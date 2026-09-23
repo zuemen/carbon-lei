@@ -7,9 +7,10 @@
 |---|---|
 | Hackathon | [IEEE ClimateChain Global Hackathon](https://ieee-climatechain-hack.devpost.com/)（IEEE Blockchain Technical Community · IEEE iGET） |
 | Track | 3 — Sustainable Supply Chains |
-| Build window | 2026-10-05 → 2026-10-25（線上） |
-| Deadline | 2026-10-25（⚠️ 官網同時出現 23:59 UTC 與 8 AM PT 兩種寫法 — 以 10/25 台灣晚間為內部死線） |
-| Winners | 於 COP31（2026-11）公布 |
+| Build window | 2026-10-05 04:00 UTC → 2026-10-25 14:00 UTC（線上；台灣 10/05 12:00 → 10/25 22:00） |
+| Deadline | **2026-10-25 14:00 UTC（台灣 22:00）** — Devpost schedule 頁的系統截止。Rules 頁另寫 "8 AM PT"（15:00 UTC），以較早者為準；內部目標 10/24 前可送件 |
+| Judging | 2026-10-26 06:00 UTC → 2026-11-08 14:00 UTC |
+| Winners | 2026-11-20 06:00 UTC 公布（賽事以支持 UN COP31 為目標） |
 
 ## Submission requirements
 - Track selection + problem alignment
@@ -20,6 +21,7 @@
 
 ## Judging criteria
 Climate Impact · Innovation & Creativity · Technical Execution · Practical Usefulness · Presentation & Communication
+（Rules 頁第五項寫作 "Presentation & Storytelling"；兩頁皆未列權重）
 
 ## Guardrails
 - Separate project from `zuemen/agent-passport` (Monad Metropolis). vLEI know-how may be shared; **code is not copied between the two repos**.
