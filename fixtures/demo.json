@@ -1,0 +1,68 @@
+{
+  "note": "All organisations, people, LEIs, EORIs and installation IDs are fictional. LEIs use the ZZZZ prefix, which no LEI issuer assigns. Emissions values are illustrative — not official CBAM methodology.",
+  "entities": {
+    "root": { "name": "Demo Root Authority (fictional)", "role": "simulated GLEIF root" },
+    "qvi": { "name": "Demo QVI (fictional)", "lei": "ZZZZ00QVIISSRDEMO116" },
+    "nab": { "name": "Demo Accreditation Body (fictional)", "lei": "ZZZZ00NABACCRDEMO119", "country": "DE" },
+    "verifier": {
+      "name": "Demo Verification GmbH (fictional)",
+      "lei": "ZZZZ00EUVERIFDEMO152",
+      "country": "DE",
+      "accreditationNumber": "DEMO-ACC-CBAM-0001",
+      "accreditationScope": "CN 7318",
+      "accreditedUntil": "2030-12-31T00:00:00Z"
+    },
+    "auditor": { "name": "Lena Demo (fictional person)", "role": "CBAM Lead Auditor" },
+    "supplier": {
+      "name": "Demo Fasteners Co. (fictional)",
+      "lei": "ZZZZ00TWSCREWDEMO185",
+      "country": "TW",
+      "unLocode": "TWKHH",
+      "operatorId": "TWZZZZ00TWSCREWDEMO185",
+      "installations": [
+        { "id": "TW-ZZZZ00TWSCREWDEMO185-0001", "name": "Demo Fasteners Plant 1 (fictional)" },
+        { "id": "TW-ZZZZ00TWSCREWDEMO185-0002", "name": "Demo Fasteners Plant 2 (fictional)" }
+      ]
+    },
+    "importers": [
+      { "name": "Demo Imports B.V. (fictional)", "lei": "ZZZZ00EUIMPRTDEMO148", "country": "NL", "eori": "NLDEMO000000001" },
+      { "name": "Demo Schrauben Import GmbH (fictional)", "lei": "ZZZZ00EUIMPRTDEMO245", "country": "DE", "eori": "DEDEMO000000002" }
+    ],
+    "impostor": { "name": "Demo Impostor Verifier (fictional)", "lei": "ZZZZ00FAKEVERFICT143", "reportId": "VR-FAKE-0001" }
+  },
+  "product": {
+    "cnCode": "7318",
+    "description": "Hex bolts, carbon steel",
+    "productNameCompany": "Hex bolt (illustrative)"
+  },
+  "reports": [
+    {
+      "verificationReportId": "VR-DEMO-0001",
+      "installation": "TW-ZZZZ00TWSCREWDEMO185-0001",
+      "reportingPeriod": "2026-01-01/2026-12-31",
+      "cbamRoute": "C",
+      "verifiedTonnes": "500",
+      "specificEmbeddedEmissions_tCO2e_per_t": "1.8",
+      "valueType": "actual",
+      "issuedAt": "2026-10-01T00:00:00Z",
+      "validUntil": "2027-12-31T00:00:00Z"
+    },
+    {
+      "verificationReportId": "VR-DEMO-0002",
+      "installation": "TW-ZZZZ00TWSCREWDEMO185-0002",
+      "reportingPeriod": "2026-01-01/2026-12-31",
+      "cbamRoute": "C",
+      "verifiedTonnes": "300",
+      "specificEmbeddedEmissions_tCO2e_per_t": "1.8",
+      "valueType": "actual",
+      "issuedAt": "2026-10-02T00:00:00Z",
+      "validUntil": "2027-12-31T00:00:00Z",
+      "purpose": "signed by the auditor after her ECR was revoked; registration must fail"
+    }
+  ],
+  "shipments": [
+    { "batchId": "BATCH-DEMO-2026-0001", "quantityTonnes": "200", "importer": 0, "shipmentDate": "2026-10-10" },
+    { "batchId": "BATCH-DEMO-2026-0002", "quantityTonnes": "400", "importer": 1, "shipmentDate": "2026-10-12", "purpose": "second importer over the remaining 300 t; must be rejected" }
+  ],
+  "defaultValue_tCO2e_per_t": "2.978"
+}
