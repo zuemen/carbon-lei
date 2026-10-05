@@ -1,0 +1,12 @@
+{
+  "dt": "2026-10-05T00:00:00.000000+00:00",
+  "keria": {
+    "dt": "2026-10-05T00:00:00.000000+00:00",
+    "curls": ["http://keria:3902/"]
+  },
+  "iurls": [
+    "http://witness-demo:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller",
+    "http://witness-demo:5643/oobi/BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM/controller",
+    "http://witness-demo:5644/oobi/BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX/controller"
+  ]
+}

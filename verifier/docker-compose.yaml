@@ -1,0 +1,93 @@
+# Local vLEI stack for CarbonLEI: KERIA agent, three demo witnesses and a schema server.
+# Only KERIA (3901 admin, 3902 http, 3903 boot) is published, and only on 127.0.0.1.
+# Witnesses and the schema server stay on the compose network, so this stack can run
+# next to other KERI stacks that already use 5642-5644 or 7723 on the host.
+#   up:      docker compose -f verifier/docker-compose.yaml -p carbonlei up -d --wait
+#   down:    docker compose -f verifier/docker-compose.yaml -p carbonlei down      (keeps state)
+#   wipe:    docker compose -f verifier/docker-compose.yaml -p carbonlei down -v   (drops state)
+name: carbonlei
+
+x-healthcheck: &healthcheck
+  interval: 3s
+  timeout: 5s
+  retries: 30
+  start_period: 5s
+
+x-python-env: &python-env
+  PYTHONUNBUFFERED: "1"
+  PYTHONIOENCODING: UTF-8
+
+services:
+  vlei-server:
+    image: gleif/vlei:1.0.3
+    environment:
+      <<: *python-env
+    command: ["vLEI-server", "-s", "/vLEI/schema", "-c", "/vLEI/credentials", "-o", "/vLEI/oobis"]
+    volumes:
+      # Custom schema served next to the official vLEI schemas (resolved by SAID).
+      - ./schemas/cbam-verifier-accreditation.json:/vLEI/schema/cbam-verifier-accreditation.json:ro
+    expose:
+      - "7723"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:7723/oobi/EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  witness-demo:
+    image: weboftrust/keri:1.2.13
+    environment:
+      <<: *python-env
+    command: ["witness", "demo"]
+    volumes:
+      # The image ships empty witness configs; without these the witnesses publish no endpoints.
+      # Mounted file by file: `witness demo` also creates empty configs for wit/wub/wyz, which
+      # must stay inside the container rather than land in the repo.
+      - ./config/witness-demo/wan.json:/keripy/scripts/keri/cf/main/wan.json
+      - ./config/witness-demo/wil.json:/keripy/scripts/keri/cf/main/wil.json
+      - ./config/witness-demo/wes.json:/keripy/scripts/keri/cf/main/wes.json
+      - witness-data:/usr/local/var/keri
+    expose:
+      - "5632"
+      - "5633"
+      - "5634"
+      - "5642"
+      - "5643"
+      - "5644"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          wget -q -O /dev/null http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller &&
+          wget -q -O /dev/null http://127.0.0.1:5643/oobi/BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM/controller &&
+          wget -q -O /dev/null http://127.0.0.1:5644/oobi/BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX/controller
+      <<: *healthcheck
+    restart: unless-stopped
+
+  keria:
+    image: weboftrust/keria:0.4.0
+    environment:
+      <<: *python-env
+      KERI_AGENT_CORS: "1"
+    # --name must equal the "keria" section of keria.json, otherwise the agent's curls are never
+    # loaded and every agent OOBI comes back empty.
+    command: ["start", "--config-dir", "/keria/config", "--config-file", "keria", "--name", "keria"]
+    volumes:
+      - ./config/keria.json:/keria/config/keri/cf/keria.json
+      - keria-data:/usr/local/var/keri
+    ports:
+      - "127.0.0.1:3901:3901"
+      - "127.0.0.1:3902:3902"
+      - "127.0.0.1:3903:3903"
+    depends_on:
+      witness-demo:
+        condition: service_healthy
+      vlei-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3902/spec.yaml"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+volumes:
+  keria-data:
+  witness-data:

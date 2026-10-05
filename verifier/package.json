@@ -3,5 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "vlei:up": "docker compose -f docker-compose.yaml -p carbonlei up -d --wait",
+    "vlei:down": "docker compose -f docker-compose.yaml -p carbonlei down",
+    "vlei:schema": "node scripts/build-schema.ts",
+    "vlei:setup": "node src/setup.ts",
+    "vlei:export": "node src/export-evidence.ts",
+    "vlei:anchor": "node src/anchor.ts",
+    "vlei:status": "node src/status.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "signify-ts": "0.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.0"
+  }
 }

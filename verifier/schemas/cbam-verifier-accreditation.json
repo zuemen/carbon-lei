@@ -1,0 +1,187 @@
+{
+  "$id": "EIyPVSpzpiV8PXfxjAhPdESlnvpUGZtBLeZ1jaoVRt8G",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CBAM Verifier Accreditation Credential (demo)",
+  "description": "Demo credential issued by an accreditation body (holder of an LE vLEI) to a CBAM verification body, stating the accredited activity and the CN codes in scope.",
+  "type": "object",
+  "credentialType": "CBAMVerifierAccreditationCredential",
+  "version": "1.0.0",
+  "properties": {
+    "v": {
+      "description": "Version",
+      "type": "string"
+    },
+    "d": {
+      "description": "Credential SAID",
+      "type": "string"
+    },
+    "u": {
+      "description": "One time use nonce",
+      "type": "string"
+    },
+    "i": {
+      "description": "Accreditation body issuer AID",
+      "type": "string"
+    },
+    "ri": {
+      "description": "Credential status registry",
+      "type": "string"
+    },
+    "s": {
+      "description": "Schema SAID",
+      "type": "string"
+    },
+    "a": {
+      "oneOf": [
+        {
+          "description": "Attributes block SAID",
+          "type": "string"
+        },
+        {
+          "$id": "EMQpwYFk7fIH2F5f91Fct2ZTPeoONLYM2EotXwUM-OiS",
+          "description": "Attributes block",
+          "type": "object",
+          "properties": {
+            "d": {
+              "description": "Attributes block SAID",
+              "type": "string"
+            },
+            "i": {
+              "description": "Issuee AID (the accredited verification body)",
+              "type": "string"
+            },
+            "dt": {
+              "description": "Issuance date time",
+              "type": "string",
+              "format": "date-time"
+            },
+            "LEI": {
+              "description": "LEI of the accredited verification body",
+              "type": "string",
+              "format": "ISO 17442"
+            },
+            "accreditationNumber": {
+              "description": "Accreditation certificate number",
+              "type": "string"
+            },
+            "activity": {
+              "description": "Accredited activity",
+              "type": "string"
+            },
+            "cnScope": {
+              "description": "Combined Nomenclature codes covered by the accreditation",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "validUntil": {
+              "description": "End of the accreditation period",
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "i",
+            "dt",
+            "LEI",
+            "accreditationNumber",
+            "activity",
+            "cnScope",
+            "validUntil"
+          ]
+        }
+      ]
+    },
+    "e": {
+      "oneOf": [
+        {
+          "description": "Edges block SAID",
+          "type": "string"
+        },
+        {
+          "$id": "ENsSxGb7bfGFLYRO8uXf4tX_PGzQFD5azUHEZetA52NA",
+          "description": "Edges block",
+          "type": "object",
+          "properties": {
+            "d": {
+              "description": "Edges block SAID",
+              "type": "string"
+            },
+            "nab": {
+              "description": "Accreditation body node: the Legal Entity vLEI credential held by the issuer",
+              "type": "object",
+              "properties": {
+                "n": {
+                  "description": "SAID of the accreditation body's LE credential",
+                  "type": "string"
+                },
+                "s": {
+                  "description": "SAID of required schema of the credential pointed to by this node",
+                  "type": "string",
+                  "const": "ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "n",
+                "s"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "d",
+            "nab"
+          ]
+        }
+      ]
+    },
+    "r": {
+      "oneOf": [
+        {
+          "description": "Rules block SAID",
+          "type": "string"
+        },
+        {
+          "$id": "ELSOu2pQf0wEFDQF6B2-C5AQ4I8vm4X5ypwVGcGGk03f",
+          "description": "Rules block",
+          "type": "object",
+          "properties": {
+            "d": {
+              "description": "Rules block SAID",
+              "type": "string"
+            },
+            "usageDisclaimer": {
+              "description": "Usage Disclaimer",
+              "type": "object",
+              "properties": {
+                "l": {
+                  "description": "Associated legal language",
+                  "type": "string",
+                  "const": "Demo only: this credential is issued by a fictional accreditation body for a hackathon prototype. It is not an accreditation under Regulation (EU) 2023/956 or any national accreditation scheme and must not be relied on for real CBAM reporting."
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "d",
+            "usageDisclaimer"
+          ]
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "i",
+    "ri",
+    "s",
+    "d",
+    "e",
+    "r"
+  ]
+}
