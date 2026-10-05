@@ -120,7 +120,7 @@ Onboarding steps for each role, as built in the prototype. The operator's steps 
 
 | Role | Steps in the prototype |
 |---|---|
-| Trust-registry operator (owner key) | Check the body's vLEI chain off-chain before adding it (`node verifier/src/onboard-check.ts`; the demo's impostor body, which has no LE vLEI and no accreditation, is refused); add the body with `addVerifier` (LEI hash, wallet address, hashes of its LE vLEI and accreditation credentials, accreditation expiry) and each lead auditor with `addAuditor` (AID hash, hash of the ECR credential) |
+| Trust-registry operator (owner key) | Check the body's vLEI chain off-chain before adding it (`node verifier/src/onboard-check.ts`; the demo's impostor body, which has no LE vLEI and no accreditation in the demo chain, is refused; attack 4 simulates a stolen owner key that skips this check); add the body with `addVerifier` (LEI hash, wallet address, hashes of its LE vLEI and accreditation credentials, accreditation expiry) and each lead auditor with `addAuditor` (AID hash, hash of the ECR credential) |
 | Verification body | Hold an LE vLEI and an accreditation credential; issue an ECR to each lead auditor; hold an EVM wallet; issue each report credential (`carbonlei issue`, EIP-712 signature with the body's key) and register it with `registerReport` |
 | Lead auditor | Hold an ECR; anchor each credential's SAID in the auditor's KEL before registration |
 | Operator (supplier) | Hold an LEI and an EVM wallet; build a proof with the fields it chooses to disclose (`carbonlei present`); claim each shipment with `claimShipment` |
@@ -134,7 +134,7 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 
 | Phase | When | Scope | Exit criterion |
 |---|---|---|---|
-| 0. Prototype | Hackathon, October 2026 | Sepolia; fictional parties; simulated GLEIF root; single allowlist key | Demo flow and three counterexamples reproducible: hosted demo at https://zuemen.github.io/carbon-lei/, or locally with `npm run demo:local` (see the [README](../README.md)) |
+| 0. Prototype | Hackathon, October 2026 | Sepolia; fictional parties; simulated GLEIF root; single allowlist key | Demo flow and four counterexamples: hosted demo at https://zuemen.github.io/carbon-lei/; locally, `npm run demo:local` reproduces the first three, and attack 4 runs with `scripts/demo-scenario.ts --synthetic-impostor` (see the [README](../README.md) and [VLEI_SETUP.md](VLEI_SETUP.md)) |
 | 1. Pilot | Around the first verified reports, from January 2027 | One verification body holding a real LE vLEI and ECRs from a QVI; a few operators using their LEI; one or two importers (one is enough to start, see §2.1); multisig allowlist. First step: the importer feeds the PACT JSON export into its existing CBAM declaration software | Reports used in real declarations alongside the official Registry flow |
 | 2. Network | After pilot | Several verification bodies and NABs; governance body with NAB and QVI representatives; several watchers; production chain decision (EVM L2 or permissioned EVM) | Independent operation without the project team |
 | 3. Extension | Later | Other CBAM goods, product passports, business wallets (see §6) | — |

@@ -199,6 +199,16 @@ npm run vlei:watch:sepolia           # polls every 15 s; on detection sends revo
 
 `vlei:watch` (`verifier/src/watch.ts`) does not trust a local credential status. Each poll, the importer's agent asks the witnesses for the body's key state and scans the body's KEL for that seal, and re-checks the event's SAID, prior link and signature. On detection it writes `fixtures/evidence/revocation-<ECR SAID>.json` (detection time, sequence number, raw event) and, only with `--send`, runs the `revokeAuditor` step of `scripts/demo-scenario.ts` with the WATCHER key (three attempts at most). `vlei:watch:sepolia` reads `WATCHER_PRIVATE_KEY` and `SEPOLIA_RPC_URL` from `.env`.
 
+**Attack 4: the impostor's own chain.** Attack 4 needs a vLEI chain that is well formed but leads to a root the impostor controls. With the stack running:
+
+```sh
+npm run vlei:impostor:setup     # five new agents and their chain; writes fixtures/vlei-impostor.json
+npm run vlei:impostor:export    # CESR streams, KELs, index.json, authority-bundle.json -> fixtures/evidence/impostor/
+npm run vlei:impostor:anchor    # anchors the impostor's credential in its auditor's KEL
+```
+
+`verifier/src/setup-impostor.ts` creates five new agents, all fictional: Self-Made Root, Self-Made QVI, Self-Made Accreditation Body, the impostor body (Demo Impostor Verifier) and its auditor. Self-Made Root issues the QVI credential; Self-Made QVI issues LE vLEIs to the accreditation body and the impostor body; the accreditation body issues the CBAM accreditation (CN 7318) to the impostor body, which issues the ECR (`CBAM Lead Auditor`) to its auditor. Their passcodes go to a private state file, `verifier/.data/state-impostor.json` (git-ignored); the eight demo agents, `verifier/.data/state.json` and `fixtures/vlei.json` are not written, and the script refuses AIDs shared with the demo agents. In our run on 2026-10-05 the setup took 37.3 seconds. `export` writes `fixtures/evidence/impostor/` and then runs check 7 on it twice: it must pass with the impostor's own root configured and fail with the pinned demo root. `anchor` takes the `credSAID` from `fixtures/sepolia-credential-impostor.json`, written by the `impostorIssue` step of `scripts/demo-scenario.ts` (the order of the attack 4 steps is in that script's header), and writes `fixtures/evidence/impostor/anchor-<credSAID>.json`. Without KERIA, `scripts/demo-scenario.ts --network local --synthetic-impostor` generates a synthetic chain in `fixtures/local-impostor/` (git-ignored); it is refused on Sepolia.
+
 ---
 
 ## 9. Evidence files
@@ -218,6 +228,8 @@ npm run vlei:watch:sepolia           # polls every 15 s; on detection sends revo
 | `authority-bundle.json` | Trust anchor, accreditation schema SAID and the five CESR streams check 7 reads | Check 7 (the proof carries its sha256) |
 | `anchor-ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx.json` | The auditor's KEL event anchoring the Sepolia demo credential, `kelSeq` 3 | Check 6; `kelSeq` for the scenario |
 | `anchor-EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5.json` | The anchor of the credential used by the earlier deployment (`fixtures/archive/`), `kelSeq` 2 | Archive |
+
+`fixtures/evidence/impostor/` holds the same kinds of files for attack 4 (five CESR streams, the KELs of the five impostor agents, `index.json`, `authority-bundle.json` and the anchor of the impostor's credential), exported on 2026-10-05.
 
 The hosted page serves a copy in `demo/public/evidence/`, which `scripts/build-demo-data.ts` regenerates from `fixtures/evidence/` (keeping only the anchors of the demo credentials).
 
