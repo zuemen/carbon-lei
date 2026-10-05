@@ -12,7 +12,10 @@
     "vlei:export": "node src/export-evidence.ts",
     "vlei:anchor": "node src/anchor.ts",
     "vlei:status": "node src/status.ts",
-    "typecheck": "tsc -p ."
+    "vlei:revoke": "node src/revoke-ecr.ts",
+    "vlei:watch": "node src/watch.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@noble/curves": "^2.4.0",

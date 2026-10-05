@@ -22,7 +22,10 @@
     "demo:scenario": "node scripts/demo-scenario.ts",
     "demo:data": "node scripts/build-demo-data.ts",
     "demo:sepolia": "node --env-file=.env scripts/demo-scenario.ts --network sepolia",
-    "demo:data:sepolia": "node scripts/build-demo-data.ts --network sepolia"
+    "demo:data:sepolia": "node scripts/build-demo-data.ts --network sepolia",
+    "vlei:watch": "npm run vlei:watch -w verifier --",
+    "vlei:revoke": "npm run vlei:revoke -w verifier --",
+    "vlei:watch:sepolia": "node --env-file=.env verifier/src/watch.ts --send"
   },
   "type": "module"
 }
