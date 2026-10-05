@@ -229,7 +229,424 @@
       "caller": "0xaA21B52F3b78F1f0fdACd34d50AfB68D6590f725",
       "quantityTonnes": "400"
     },
-    "attack3": null
+    "attack3": null,
+    "attack4": {
+      "evidence": "keria",
+      "exportDate": "2026-10-05",
+      "body": {
+        "name": "Demo Impostor Verifier (fictional)",
+        "lei": "ZZZZ00FAKEVERFICT143",
+        "address": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93"
+      },
+      "impostorRoot": {
+        "name": "Self-Made Root (fictional)",
+        "aid": "ED3pLymCukZNFEncvRm5sPFzn-IfrolUxC4M01OGdMGx"
+      },
+      "pinnedRoot": "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB",
+      "supplier": {
+        "name": "Demo Bolt Works Ltd. (fictional)",
+        "installationName": "Demo Bolt Works Plant 1 (fictional)"
+      },
+      "proof": {
+        "core": "{\"d\":\"EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93\",\"verifierLEI\":\"ZZZZ00FAKEVERFICT143\",\"auditorAID\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\"},\"digests\":[\"5Gl2EbyQiuNXfTK_vEAQMhn5fUTOkE90mSjf_X0BVbU\",\"5qYNP8aYn8xFQwaHkLALJ76wrpFkRge5Oy9di-Qywbg\",\"6Yvvsfl-F5KgGhilbFr1ziYpAAy9hHsF_CVMDs2PPU8\",\"6m-285y67jQPf4YV2-Q6vSp1HhmqwZgnYZvnBJRNQ0w\",\"7mBUechLNG3zPcuJrlklR4Cv3mRWZu6DW-RAFJxjltk\",\"9iCdHdDtAMRu9b6x6SK0WQZxKypr3N-aYF2qNOGZY7M\",\"9zoCpDrFkdtZ97bFo968GmfOFWKOXVzAOc4wBBu4qLA\",\"AL4sf8Q8UnSLlui9yaBOtefHvy4YnPZDZfdvNlEmBGM\",\"Gp9202dAm3YtqEq7LWjOjaf5ANI4Y5-TeEAbPsQJWTg\",\"HO4Suw4scUqT4v7bOhYoYYHA54SYVNIHLHGWysP5lTQ\",\"HrTZzEjmjxlQNBn1pRVYhCuIuhzPIU7FMncuSaQEUeU\",\"JM8hCnLtda53SEO4wdi_2-6I3-HZwqFBc8wNu5DCkI0\",\"JrdRRV9wpI7N9jwB21j0Zqahi7AO4mZ17ebbiEEMufg\",\"LvX9AEGGIRHK8N2SX29Nv0OWvH60zdvl43_D-h4o7L8\",\"MYfn8BHHYV39YBrz-9WSsiknyiGFmqu2DOhXzREUoWo\",\"VXdzIFmBiCfLege82GuI8BVtw_K9ar06fv_pf2RNxvE\",\"WVkMGVuwNUNPjJ8C3y_-fml0JZZ_tUdWhvL3mGCHV3U\",\"XBo-HBhVJGzUEaqcEmsddMr63K2HXAm3nILARmzKITY\",\"bR25f_vN4m9gu5OFpbHLsVD51Os6MQam3HBfx9t77Lk\",\"eV_ibIe0f_NQVGWxh7PydT2wo9Na4HJUxtu0JwBtdYM\",\"ekJOj-tSHGV8wfblP_9foX_LYT8kk8WlrQY6BkUCznw\",\"h4GXP975GvFA1pwVYu1IpW2veIpQZMQoaTUdyb5u8hw\",\"jc_B6M7MOjEsykgbkhJk0JySX0DtLiEDWOaOVH-JoCA\",\"r6BPg48qvLG8LAutrPiO1wFwT2K_Onhoie8gWtuTqLA\",\"soIyabrhgUCseDfapYJ6dkFfusjlo_9N2-GdkYqbNgQ\",\"zd_AXNxYT2EgBMLDyvsiYsaFWiG46c1po7tD8GgQzaM\"],\"issuedAt\":\"2027-03-25T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
+        "signature": "0xa8625a29b775c8a500fc163c1f0dc0eda7d9d800705cf46d5bdabdee76d70e6d46f74ac2ac1c0308a0a2756aaa7d79a4638f34c1950bd5faf782514574d7f6341c",
+        "disclosures": [
+          "WyIweGYwNDBjNjRiN2ZiYmNhYzMyN2JjMDY0ZjQ5ODE4ZmNiOTMyYzY4YWIyZGU1OTE4NTk2MDc1OTY3YzM5ZjFlMjIiLCJzdXBwbGllckxFSSIsIlpaWlowMFRXQk9MVFNERU1PMjc3Il0",
+          "WyIweDljMjliN2I3ZWI5MzAwZDJlMTQwZTg3MzE0NzI5YWQ4ZDU2ODMwMjE0ZGQ0MThhZWEzZWU0ZDE0ZGFjMmQzMjIiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXQk9MVFNERU1PMjc3LTAwMDEiXQ",
+          "WyIweGVlOWRmZDc0ZGVmZjY1OWE5ODE0NzBkZGZjNjRiNzAzMzc4MGE0OGRiZWYxOWIyNThiN2U0YzVkNzdlYTczNTgiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
+          "WyIweGZmZDJiZDZmODkzMTY0NzQzMzNkMDBmOTJhMzY4MGQ1YjUwNjdhOGVhZTE2MDAyYmIzNDg5NTJkYTkwZjU1OWUiLCJjbkNvZGUiLCI3MzE4Il0",
+          "WyIweDNlYTVhMmZhYWNkN2U3ODE4OTdiNmZkNTAyMWE1OTY2MTEzMmU1NGFiNTYwMDg2MDBlNWMxN2IxMTEwY2UyOGIiLCJjYmFtUm91dGUiLCJDIl0",
+          "WyIweDRhZGIyZWFkNTJjZTllNTEwMDFiMWRhZTIzMGJjNTM4NDFjY2ZiMTM1ODgyMzgwZTZlOGQzMWJmZWFlNjc0N2UiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
+          "WyIweGM1NjYzMTA2M2FlM2VmMjhmY2ZlMjE4NWM4MTNlNmJkMzNjYTYyYzcwMWE1ZTAyY2ZlYjY4NmU5MzY5NWUxOTUiLCJ2ZXJpZmllZFRvbm5lcyIsIjYwMCJd",
+          "WyIweGU1OTVlZDFjN2EzM2Y1ZGU5NzkxMWU1YjJjYTNmNzVmZDgyYTI1ZjJhZmE2YjM3OGM3ZTc4MWJhMTVhNWYzN2EiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
+          "WyIweGYxOGZkOGE0MmFlMDMxNmYyOWQxODFjMTVkYTIwYTc5Yzg3MDk1MWU3MDI3ZTc0ZmI4MTU5OTY0NjFlNmRmNjYiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
+          "WyIweDNhM2EyZDRiZmFlYzc5ODkzYzkzN2NmZmE3MzEyYmNkMjBkOTVkOWZjNDU3NGJlZWQxMzFjNzY0MGIwZTU3ZjYiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
+          "WyIweGQ5NzQxNGE0MDUxYTYzYTJhZTYwY2M4NTUzYTdmODNiMjMxOTM0N2U5YWFjN2JlM2IwNWY3YjY0MTM0ODUyNzIiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLUZBS0UtMDAwMSJd",
+          "WyIweDAzNWY1NDZjN2NhYTY2YTQxNTg4NmIwMTU0YTEyYWUwNWEyNjk4MzAxMDY0Y2M4OTE3OTNjYjc0MTk2ZmE4OWIiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEZBS0VWRVJGSUNUMTQzIl0",
+          "WyIweDMyNWI3YTg3ZGY2ZDExMGMyOWYwM2FjYWUwNWU1NGVlMDFmMjQ3ZjlmMTJjNzZlNGQ4MWI5NWY3OGI3YmQ3MjAiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiRkFLRS1BQ0MtQ0JBTS0wMDAxIl0",
+          "WyIweGQ0MzdkOGRiZmRmYmUyNTA3NGMyYTYzMmY3ODY2YWY0N2FmOGY2NDg0YWViMThiMThkMTE1YzU4ZWQ4YWM4ZTYiLCJuYWJOYW1lIiwiU2VsZi1NYWRlIEFjY3JlZGl0YXRpb24gQm9keSAoZmljdGlvbmFsKSJd",
+          "WyIweDBmY2E2NDYxMzYzNWVhYWQzYjVjMmNiOGNiZDRlNjdkNDlkZjFhNjcxMDFiY2VlNGExNzFhNWE5N2I1MTg4N2MiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
+          "WyIweDcwMzY5YjNiZjYwNGU4NTMxYTY0YTAxYTc0MGRlMjFiYzYyNTk0OGI2NDJmYjQzMmZlNGFmNTdmZThmZmI3ZTEiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
+          "WyIweGUwM2U2Y2QyNDI4NzVlZDk2YjI1Njc5NDk3MWFiM2JhYjgzNGFkZmM2ZTAzZDk0M2NiMDVmMGUxYjJlYjc5NzMiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
+          "WyIweDBiMDYxN2YyMTc3ODRiZjAzNTc5NzAzZTE0NzZjOWFlNjFlZjUxZDE3NTdhMGM3NGY2ZDYwMmJkNDA4OWRkMjEiLCJpZFNhbHQiLCIweGRhZWU3YzY5OWVjYTg1YzJiNzAxYzZhMGQzOWUzMTM5ODljMTU0NTRkNzMxMGQ3NTUyMWQyZDQxMDkwYTYzMjEiXQ",
+          "WyIweDU3YzY4YzY3NGY3MWMzOGU0MzQ1ZjdkMTkwODBhZmYxM2M4Y2RmOTVkODYyZjFhYTljYThkNzYzNWFlYjM1MWUiLCJiYXRjaFNhbHQiLCIweDUwOTNkYmNlMTYwOGM5MWM1MTdiMmVmODJjODRkOWNiN2FlN2RmMTY0M2VkNzE5M2ZmNWNjZjhkNGQyMmRlZWYiXQ",
+          "WyIweGEzMzE3YjRjMmM3OGE3N2Q2MGNmZTUzNjhhYjQ3YmYyYWRiMjFiNThiYmFlMWI2ZmQ2NmYwY2FiNDk5MGVjY2QiLCJpc3N1ZWRBdCIsIjIwMjctMDMtMjVUMDA6MDA6MDBaIl0",
+          "WyIweDhhNWU2MWZkNDhmZDZlOTk0MDMxN2Y0MTg2YmZkN2Q5NjU0NzE4MjdkMDhmYjk5MzhiZTU2MmIzODJjODViMWYiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
+        ],
+        "anchorEvidence": {
+          "note": "Interaction event in the auditor's KEL anchoring a credential SAID. Verify: SAID = Blake3-256 over `raw` with `d` replaced by 44 '#'; signature = Ed25519 over the UTF-8 bytes of `raw`.",
+          "credSAID": "EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6",
+          "auditor": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK",
+          "kelSeq": 1,
+          "event": {
+            "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"ED4b4o2fiyQ-6wg7edSxaO3Py8dN_g8v7hEl7Ei8trhe\",\"i\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"s\":\"1\",\"p\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"a\":[{\"d\":\"EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6\"}]}",
+            "said": "ED4b4o2fiyQ-6wg7edSxaO3Py8dN_g8v7hEl7Ei8trhe",
+            "type": "ixn",
+            "sn": "1",
+            "prior": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK",
+            "seals": [
+              {
+                "d": "EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6"
+              }
+            ]
+          },
+          "signatures": [
+            {
+              "qb64": "AADJ14Q5cRG8mRn12Iz4ZfZwmsuZ1AQUmXP-A1Xv3-gN2nfF_lJDe904oXkaR4Ot-HlPdjYw6MvMnPBdt_t9nZ8P",
+              "index": 0,
+              "hex": "c9d784397111bc9919f5d88cf865f6709acb99d404149973fe0355efdfe80dda77c5fe52437bdd38a1791a4783adf8794f763630e8cbcc9cf05db7fb7d9d9f0f"
+            }
+          ],
+          "signingKeys": [
+            {
+              "qb64": "DIKu1niqjMzE7h5NPadgM1WSdtC3V3hfuudh7ngms05H",
+              "hex": "82aed678aa8cccc4ee1e4d3da76033559276d0b757785fbae761ee7826b34e47"
+            }
+          ],
+          "signingThreshold": "1",
+          "establishmentEvent": {
+            "sn": "0",
+            "said": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK"
+          },
+          "kelAttachment": "-VBU-AABAADJ14Q5cRG8mRn12Iz4ZfZwmsuZ1AQUmXP-A1Xv3-gN2nfF_lJDe904oXkaR4Ot-HlPdjYw6MvMnPBdt_t9nZ8P-BACAAAF_6LmxHHIN_CTDXg_JJL9GRBnAX6Q4atNpGPpPGTFxAXZjhalPjovAqf4REo8P6Z6dMLMQ1_XXplqWueE3cYCABDLb4EbVJ7WyK_0bUkGudPqtbYa1QCRv50OdGtSEt3oDRK4pwpdNiFPPbZ7W1XNV2LjUU4MEi-t0fwoQPChTxUB-EAB0AAAAAAAAAAAAAAAAAAAAAAB1AAG2026-10-05T14c27c12d690912p00c00",
+          "checks": {
+            "saidRecomputed": true,
+            "sizeMatchesVersion": true,
+            "signatureValid": true,
+            "matchesSubmittedEvent": true
+          },
+          "exportedAt": "2026-10-05T14:27:13.081Z",
+          "establishmentRaw": "{\"v\":\"KERI10JSON0001b7_\",\"t\":\"icp\",\"d\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"i\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DIKu1niqjMzE7h5NPadgM1WSdtC3V3hfuudh7ngms05H\"],\"nt\":\"1\",\"n\":[\"EEE9bEOIHbTnCn3tPnRYnuFLYZ44H6rtsbHEdjBwXiXv\"],\"bt\":\"2\",\"b\":[\"BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha\",\"BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM\",\"BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX\"],\"c\":[],\"a\":[]}"
+        },
+        "authorityEvidence": {
+          "bundle": "evidence/impostor/authority-bundle.json",
+          "sha256": "245ce6c050fc14a30a0e8d66609e8b1df116ac47c905988dd282b229fd85adc1"
+        }
+      },
+      "txs": {
+        "addVerifier": {
+          "step": "impostorAddVerifier",
+          "label": "Attack 4 (simulated owner-key compromise): impostor body added to the allowlist",
+          "hash": "0x5e966227967fc35ce882364fc9c5b53ef14af8b9f9253dcb9d63b42400ad3d5b",
+          "block": 11849376,
+          "time": "2026-10-05T14:28:00Z",
+          "result": "success",
+          "gasUsed": 163521
+        },
+        "addAuditor": {
+          "step": "impostorAddAuditor",
+          "label": "Attack 4 (simulated owner-key compromise): impostor's auditor added",
+          "hash": "0x6282a006f73ce95bde47f0e92aab8841975456e918edaace0e737993dcaa4376",
+          "block": 11849377,
+          "time": "2026-10-05T14:28:12Z",
+          "result": "success",
+          "gasUsed": 75107
+        },
+        "register": {
+          "step": "impostorRegister",
+          "label": "Attack 4: impostor registers its own report — accepted (status 1)",
+          "hash": "0x295abe6cb63e3df44e942b07397ba926dcff815a6e1e2e05870f21d0dc3d0013",
+          "block": 11849378,
+          "time": "2026-10-05T14:28:24Z",
+          "result": "success",
+          "gasUsed": 368616
+        },
+        "suspend": {
+          "step": "impostorSuspend",
+          "label": "Attack 4: watcher suspends the impostor body",
+          "hash": "0x61431e780afea4c1cad3c12af6406955f42a0e6b93c32d9198e2701e9f96dd99",
+          "block": 11849379,
+          "time": "2026-10-05T14:28:36Z",
+          "result": "success",
+          "gasUsed": 30750
+        }
+      },
+      "dryRun": {
+        "input": {
+          "reportKey": "0x9a426d7306a54748317c750c6b0e0cb048ebef461f837b6beadb64d787a375f7",
+          "reportIdHash": "0xbe2eb5c6010c308b02a66cf2f07df56b38b8c06097d2f673c6a40efba7057f77",
+          "reportScopeKey": "0x59de8a1895041155464825308e9eed187ac26f49b5503f311a8857afe0d6128c",
+          "credScopeKey": "0x3bf2fbd34a0db8bfcf36b75e0c75ffe7a6a29a4a4cb62e5b8b5b97da0690dbd4",
+          "auditorAidHash": "0x086f8c986f42a8ad00de0ec0df2b9682e62d3d690a48a02cf95feb61d3125c0a",
+          "kelSeq": "1",
+          "supplier": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93",
+          "supplierCommit": "0xea855b7d8fbbc039fe723884360b854c18e78bdf74efa51ac34cbd11fe97dedd",
+          "installationCommit": "0x9bde3d11fe7b6d1e90b0c01ecf8c2f11f5aeafc806d5a8fa981a9964f3aed034",
+          "verifiedKg": "600000",
+          "validUntil": "1830211200",
+          "supersedes": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "caller": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93"
+      },
+      "verification": {
+        "overall": "INVALID",
+        "checks": [
+          {
+            "index": 0,
+            "name": "Structure",
+            "status": "pass",
+            "code": "",
+            "detail": ""
+          },
+          {
+            "index": 1,
+            "name": "Credential integrity (SAID)",
+            "status": "pass",
+            "code": "",
+            "detail": "credential ID matches its content"
+          },
+          {
+            "index": 2,
+            "name": "Disclosed fields",
+            "status": "pass",
+            "code": "",
+            "detail": "21 fields disclosed, 5 hidden by supplier"
+          },
+          {
+            "index": 3,
+            "name": "Issuer signature",
+            "status": "pass",
+            "code": "",
+            "detail": "signed by 0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93"
+          },
+          {
+            "index": 4,
+            "name": "On-chain report",
+            "status": "pass",
+            "code": "CONTESTED",
+            "detail": "registered by an authorized auditor (checked by the contract at registration); revoked or suspended within 24 h after"
+          },
+          {
+            "index": 5,
+            "name": "Shipment claim",
+            "status": "skipped",
+            "code": "",
+            "detail": "no shipment in this proof"
+          },
+          {
+            "index": 6,
+            "name": "Auditor anchor (KEL)",
+            "status": "pass",
+            "code": "",
+            "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
+          },
+          {
+            "index": 7,
+            "name": "Authority chain (vLEI)",
+            "status": "fail",
+            "code": "AUTHORITY_INVALID",
+            "detail": "QVI credential not issued by the configured root of trust"
+          },
+          {
+            "index": 8,
+            "name": "Report reconciliation",
+            "status": "skipped",
+            "code": "",
+            "detail": "no report extract in this proof"
+          }
+        ],
+        "disclosed": {
+          "supplierLEI": "ZZZZ00TWBOLTSDEMO277",
+          "installationId": "TW-ZZZZ00TWBOLTSDEMO277-0001",
+          "unLocode": "TWKHH",
+          "cnCode": "7318",
+          "cbamRoute": "C",
+          "reportingPeriod": "2026-01-01/2026-12-31",
+          "verifiedTonnes": "600",
+          "specificEmbeddedEmissions_tCO2e_per_t": "1.8",
+          "valueType": "actual",
+          "methodologyNote": "illustrative — not official CBAM methodology",
+          "verificationReportId": "VR-FAKE-0001",
+          "verifierLEI": "ZZZZ00FAKEVERFICT143",
+          "accreditationNumber": "FAKE-ACC-CBAM-0001",
+          "nabName": "Self-Made Accreditation Body (fictional)",
+          "siteVisit": "physical",
+          "assuranceLevel": "reasonable",
+          "materialityThreshold": "5%",
+          "idSalt": "0xdaee7c699eca85c2b701c6a0d39e313989c15454d7310d75521d2d41090a6321",
+          "batchSalt": "0x5093dbce1608c91c517b2ef82c84d9cb7ae7df1643ed7193ff5ccf8d4d22deef",
+          "issuedAt": "2027-03-25T00:00:00Z",
+          "validUntil": "2027-12-31T00:00:00Z"
+        },
+        "hidden": 5,
+        "onchain": {
+          "reportKey": "0x9a426d7306a54748317c750c6b0e0cb048ebef461f837b6beadb64d787a375f7",
+          "registeredAt": "1791210504",
+          "validUntil": "1830211200",
+          "verifiedKg": "600000",
+          "verifier": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93",
+          "issuerLeiHash": "0x36e229645a7047685ac60f9c881d20d3aaed44a749e0c82a14f5fcbe8a98aa96",
+          "supersedes": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "supersededBy": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "remainingKg": "600000"
+        },
+        "primaryCode": "AUTHORITY_INVALID",
+        "checkedAt": "1791210576"
+      },
+      "beforeSuspension": {
+        "block": 11849378,
+        "time": "2026-10-05T14:28:24Z",
+        "verification": {
+          "overall": "INVALID",
+          "checks": [
+            {
+              "index": 0,
+              "name": "Structure",
+              "status": "pass",
+              "code": "",
+              "detail": ""
+            },
+            {
+              "index": 1,
+              "name": "Credential integrity (SAID)",
+              "status": "pass",
+              "code": "",
+              "detail": "credential ID matches its content"
+            },
+            {
+              "index": 2,
+              "name": "Disclosed fields",
+              "status": "pass",
+              "code": "",
+              "detail": "21 fields disclosed, 5 hidden by supplier"
+            },
+            {
+              "index": 3,
+              "name": "Issuer signature",
+              "status": "pass",
+              "code": "",
+              "detail": "signed by 0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93"
+            },
+            {
+              "index": 4,
+              "name": "On-chain report",
+              "status": "pass",
+              "code": "",
+              "detail": "registered by an authorized auditor (checked by the contract at registration)"
+            },
+            {
+              "index": 5,
+              "name": "Shipment claim",
+              "status": "skipped",
+              "code": "",
+              "detail": "no shipment in this proof"
+            },
+            {
+              "index": 6,
+              "name": "Auditor anchor (KEL)",
+              "status": "pass",
+              "code": "",
+              "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
+            },
+            {
+              "index": 7,
+              "name": "Authority chain (vLEI)",
+              "status": "fail",
+              "code": "AUTHORITY_INVALID",
+              "detail": "QVI credential not issued by the configured root of trust"
+            },
+            {
+              "index": 8,
+              "name": "Report reconciliation",
+              "status": "skipped",
+              "code": "",
+              "detail": "no report extract in this proof"
+            }
+          ],
+          "disclosed": {
+            "supplierLEI": "ZZZZ00TWBOLTSDEMO277",
+            "installationId": "TW-ZZZZ00TWBOLTSDEMO277-0001",
+            "unLocode": "TWKHH",
+            "cnCode": "7318",
+            "cbamRoute": "C",
+            "reportingPeriod": "2026-01-01/2026-12-31",
+            "verifiedTonnes": "600",
+            "specificEmbeddedEmissions_tCO2e_per_t": "1.8",
+            "valueType": "actual",
+            "methodologyNote": "illustrative — not official CBAM methodology",
+            "verificationReportId": "VR-FAKE-0001",
+            "verifierLEI": "ZZZZ00FAKEVERFICT143",
+            "accreditationNumber": "FAKE-ACC-CBAM-0001",
+            "nabName": "Self-Made Accreditation Body (fictional)",
+            "siteVisit": "physical",
+            "assuranceLevel": "reasonable",
+            "materialityThreshold": "5%",
+            "idSalt": "0xdaee7c699eca85c2b701c6a0d39e313989c15454d7310d75521d2d41090a6321",
+            "batchSalt": "0x5093dbce1608c91c517b2ef82c84d9cb7ae7df1643ed7193ff5ccf8d4d22deef",
+            "issuedAt": "2027-03-25T00:00:00Z",
+            "validUntil": "2027-12-31T00:00:00Z"
+          },
+          "hidden": 5,
+          "onchain": {
+            "reportKey": "0x9a426d7306a54748317c750c6b0e0cb048ebef461f837b6beadb64d787a375f7",
+            "registeredAt": "1791210504",
+            "validUntil": "1830211200",
+            "verifiedKg": "600000",
+            "verifier": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93",
+            "issuerLeiHash": "0x36e229645a7047685ac60f9c881d20d3aaed44a749e0c82a14f5fcbe8a98aa96",
+            "supersedes": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "supersededBy": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "remainingKg": "600000"
+          },
+          "primaryCode": "AUTHORITY_INVALID",
+          "checkedAt": "1791210504"
+        }
+      },
+      "evidenceFiles": [
+        {
+          "label": "Impostor auditor's KEL anchor of the impostor's credential",
+          "path": "evidence/impostor/anchor-EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6.json"
+        },
+        {
+          "label": "Impostor's authority chain (leads to its own root)",
+          "path": "evidence/impostor/authority-bundle.json"
+        },
+        {
+          "label": "Accreditation, its accreditation body → the impostor body",
+          "path": "evidence/impostor/cred-accreditation.cesr"
+        },
+        {
+          "label": "ECR credential, the impostor body → its auditor",
+          "path": "evidence/impostor/cred-ecr.cesr"
+        },
+        {
+          "label": "LE credential, its QVI → the impostor body",
+          "path": "evidence/impostor/cred-le-body.cesr"
+        },
+        {
+          "label": "LE credential, its QVI → its accreditation body",
+          "path": "evidence/impostor/cred-le-nab.cesr"
+        },
+        {
+          "label": "QVI credential, impostor's root → its QVI",
+          "path": "evidence/impostor/cred-qvi.cesr"
+        },
+        {
+          "label": "Impostor's evidence index",
+          "path": "evidence/impostor/index.json"
+        },
+        {
+          "label": "Key event log: impAuditor",
+          "path": "evidence/impostor/kel-impAuditor.json"
+        },
+        {
+          "label": "Key event log: impBody",
+          "path": "evidence/impostor/kel-impBody.json"
+        },
+        {
+          "label": "Key event log: impNab",
+          "path": "evidence/impostor/kel-impNab.json"
+        },
+        {
+          "label": "Key event log: impQvi",
+          "path": "evidence/impostor/kel-impQvi.json"
+        },
+        {
+          "label": "Key event log: impRoot",
+          "path": "evidence/impostor/kel-impRoot.json"
+        }
+      ]
+    }
   },
   "txs": [
     {
@@ -267,6 +684,42 @@
       "time": "2026-10-05T05:15:48Z",
       "result": "success",
       "gasUsed": 155449
+    },
+    {
+      "step": "impostorAddVerifier",
+      "label": "Attack 4 (simulated owner-key compromise): impostor body added to the allowlist",
+      "hash": "0x5e966227967fc35ce882364fc9c5b53ef14af8b9f9253dcb9d63b42400ad3d5b",
+      "block": 11849376,
+      "time": "2026-10-05T14:28:00Z",
+      "result": "success",
+      "gasUsed": 163521
+    },
+    {
+      "step": "impostorAddAuditor",
+      "label": "Attack 4 (simulated owner-key compromise): impostor's auditor added",
+      "hash": "0x6282a006f73ce95bde47f0e92aab8841975456e918edaace0e737993dcaa4376",
+      "block": 11849377,
+      "time": "2026-10-05T14:28:12Z",
+      "result": "success",
+      "gasUsed": 75107
+    },
+    {
+      "step": "impostorRegister",
+      "label": "Attack 4: impostor registers its own report — accepted (status 1)",
+      "hash": "0x295abe6cb63e3df44e942b07397ba926dcff815a6e1e2e05870f21d0dc3d0013",
+      "block": 11849378,
+      "time": "2026-10-05T14:28:24Z",
+      "result": "success",
+      "gasUsed": 368616
+    },
+    {
+      "step": "impostorSuspend",
+      "label": "Attack 4: watcher suspends the impostor body",
+      "hash": "0x61431e780afea4c1cad3c12af6406955f42a0e6b93c32d9198e2701e9f96dd99",
+      "block": 11849379,
+      "time": "2026-10-05T14:28:36Z",
+      "result": "success",
+      "gasUsed": 30750
     }
   ],
   "trustChain": [
@@ -391,8 +844,8 @@
     ]
   },
   "cached": {
-    "block": 11848813,
-    "time": "2026-10-05T12:27:48Z",
+    "block": 11849384,
+    "time": "2026-10-05T14:29:36Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {
@@ -519,6 +972,12 @@
         "args": [
           "300000",
           "400000"
+        ]
+      },
+      "impostorAfterSuspension": {
+        "errorName": "NotActiveVerifier",
+        "args": [
+          "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93"
         ]
       }
     }

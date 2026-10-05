@@ -44,6 +44,51 @@
       "time": "2026-10-05T05:15:48Z",
       "result": "success",
       "gasUsed": 155449
+    },
+    {
+      "step": "fundImpostor",
+      "label": "Attack 4: test ETH sent to the impostor's wallet",
+      "hash": "0x5ef8922601e7b9e2b7010de8e6e4fa62826987209b1f232f7f43227ae5afa5bb",
+      "block": 11849375,
+      "time": "2026-10-05T14:27:48Z",
+      "result": "success",
+      "gasUsed": 21000
+    },
+    {
+      "step": "impostorAddVerifier",
+      "label": "Attack 4 (simulated owner-key compromise): impostor body added to the allowlist",
+      "hash": "0x5e966227967fc35ce882364fc9c5b53ef14af8b9f9253dcb9d63b42400ad3d5b",
+      "block": 11849376,
+      "time": "2026-10-05T14:28:00Z",
+      "result": "success",
+      "gasUsed": 163521
+    },
+    {
+      "step": "impostorAddAuditor",
+      "label": "Attack 4 (simulated owner-key compromise): impostor's auditor added",
+      "hash": "0x6282a006f73ce95bde47f0e92aab8841975456e918edaace0e737993dcaa4376",
+      "block": 11849377,
+      "time": "2026-10-05T14:28:12Z",
+      "result": "success",
+      "gasUsed": 75107
+    },
+    {
+      "step": "impostorRegister",
+      "label": "Attack 4: impostor registers its own report — accepted (status 1)",
+      "hash": "0x295abe6cb63e3df44e942b07397ba926dcff815a6e1e2e05870f21d0dc3d0013",
+      "block": 11849378,
+      "time": "2026-10-05T14:28:24Z",
+      "result": "success",
+      "gasUsed": 368616
+    },
+    {
+      "step": "impostorSuspend",
+      "label": "Attack 4: watcher suspends the impostor body",
+      "hash": "0x61431e780afea4c1cad3c12af6406955f42a0e6b93c32d9198e2701e9f96dd99",
+      "block": 11849379,
+      "time": "2026-10-05T14:28:36Z",
+      "result": "success",
+      "gasUsed": 30750
     }
   ]
 }

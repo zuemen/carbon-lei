@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-10-05T14:27:16.750Z",
+  "trustAnchor": "ED3pLymCukZNFEncvRm5sPFzn-IfrolUxC4M01OGdMGx",
+  "credentials": {
+    "qvi": {
+      "said": "EKxyMvin1T6qm3Ox1ubuRBkdbcnKhfh08ZDMR_tBYEg6",
+      "schema": "QVI",
+      "issuer": "impRoot",
+      "issuee": "impQvi",
+      "file": "cred-qvi.cesr",
+      "bytes": 6631,
+      "sha256": "2d1ce40d3447c8a558598fb2db916c93a0aa7233dd0eae66f808b1d6c3edcdec"
+    },
+    "leNab": {
+      "said": "EPcq6bIee6jf2fa-MZrsAcf4PobpaeAKtu12UG1tvwna",
+      "schema": "LE",
+      "issuer": "impQvi",
+      "issuee": "impNab",
+      "file": "cred-le-nab.cesr",
+      "bytes": 14335,
+      "sha256": "d2742d48b72c772dda9085ec1e6f502ebe37f1d815127ca6b736f5c609a77515"
+    },
+    "leBody": {
+      "said": "ELjrkQt4T-XawS3yxu1HquFcjfLbXt5tagWYkXlrNjam",
+      "schema": "LE",
+      "issuer": "impQvi",
+      "issuee": "impBody",
+      "file": "cred-le-body.cesr",
+      "bytes": 14335,
+      "sha256": "fa2c48011799e8bd18ff7b94e03ca5242e9a5f8f316065d712bd43fffba2bec7"
+    },
+    "accreditation": {
+      "said": "ECwrZIam_Xp7oi0uZeekhXc7mlJZ49l_dUegjARPGXvo",
+      "schema": "CBAMVerifierAccreditation",
+      "issuer": "impNab",
+      "issuee": "impBody",
+      "file": "cred-accreditation.cesr",
+      "bytes": 20891,
+      "sha256": "67d1a831dfb5e10d2d61568c54dde89bf9a7a68d4eece3c6a51ca41e6f665497"
+    },
+    "ecr": {
+      "said": "EPFRV8nOzNKG2l4zHeemDHMJLy4zqk1t-X4Rfizyhh-e",
+      "schema": "ECR",
+      "issuer": "impBody",
+      "issuee": "impAuditor",
+      "file": "cred-ecr.cesr",
+      "bytes": 21059,
+      "sha256": "eb4200461457a26ec124d742f22f37a9fcea5f42b834495a1ca07a67796d2bb5"
+    }
+  },
+  "kels": {
+    "impRoot": {
+      "aid": "ED3pLymCukZNFEncvRm5sPFzn-IfrolUxC4M01OGdMGx",
+      "events": 3,
+      "file": "kel-impRoot.json",
+      "bytes": 2881,
+      "sha256": "ba03aebed0b6746f4d60f22121003f7d57f94b9cff3f81df65acbb8b5362b114"
+    },
+    "impQvi": {
+      "aid": "EFD-DL4CaEcEquVMzqzbVIgw2kSafqL-vA2R05uJRubO",
+      "events": 4,
+      "file": "kel-impQvi.json",
+      "bytes": 3781,
+      "sha256": "4abfd6d00e8f4a3bc4f529ec7f8788c9b577594fc2427ff139a9ba654e0c4281"
+    },
+    "impNab": {
+      "aid": "EIa1ssy7HmmBzNp3MBjYkz75bTxi9b_AX_kzPr1FXhwt",
+      "events": 3,
+      "file": "kel-impNab.json",
+      "bytes": 2881,
+      "sha256": "aba18b9066413d1d1fe743ab4703300e380ec5ed839ebc03a2253cb74c67e1ed"
+    },
+    "impBody": {
+      "aid": "EKn5CqAE5eK8n7NuNXvaYYiy1KKMS5dTIoMCvESn1jKf",
+      "events": 3,
+      "file": "kel-impBody.json",
+      "bytes": 2881,
+      "sha256": "01bba0e8c1a74da8185c42e0c8acc452690c898e7bdfa909c5c3598633d500f4"
+    },
+    "impAuditor": {
+      "aid": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK",
+      "events": 2,
+      "file": "kel-impAuditor.json",
+      "bytes": 1898,
+      "sha256": "b4ca80515e0e4c931ba6d5b67f625c4d3cf672c91322e4c4e53dd4e4bf09ef57"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "note": "Interaction event in the auditor's KEL anchoring a credential SAID. Verify: SAID = Blake3-256 over `raw` with `d` replaced by 44 '#'; signature = Ed25519 over the UTF-8 bytes of `raw`.",
+  "credSAID": "EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6",
+  "auditor": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK",
+  "kelSeq": 1,
+  "event": {
+    "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"ED4b4o2fiyQ-6wg7edSxaO3Py8dN_g8v7hEl7Ei8trhe\",\"i\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"s\":\"1\",\"p\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"a\":[{\"d\":\"EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6\"}]}",
+    "said": "ED4b4o2fiyQ-6wg7edSxaO3Py8dN_g8v7hEl7Ei8trhe",
+    "type": "ixn",
+    "sn": "1",
+    "prior": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK",
+    "seals": [
+      {
+        "d": "EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6"
+      }
+    ]
+  },
+  "signatures": [
+    {
+      "qb64": "AADJ14Q5cRG8mRn12Iz4ZfZwmsuZ1AQUmXP-A1Xv3-gN2nfF_lJDe904oXkaR4Ot-HlPdjYw6MvMnPBdt_t9nZ8P",
+      "index": 0,
+      "hex": "c9d784397111bc9919f5d88cf865f6709acb99d404149973fe0355efdfe80dda77c5fe52437bdd38a1791a4783adf8794f763630e8cbcc9cf05db7fb7d9d9f0f"
+    }
+  ],
+  "signingKeys": [
+    {
+      "qb64": "DIKu1niqjMzE7h5NPadgM1WSdtC3V3hfuudh7ngms05H",
+      "hex": "82aed678aa8cccc4ee1e4d3da76033559276d0b757785fbae761ee7826b34e47"
+    }
+  ],
+  "signingThreshold": "1",
+  "establishmentEvent": {
+    "sn": "0",
+    "said": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK"
+  },
+  "kelAttachment": "-VBU-AABAADJ14Q5cRG8mRn12Iz4ZfZwmsuZ1AQUmXP-A1Xv3-gN2nfF_lJDe904oXkaR4Ot-HlPdjYw6MvMnPBdt_t9nZ8P-BACAAAF_6LmxHHIN_CTDXg_JJL9GRBnAX6Q4atNpGPpPGTFxAXZjhalPjovAqf4REo8P6Z6dMLMQ1_XXplqWueE3cYCABDLb4EbVJ7WyK_0bUkGudPqtbYa1QCRv50OdGtSEt3oDRK4pwpdNiFPPbZ7W1XNV2LjUU4MEi-t0fwoQPChTxUB-EAB0AAAAAAAAAAAAAAAAAAAAAAB1AAG2026-10-05T14c27c12d690912p00c00",
+  "checks": {
+    "saidRecomputed": true,
+    "sizeMatchesVersion": true,
+    "signatureValid": true,
+    "matchesSubmittedEvent": true
+  },
+  "exportedAt": "2026-10-05T14:27:13.081Z"
+}

@@ -1,0 +1,111 @@
+{
+  "note": "Verification of the impostor's proof (attack 4) with the pinned root of trust, recorded by scripts/demo-scenario.ts impostorVerify.",
+  "block": 11849378,
+  "time": "2026-10-05T14:28:24Z",
+  "suspendedBefore": false,
+  "verification": {
+    "overall": "INVALID",
+    "checks": [
+      {
+        "index": 0,
+        "name": "Structure",
+        "status": "pass",
+        "code": "",
+        "detail": ""
+      },
+      {
+        "index": 1,
+        "name": "Credential integrity (SAID)",
+        "status": "pass",
+        "code": "",
+        "detail": "credential ID matches its content"
+      },
+      {
+        "index": 2,
+        "name": "Disclosed fields",
+        "status": "pass",
+        "code": "",
+        "detail": "21 fields disclosed, 5 hidden by supplier"
+      },
+      {
+        "index": 3,
+        "name": "Issuer signature",
+        "status": "pass",
+        "code": "",
+        "detail": "signed by 0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93"
+      },
+      {
+        "index": 4,
+        "name": "On-chain report",
+        "status": "pass",
+        "code": "",
+        "detail": "registered by an authorized auditor (checked by the contract at registration)"
+      },
+      {
+        "index": 5,
+        "name": "Shipment claim",
+        "status": "skipped",
+        "code": "",
+        "detail": "no shipment in this proof"
+      },
+      {
+        "index": 6,
+        "name": "Auditor anchor (KEL)",
+        "status": "pass",
+        "code": "",
+        "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
+      },
+      {
+        "index": 7,
+        "name": "Authority chain (vLEI)",
+        "status": "fail",
+        "code": "AUTHORITY_INVALID",
+        "detail": "QVI credential not issued by the configured root of trust"
+      },
+      {
+        "index": 8,
+        "name": "Report reconciliation",
+        "status": "skipped",
+        "code": "",
+        "detail": "no report extract in this proof"
+      }
+    ],
+    "disclosed": {
+      "supplierLEI": "ZZZZ00TWBOLTSDEMO277",
+      "installationId": "TW-ZZZZ00TWBOLTSDEMO277-0001",
+      "unLocode": "TWKHH",
+      "cnCode": "7318",
+      "cbamRoute": "C",
+      "reportingPeriod": "2026-01-01/2026-12-31",
+      "verifiedTonnes": "600",
+      "specificEmbeddedEmissions_tCO2e_per_t": "1.8",
+      "valueType": "actual",
+      "methodologyNote": "illustrative — not official CBAM methodology",
+      "verificationReportId": "VR-FAKE-0001",
+      "verifierLEI": "ZZZZ00FAKEVERFICT143",
+      "accreditationNumber": "FAKE-ACC-CBAM-0001",
+      "nabName": "Self-Made Accreditation Body (fictional)",
+      "siteVisit": "physical",
+      "assuranceLevel": "reasonable",
+      "materialityThreshold": "5%",
+      "idSalt": "0xdaee7c699eca85c2b701c6a0d39e313989c15454d7310d75521d2d41090a6321",
+      "batchSalt": "0x5093dbce1608c91c517b2ef82c84d9cb7ae7df1643ed7193ff5ccf8d4d22deef",
+      "issuedAt": "2027-03-25T00:00:00Z",
+      "validUntil": "2027-12-31T00:00:00Z"
+    },
+    "hidden": 5,
+    "onchain": {
+      "reportKey": "0x9a426d7306a54748317c750c6b0e0cb048ebef461f837b6beadb64d787a375f7",
+      "registeredAt": "1791210504",
+      "validUntil": "1830211200",
+      "verifiedKg": "600000",
+      "verifier": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93",
+      "issuerLeiHash": "0x36e229645a7047685ac60f9c881d20d3aaed44a749e0c82a14f5fcbe8a98aa96",
+      "supersedes": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "supersededBy": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "remainingKg": "600000"
+    },
+    "primaryCode": "AUTHORITY_INVALID",
+    "checkedAt": "1791210504"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "note": "Attack 4: a vLEI chain the impostor verification body built for itself on the local KERIA stack. Its root is the impostor's own AID, not the pinned root of trust, so check 7 rejects it. Fictional identities; LEIs use the ZZZZ prefix. Passcodes are kept out of this file.",
+  "createdAt": "2026-10-05T14:25:43.203Z",
+  "updatedAt": "2026-10-05T14:26:20.517Z",
+  "stack": {
+    "keria": "weboftrust/keria:0.4.0",
+    "witness": "weboftrust/keri:1.2.13",
+    "schemaServer": "gleif/vlei:1.0.3",
+    "client": "signify-ts@0.4.0"
+  },
+  "witnesses": {
+    "ids": [
+      "BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha",
+      "BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM",
+      "BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX"
+    ],
+    "toad": 2
+  },
+  "trustAnchor": "ED3pLymCukZNFEncvRm5sPFzn-IfrolUxC4M01OGdMGx",
+  "schemas": {
+    "QVI": "EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao",
+    "LE": "ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY",
+    "ECR": "EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw",
+    "CBAMVerifierAccreditation": "EIyPVSpzpiV8PXfxjAhPdESlnvpUGZtBLeZ1jaoVRt8G"
+  },
+  "agents": {
+    "impRoot": {
+      "name": "Self-Made Root",
+      "role": "the impostor's own root, not the pinned root of trust",
+      "lei": null,
+      "aid": "ED3pLymCukZNFEncvRm5sPFzn-IfrolUxC4M01OGdMGx",
+      "oobi": "http://keria:3902/oobi/ED3pLymCukZNFEncvRm5sPFzn-IfrolUxC4M01OGdMGx/agent/EF-YJleb-qqTmgtLekiWGhV07RExlWoGyGepAmDvMCBC"
+    },
+    "impQvi": {
+      "name": "Self-Made QVI",
+      "role": "Qualified vLEI Issuer under the impostor's own root",
+      "lei": "ZZZZ00FAKEQVIFICT158",
+      "aid": "EFD-DL4CaEcEquVMzqzbVIgw2kSafqL-vA2R05uJRubO",
+      "oobi": "http://keria:3902/oobi/EFD-DL4CaEcEquVMzqzbVIgw2kSafqL-vA2R05uJRubO/agent/EPmLlrefAF4GVlmQ9Py6tOi84r3boRpLAo_kI1iMkaY9"
+    },
+    "impNab": {
+      "name": "Self-Made Accreditation Body",
+      "role": "accreditation body under the impostor's own root",
+      "lei": "ZZZZ00FAKENABFICT158",
+      "aid": "EIa1ssy7HmmBzNp3MBjYkz75bTxi9b_AX_kzPr1FXhwt",
+      "oobi": "http://keria:3902/oobi/EIa1ssy7HmmBzNp3MBjYkz75bTxi9b_AX_kzPr1FXhwt/agent/EAXCiNjXOQkXQRnMiA6qUNhvlh4UvdTsFyn1uxtj_wL1"
+    },
+    "impBody": {
+      "name": "Demo Impostor Verifier",
+      "role": "impostor verification body",
+      "lei": "ZZZZ00FAKEVERFICT143",
+      "aid": "EKn5CqAE5eK8n7NuNXvaYYiy1KKMS5dTIoMCvESn1jKf",
+      "oobi": "http://keria:3902/oobi/EKn5CqAE5eK8n7NuNXvaYYiy1KKMS5dTIoMCvESn1jKf/agent/ENC_EbffxsxF9V04W5e1usYl0iwJVK6532jjUFEEpXy6"
+    },
+    "impAuditor": {
+      "name": "Max Demo",
+      "role": "CBAM Lead Auditor",
+      "lei": null,
+      "aid": "EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK",
+      "oobi": "http://keria:3902/oobi/EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK/agent/EOTJZnYaoTg7D7rmyC827no9uTK-VJP1d84JEHTQ6EjE"
+    }
+  },
+  "credentials": {
+    "qvi": {
+      "said": "EKxyMvin1T6qm3Ox1ubuRBkdbcnKhfh08ZDMR_tBYEg6",
+      "schema": "QVI",
+      "issuer": "impRoot",
+      "issuee": "impQvi"
+    },
+    "leNab": {
+      "said": "EPcq6bIee6jf2fa-MZrsAcf4PobpaeAKtu12UG1tvwna",
+      "schema": "LE",
+      "issuer": "impQvi",
+      "issuee": "impNab"
+    },
+    "leBody": {
+      "said": "ELjrkQt4T-XawS3yxu1HquFcjfLbXt5tagWYkXlrNjam",
+      "schema": "LE",
+      "issuer": "impQvi",
+      "issuee": "impBody"
+    },
+    "accreditation": {
+      "said": "ECwrZIam_Xp7oi0uZeekhXc7mlJZ49l_dUegjARPGXvo",
+      "schema": "CBAMVerifierAccreditation",
+      "issuer": "impNab",
+      "issuee": "impBody",
+      "edge": "nab",
+      "parent": "EPcq6bIee6jf2fa-MZrsAcf4PobpaeAKtu12UG1tvwna"
+    },
+    "ecr": {
+      "said": "EPFRV8nOzNKG2l4zHeemDHMJLy4zqk1t-X4Rfizyhh-e",
+      "schema": "ECR",
+      "issuer": "impBody",
+      "issuee": "impAuditor",
+      "edge": "le",
+      "parent": "ELjrkQt4T-XawS3yxu1HquFcjfLbXt5tagWYkXlrNjam",
+      "privacy": true
+    }
+  }
+}
