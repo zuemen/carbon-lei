@@ -1,0 +1,96 @@
+{
+  "generatedAt": "2026-10-05T04:34:38.697Z",
+  "credentials": {
+    "qvi": {
+      "said": "EAK_NBUr6LeB8DFkLPMv0cJyvF_ckjr-rJEPWxnKH_gm",
+      "schema": "QVI",
+      "issuer": "geda",
+      "issuee": "qvi",
+      "file": "cred-qvi.cesr",
+      "bytes": 7373,
+      "sha256": "a62f0ed305d39347fd057437f43037fb498bed47e62321b586e907a3793af715"
+    },
+    "leNab": {
+      "said": "EGh9pElHjo-eBi0IQsn77dwNBj9dzjzBZjIuG4XSpKZ3",
+      "schema": "LE",
+      "issuer": "qvi",
+      "issuee": "nab",
+      "file": "cred-le-nab.cesr",
+      "bytes": 15819,
+      "sha256": "ac3279ecff22ce257a7522edb8d5e7ad97ed80be631fe13e06a61488fa4e3727"
+    },
+    "leVerifier": {
+      "said": "EF7MIyN2Gwo4vxzSGMhkBsqRcak62_9W45XARjVxtAas",
+      "schema": "LE",
+      "issuer": "qvi",
+      "issuee": "verifier",
+      "file": "cred-le-verifier.cesr",
+      "bytes": 15819,
+      "sha256": "12a92332aae878c82ddee0596fa6e726dde7cc58c340cbc57cd5da6349424e77"
+    },
+    "leSupplier": {
+      "said": "EPk_jUxG4uuO-argTcGs4tpjYk6yJZKoZaBf88RGrD8b",
+      "schema": "LE",
+      "issuer": "qvi",
+      "issuee": "supplier",
+      "file": "cred-le-supplier.cesr",
+      "bytes": 14335,
+      "sha256": "019db7e99d3acc0deabe23f7fbe94f52e99b1f46e50ca9a77144b642a01a92f2"
+    },
+    "accreditation": {
+      "said": "EFNX1xtexKD7MfhPZf3fVQAZvRZXvwO9tTw-W_iLXZJC",
+      "schema": "CBAMVerifierAccreditation",
+      "issuer": "nab",
+      "issuee": "verifier",
+      "file": "cred-accreditation.cesr",
+      "bytes": 22375,
+      "sha256": "3cf88e344872995c3957cd4ebab6b3aa17ca6dc51baf3c497c9ba28f094fc3dc"
+    },
+    "ecr": {
+      "said": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
+      "schema": "ECR",
+      "issuer": "verifier",
+      "issuee": "auditor",
+      "file": "cred-ecr.cesr",
+      "bytes": 22544,
+      "sha256": "c1ecd2e0c0eebd4824baa95ce79dc29f4e67697a9023377c0c7954697fdf19f3"
+    }
+  },
+  "kels": {
+    "geda": {
+      "aid": "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB",
+      "events": 3,
+      "file": "kel-geda.json",
+      "bytes": 2881,
+      "sha256": "db82e22ec408f4e3d5de9a608bc3b2f7cd8be0606ec07a9d107f3b43e0f85b87"
+    },
+    "qvi": {
+      "aid": "EGrp3F8ux8ZLAlGsLtQnGO8mcIpOFuUdlMHw6iTRBz2T",
+      "events": 5,
+      "file": "kel-qvi.json",
+      "bytes": 4681,
+      "sha256": "bbc31b6785ec5a1f39ed0aefa90b27e22ed7e34719f5a968b9b2f30a99913c9b"
+    },
+    "nab": {
+      "aid": "EEAIbtVAJ0knWhSZuTBn8u8HBuqg8I_CTAhIF_s9wGIV",
+      "events": 3,
+      "file": "kel-nab.json",
+      "bytes": 2881,
+      "sha256": "36a9e84f4bba59f69b08fc9f033ecbd22d4f3b02dff6c2e69e3193b84657914e"
+    },
+    "verifier": {
+      "aid": "EB_Z75CkiUqrBb1C0KH6-yQL3lRUXJJzwhz6Q9aXi8vy",
+      "events": 3,
+      "file": "kel-verifier.json",
+      "bytes": 2881,
+      "sha256": "a86269ca5924d25863590a0ae113d57ce93b639ffd930eb52f6735b808c991d6"
+    },
+    "auditor": {
+      "aid": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE",
+      "events": 2,
+      "file": "kel-auditor.json",
+      "bytes": 1898,
+      "sha256": "f70da3f865f57ef69ca3f0db3f895378b4bbae09c71b1330b284140f601e76ed"
+    }
+  }
+}

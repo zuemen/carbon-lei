@@ -3,7 +3,9 @@
 // fixtures/vlei.json and fixtures/evidence/*, plus a snapshot of on-chain reads taken now.
 //
 // Usage: node scripts/build-demo-data.ts --network local|sepolia [--rpc <url>] [--out demo/public/demo-data.json]
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import { parseCesr } from "../sdk/vlei.ts";
+import { sha256Hex, vleiCheckers } from "../sdk/checkers.ts";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { getAddress } from "viem";
@@ -328,11 +330,26 @@ export async function buildDemoData(network: NetworkName, rpcArg?: string): Prom
     shipmentDate: SHIPMENT_1.shipmentDate as string,
     importerSalt: credFile.importerSalt as Hex,
   };
+  // Check 6: the anchor event plus the auditor's inception event (binds the signing key to the AID).
+  const anchorEvidence = anchorName ? readJson<any>(resolve(EVIDENCE_DIR, anchorName)) : null;
+  if (anchorEvidence && !anchorEvidence.establishmentRaw && evidenceSrc.includes("cred-ecr.cesr")) {
+    const icp = parseCesr(readFileSync(resolve(EVIDENCE_DIR, "cred-ecr.cesr"), "utf8")).find(
+      (m) => m.ked.t === "icp" && m.ked.i === anchorEvidence.auditor,
+    );
+    if (icp) anchorEvidence.establishmentRaw = icp.raw;
+  }
+  // Check 7: the credential chain travels as a hashed reference to the bundle served next to the page.
+  const bundleName = evidenceSrc.find((f) => f === "authority-bundle.json");
   const proof: Presentation = {
     ...present(cred, DEMO_DISCLOSURE, shipment),
-    ...(anchorName ? { anchorEvidence: readJson(resolve(EVIDENCE_DIR, anchorName)) } : {}),
-    ...(authorityName && authorityName !== "index.json"
-      ? { authorityEvidence: readJson(resolve(EVIDENCE_DIR, authorityName)) }
+    ...(anchorEvidence ? { anchorEvidence } : {}),
+    ...(bundleName
+      ? {
+          authorityEvidence: {
+            bundle: `evidence/${bundleName}`,
+            sha256: sha256Hex(readFileSync(resolve(EVIDENCE_DIR, bundleName), "utf8")),
+          },
+        }
       : {}),
   };
 
@@ -357,7 +374,10 @@ export async function buildDemoData(network: NetworkName, rpcArg?: string): Prom
 
   // ---- cached snapshot
   const head = await reader.client.getBlock();
-  const verification = await verifyPresentation(proof, reader, { importerEORI: IMPORTER_1.eori });
+  const verification = await verifyPresentation(proof, reader, {
+    importerEORI: IMPORTER_1.eori,
+    checkers: vleiCheckers({ loadBundle: async (p) => readFileSync(resolve(EVIDENCE_DIR, p.replace(/^evidence\//, "")), "utf8") }),
+  });
   const ship = await reader.shipmentStatus(claim1[1]);
   const dry = async (args: readonly [Hex, Hex, bigint, Hex]) => {
     const r = await reader.dryRun("claimShipment", args, addresses.supplier);

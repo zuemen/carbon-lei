@@ -46,7 +46,9 @@ test("E3 the three attacks are rejected with the right reasons", async ({ page }
   await expect(page.getByText(/Reverted: BatchAlreadyClaimed/)).toBeVisible();
   await page.getByRole("button", { name: /Claim \d+ t more/ }).click();
   await expect(page.getByText(/Reverted: ExceedsVerifiedTonnage — .*\(300 t left, 400 t requested\)/)).toBeVisible();
-  await expect(page.getByText(/AuditorNotAuthorized/).first()).toBeVisible();
+  const data = await (await page.request.get("demo-data.json")).json();
+  if (data.attacks.attack3) await expect(page.getByText(/AuditorNotAuthorized/).first()).toBeVisible();
+  else await expect(page.getByText("not recorded yet")).toBeVisible();
 });
 
 test("E5 primary RPC down → switches to the backup node", async ({ page }) => {

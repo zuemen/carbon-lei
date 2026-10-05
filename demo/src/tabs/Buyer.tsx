@@ -113,7 +113,7 @@ export function Buyer() {
             >
               Load the demo proof
             </button>
-            <button className="btn" disabled={running || !proofText} onClick={() => run(proofText)}>
+            <button className="btn" disabled={running || !proofText || (!reader && !offline)} onClick={() => run(proofText)}>
               {running ? "Verifying…" : "Verify"}
             </button>
           </div>

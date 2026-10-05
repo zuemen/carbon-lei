@@ -13,6 +13,7 @@ export function Attacks() {
   const [busy, setBusy] = useState("");
   const a3 = data.attacks.attack3;
   const reg = data.txs.find((t) => t.step === "registerReport1");
+  const waiting = !reader && !offline;
   const revoke = data.txs.find((t) => t.step === "revokeAuditor");
 
   async function attack1() {
@@ -77,6 +78,11 @@ export function Attacks() {
         title="Try to break it"
         lede="Three attacks. Each one says how it is checked: in your browser, as a dry run against the live contract, or as a real transaction recorded on Sepolia."
       />
+      {waiting && (
+        <p className="conn" role="status">
+          Connecting to Sepolia… the attack buttons unlock when the connection is ready.
+        </p>
+      )}
       <section className="sheet reveal" aria-label="Attacks">
         <div className="attack">
           <div>
@@ -84,7 +90,7 @@ export function Attacks() {
             <div className="how">Checked in your browser — no contract call</div>
             <p className="fine">The supplier's proof says 1.8 tCO2e/t. We change it to 1.2 and check the proof again.</p>
           </div>
-          <button className="btn" disabled={busy === "a1"} onClick={attack1}>
+          <button className="btn" disabled={busy === "a1" || waiting} onClick={attack1}>
             Change one disclosed number
           </button>
           <Result id="a1" />
@@ -96,7 +102,7 @@ export function Attacks() {
             <div className="how">Dry run against the live Sepolia contract (eth_call) — no private key</div>
             <p className="fine">The supplier tries to sell batch {data.shipment.batchId} a second time, to another importer.</p>
           </div>
-          <button className="btn" disabled={busy === "a2a"} onClick={() => dry("a2a")}>
+          <button className="btn" disabled={busy === "a2a" || waiting} onClick={() => dry("a2a")}>
             Claim the same batch again
           </button>
           <Result id="a2a" />
@@ -111,7 +117,7 @@ export function Attacks() {
               ledger is shared by every importer.
             </p>
           </div>
-          <button className="btn" disabled={busy === "a2b"} onClick={() => dry("a2b")}>
+          <button className="btn" disabled={busy === "a2b" || waiting} onClick={() => dry("a2b")}>
             Claim {data.attacks.secondImporter.quantityTonnes} t more
           </button>
           <Result id="a2b" />
