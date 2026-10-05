@@ -14,6 +14,8 @@ import { sepolia } from "viem/chains";
 import { emissionsClaimRegistryAbi, verifierAllowlistAbi } from "./abi.ts";
 import type { Hex } from "./credential.ts";
 
+export { sepolia as SEPOLIA_CHAIN };
+
 /** Public Sepolia RPCs with CORS: primary, then backup (tested 2026-09-24). */
 export const SEPOLIA_RPCS = ["https://ethereum-sepolia-rpc.publicnode.com", "https://rpc.sepolia.ethpandaops.io"];
 /** Largest getLogs range used against public RPCs. */

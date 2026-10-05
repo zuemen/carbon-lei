@@ -1,14 +1,14 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
-import { ChainReader } from "../../sdk/chain.ts";
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { ChainReader } from "../../sdk/chain.ts";
 import { loadDemoData, type DemoData } from "./data.ts";
-import { Buyer } from "./tabs/Buyer.tsx";
-import { Supplier } from "./tabs/Supplier.tsx";
-import { VerificationBody } from "./tabs/VerificationBody.tsx";
-import { Attacks } from "./tabs/Attacks.tsx";
-import { TrustChain } from "./tabs/TrustChain.tsx";
-import { OnchainProof } from "./tabs/OnchainProof.tsx";
+
+// Tabs and the chain client load on demand, so the first screen needs only the page shell.
+const Buyer = lazy(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
+const Supplier = lazy(() => import("./tabs/Supplier.tsx").then((m) => ({ default: m.Supplier })));
+const VerificationBody = lazy(() => import("./tabs/VerificationBody.tsx").then((m) => ({ default: m.VerificationBody })));
+const Attacks = lazy(() => import("./tabs/Attacks.tsx").then((m) => ({ default: m.Attacks })));
+const TrustChain = lazy(() => import("./tabs/TrustChain.tsx").then((m) => ({ default: m.TrustChain })));
+const OnchainProof = lazy(() => import("./tabs/OnchainProof.tsx").then((m) => ({ default: m.OnchainProof })));
 
 export const TABS = [
   { id: "verification-body", label: "Verification body", short: "Body" },
@@ -56,13 +56,23 @@ function tabFromHash(): TabId {
   return (TABS.find((t) => t.id === h)?.id ?? "buyer") as TabId;
 }
 
+/** One JSON-RPC call with a timeout; no client library needed for the first screen. */
 async function probe(rpc: string, ms: number): Promise<boolean> {
-  const client = createPublicClient({ transport: http(rpc, { timeout: ms, retryCount: 0 }) });
+  const ctrl = new AbortController();
+  const t = window.setTimeout(() => ctrl.abort(), ms);
   try {
-    await client.getBlockNumber();
-    return true;
+    const res = await fetch(rpc, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }),
+      signal: ctrl.signal,
+    });
+    const body = (await res.json()) as { result?: string };
+    return res.ok && typeof body.result === "string";
   } catch {
     return false;
+  } finally {
+    window.clearTimeout(t);
   }
 }
 
@@ -98,7 +108,9 @@ export function App() {
         if (await probe(rpc, 7000)) {
           if (attempt.current !== my) return;
           const ordered = [rpc, ...d.network.rpcs.filter((r) => r !== rpc)];
-          setReader(ChainReader.forRpc(d.deployment, ordered, d.network.chainId === 11155111 ? sepolia : undefined));
+          const { ChainReader: Reader, SEPOLIA_CHAIN } = await import("../../sdk/chain.ts");
+          if (attempt.current !== my) return;
+          setReader(Reader.forRpc(d.deployment, ordered, d.network.chainId === 11155111 ? SEPOLIA_CHAIN : undefined));
           setConn({ kind: "live", rpc, switched: i > 0 });
           return;
         }
@@ -233,12 +245,14 @@ export function App() {
       )}
 
       <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="wrap">
-        {tab === "verification-body" && <VerificationBody />}
-        {tab === "supplier" && <Supplier />}
-        {tab === "buyer" && <Buyer />}
-        {tab === "try-to-break-it" && <Attacks />}
-        {tab === "trust-chain" && <TrustChain />}
-        {tab === "on-chain-proof" && <OnchainProof />}
+        <Suspense fallback={<p aria-live="polite">Loading…</p>}>
+          {tab === "verification-body" && <VerificationBody />}
+          {tab === "supplier" && <Supplier />}
+          {tab === "buyer" && <Buyer />}
+          {tab === "try-to-break-it" && <Attacks />}
+          {tab === "trust-chain" && <TrustChain />}
+          {tab === "on-chain-proof" && <OnchainProof />}
+        </Suspense>
       </main>
 
       <footer className="wrap">
