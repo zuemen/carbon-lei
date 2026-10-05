@@ -134,7 +134,7 @@ export function Buyer() {
             <div className="btn-row">
               <button
                 className="btn btn-ghost"
-                disabled={running}
+                disabled={running || (!reader && !offline)}
                 onClick={() => {
                   try {
                     const p = tamperedProof(JSON.parse(proofText) as Presentation);

@@ -14,17 +14,17 @@
     "chainId": 11155111,
     "contracts": {
       "VerifierAllowlist": {
-        "address": "0x70aA4b15b5dA8daCE15E8504577736DDE632A82B",
-        "block": 11846437
+        "address": "0xF7AD0cbe867eb9CE4847Af3717C2d27f6434Ea5C",
+        "block": 11846766
       },
       "EmissionsClaimRegistry": {
-        "address": "0x72152A40f91C4357Ed53635C3fd3C41D023D78ba",
-        "block": 11846437
+        "address": "0xEA52a50d3753bACD835DCd47892754b65a90ca19",
+        "block": 11846766
       }
     },
     "deployTxs": {
-      "VerifierAllowlist": "0x27a9b38bc8fae65a4c8bed484aedf3d3af744e1b0c6e50ebc89acb1b15d1ce01",
-      "EmissionsClaimRegistry": "0xe4ae91dfbd5f30577f5a8c31632a2c87fc6a4502bc3be84203c6747f447fa0ff"
+      "VerifierAllowlist": "0x6937f992b2acd9354d1b43f7c85162b87ef86a50787f95f0f1c714ba13342a69",
+      "EmissionsClaimRegistry": "0xc36877c6774adf47c728c8303cd0dac0a8ed2487f72908d9083aec39fce40094"
     },
     "sourceVerified": true
   },
@@ -45,59 +45,91 @@
     "eori": "DEDEMO000000002"
   },
   "proof": {
-    "core": "{\"d\":\"EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO152\",\"auditorAID\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\"},\"digests\":[\"0npBkmrIj46y7Zy_Uu7UyHigeL0_EJ3vpX7EXBoF1iE\",\"2rk20iRjF0BdMjZdsIU5TdZSzAxeVoePlwl7VTFSB2o\",\"3KiZtcLKmWslnIpYYdEAoeMcB4L1qcGLkoPx0w2zCFs\",\"3vbSmYoz73nckTAoEFbWfhVqGynOqWNFDfr0K3m4mgY\",\"A2rVzYOpyAMMNBZS-BXTs7W9AMAkmDyUpvUpEVfH19Y\",\"B54FD0F6wE0z-1t2YBJtUs7unnLOd531huFGFBlbUpI\",\"BcVBipNUK9zGb5hRmoSqBP1l7J049B4KeNKEG-0i49U\",\"FnEzNeLpSvkS5iHWEzoeakDv6MUZEkYv6B3VQFX-yqc\",\"Hqm3yEYDAjya6y1YaQvIM6UGrY_XLTbiwcZj_EV-HPk\",\"Js2ZhhhttMBwu2ow7cSfeSrOGUfTTIr6QRp6YrLjkL8\",\"Nd_ALKy4E4U4MeBEOGZ0gw59JBmggNi-hmuP4K6hezw\",\"OqcWGdwlEE7BVdBKqJ21hmnb2S8yNQ6odEs0J7Ry8ZM\",\"SiOmYEJsHy-tHkuShzBMxDF9MV82jNv0HDtYv_vbD_Q\",\"V4I6LHUOr1lBJyCYkp8P45NOQHEgBhxO_UiaeJt1iQg\",\"XsojRXtU_RAlumPrc0yyCsjRzRMm5ar3jBb_Hjf0_xw\",\"gsPbcrgyNovDCmfW5X9j2Hw2aF4Yg8XGb0HjvmRcTMQ\",\"kEJlk93y6P0-N3GwcNDUPvLPqA17IVAGfG2LwIyZHd4\",\"kKJIOEVoSI91HHtrbzicKu3-Jinv6Bzwx9Ws1bSAtGo\",\"loEZubYCiG5xF-OIq6MLnRK-GZmW6f4OOh4vxMy8ad0\",\"mcJlYmTKkedCypGY1RqT-kczqQmxo84FirjoqXPAjo8\",\"nbVsmgv62Tu7bRZ_EebDIn0Eguq1-sB-PGuOmd-XUns\",\"oGnY1qhFH5udzBETvxM8fXi0NlNFHrN9iagtUIt4ExM\",\"qHL6YyfwT0fKMNJdHX5u2puL40OPVprJ1oYAmVHfbpQ\",\"tCAzPLoM1HHfoMd1SWugmmljGnFzdVl-Rh4T1E-4c_Y\",\"teepjSneHR3rwiAL6jb45O1IjWdIHOepLLZwjDm_h90\",\"yDiRJKtFLnVMhdOcMvRYEGztOG7MYBipd1okd-jkx3M\"],\"issuedAt\":\"2026-10-01T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
-    "signature": "0x0a2bd4bf1c46d8f04a9bcce6ea11b098737b10d7e37aa68dc57ace59b42f97200df16ce991e7e0daa86b62726ecdca014329839497e54cb3649abfa0e398b5b71c",
+    "core": "{\"d\":\"ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO152\",\"auditorAID\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\"},\"digests\":[\"06RIOmjbfRSfkSBAItfWVR5HB6hzhHt7mgrNoccSl64\",\"1NqMgPW3-33CNrr5GxrAPde3iyOINynG1v4-g9Yt27M\",\"1RNZGCEC7VOZypHUpPQnZY0LvfdL_GvqHGRVOowx5dg\",\"43FB2ZNgvBiDAbTAoSrG2SCMOC3o6z3Z052-jbOapcM\",\"4JR8Vtjm8O7yeY4QqSWkXCEn2gXtwxW7295zb7o-6RA\",\"5oki8pFZofEi0VtQZXQQa4f4vDY71v60Hi4cAYYP0GY\",\"8p1iTw5focVD9JJVlx_H72RFc7N_Qhy4FSGUtwRujgw\",\"8ruNZnzy3DpFQEyR8bdFy0EADSxdXSwUU926f-UFbjQ\",\"Ac8lSryI_gJcwiaXSQqcmhOxYEIdEt8kj9U8p-y-kv8\",\"AsU9lYzbrogLvV9k-PiNUL1O77pne_9UX49n2R5Tv4M\",\"DFqEeC9xXVDW4e_0EnaNu3DnMJl2rP8F-WKNvD2Za1c\",\"FDxkf69NYVz5lMWc_s0SwmjHBCCAFqx1Ps8nZtPrRoM\",\"FkCbJOt2POH_yd4LfGvQnlzEynt_JldmPZ9Txol27Mo\",\"Mj9Drxio5O0b6MoIoY1mBLCJqxgoEam3ReWFSMTx4Ho\",\"Pc5Y2on9DIYjunJ1-xlMrRU8SGe93cyhNt8a7Z_y0Ps\",\"R3Rr0gcgkck3_gQRh3CzmF1XRHvTdr816yXHLxgKBLs\",\"UPlIzBsdx7YAgrGM1bn9FxFLoBZhg3dcDTlx0c5G6zU\",\"aQhDbHGgVREIgJg7SzgBrdTLHU10McXdpl90OX7Rb7A\",\"fYl-b16m0ZG2mGTVP0gDVzEzaqN0QqW277Hfmeb0Zio\",\"i6Ra2GmbE7zriP1xtTc7G9iQyaYdA5Cu9b3Nyo9VTxw\",\"jin6GHFuKcD5ERjywGDeGNTHggsaldrH5I41k1glNeM\",\"kuzej1aCUFpCSkCQ5oV5n6lMWnNOzdiIkTAZB0onmdI\",\"m5g6zuesJcBjbeQQUdkwe0LsebvjyEgmDVib1pjZquo\",\"qleFmsbKd2zSRqqn7Swf4zjPh907l_C4gnDnJisH48g\",\"skGsyUMyEYsdDsJcO77bOx8xTFpqDt0HpBTZXwbBH4c\",\"srxRkU3ykoFDPGCN_3JmFm2m3-dYRHB5afN2yf-ElBY\"],\"reconciliation\":{\"inputHash\":\"0xfca6a156d6672b8a4f358a49ed3bba9bfb3ef8d1e304814749829ddc78757ac2\",\"outputHash\":\"0x6abd795738745a6fb79f395f231738e4891f3faed85dfe3ac8b26c00a9015c94\",\"ruleVersionHash\":\"0x169313d4e5424afbf611699b34adac6a61402ed907f1128723e2ed5e8dd16360\"},\"issuedAt\":\"2027-03-20T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
+    "signature": "0xfa1d2a4989e6ee44dfa533a84f7084cbbec92cd593a0bf4778d2b82703be8d8578884f800f45178496c3dcb69ab33ed348a13ae171942d2682f64d1a2991c74b1c",
     "disclosures": [
-      "WyIweGQ2Zjk1ZTQ1ZDJmZmU0Mjg1ZDM5MzI4Mzg5OTRmYjk1MmI3NzhmOTFjYmIyZjA1NjIxYTA1ZmU2NmMyMzExOTciLCJzdXBwbGllckxFSSIsIlpaWlowMFRXU0NSRVdERU1PMTg1Il0",
-      "WyIweDJmMGM3NzBkZmI1NGViZGQ1ODJkY2ZlNjNkZjkwZDhkODQ0N2JiZDRkNjZiYTljMzZmZTU4MWYyZTJkMDY5MTIiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXU0NSRVdERU1PMTg1LTAwMDEiXQ",
-      "WyIweGMzOTkyNTc2M2MzMjJjODA1ZmVmZDQ5ZjYzOGI2ZWQ3MDYwMTgwN2RhZTFlNzQzZDRiZDYwMzVlMzBiMTcxNDUiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
-      "WyIweGZmYTc1Y2QxNGRjMzdkMjczMTRhMmE5MTUzZDQ1NWZkMjA0ZTkwYzIyNjc1NmRjNTZmYWE4ZGJkZjE3NDdhNDYiLCJjbkNvZGUiLCI3MzE4Il0",
-      "WyIweGJjMWY0YjZjY2FjOTBkZGNjOTJlODZlYTU5YjM1OWJkYThhNzcyNmUyYmJmZjgxZTZjNzNkNmY1NTM0OTYzZWQiLCJjYmFtUm91dGUiLCJDIl0",
-      "WyIweDQxMTY0YzQ3ZjFiNzgxMjQyOTdmZjRkZGU5NzQ0YTg3ZmNkMDc5YWM4ZTlkOWUxYmJhODc1ZDgwZTdmZmVmNDIiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
-      "WyIweDc5NDExNWI0M2E4YTk3YWVjNmJmMWE3YTdlYTAxMjQyYjU5YjEyMjRhZmNjNTlkY2U3OWM1NjZkYmMxMmU4YjAiLCJ2ZXJpZmllZFRvbm5lcyIsIjUwMCJd",
-      "WyIweDVkYTg2ODliNDRiZjdmNmQyMDE2N2U2M2RkMGI0MTY3ZTQ3NTZlOTRjZWYxY2U3ODBkNzFjMTZlZjVlZTQ4MTgiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
-      "WyIweDNmMmM5MmM3NzRmYjg2NDcyNDExOTkwNWZkZDYwNmVmMzBjN2FhNGU4YzMwNzRiMTJjODIyODNjYjliMjFlN2MiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
-      "WyIweDliNmRhODI1MThhZTJlOGYwZDQ5MzdjYTllZDY1ZDE5NzI4NmExZGVmNjYzZWIwNTY1OTdkYTNiNjdkZmVkMTMiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
-      "WyIweDZmZDhlNWZmZDUxNTYyNzhhN2ExZTE1NTRhODhmM2EwMzA3ZDk0Yjg0ZWE4MmNlYTQ0ZDk5ZjcyMzE5YzBmNWYiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tMDAwMSJd",
-      "WyIweDFiNmQ3YzIyZDRiNjdjNmMyY2FkOGZjOGJhOWZmYzBjZmI0NGVhNWYzY2ZjNjVjOTVlMTJmNTc5MjE2ZTgwMGYiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMTUyIl0",
-      "WyIweDJjNDNhOWIyMDgxNWEyOWNjMmYxOGFjMGE5ZjY1OTk3ODBhMmI5ODQ3YWE3MjFlYjQ2NTMyYzNjYTY2ZDg1ZjIiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAxIl0",
-      "WyIweDA0Y2Y4ZjhiZGUxMTlhYTg0ZThmNDA3OTZlMzM3YTcwY2FhMzhhYzIzZTAxMzEyYTVlYzA0YTJkMzYwNTU5ZmQiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
-      "WyIweDQzYTA2ZTNjMmE3NTU2ZTM5OWU4NzYzOTc0MzlkMDM0MDE4NjlhYzQzYTI0MTgzODBmMDkxMjIyMjc2ZDNiZjYiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
-      "WyIweDU1OTlhMWI0Yzk2MGFiNGEwMTY0ZjZhZDkyMWE0N2Q0ZjNiZDk2MGI5OWE1ZTZkNmJmYjU5ZDMzMjAyZmIzNjIiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
-      "WyIweDczODc4MmYwMGJiNThkZjA0YTQzOGRiNzBhYTczY2FhN2MwMGM1MDIzNmNlNjM4N2FhNGI5MGZhNzllODQ5ZDAiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
-      "WyIweGRlZmM0OGQ0OTIyMTA5YTEzMzJiNTNkYTBhNTJhMjEwYjlkOWQ0ZjIyYzFmZmNlNzgxMmMxMDBhNDQ0OGMyZjUiLCJpZFNhbHQiLCIweGU4MjYxNDQ3ZDFhYjNlMTU1MjYzMTIyYzBkOWE5ZGZjMzJkNDJjZDI1MmNlOGUxZmMyOTBmNzBhMTVkM2Q5M2YiXQ",
-      "WyIweDkzODM4NThjOWNhYmRkZTVhYTM2OTZlNmUwYzU5NDc2MmEwOTc5ZWY4ZWQ3NTcxZWRhNjViOTUxNWQ1ODY0ZmYiLCJiYXRjaFNhbHQiLCIweGFkMGRkOGI4MWI0Y2JlOTg0N2UzYjlmY2FhZmZiYjFlZDgwNjk1ZmYyODkzMGRjY2MyNWNiMjJhOWIzOThlNGMiXQ",
-      "WyIweGI5ODM0NTFjMjc1NzlhYWFhMzdkNDIxZGU5MmQyN2U0Y2Q4NzI4YTVkNGNkODM0M2Q5NDgxMGE2ODZhN2U4MDYiLCJpc3N1ZWRBdCIsIjIwMjYtMTAtMDFUMDA6MDA6MDBaIl0",
-      "WyIweDcxZjA0MTI0YzkzZGIzOTc5MjI1N2JmNDRlNmMzZGY3NWM3NGRkNjBiNTlhYmI2NzdhMjgyNWY3ZDk5MDU5ZmQiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
+      "WyIweDliMWM2OWZlZDIwOGIyZDI1YWYzOWM0ZjVmM2VjNDZmNzZmNGMxZjcxYTM4Mjc2YjdkYzMzYWQ0ZGUxZTcxOGYiLCJzdXBwbGllckxFSSIsIlpaWlowMFRXU0NSRVdERU1PMTg1Il0",
+      "WyIweGI1MTVjNWJmMDg1ZWM4ZTAyYTA3NTFmOWVmNTU0ODI1MWQyNWQzYTU0YTZlMjkxZGZmNmU3MDAxZmI0ZTNhNjAiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXU0NSRVdERU1PMTg1LTAwMDEiXQ",
+      "WyIweDA5ZmIyNWJkNTA5NTFmMmQ5ZmY0NzljMjUyZmFkOTZjZWRiZTg2NGJkNmJlMmRmNjZiMTU1MmZhMDg0YmUyMGEiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
+      "WyIweGIxMDU3NWM4ZTYxMzdkNTQ1YTI1NGE0MGMwNTAxNmYyYWFlMGM4MjdiMWJkZjFlZWU2ODYxNDczYWM1NTU3MTEiLCJjbkNvZGUiLCI3MzE4Il0",
+      "WyIweGFlODhkN2NiNDNiNzgyYzRmY2YxODA0ZjZhNmQ1NTA4MDFkYTc3NTVmYmZhYTU1NzUyYmU5NmRmZjE1MDA1NjYiLCJjYmFtUm91dGUiLCJDIl0",
+      "WyIweDZkYTFkMzA0OTUzNDRlZDI2NjNkNmEzY2I1ODA4ZDQ2ZDE3YzYzYTI2MmMxMzU5NDAxNTk3YjFmYjc4MWNmOTEiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
+      "WyIweDNjNTg1YmU1OWIxMzhjMTM1ZjExNzRlNTAxNDY3ODRhZTVhZjhjZDA2Y2Q5NTg0MmE2NTRhZjU5NWU4YThiYzgiLCJ2ZXJpZmllZFRvbm5lcyIsIjUwMCJd",
+      "WyIweDE4NmMxMmIzMjM0NzI5ODk4MTNjZmQwNzFjYTE2NTlkMWU5MmQ2NzUwZDgwMWE0MzUwMmMyNmYwMmJhYjgzZTgiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
+      "WyIweDE4NjgyY2U0ZGVkY2QwZTQyNzQ2NmMxMDQyZmQwZWFlMzc3NDAyY2Q1OGRmMzFlMmY2NTk1N2UyN2VjZDE5YjkiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
+      "WyIweGUxNDdmOGUxNDI5MDBkMTViYTViZDVlMjQ4M2RkNzJmZjJiZjQzMWNjMjRmNTAyOGNmMDc0ZmIzOWExMmEyMmYiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
+      "WyIweDEzZGM2YjUyMDExZWYzOTQwYzdlYzU1MGE3MTQxNzc2MjU2ODk3MzFmYmFiYzM4YjFhNjMzZWY5YzhjMzk0NzEiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tMDAwMSJd",
+      "WyIweDA5OWYyNjVhYWY3ODNmMDkxMmNkYTA3OTU4ODlmOGQwYTUyYTY3M2U1MWY3MmYzYWQwMjU0ODYzY2IxODA0NzEiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMTUyIl0",
+      "WyIweDExZmRlMWVkYmFiOWM4NzJkMWY2ZDUxMjE2NDlhMjQ2MGU2NTY5NjJjYTgyZDFhYjg5Yzk2MGMwMzgwMDE4NzMiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAxIl0",
+      "WyIweDAzNjhlMDU0Nzc3ZmZjZTk1MmE1OWFiYjk5ZmU1NGYwMTc1NzdjYjhkOTQ4ZTkxOGE5YzQzODY0YWRmOWI2NDgiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
+      "WyIweDFhNjlhOTlkODlmNDA2M2RmYjg2OTI2NWQ2NTBiNzEyNzA4YzdiYTc5YzFkNjZlMzcxNjVhYjU1NTNhOTdjNzkiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
+      "WyIweGY3NmQwZjkxMDRhYzg5NTAwYWU4Y2QyYzYzZTU5NDIzZjQ0MmFkOWNkMDBjMmI2Mjk3ZWQyMzdmMmMwMGJiZDIiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
+      "WyIweGY2ZWVkOWQ4NWE2YzlkNWVjNWViMWQ4OTk1M2MzNjJjOTI5MWNlZGYwNjBlNDIxNTJmOTU0OTQzMDZhMmQ3NTQiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
+      "WyIweDY2MTI5ZmI3OGI5OTBhNGVlNGE3MzVhMDY3YmU1MmYyNDc2ZDk5NjRhZTBmZjYyZjdmMDZkY2I0ZjlmMmJmNmQiLCJpZFNhbHQiLCIweDY0MjVmYTU0M2NhZTMzZWU4NTYzMGM2MjRjMDNmMzgyYjhhOTE5OTQ3YzNlM2M3YWJjZDZmOTk0OGI4OGRhOTYiXQ",
+      "WyIweGE1MzRiNWNhOTJiODYzMThhNTAyNzZlNmMwYTI2ODBmODk2YmU5NjMwY2I1MTAxNzkwODBhNjI2ZTM4NzY1NGIiLCJiYXRjaFNhbHQiLCIweDRhZWMzNWUwODNhMDNkNTAyNDAxYTA0MzA3YmI0ZmNhODM4ZjEwMjdkNjVmYjY5NTkyODhiYmE2Y2JmZDYxNDIiXQ",
+      "WyIweGFkYTY0OThjY2NjZTUyN2ZkMTI0NWVjNDg5MzE4YTExN2E0ZjhmNzRjNDdkMzg3YmMyZDM5MDI3NGMwOTczMGYiLCJpc3N1ZWRBdCIsIjIwMjctMDMtMjBUMDA6MDA6MDBaIl0",
+      "WyIweDM1Y2YzZDFlYTY1NTVmMTcxYmRiZjYyNjYzMWJhZDNmOTkwNDlkNzdkNDdiYjAzYjUxYmY1MWJlN2MyNjA2MTEiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
     ],
     "shipment": {
       "batchId": "BATCH-DEMO-2026-0001",
       "quantityTonnes": "200",
       "shipmentDate": "2026-10-10",
-      "importerSalt": "0x8cd02f371ec1329f67e9ca62bae881b8f2be6f88f72ac2df4437223c88c59d35"
+      "importerSalt": "0x16964453c944e5940e92bfe3c22f024a5b3c52a9779c423c20da90533da30767"
+    },
+    "reportExtract": {
+      "reportId": "VR-DEMO-0001",
+      "reportingPeriod": "2026-01-01/2026-12-31",
+      "installationId": "TW-ZZZZ00TWSCREWDEMO185-0001",
+      "verifierName": "Demo Verification GmbH (fictional)",
+      "accreditationNumber": "DEMO-ACC-CBAM-0001",
+      "nabName": "Demo Accreditation Body (fictional)",
+      "accreditedUntil": "2030-12-31",
+      "accreditationScope": [
+        "CN 7318"
+      ],
+      "leadAuditor": "Lena Demo (fictional person)",
+      "siteVisit": "physical",
+      "siteVisitDates": "2027-02-08/2027-02-09",
+      "materialityThreshold": "5%",
+      "quantityPerCn": [
+        {
+          "cnCode": "7318",
+          "quantity": "500"
+        }
+      ],
+      "specificEmbeddedEmissionsPerCn": [
+        {
+          "cnCode": "7318",
+          "value": "1.8"
+        }
+      ],
+      "assuranceLevel": "reasonable",
+      "signedBy": "Lena Demo (fictional person), CBAM Lead Auditor",
+      "signedAt": "2027-03-15",
+      "firstVerifiedPeriod": true
     },
     "anchorEvidence": {
       "note": "Interaction event in the auditor's KEL anchoring a credential SAID. Verify: SAID = Blake3-256 over `raw` with `d` replaced by 44 '#'; signature = Ed25519 over the UTF-8 bytes of `raw`.",
-      "credSAID": "EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5",
+      "credSAID": "ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx",
       "auditor": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE",
-      "kelSeq": 2,
+      "kelSeq": 3,
       "event": {
-        "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EBLwah5sQV_7641r0LDcUBC4qP0IEOB8eet9Pa4kILaK\",\"i\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"s\":\"2\",\"p\":\"EG1LME0bP8PNSw2NtxwaQT4Fu4_4T4a10kHJeBw4Xcc_\",\"a\":[{\"d\":\"EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5\"}]}",
-        "said": "EBLwah5sQV_7641r0LDcUBC4qP0IEOB8eet9Pa4kILaK",
+        "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EEM7DCVuj3HB2WUX_WlXru4NvllTEtqTaIhWipkFJscu\",\"i\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"s\":\"3\",\"p\":\"EBLwah5sQV_7641r0LDcUBC4qP0IEOB8eet9Pa4kILaK\",\"a\":[{\"d\":\"ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx\"}]}",
+        "said": "EEM7DCVuj3HB2WUX_WlXru4NvllTEtqTaIhWipkFJscu",
         "type": "ixn",
-        "sn": "2",
-        "prior": "EG1LME0bP8PNSw2NtxwaQT4Fu4_4T4a10kHJeBw4Xcc_",
+        "sn": "3",
+        "prior": "EBLwah5sQV_7641r0LDcUBC4qP0IEOB8eet9Pa4kILaK",
         "seals": [
           {
-            "d": "EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5"
+            "d": "ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx"
           }
         ]
       },
       "signatures": [
         {
-          "qb64": "AAAUp-3ExVeJHJw__0msNa6q6-rRGFda8S45WYmTlVuFl-WJi_7Jp56g7XIm0kVDGu9PlClido1aNts19zG2FXwH",
+          "qb64": "AACnScXJY9enixROuc6DgbgEnBwYKdx_dBsSnzxyiyczq1QYBWnmNN8hay3ZKJr1CC5GaQgWA-N1sQj6lcJK99cK",
           "index": 0,
-          "hex": "14a7edc4c557891c9c3fff49ac35aeaaebead118575af12e39598993955b8597e5898bfec9a79ea0ed7226d245431aef4f942962768d5a36db35f731b6157c07"
+          "hex": "a749c5c963d7a78b144eb9ce8381b8049c1c1829dc7f741b129f3c728b2733ab54180569e634df216b2dd9289af5082e4669081603e375b108fa95c24af7d70a"
         }
       ],
       "signingKeys": [
@@ -111,14 +143,14 @@
         "sn": "0",
         "said": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE"
       },
-      "kelAttachment": "-VBq-AABAAAUp-3ExVeJHJw__0msNa6q6-rRGFda8S45WYmTlVuFl-WJi_7Jp56g7XIm0kVDGu9PlClido1aNts19zG2FXwH-BADAAAULnFiKSfpc1ZRgqwuTrUORne0-d9tyqZEc8MQKD9PNaPBOmZlx-9YqjTi38pFB6h7bwI0i5OXdALOvXHi3dgCABCMy0vjhz78VB8YupS38QLqAk4jgx-p9uiGuub-3CHuNt1hMNsBOYpq1lAa64I9DnzbpGSRgRx20hG_SKNC1vUAACDmSJ79mSjK9F3fuVZNQOBDhPNt8HRdIuAs7oW8cgNYR3POKEUnoxPUhS4iVdYZs34SMQoXDDDlpUCLbSUQ4CIB-EAB0AAAAAAAAAAAAAAAAAAAAAAC1AAG2026-10-05T04c38c15d346982p00c00",
+      "kelAttachment": "-VBq-AABAACnScXJY9enixROuc6DgbgEnBwYKdx_dBsSnzxyiyczq1QYBWnmNN8hay3ZKJr1CC5GaQgWA-N1sQj6lcJK99cK-BADAABZcEZNuHZTJ5XXsFDlfm22SPTlgn_7ozQ_ZY4lB4pVs6_mH5OAWrBgHPBs_qTxdeMHmqmjQ18vWMWpnAljTasGABA5SkGXD2oF0GHZJtUYktkqmACv6NMJWRLotLAviMhfaS-5C2QJnwlXQweu2ZRKpcDeo2J_on40DhcQ-EAvpFkDACB2I4yv-W2bCoXMmF9RRMr5TIDrH6egpvDh8YGlcB0KiaprJQyPczi9q9-YMD46BAOR6723x9c45MnOkb5hV3AG-EAB0AAAAAAAAAAAAAAAAAAAAAAD1AAG2026-10-05T05c14c57d098417p00c00",
       "checks": {
         "saidRecomputed": true,
         "sizeMatchesVersion": true,
         "signatureValid": true,
         "matchesSubmittedEvent": true
       },
-      "exportedAt": "2026-10-05T04:38:15.988Z",
+      "exportedAt": "2026-10-05T05:14:57.796Z",
       "establishmentRaw": "{\"v\":\"KERI10JSON0001b7_\",\"t\":\"icp\",\"d\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"i\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DExo4cobvdi9zhHw95JcFgFG4fAgBJRd0P_X1sBk9GIA\"],\"nt\":\"1\",\"n\":[\"EBxQ-LcVr0-pJgzqlWh3isBT83mtRpDyg6Jj-R1usNtP\"],\"bt\":\"2\",\"b\":[\"BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha\",\"BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM\",\"BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX\"],\"c\":[],\"a\":[]}"
     },
     "authorityEvidence": {
@@ -127,38 +159,38 @@
     }
   },
   "credential": {
-    "coreJson": "{\"d\":\"EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO152\",\"auditorAID\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\"},\"digests\":[\"0npBkmrIj46y7Zy_Uu7UyHigeL0_EJ3vpX7EXBoF1iE\",\"2rk20iRjF0BdMjZdsIU5TdZSzAxeVoePlwl7VTFSB2o\",\"3KiZtcLKmWslnIpYYdEAoeMcB4L1qcGLkoPx0w2zCFs\",\"3vbSmYoz73nckTAoEFbWfhVqGynOqWNFDfr0K3m4mgY\",\"A2rVzYOpyAMMNBZS-BXTs7W9AMAkmDyUpvUpEVfH19Y\",\"B54FD0F6wE0z-1t2YBJtUs7unnLOd531huFGFBlbUpI\",\"BcVBipNUK9zGb5hRmoSqBP1l7J049B4KeNKEG-0i49U\",\"FnEzNeLpSvkS5iHWEzoeakDv6MUZEkYv6B3VQFX-yqc\",\"Hqm3yEYDAjya6y1YaQvIM6UGrY_XLTbiwcZj_EV-HPk\",\"Js2ZhhhttMBwu2ow7cSfeSrOGUfTTIr6QRp6YrLjkL8\",\"Nd_ALKy4E4U4MeBEOGZ0gw59JBmggNi-hmuP4K6hezw\",\"OqcWGdwlEE7BVdBKqJ21hmnb2S8yNQ6odEs0J7Ry8ZM\",\"SiOmYEJsHy-tHkuShzBMxDF9MV82jNv0HDtYv_vbD_Q\",\"V4I6LHUOr1lBJyCYkp8P45NOQHEgBhxO_UiaeJt1iQg\",\"XsojRXtU_RAlumPrc0yyCsjRzRMm5ar3jBb_Hjf0_xw\",\"gsPbcrgyNovDCmfW5X9j2Hw2aF4Yg8XGb0HjvmRcTMQ\",\"kEJlk93y6P0-N3GwcNDUPvLPqA17IVAGfG2LwIyZHd4\",\"kKJIOEVoSI91HHtrbzicKu3-Jinv6Bzwx9Ws1bSAtGo\",\"loEZubYCiG5xF-OIq6MLnRK-GZmW6f4OOh4vxMy8ad0\",\"mcJlYmTKkedCypGY1RqT-kczqQmxo84FirjoqXPAjo8\",\"nbVsmgv62Tu7bRZ_EebDIn0Eguq1-sB-PGuOmd-XUns\",\"oGnY1qhFH5udzBETvxM8fXi0NlNFHrN9iagtUIt4ExM\",\"qHL6YyfwT0fKMNJdHX5u2puL40OPVprJ1oYAmVHfbpQ\",\"tCAzPLoM1HHfoMd1SWugmmljGnFzdVl-Rh4T1E-4c_Y\",\"teepjSneHR3rwiAL6jb45O1IjWdIHOepLLZwjDm_h90\",\"yDiRJKtFLnVMhdOcMvRYEGztOG7MYBipd1okd-jkx3M\"],\"issuedAt\":\"2026-10-01T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
-    "signature": "0x0a2bd4bf1c46d8f04a9bcce6ea11b098737b10d7e37aa68dc57ace59b42f97200df16ce991e7e0daa86b62726ecdca014329839497e54cb3649abfa0e398b5b71c",
+    "coreJson": "{\"d\":\"ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO152\",\"auditorAID\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\"},\"digests\":[\"06RIOmjbfRSfkSBAItfWVR5HB6hzhHt7mgrNoccSl64\",\"1NqMgPW3-33CNrr5GxrAPde3iyOINynG1v4-g9Yt27M\",\"1RNZGCEC7VOZypHUpPQnZY0LvfdL_GvqHGRVOowx5dg\",\"43FB2ZNgvBiDAbTAoSrG2SCMOC3o6z3Z052-jbOapcM\",\"4JR8Vtjm8O7yeY4QqSWkXCEn2gXtwxW7295zb7o-6RA\",\"5oki8pFZofEi0VtQZXQQa4f4vDY71v60Hi4cAYYP0GY\",\"8p1iTw5focVD9JJVlx_H72RFc7N_Qhy4FSGUtwRujgw\",\"8ruNZnzy3DpFQEyR8bdFy0EADSxdXSwUU926f-UFbjQ\",\"Ac8lSryI_gJcwiaXSQqcmhOxYEIdEt8kj9U8p-y-kv8\",\"AsU9lYzbrogLvV9k-PiNUL1O77pne_9UX49n2R5Tv4M\",\"DFqEeC9xXVDW4e_0EnaNu3DnMJl2rP8F-WKNvD2Za1c\",\"FDxkf69NYVz5lMWc_s0SwmjHBCCAFqx1Ps8nZtPrRoM\",\"FkCbJOt2POH_yd4LfGvQnlzEynt_JldmPZ9Txol27Mo\",\"Mj9Drxio5O0b6MoIoY1mBLCJqxgoEam3ReWFSMTx4Ho\",\"Pc5Y2on9DIYjunJ1-xlMrRU8SGe93cyhNt8a7Z_y0Ps\",\"R3Rr0gcgkck3_gQRh3CzmF1XRHvTdr816yXHLxgKBLs\",\"UPlIzBsdx7YAgrGM1bn9FxFLoBZhg3dcDTlx0c5G6zU\",\"aQhDbHGgVREIgJg7SzgBrdTLHU10McXdpl90OX7Rb7A\",\"fYl-b16m0ZG2mGTVP0gDVzEzaqN0QqW277Hfmeb0Zio\",\"i6Ra2GmbE7zriP1xtTc7G9iQyaYdA5Cu9b3Nyo9VTxw\",\"jin6GHFuKcD5ERjywGDeGNTHggsaldrH5I41k1glNeM\",\"kuzej1aCUFpCSkCQ5oV5n6lMWnNOzdiIkTAZB0onmdI\",\"m5g6zuesJcBjbeQQUdkwe0LsebvjyEgmDVib1pjZquo\",\"qleFmsbKd2zSRqqn7Swf4zjPh907l_C4gnDnJisH48g\",\"skGsyUMyEYsdDsJcO77bOx8xTFpqDt0HpBTZXwbBH4c\",\"srxRkU3ykoFDPGCN_3JmFm2m3-dYRHB5afN2yf-ElBY\"],\"reconciliation\":{\"inputHash\":\"0xfca6a156d6672b8a4f358a49ed3bba9bfb3ef8d1e304814749829ddc78757ac2\",\"outputHash\":\"0x6abd795738745a6fb79f395f231738e4891f3faed85dfe3ac8b26c00a9015c94\",\"ruleVersionHash\":\"0x169313d4e5424afbf611699b34adac6a61402ed907f1128723e2ed5e8dd16360\"},\"issuedAt\":\"2027-03-20T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
+    "signature": "0xfa1d2a4989e6ee44dfa533a84f7084cbbec92cd593a0bf4778d2b82703be8d8578884f800f45178496c3dcb69ab33ed348a13ae171942d2682f64d1a2991c74b1c",
     "disclosures": {
-      "supplierLEI": "WyIweGQ2Zjk1ZTQ1ZDJmZmU0Mjg1ZDM5MzI4Mzg5OTRmYjk1MmI3NzhmOTFjYmIyZjA1NjIxYTA1ZmU2NmMyMzExOTciLCJzdXBwbGllckxFSSIsIlpaWlowMFRXU0NSRVdERU1PMTg1Il0",
-      "operatorId": "WyIweGIyMTAyYmMxODc0NzUyZGNkNzg1MjUyZTgzZmU0Y2VmOGQ3Mzg4YmFmZmY1NjY2OWQzMDY4NjY4ZTUxNWVjNjQiLCJvcGVyYXRvcklkIiwiVFdaWlpaMDBUV1NDUkVXREVNTzE4NSJd",
-      "installationId": "WyIweDJmMGM3NzBkZmI1NGViZGQ1ODJkY2ZlNjNkZjkwZDhkODQ0N2JiZDRkNjZiYTljMzZmZTU4MWYyZTJkMDY5MTIiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXU0NSRVdERU1PMTg1LTAwMDEiXQ",
-      "installationName": "WyIweDM1NjczYTYxZDdmODJhYTEyODgwN2IzNWM5NmJkNTUzODE3MWNhZWZhY2JhZmFmZGMxNzljNWU2NGE5OGNkNmMiLCJpbnN0YWxsYXRpb25OYW1lIiwiRGVtbyBGYXN0ZW5lcnMgUGxhbnQgMSAoZmljdGlvbmFsKSJd",
-      "unLocode": "WyIweGMzOTkyNTc2M2MzMjJjODA1ZmVmZDQ5ZjYzOGI2ZWQ3MDYwMTgwN2RhZTFlNzQzZDRiZDYwMzVlMzBiMTcxNDUiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
-      "cnCode": "WyIweGZmYTc1Y2QxNGRjMzdkMjczMTRhMmE5MTUzZDQ1NWZkMjA0ZTkwYzIyNjc1NmRjNTZmYWE4ZGJkZjE3NDdhNDYiLCJjbkNvZGUiLCI3MzE4Il0",
-      "cbamRoute": "WyIweGJjMWY0YjZjY2FjOTBkZGNjOTJlODZlYTU5YjM1OWJkYThhNzcyNmUyYmJmZjgxZTZjNzNkNmY1NTM0OTYzZWQiLCJjYmFtUm91dGUiLCJDIl0",
-      "reportingPeriod": "WyIweDQxMTY0YzQ3ZjFiNzgxMjQyOTdmZjRkZGU5NzQ0YTg3ZmNkMDc5YWM4ZTlkOWUxYmJhODc1ZDgwZTdmZmVmNDIiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
-      "verifiedTonnes": "WyIweDc5NDExNWI0M2E4YTk3YWVjNmJmMWE3YTdlYTAxMjQyYjU5YjEyMjRhZmNjNTlkY2U3OWM1NjZkYmMxMmU4YjAiLCJ2ZXJpZmllZFRvbm5lcyIsIjUwMCJd",
-      "specificEmbeddedEmissions_tCO2e_per_t": "WyIweDVkYTg2ODliNDRiZjdmNmQyMDE2N2U2M2RkMGI0MTY3ZTQ3NTZlOTRjZWYxY2U3ODBkNzFjMTZlZjVlZTQ4MTgiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
-      "valueType": "WyIweDNmMmM5MmM3NzRmYjg2NDcyNDExOTkwNWZkZDYwNmVmMzBjN2FhNGU4YzMwNzRiMTJjODIyODNjYjliMjFlN2MiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
-      "methodologyNote": "WyIweDliNmRhODI1MThhZTJlOGYwZDQ5MzdjYTllZDY1ZDE5NzI4NmExZGVmNjYzZWIwNTY1OTdkYTNiNjdkZmVkMTMiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
-      "verificationReportId": "WyIweDZmZDhlNWZmZDUxNTYyNzhhN2ExZTE1NTRhODhmM2EwMzA3ZDk0Yjg0ZWE4MmNlYTQ0ZDk5ZjcyMzE5YzBmNWYiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tMDAwMSJd",
-      "verifierLEI": "WyIweDFiNmQ3YzIyZDRiNjdjNmMyY2FkOGZjOGJhOWZmYzBjZmI0NGVhNWYzY2ZjNjVjOTVlMTJmNTc5MjE2ZTgwMGYiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMTUyIl0",
-      "accreditationNumber": "WyIweDJjNDNhOWIyMDgxNWEyOWNjMmYxOGFjMGE5ZjY1OTk3ODBhMmI5ODQ3YWE3MjFlYjQ2NTMyYzNjYTY2ZDg1ZjIiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAxIl0",
-      "nabName": "WyIweDA0Y2Y4ZjhiZGUxMTlhYTg0ZThmNDA3OTZlMzM3YTcwY2FhMzhhYzIzZTAxMzEyYTVlYzA0YTJkMzYwNTU5ZmQiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
-      "siteVisit": "WyIweDQzYTA2ZTNjMmE3NTU2ZTM5OWU4NzYzOTc0MzlkMDM0MDE4NjlhYzQzYTI0MTgzODBmMDkxMjIyMjc2ZDNiZjYiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
-      "assuranceLevel": "WyIweDU1OTlhMWI0Yzk2MGFiNGEwMTY0ZjZhZDkyMWE0N2Q0ZjNiZDk2MGI5OWE1ZTZkNmJmYjU5ZDMzMjAyZmIzNjIiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
-      "materialityThreshold": "WyIweDczODc4MmYwMGJiNThkZjA0YTQzOGRiNzBhYTczY2FhN2MwMGM1MDIzNmNlNjM4N2FhNGI5MGZhNzllODQ5ZDAiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
-      "idSalt": "WyIweGRlZmM0OGQ0OTIyMTA5YTEzMzJiNTNkYTBhNTJhMjEwYjlkOWQ0ZjIyYzFmZmNlNzgxMmMxMDBhNDQ0OGMyZjUiLCJpZFNhbHQiLCIweGU4MjYxNDQ3ZDFhYjNlMTU1MjYzMTIyYzBkOWE5ZGZjMzJkNDJjZDI1MmNlOGUxZmMyOTBmNzBhMTVkM2Q5M2YiXQ",
-      "batchSalt": "WyIweDkzODM4NThjOWNhYmRkZTVhYTM2OTZlNmUwYzU5NDc2MmEwOTc5ZWY4ZWQ3NTcxZWRhNjViOTUxNWQ1ODY0ZmYiLCJiYXRjaFNhbHQiLCIweGFkMGRkOGI4MWI0Y2JlOTg0N2UzYjlmY2FhZmZiYjFlZDgwNjk1ZmYyODkzMGRjY2MyNWNiMjJhOWIzOThlNGMiXQ",
-      "issuedAt": "WyIweGI5ODM0NTFjMjc1NzlhYWFhMzdkNDIxZGU5MmQyN2U0Y2Q4NzI4YTVkNGNkODM0M2Q5NDgxMGE2ODZhN2U4MDYiLCJpc3N1ZWRBdCIsIjIwMjYtMTAtMDFUMDA6MDA6MDBaIl0",
-      "validUntil": "WyIweDcxZjA0MTI0YzkzZGIzOTc5MjI1N2JmNDRlNmMzZGY3NWM3NGRkNjBiNTlhYmI2NzdhMjgyNWY3ZDk5MDU5ZmQiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ",
-      "productionRoute": "WyIweDQ1MjZmNjU3NWQ3MGM2OTc1MGVlMzkzZTU1NjhiYzAxNTRiY2U4NmY5ODhjZTY3ZmI1MTFjMmE1YWZlNGMxM2UiLCJwcm9kdWN0aW9uUm91dGUiLCJCRi1CT0Ygd2lyZSByb2QsIGNvbGQgaGVhZGluZyAoaWxsdXN0cmF0aXZlKSJd",
-      "energyMix": "WyIweGMwZGQyNThmNmRhYjQ0MjBkZWUzOTk1YThkNmI2MjNmYjgxNDMxMWNhMWIyMjExMDhmZTg3YTQwMmZmYzNmNDQiLCJlbmVyZ3lNaXgiLCJncmlkIDcwJSwgb24tc2l0ZSBzb2xhciAzMCUgKGlsbHVzdHJhdGl2ZSkiXQ",
-      "supplierCost": "WyIweGNkZjZiMTc0MjdiNmQ3MDYwYmRlNmI4OTVmOWQxZmQxNzc2ODQzMTlkOWExY2MyNmMyZTk2ZGNjNTI0ZDdmMjciLCJzdXBwbGllckNvc3QiLCJ3aXRoaGVsZCAoaWxsdXN0cmF0aXZlKSJd"
+      "supplierLEI": "WyIweDliMWM2OWZlZDIwOGIyZDI1YWYzOWM0ZjVmM2VjNDZmNzZmNGMxZjcxYTM4Mjc2YjdkYzMzYWQ0ZGUxZTcxOGYiLCJzdXBwbGllckxFSSIsIlpaWlowMFRXU0NSRVdERU1PMTg1Il0",
+      "operatorId": "WyIweDRiMjRhMjQwNjBlNmJmM2Q4MzBiMDQxN2QwN2ViOTA1MTRiNmE1YmQ1MjZjM2Y1YzhhNjdjNzI4MjRkMjVjZmMiLCJvcGVyYXRvcklkIiwiVFdaWlpaMDBUV1NDUkVXREVNTzE4NSJd",
+      "installationId": "WyIweGI1MTVjNWJmMDg1ZWM4ZTAyYTA3NTFmOWVmNTU0ODI1MWQyNWQzYTU0YTZlMjkxZGZmNmU3MDAxZmI0ZTNhNjAiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXU0NSRVdERU1PMTg1LTAwMDEiXQ",
+      "installationName": "WyIweDczNTExMTVmZGI5ODdkMjk4NjhlZGVhM2E0NDg4NmYwNjcxY2EzNGQ1MzZkYjViYjIyZWNlOTQwNjBkMGIwNTciLCJpbnN0YWxsYXRpb25OYW1lIiwiRGVtbyBGYXN0ZW5lcnMgUGxhbnQgMSAoZmljdGlvbmFsKSJd",
+      "unLocode": "WyIweDA5ZmIyNWJkNTA5NTFmMmQ5ZmY0NzljMjUyZmFkOTZjZWRiZTg2NGJkNmJlMmRmNjZiMTU1MmZhMDg0YmUyMGEiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
+      "cnCode": "WyIweGIxMDU3NWM4ZTYxMzdkNTQ1YTI1NGE0MGMwNTAxNmYyYWFlMGM4MjdiMWJkZjFlZWU2ODYxNDczYWM1NTU3MTEiLCJjbkNvZGUiLCI3MzE4Il0",
+      "cbamRoute": "WyIweGFlODhkN2NiNDNiNzgyYzRmY2YxODA0ZjZhNmQ1NTA4MDFkYTc3NTVmYmZhYTU1NzUyYmU5NmRmZjE1MDA1NjYiLCJjYmFtUm91dGUiLCJDIl0",
+      "reportingPeriod": "WyIweDZkYTFkMzA0OTUzNDRlZDI2NjNkNmEzY2I1ODA4ZDQ2ZDE3YzYzYTI2MmMxMzU5NDAxNTk3YjFmYjc4MWNmOTEiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
+      "verifiedTonnes": "WyIweDNjNTg1YmU1OWIxMzhjMTM1ZjExNzRlNTAxNDY3ODRhZTVhZjhjZDA2Y2Q5NTg0MmE2NTRhZjU5NWU4YThiYzgiLCJ2ZXJpZmllZFRvbm5lcyIsIjUwMCJd",
+      "specificEmbeddedEmissions_tCO2e_per_t": "WyIweDE4NmMxMmIzMjM0NzI5ODk4MTNjZmQwNzFjYTE2NTlkMWU5MmQ2NzUwZDgwMWE0MzUwMmMyNmYwMmJhYjgzZTgiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
+      "valueType": "WyIweDE4NjgyY2U0ZGVkY2QwZTQyNzQ2NmMxMDQyZmQwZWFlMzc3NDAyY2Q1OGRmMzFlMmY2NTk1N2UyN2VjZDE5YjkiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
+      "methodologyNote": "WyIweGUxNDdmOGUxNDI5MDBkMTViYTViZDVlMjQ4M2RkNzJmZjJiZjQzMWNjMjRmNTAyOGNmMDc0ZmIzOWExMmEyMmYiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
+      "verificationReportId": "WyIweDEzZGM2YjUyMDExZWYzOTQwYzdlYzU1MGE3MTQxNzc2MjU2ODk3MzFmYmFiYzM4YjFhNjMzZWY5YzhjMzk0NzEiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tMDAwMSJd",
+      "verifierLEI": "WyIweDA5OWYyNjVhYWY3ODNmMDkxMmNkYTA3OTU4ODlmOGQwYTUyYTY3M2U1MWY3MmYzYWQwMjU0ODYzY2IxODA0NzEiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMTUyIl0",
+      "accreditationNumber": "WyIweDExZmRlMWVkYmFiOWM4NzJkMWY2ZDUxMjE2NDlhMjQ2MGU2NTY5NjJjYTgyZDFhYjg5Yzk2MGMwMzgwMDE4NzMiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAxIl0",
+      "nabName": "WyIweDAzNjhlMDU0Nzc3ZmZjZTk1MmE1OWFiYjk5ZmU1NGYwMTc1NzdjYjhkOTQ4ZTkxOGE5YzQzODY0YWRmOWI2NDgiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
+      "siteVisit": "WyIweDFhNjlhOTlkODlmNDA2M2RmYjg2OTI2NWQ2NTBiNzEyNzA4YzdiYTc5YzFkNjZlMzcxNjVhYjU1NTNhOTdjNzkiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
+      "assuranceLevel": "WyIweGY3NmQwZjkxMDRhYzg5NTAwYWU4Y2QyYzYzZTU5NDIzZjQ0MmFkOWNkMDBjMmI2Mjk3ZWQyMzdmMmMwMGJiZDIiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
+      "materialityThreshold": "WyIweGY2ZWVkOWQ4NWE2YzlkNWVjNWViMWQ4OTk1M2MzNjJjOTI5MWNlZGYwNjBlNDIxNTJmOTU0OTQzMDZhMmQ3NTQiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
+      "idSalt": "WyIweDY2MTI5ZmI3OGI5OTBhNGVlNGE3MzVhMDY3YmU1MmYyNDc2ZDk5NjRhZTBmZjYyZjdmMDZkY2I0ZjlmMmJmNmQiLCJpZFNhbHQiLCIweDY0MjVmYTU0M2NhZTMzZWU4NTYzMGM2MjRjMDNmMzgyYjhhOTE5OTQ3YzNlM2M3YWJjZDZmOTk0OGI4OGRhOTYiXQ",
+      "batchSalt": "WyIweGE1MzRiNWNhOTJiODYzMThhNTAyNzZlNmMwYTI2ODBmODk2YmU5NjMwY2I1MTAxNzkwODBhNjI2ZTM4NzY1NGIiLCJiYXRjaFNhbHQiLCIweDRhZWMzNWUwODNhMDNkNTAyNDAxYTA0MzA3YmI0ZmNhODM4ZjEwMjdkNjVmYjY5NTkyODhiYmE2Y2JmZDYxNDIiXQ",
+      "issuedAt": "WyIweGFkYTY0OThjY2NjZTUyN2ZkMTI0NWVjNDg5MzE4YTExN2E0ZjhmNzRjNDdkMzg3YmMyZDM5MDI3NGMwOTczMGYiLCJpc3N1ZWRBdCIsIjIwMjctMDMtMjBUMDA6MDA6MDBaIl0",
+      "validUntil": "WyIweDM1Y2YzZDFlYTY1NTVmMTcxYmRiZjYyNjYzMWJhZDNmOTkwNDlkNzdkNDdiYjAzYjUxYmY1MWJlN2MyNjA2MTEiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ",
+      "productionRoute": "WyIweGIwYmU1ZDRlODM4YmQ4OTJiZjY0M2UwNzM2M2Y0NDljMWQyMmMxNmU0ZjI3NTVkNzY4ODdmNDM4MzcwNDBkZGEiLCJwcm9kdWN0aW9uUm91dGUiLCJCRi1CT0Ygd2lyZSByb2QsIGNvbGQgaGVhZGluZyAoaWxsdXN0cmF0aXZlKSJd",
+      "energyMix": "WyIweGE4NDkxZjIyMWMzOWVmMDBmNjYwNGU4NjhmMDM5NWYzOGRiOGMzYTAyMjI4MWEzOGZlOTBhZjQ3MTI1YzU5YjkiLCJlbmVyZ3lNaXgiLCJncmlkIDcwJSwgb24tc2l0ZSBzb2xhciAzMCUgKGlsbHVzdHJhdGl2ZSkiXQ",
+      "supplierCost": "WyIweDg3MTViMGZjNjg3NDI3YTJhZjdiNWY2NTI2ZjhlNDljY2UxM2NmZTc3N2Q4MzkzMTZjNDRmMTlkZDA5ZWU0MjEiLCJzdXBwbGllckNvc3QiLCJ3aXRoaGVsZCAoaWxsdXN0cmF0aXZlKSJd"
     },
-    "reportKey": "0x22193629a44e9af05ebfd9b1306d47243e1b1ebf5214fc96af47140f9ad35b16",
-    "kelSeq": "2"
+    "reportKey": "0x4ed7588537cff1c445880821e44f2df65f517199f7edbe26f9e59cd4724a4ab8",
+    "kelSeq": "3"
   },
   "report": {
     "installationName": "Demo Fasteners Plant 1 (fictional)",
@@ -169,30 +201,30 @@
     "intensity": "1.8",
     "reportId": "VR-DEMO-0001",
     "accreditationNumber": "DEMO-ACC-CBAM-0001",
-    "issuedAt": "2026-10-01T00:00:00Z"
+    "issuedAt": "2027-03-20T00:00:00Z"
   },
   "shipment": {
     "batchId": "BATCH-DEMO-2026-0001",
     "quantityTonnes": "200",
     "shipmentDate": "2026-10-10",
-    "importerSalt": "0x8cd02f371ec1329f67e9ca62bae881b8f2be6f88f72ac2df4437223c88c59d35"
+    "importerSalt": "0x16964453c944e5940e92bfe3c22f024a5b3c52a9779c423c20da90533da30767"
   },
   "attacks": {
     "sameBatch": {
       "args": [
-        "0x22193629a44e9af05ebfd9b1306d47243e1b1ebf5214fc96af47140f9ad35b16",
-        "0x50bf8a2682afe42c836546e6eea06584dfa306dcacf708d6518f8bf51aaf54c6",
+        "0x4ed7588537cff1c445880821e44f2df65f517199f7edbe26f9e59cd4724a4ab8",
+        "0xfaa01d33b8d28a0d1a01a8af17103cccde1421d32b9577e4db44ae294d116beb",
         "200000",
-        "0x6c9cc9f2f20437ec82ef40b5e4fe7875b31b978abc6930569137369c11142c39"
+        "0xdb214c6a8bfbcf9eddc3f4cda3708ace6051fbb5887c8e018a2aa3eacc6324e2"
       ],
       "caller": "0xaA21B52F3b78F1f0fdACd34d50AfB68D6590f725"
     },
     "secondImporter": {
       "args": [
-        "0x22193629a44e9af05ebfd9b1306d47243e1b1ebf5214fc96af47140f9ad35b16",
-        "0xf1a24ff5a201937a00aeaef508cd292438bdee25609aff1cee433a7e2c056977",
+        "0x4ed7588537cff1c445880821e44f2df65f517199f7edbe26f9e59cd4724a4ab8",
+        "0xb893979f2af29e5f223cecdb648f12d0c7839c688f8a186ec7874f8b0d7e6d44",
         "400000",
-        "0x6c9cc9f2f20437ec82ef40b5e4fe7875b31b978abc6930569137369c11142c39"
+        "0xdb214c6a8bfbcf9eddc3f4cda3708ace6051fbb5887c8e018a2aa3eacc6324e2"
       ],
       "caller": "0xaA21B52F3b78F1f0fdACd34d50AfB68D6590f725",
       "quantityTonnes": "400"
@@ -203,33 +235,33 @@
     {
       "step": "addVerifier",
       "label": "Verification body added to the allowlist",
-      "hash": "0xb93244e2e9b0c5f60e69a731a719d6764c1211f1298df00e2837df1fd31c6af3",
-      "block": 11846623,
-      "time": "2026-10-05T04:41:48Z",
+      "hash": "0x7d393bda2d7ec11ca4f453ec9ff4b55cafb9a100aa66789eb4909237fc4ef1b6",
+      "block": 11846773,
+      "time": "2026-10-05T05:13:48Z",
       "result": "success"
     },
     {
       "step": "addAuditor",
       "label": "Auditor added",
-      "hash": "0xad28ec6b154b5e2beeecd3a6e8f6df8000230b55d6dbec51ada57bcecf300025",
-      "block": 11846624,
-      "time": "2026-10-05T04:42:00Z",
+      "hash": "0x1c0be29a41dec1cd2442168213ef3ce1f8785c9f54ec5d99aa269ba247fd416e",
+      "block": 11846774,
+      "time": "2026-10-05T05:14:00Z",
       "result": "success"
     },
     {
       "step": "registerReport1",
       "label": "Report registered",
-      "hash": "0xa793d606229ee721e0c204a26a492bdb74c07995856e847466c8ccebb8adb2b1",
-      "block": 11846626,
-      "time": "2026-10-05T04:42:24Z",
+      "hash": "0x5cba53bb5a438883252721407dba8e58962ef71f1f91493c266a4ae561981de2",
+      "block": 11846781,
+      "time": "2026-10-05T05:15:36Z",
       "result": "success"
     },
     {
       "step": "claim1",
       "label": "Batch claimed (200 t)",
-      "hash": "0xdc399babd23676e693bfce229e92820159d04813534140a9b412173957ca2b45",
-      "block": 11846628,
-      "time": "2026-10-05T04:42:48Z",
+      "hash": "0x2f873bd582ac399f83fcea28ffb048100d4d002f9a03e43b61e46991ae288484",
+      "block": 11846782,
+      "time": "2026-10-05T05:15:48Z",
       "result": "success"
     }
   ],
@@ -293,12 +325,12 @@
     "quarter": "Q2 2026"
   },
   "evidence": {
-    "anchor": "evidence/anchor-EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5.json",
+    "anchor": "evidence/anchor-ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx.json",
     "authority": "evidence/authority-bundle.json",
     "files": [
       {
         "label": "Auditor KEL anchor of the demo credential",
-        "path": "evidence/anchor-EL2PgLIfKJDQ3agamrlTAuMbPOjl7otkRbcxruF-ZBK5.json"
+        "path": "evidence/anchor-ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx.json"
       },
       {
         "label": "vLEI authority chain",
@@ -355,12 +387,12 @@
     ]
   },
   "cached": {
-    "block": 11846660,
-    "time": "2026-10-05T04:49:12Z",
+    "block": 11846782,
+    "time": "2026-10-05T05:15:48Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {
-      "claimedAt": "1791175368",
+      "claimedAt": "1791177348",
       "quantityKg": "200000",
       "reportValid": true
     },
@@ -414,7 +446,7 @@
           "name": "Auditor anchor (KEL)",
           "status": "pass",
           "code": "",
-          "detail": "KERI event #2 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
+          "detail": "KERI event #3 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
         },
         {
           "index": 7,
@@ -426,9 +458,9 @@
         {
           "index": 8,
           "name": "Report reconciliation",
-          "status": "skipped",
+          "status": "pass",
           "code": "",
-          "detail": "no report extract in this proof"
+          "detail": "12 rules match the verification report; covered by the auditor's signature"
         }
       ],
       "disclosed": {
@@ -449,16 +481,16 @@
         "siteVisit": "physical",
         "assuranceLevel": "reasonable",
         "materialityThreshold": "5%",
-        "idSalt": "0xe8261447d1ab3e155263122c0d9a9dfc32d42cd252ce8e1fc290f70a15d3d93f",
-        "batchSalt": "0xad0dd8b81b4cbe9847e3b9fcaaffbb1ed80695ff28930dccc25cb22a9b398e4c",
-        "issuedAt": "2026-10-01T00:00:00Z",
+        "idSalt": "0x6425fa543cae33ee85630c624c03f382b8a919947c3e3c7abcd6f9948b88da96",
+        "batchSalt": "0x4aec35e083a03d502401a04307bb4fca838f1027d65fb6959288bba6cbfd6142",
+        "issuedAt": "2027-03-20T00:00:00Z",
         "validUntil": "2027-12-31T00:00:00Z"
       },
       "hidden": 5,
       "onchain": {
-        "reportKey": "0x22193629a44e9af05ebfd9b1306d47243e1b1ebf5214fc96af47140f9ad35b16",
-        "batchKey": "0x50bf8a2682afe42c836546e6eea06584dfa306dcacf708d6518f8bf51aaf54c6",
-        "registeredAt": "1791175344",
+        "reportKey": "0x4ed7588537cff1c445880821e44f2df65f517199f7edbe26f9e59cd4724a4ab8",
+        "batchKey": "0xfaa01d33b8d28a0d1a01a8af17103cccde1421d32b9577e4db44ae294d116beb",
+        "registeredAt": "1791177336",
         "validUntil": "1830211200",
         "verifiedKg": "500000",
         "verifier": "0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45",
@@ -466,16 +498,16 @@
         "supersedes": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "supersededBy": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "remainingKg": "300000",
-        "claimedAt": "1791175368"
+        "claimedAt": "1791177348"
       },
       "primaryCode": "",
-      "checkedAt": "1791175368"
+      "checkedAt": "1791177348"
     },
     "dryRuns": {
       "sameBatch": {
         "errorName": "BatchAlreadyClaimed",
         "args": [
-          "0x50bf8a2682afe42c836546e6eea06584dfa306dcacf708d6518f8bf51aaf54c6"
+          "0xfaa01d33b8d28a0d1a01a8af17103cccde1421d32b9577e4db44ae294d116beb"
         ]
       },
       "secondImporter": {

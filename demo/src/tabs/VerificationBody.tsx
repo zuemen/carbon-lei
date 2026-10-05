@@ -32,7 +32,13 @@ export function VerificationBody() {
       <TabHead
         title="Issue a verified emissions report"
         lede="The verification body issues the report here. To check a report, use the Buyer tab."
-      />
+      >
+        <p className="fine">
+          Demo timeline: the report covers calendar year 2026 (goods imported in 2026 use the 2026 reporting period),
+          so the verification report and the credential are dated March 2027, before the declaration deadline of
+          30 September 2027. The Sepolia transactions were recorded in October 2026 to build this demo.
+        </p>
+      </TabHead>
       <div className="grid-2">
         <section className="sheet reveal" aria-labelledby="rep-h">
           <p className="sheet-kicker" id="rep-h">

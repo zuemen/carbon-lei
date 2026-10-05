@@ -3,7 +3,7 @@ name: pages
 on:
   push:
     branches: [main]
-    paths: ["demo/**", "sdk/**", "fixtures/**", "contracts/deployments/**", ".github/workflows/pages.yml"]
+    paths: ["demo/**", "sdk/**", "fixtures/**", "contracts/deployments/**", "package-lock.json", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
