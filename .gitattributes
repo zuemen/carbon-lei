@@ -1,0 +1,6 @@
+# LF everywhere: evidence files are hashed byte for byte (check 7 compares sha256).
+* text=auto eol=lf
+*.cesr -text
+fixtures/evidence/** -text
+demo/public/evidence/** -text
+*.png binary
