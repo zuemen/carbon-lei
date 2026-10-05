@@ -1,0 +1,24 @@
+{
+  "name": "@carbon-lei/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.3",
+    "yaml": "^2.9.1"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "viem": "^2.57.3"
+  }
+}

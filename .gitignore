@@ -1,0 +1,30 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# foundry
+contracts/out*/
+contracts/cache*/
+contracts/broadcast/
+lcov.info
+
+# vite / playwright
+demo/dist/
+test-results/
+playwright-report/
+
+# local vLEI state
+verifier/.data/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.cache/

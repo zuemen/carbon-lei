@@ -1,0 +1,19 @@
+{
+  "name": "carbon-lei",
+  "private": true,
+  "description": "Verified embedded-emissions credentials for CBAM supply chains, with a shared claimable-tonnage ledger on Sepolia.",
+  "license": "MIT",
+  "workspaces": [
+    "sdk",
+    "verifier",
+    "demo"
+  ],
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "contracts:test": "forge test",
+    "contracts:deploy": "forge script contracts/script/Deploy.s.sol --rpc-url sepolia --broadcast --verify --verifier etherscan && node scripts/record-deployment.mjs 11155111"
+  }
+}
