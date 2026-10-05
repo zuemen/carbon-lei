@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
 import { useApp } from "../App.tsx";
@@ -95,6 +95,64 @@ function VerifySummary({ result, onSeeComparison }: { result: VerificationResult
         See comparison ↓
       </button>
     </p>
+  );
+}
+
+const SUMMARY_FIELDS: [string, string, string][] = [
+  ["cnCode", "CN code", ""],
+  ["specificEmbeddedEmissions_tCO2e_per_t", "Verified intensity", " tCO2e/t"],
+  ["verifiedTonnes", "Verified quantity", " t"],
+  ["reportingPeriod", "Reporting period", ""],
+  ["verifierLEI", "Verification body LEI", ""],
+];
+
+/** What a pasted proof says, in words, before anyone reads the JSON. Nothing here is checked yet. */
+function ProofSummary({ text }: { text: string }) {
+  const fields: Record<string, string> = {};
+  let disclosed = 0;
+  let total = 0;
+  let batch = "";
+  try {
+    const p = JSON.parse(text) as Presentation;
+    const core = JSON.parse(p.core) as { digests?: unknown[] };
+    for (const d of p.disclosures ?? []) {
+      try {
+        const x = decodeDisclosure(d);
+        fields[x.name] = x.value;
+      } catch {
+        // a malformed field is reported by check 2
+      }
+    }
+    disclosed = (p.disclosures ?? []).length;
+    total = Array.isArray(core.digests) ? core.digests.length : 0;
+    batch = p.shipment ? `${p.shipment.batchId} · ${p.shipment.quantityTonnes} t` : "";
+  } catch {
+    return null;
+  }
+  return (
+    <div className="proof-summary" aria-label="What this proof states (not yet checked)">
+      <dl className="fields">
+        {SUMMARY_FIELDS.filter(([k]) => fields[k] !== undefined).map(([k, label, unit]) => (
+          <Fragment key={k}>
+            <dt>{label}</dt>
+            <dd>
+              {fields[k]}
+              {unit}
+            </dd>
+          </Fragment>
+        ))}
+        {batch && (
+          <>
+            <dt>Shipment</dt>
+            <dd>{batch}</dd>
+          </>
+        )}
+      </dl>
+      <p className="fine">
+        {disclosed} field{disclosed === 1 ? "" : "s"} disclosed{total > disclosed ? ` · ${total - disclosed} hidden by the supplier` : ""} ·
+        what the proof states, not yet checked. Raw JSON below.
+      </p>
+    </div>
   );
 }
 
@@ -243,6 +301,7 @@ export function Buyer() {
           </div>
           {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}
           {fromQr && <p className="fine">Proof loaded from the product passport QR code ({data.shipment.batchId}). Press Verify.</p>}
+          {proofText && <ProofSummary text={proofText} />}
           <label className="field-label" htmlFor="proof-in">
             Paste the supplier's proof
           </label>

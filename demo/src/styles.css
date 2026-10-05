@@ -105,6 +105,8 @@ main { padding: 28px 0 56px; }
 .fields { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 18px; margin: 0; font-size: 14px; }
 .fields dt { color: var(--ink-faint); font: 400 13px/1.5 var(--mono); }
 .fields dd { margin: 0; font: 500 14px/1.5 var(--mono); overflow-wrap: anywhere; }
+.proof-summary { margin: 14px 0 4px; padding: 10px 14px; border-left: 3px solid var(--ink-faint); background: rgba(255, 253, 248, 0.6); }
+.proof-summary .fine { margin: 8px 0 0; }
 .tag-illustrative { font: italic 400 12px/1 var(--sans); color: var(--ink-faint); margin-left: 6px; }
 
 /* -------------------------------------------------------------------- buttons */
