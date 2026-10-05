@@ -1,0 +1,129 @@
+{
+  "note": "Fictional demo identities on a local KERIA stack (verifier/docker-compose.yaml). The root is a simulated GEDA, not GLEIF; LEIs use the ZZZZ prefix and are not registered. Passcodes are kept out of this file.",
+  "createdAt": "2026-10-05T04:32:39.508Z",
+  "updatedAt": "2026-10-05T04:33:53.039Z",
+  "stack": {
+    "keria": "weboftrust/keria:0.4.0",
+    "witness": "weboftrust/keri:1.2.13",
+    "schemaServer": "gleif/vlei:1.0.3",
+    "client": "signify-ts@0.4.0"
+  },
+  "witnesses": {
+    "ids": [
+      "BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha",
+      "BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM",
+      "BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX"
+    ],
+    "toad": 2
+  },
+  "trustAnchor": "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB",
+  "schemas": {
+    "QVI": "EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao",
+    "LE": "ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY",
+    "ECR": "EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw",
+    "CBAMVerifierAccreditation": "EIyPVSpzpiV8PXfxjAhPdESlnvpUGZtBLeZ1jaoVRt8G"
+  },
+  "agents": {
+    "geda": {
+      "name": "Demo Root Authority",
+      "role": "simulated GLEIF root (GEDA)",
+      "lei": null,
+      "aid": "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB",
+      "oobi": "http://keria:3902/oobi/EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB/agent/EHlLcRapSBv5TAVSFQSVS4-DGUr98oCCMyW10adxzKKF"
+    },
+    "qvi": {
+      "name": "Demo QVI",
+      "role": "Qualified vLEI Issuer",
+      "lei": "ZZZZ00QVIISSRDEMO116",
+      "aid": "EGrp3F8ux8ZLAlGsLtQnGO8mcIpOFuUdlMHw6iTRBz2T",
+      "oobi": "http://keria:3902/oobi/EGrp3F8ux8ZLAlGsLtQnGO8mcIpOFuUdlMHw6iTRBz2T/agent/EM152jnvMzdXuJMFTRcc7mBD17G8zOMlub50PV43TCfT"
+    },
+    "nab": {
+      "name": "Demo Accreditation Body",
+      "role": "national accreditation body",
+      "lei": "ZZZZ00NABACCRDEMO119",
+      "aid": "EEAIbtVAJ0knWhSZuTBn8u8HBuqg8I_CTAhIF_s9wGIV",
+      "oobi": "http://keria:3902/oobi/EEAIbtVAJ0knWhSZuTBn8u8HBuqg8I_CTAhIF_s9wGIV/agent/ELRJ63YkzjTYW8eOowOvlS8-YgLltZnAR7Qz6rhgVZA6"
+    },
+    "verifier": {
+      "name": "Demo Verification GmbH",
+      "role": "accredited CBAM verifier",
+      "lei": "ZZZZ00EUVERIFDEMO152",
+      "aid": "EB_Z75CkiUqrBb1C0KH6-yQL3lRUXJJzwhz6Q9aXi8vy",
+      "oobi": "http://keria:3902/oobi/EB_Z75CkiUqrBb1C0KH6-yQL3lRUXJJzwhz6Q9aXi8vy/agent/EGTBsiB9LULSZMNvXgFDH-stN0-s8urpGAb_7uFXCz2W"
+    },
+    "auditor": {
+      "name": "Lena Demo",
+      "role": "CBAM Lead Auditor",
+      "lei": null,
+      "aid": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE",
+      "oobi": "http://keria:3902/oobi/EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE/agent/EKyPZZVQJjSfbglPIrKaqLN97dzT3zu9WOGo-kNxzuX7"
+    },
+    "supplier": {
+      "name": "Demo Fasteners Co.",
+      "role": "installation operator",
+      "lei": "ZZZZ00TWSCREWDEMO185",
+      "aid": "EAkmTlu6a1mioqAlEuUFXDFoZ4T-cnByJgadP79poBeJ",
+      "oobi": "http://keria:3902/oobi/EAkmTlu6a1mioqAlEuUFXDFoZ4T-cnByJgadP79poBeJ/agent/EAK7kaB2NmwQa17m8LwLg8LnQYeJOFYC7WGYbFoPsDRw"
+    },
+    "importer": {
+      "name": "Demo Imports B.V.",
+      "role": "CBAM declarant",
+      "lei": "ZZZZ00EUIMPRTDEMO148",
+      "aid": "EMlTTP70PxdlZ9nQw8S81uogvYFcpaFnzS_qigm4W0D0",
+      "oobi": "http://keria:3902/oobi/EMlTTP70PxdlZ9nQw8S81uogvYFcpaFnzS_qigm4W0D0/agent/EBDgX_gVduFxho82BMNJ5oo_JWZ3jQOEi2q0RWbNABxS"
+    },
+    "impostor": {
+      "name": "Demo Impostor Verifier",
+      "role": "impostor verifier (no credentials)",
+      "lei": "ZZZZ00FAKEVERFICT143",
+      "aid": "EAz8PwFYOa3-3R7bvqwCQPAZAj9g01AqeXeD3oZqag8j",
+      "oobi": "http://keria:3902/oobi/EAz8PwFYOa3-3R7bvqwCQPAZAj9g01AqeXeD3oZqag8j/agent/EMkd9PikC6s8DkQTB8K49JliPElZWuyhfSyyNnmnS4iT"
+    }
+  },
+  "credentials": {
+    "qvi": {
+      "said": "EAK_NBUr6LeB8DFkLPMv0cJyvF_ckjr-rJEPWxnKH_gm",
+      "schema": "QVI",
+      "issuer": "geda",
+      "issuee": "qvi"
+    },
+    "leNab": {
+      "said": "EGh9pElHjo-eBi0IQsn77dwNBj9dzjzBZjIuG4XSpKZ3",
+      "schema": "LE",
+      "issuer": "qvi",
+      "issuee": "nab"
+    },
+    "leVerifier": {
+      "said": "EF7MIyN2Gwo4vxzSGMhkBsqRcak62_9W45XARjVxtAas",
+      "schema": "LE",
+      "issuer": "qvi",
+      "issuee": "verifier"
+    },
+    "leSupplier": {
+      "said": "EPk_jUxG4uuO-argTcGs4tpjYk6yJZKoZaBf88RGrD8b",
+      "schema": "LE",
+      "issuer": "qvi",
+      "issuee": "supplier"
+    },
+    "accreditation": {
+      "said": "EFNX1xtexKD7MfhPZf3fVQAZvRZXvwO9tTw-W_iLXZJC",
+      "schema": "CBAMVerifierAccreditation",
+      "issuer": "nab",
+      "issuee": "verifier",
+      "edge": "nab",
+      "parent": "EGh9pElHjo-eBi0IQsn77dwNBj9dzjzBZjIuG4XSpKZ3"
+    },
+    "ecr": {
+      "said": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
+      "schema": "ECR",
+      "issuer": "verifier",
+      "issuee": "auditor",
+      "edge": "le",
+      "parent": "EF7MIyN2Gwo4vxzSGMhkBsqRcak62_9W45XARjVxtAas",
+      "privacy": true
+    }
+  },
+  "presentedTo": "importer",
+  "impostorCredentials": 0
+}
