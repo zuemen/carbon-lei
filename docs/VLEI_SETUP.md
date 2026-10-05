@@ -186,6 +186,19 @@ npm run dev -w demo
 
 `npm run demo:local` reads `fixtures/vlei.json` and `fixtures/evidence/`; it does not need the KERI stack to be running.
 
+**Revocation and the watcher.** These need the stack running.
+
+```sh
+npm run vlei:watch -- --once         # one poll: issuance seal found, no revocation yet
+npm run vlei:revoke                  # dry run: prints what it would revoke
+npm run vlei:revoke -- --confirm     # revokes the auditor's ECR as the verification body
+npm run vlei:watch:sepolia           # polls every 15 s; on detection sends revokeAuditor on Sepolia
+```
+
+`vlei:revoke` (`verifier/src/revoke-ecr.ts`) makes the verification body's agent revoke the ECR: a TEL `rev` event and an interaction event in the body's KEL with the seal `{ i: <ECR SAID>, s: "1" }`. It is a dry run unless `--confirm` is given, and `--confirm` is refused before 24 hours after the Sepolia report registration (`--not-before none` lifts this on a local run). Revocation cannot be undone; the auditor would need a new AID and a new ECR.
+
+`vlei:watch` (`verifier/src/watch.ts`) does not trust a local credential status. Each poll, the importer's agent asks the witnesses for the body's key state and scans the body's KEL for that seal, and re-checks the event's SAID, prior link and signature. On detection it writes `fixtures/evidence/revocation-<ECR SAID>.json` (detection time, sequence number, raw event) and, only with `--send`, runs the `revokeAuditor` step of `scripts/demo-scenario.ts` with the WATCHER key (three attempts at most). `vlei:watch:sepolia` reads `WATCHER_PRIVATE_KEY` and `SEPOLIA_RPC_URL` from `.env`.
+
 ---
 
 ## 9. Evidence files

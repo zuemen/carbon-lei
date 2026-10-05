@@ -59,7 +59,7 @@ Why not a signed database: no single verification body's or importer's database 
 | EU importer (CBAM declarant) | Demo Imports B.V. (fictional), LEI `ZZZZ00EUIMPRTDEMO148`, EORI `NLDEMO000000001` | EORI | Verifies presentations |
 | Second EU importer (CBAM declarant) | Demo Schrauben Import GmbH (fictional), LEI `ZZZZ00EUIMPRTDEMO245`, EORI `DEDEMO000000002` | EORI | Would receive a second shipment from the same report. The claim for it exceeds the remaining tonnage and reverts with `ExceedsVerifiedTonnage`, which shows that the tonnage ledger is shared across importers. |
 | Trust-registry operator | Project team in the prototype | Owner key | After off-chain checks (`verifier/src/onboard-check.ts`), writes assertions to the allowlist: adds verification bodies and auditors, each entry with the evidence hashes it relied on. Cannot change reports, registration times or the tonnage ledger. |
-| Watcher | Project team in the prototype | WATCHER role key, a separate address from the owner key | Syncs revocations to the allowlist with `suspendVerifier`, `liftSuspension` and `revokeAuditor`; these calls require the WATCHER role. In the prototype the sync transaction is sent from `scripts/demo-scenario.ts`; a service that polls issuer KELs is on the roadmap. |
+| Watcher | Project team in the prototype | WATCHER role key, a separate address from the owner key | Syncs revocations to the allowlist with `suspendVerifier`, `liftSuspension` and `revokeAuditor`; these calls require the WATCHER role. In the prototype, `verifier/src/watch.ts` polls the verification body's KEL for the ECR revocation and sends `revokeAuditor` through `scripts/demo-scenario.ts`; suspensions are sent by the operator. |
 | Impostor | Demo Impostor Verifier (fictional), LEI `ZZZZ00FAKEVERFICT143` | EVM wallet only; no LE vLEI, no accreditation | With no vLEI and no accreditation it fails the onboarding check (`onboard-check.ts impostor` refuses it) and is never added to the allowlist, so any `registerReport` from its address reverts with `NotActiveVerifier`. The Trust chain tab shows it. It is not one of the three demonstrated attacks, which are a tampered input (`DISCLOSURE_TAMPERED`), a claim for a second importer beyond the verified tonnage (`ExceedsVerifiedTonnage`) and a report by a revoked auditor (`AuditorNotAuthorized`). |
 
 ---
@@ -175,7 +175,7 @@ sequenceDiagram
   Note over IMP: registeredAt within 24 hours before t_rev is shown as CONTESTED, manual review
 ```
 
-In both diagrams, a verification body's allowlist entry is keyed by `leiHash`; `verifier` is the body's current address. In the prototype the owner's and the watcher's transactions are sent by `scripts/demo-scenario.ts`. Revoking the ECR in the body's KEL, and a watcher that detects such a revocation by polling, are outside the prototype (roadmap).
+In both diagrams, a verification body's allowlist entry is keyed by `leiHash`; `verifier` is the body's current address. In the prototype the owner's and the watcher's transactions are sent by `scripts/demo-scenario.ts`. The ECR is revoked in the body's KEL with `verifier/src/revoke-ecr.ts`, and `verifier/src/watch.ts` detects the revocation by polling the body's KEL through the witnesses and then runs the `revokeAuditor` step.
 
 ### 5.1 Contract interface
 
@@ -376,7 +376,7 @@ CarbonLEI does not order KEL events. It uses block timestamps to order two kinds
 
 Limit: a revocation reaches the chain only when the watcher sends the sync transaction, and a report registered before that is accepted on-chain. The verifier flags every report registered within N hours before an `AuditorRevoked` or `VerifierSuspended` event for its auditor or institution (N = 24 by default, the `contestedWindowHours` option) as CONTESTED: "Registered inside the revocation window. Manual review required." It is not marked invalid automatically. Back-dating a revocation to the KERI event time (`effectiveAt`) is on the roadmap. Check 7 reads exported evidence in every mode, the CLI included: it does not query issuer KELs at verification time, so a revocation recorded in KERI after the export is visible only through the on-chain allowlist and the CONTESTED flag. Querying issuer KELs at verification time is on the roadmap. See [SECURITY.md](SECURITY.md) T2.
 
-In the prototype no watcher service polls KELs, so there is no measured sync latency; the revocation-sync transaction is sent from the watcher key by `scripts/demo-scenario.ts`. In the demo it is sent more than 24 hours after the report was registered (`npm run demo:local` moves the local chain 25 hours ahead first), so the earlier report verifies as VALID rather than CONTESTED. Once a watcher service exists, N must stay well above its measured sync latency.
+In the prototype one watcher process polls the body's KEL every 15 seconds (`verifier/src/watch.ts`) and records the delay from detection to the block of its sync transaction; on Sepolia: [PENDING-IMPL: measured delay]. In the demo it is sent more than 24 hours after the report was registered (`npm run demo:local` moves the local chain 25 hours ahead first), so the earlier report verifies as VALID rather than CONTESTED. N must stay well above the watcher's sync latency.
 
 ---
 
