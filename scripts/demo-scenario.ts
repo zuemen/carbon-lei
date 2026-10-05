@@ -10,6 +10,7 @@
 // sepolia: addresses from contracts/deployments/11155111.json; keys from DEPLOYER_PRIVATE_KEY (owner),
 //          WATCHER_PRIVATE_KEY, VERIFIER_PRIVATE_KEY (body), SUPPLIER_PRIVATE_KEY; IMPOSTOR_ADDRESS;
 //          RPC from SEPOLIA_RPC_URL (or --rpc). The script reads only the process environment.
+import { pickReconciledClaims, reconcile, type ReportExtract } from "../sdk/consistency.ts";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -291,6 +292,8 @@ export interface CredentialFile {
   importerSalt?: Hex;
   importer2Salt?: Hex;
   issuedWith: string;
+  /** Verification report extract reconciled at issuance (check 8). */
+  reportExtractFile?: string;
 }
 
 export function toSigned(f: CredentialFile): SignedCredential {
@@ -551,16 +554,29 @@ async function ensureCredential(ctx: Ctx, index: 1 | 2): Promise<CredentialFile>
   return existing;
 }
 
+/** Structured fields of the demo verification report, if the fixture exists (fixtures/report-<id>.json). */
+export function loadReportExtract(reportId: string): ReportExtract | null {
+  const path = fileURLToPath(new URL(`../fixtures/report-${reportId}.json`, import.meta.url));
+  return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")).extract as ReportExtract) : null;
+}
+
 async function issueAndSave(ctx: Ctx, index: 1 | 2): Promise<CredentialFile> {
   const registry = ctx.deployment.contracts.EmissionsClaimRegistry.address;
   const chainId = ctx.deployment.chainId;
   const auditorAID = ctx.vlei.values.auditorAid;
+  const claims = demoClaims(index);
+  // Check 8: the body reconciles the verification report's structured fields with the credential
+  // and signs the three reconciliation hashes as part of the credential core.
+  const extract = loadReportExtract(claims.verificationReportId);
+  const picked = extract ? pickReconciledClaims(claims as unknown as Record<string, string>) : null;
+  const reconciliation = extract && picked ? reconcile(extract, picked).reconciliation : undefined;
   const cred = await issueCredential({
-    claims: demoClaims(index),
+    claims,
     auditorAID,
     signer: ctx.account("body"),
     registry,
     chainId,
+    ...(reconciliation ? { reconciliation } : {}),
   });
   const file: CredentialFile = {
     network: ctx.network,
@@ -576,6 +592,7 @@ async function issueAndSave(ctx: Ctx, index: 1 | 2): Promise<CredentialFile> {
     disclosures: cred.disclosures,
     ...(index === 1 ? { importerSalt: newSalt(), importer2Salt: newSalt() } : {}),
     issuedWith: "scripts/demo-scenario.ts (sdk issueCredential, EIP-712 by the verification body)",
+    ...(extract ? { reportExtractFile: `fixtures/report-${claims.verificationReportId}.json` } : {}),
   };
   writeJson(credentialPath(ctx.network, index), file);
   console.log(`  credential ${index} issued: credSAID ${file.credSAID}`);

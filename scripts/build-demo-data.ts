@@ -45,6 +45,7 @@ import {
   type NetworkName,
   type TxLog,
   type VleiValues,
+  FIXTURES,
 } from "./demo-scenario.ts";
 
 /** Carbon price used for the comparison until the quarterly update. */
@@ -340,8 +341,12 @@ export async function buildDemoData(network: NetworkName, rpcArg?: string): Prom
   }
   // Check 7: the credential chain travels as a hashed reference to the bundle served next to the page.
   const bundleName = evidenceSrc.find((f) => f === "authority-bundle.json");
+  const reportExtract = credFile.reportExtractFile
+    ? readJson<any>(resolve(FIXTURES, "..", credFile.reportExtractFile)).extract
+    : undefined;
   const proof: Presentation = {
     ...present(cred, DEMO_DISCLOSURE, shipment),
+    ...(reportExtract ? { reportExtract } : {}),
     ...(anchorEvidence ? { anchorEvidence } : {}),
     ...(bundleName
       ? {
