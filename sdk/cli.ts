@@ -13,6 +13,8 @@ import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "./issue.ts";
 import { exportPact } from "./pact.ts";
 import { verifyPresentation } from "./verify.ts";
+import { vleiCheckers } from "./checkers.ts";
+import { dirname, resolve } from "node:path";
 import { reportKeyOf } from "./commitment.ts";
 
 const USAGE = `carbonlei <command> [options]
@@ -104,7 +106,19 @@ async function main(argv: string[]) {
     }
     case "verify": {
       const proof = readJson(values.proof as string) as Presentation;
-      const r = await verifyPresentation(proof, reader(values), { importerEORI: values.eori as string | undefined });
+      // Evidence bundles referenced by the proof are read relative to the proof file, then to the demo's public folder.
+      const loadBundle = async (p: string) => {
+        for (const base of [dirname(values.proof as string), fileURLToPath(new URL("../demo/public/", import.meta.url))]) {
+          try {
+            return readFileSync(resolve(base, p), "utf8");
+          } catch {}
+        }
+        throw new Error(`evidence file ${p} not found`);
+      };
+      const r = await verifyPresentation(proof, reader(values), {
+        importerEORI: values.eori as string | undefined,
+        checkers: vleiCheckers({ loadBundle }),
+      });
       for (const c of r.checks) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);

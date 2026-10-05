@@ -153,6 +153,14 @@ export class ChainReader {
     return { leiHash, addressBoundAt, unboundAt };
   }
 
+  async auditor(auditorAidHash: Hex, leiHash: Hex) {
+    const [ecrSaidHash, addedAt, revokedAt] = await this.readAllowlist<[Hex, bigint, bigint]>("auditors", [
+      auditorAidHash,
+      leiHash,
+    ]);
+    return { ecrSaidHash, addedAt, revokedAt };
+  }
+
   isInstitutionActiveAt(leiHash: Hex, t: bigint): Promise<boolean> {
     return this.readAllowlist<boolean>("isInstitutionActiveAt", [leiHash, t]);
   }
