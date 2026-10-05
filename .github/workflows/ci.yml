@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: contracts (forge)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - name: Format
+        run: forge fmt --check
+      - name: Build
+        run: forge build --sizes
+      - name: Test (unit + invariant fuzz, 256 runs x depth 128)
+        run: forge test -vv
+
+  sdk:
+    name: sdk (vitest, local anvil chain)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - name: Build contracts (ABI and bytecode for the anvil tests)
+        run: forge build
+      - name: ABI in sdk/abi.ts matches the contracts
+        run: node sdk/scripts/export-abi.ts && git diff --exit-code sdk/abi.ts
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npx tsc -p sdk
+      - run: npm test
