@@ -23,6 +23,7 @@ const authority: AuthorityEvidence = {
   },
 };
 const expectAuth = {
+  trustAnchor: vlei.trustAnchor,
   auditorAID: anchor.auditor,
   verifierLEI: "ZZZZ00EUVERIFDEMO152",
   cnCode: "7318",
@@ -40,11 +41,16 @@ describe("check 6: KEL anchor", () => {
     const r = verifyAnchor({ ...anchor, establishmentRaw: auditorIcp }, exp);
     expect(r).toMatchObject({ ok: true });
   });
+  it("rejects an anchor without the auditor's inception event (key not bound)", () => {
+    const { establishmentRaw: _drop, ...noEst } = { ...anchor, establishmentRaw: auditorIcp };
+    expect(verifyAnchor(noEst as AnchorEvidence, exp)).toMatchObject({ ok: false, code: "ANCHOR_NOT_FOUND" });
+  });
   it("rejects a changed event, another credential, another sequence number, another key", () => {
     const changed = anchor.event.raw.replace(anchor.credSAID, anchor.credSAID.slice(0, -1) + "A");
     expect(verifyAnchor({ ...anchor, event: { raw: changed } }, exp).ok).toBe(false);
-    expect(verifyAnchor(anchor, { ...exp, credSAID: "EOtherCredentialSaid000000000000000000000000" }).ok).toBe(false);
-    expect(verifyAnchor(anchor, { ...exp, kelSeq: exp.kelSeq + 1n }).ok).toBe(false);
+    const full = { ...anchor, establishmentRaw: auditorIcp };
+    expect(verifyAnchor(full, { ...exp, credSAID: "EOtherCredentialSaid000000000000000000000000" }).ok).toBe(false);
+    expect(verifyAnchor(full, { ...exp, kelSeq: exp.kelSeq + 1n }).ok).toBe(false);
     const otherIcp = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i !== anchor.auditor)?.raw;
     expect(verifyAnchor({ ...anchor, establishmentRaw: otherIcp }, exp).ok).toBe(false);
   });
@@ -60,6 +66,7 @@ describe("check 7: authority chain", () => {
     expect(verifyAuthority(authority, { ...expectAuth, auditorAID: vlei.agents.importer.aid }).ok).toBe(false);
     expect(verifyAuthority(authority, { ...expectAuth, onchain: { ...expectAuth.onchain, ecrSaidHash: hashString("x") } }).ok).toBe(false);
     expect(verifyAuthority({ ...authority, trustAnchor: vlei.agents.qvi.aid }, expectAuth).ok).toBe(false);
+    expect(verifyAuthority(authority, { ...expectAuth, trustAnchor: vlei.agents.qvi.aid }).ok).toBe(false);
   });
   it("rejects a credential whose content was changed", () => {
     const tampered = authority.cesr.ecr.replace('"CBAM Lead Auditor"', '"CBAM Lead Auditer"');

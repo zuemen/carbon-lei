@@ -24,6 +24,9 @@ export const SCHEMA = {
   ECR: "EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw",
 } as const;
 export const AUDITOR_ROLE = "CBAM Lead Auditor";
+/** Root of trust of the demo: the simulated GLEIF root (GEDA) of the local KERI stack (fixtures/vlei.json).
+ * A production verifier pins GLEIF's root AID here instead. */
+export const DEMO_TRUST_ANCHOR = "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB";
 
 export interface Message {
   raw: string;
@@ -123,7 +126,9 @@ export function verifyAnchor(
   }
   if (!sigOk) return fail(code, "the event's signature does not verify");
 
-  if (ev.establishmentRaw) {
+  // The signing key must be bound to the auditor's AID; without the inception event it is not.
+  if (!ev.establishmentRaw) return fail(code, "the auditor's inception event is missing, so the signing key is not bound to the auditor");
+  {
     const est: Message = { raw: ev.establishmentRaw, ked: JSON.parse(ev.establishmentRaw) };
     if (est.ked.t !== "icp" || est.ked.i !== expect.auditorAID || est.ked.d !== est.ked.i) {
       return fail(code, "inception event does not belong to the auditor");
@@ -139,7 +144,7 @@ export function verifyAnchor(
   return {
     ok: true,
     code: "",
-    detail: `KERI event #${parseInt(k.s, 16)} by the auditor anchors this credential; Ed25519 signature verified${ev.establishmentRaw ? " with the key from the auditor's inception event" : ""}`,
+    detail: `KERI event #${parseInt(k.s, 16)} by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event`,
   };
 }
 
@@ -154,6 +159,8 @@ export interface AuthorityEvidence {
 }
 
 export interface AuthorityExpect {
+  /** Root of trust configured by the verifier (never taken from the evidence). */
+  trustAnchor: string;
   auditorAID: string;
   verifierLEI: string;
   cnCode: string;
@@ -205,7 +212,8 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     if (L.s !== SCHEMA.LE || L.a?.LEI !== x.verifierLEI) return fail(code, "body LE vLEI missing or for another LEI");
     if (L.e?.qvi?.n !== Q.d || L.i !== Q.a?.i) return fail(code, "body LE vLEI not issued by the QVI");
     // QVI, issued by the root of trust
-    if (Q.s !== SCHEMA.QVI || Q.i !== ev.trustAnchor) return fail(code, "QVI credential not issued by the root of trust");
+    if (ev.trustAnchor && ev.trustAnchor !== x.trustAnchor) return fail(code, "the evidence names another root of trust");
+    if (Q.s !== SCHEMA.QVI || Q.i !== x.trustAnchor) return fail(code, "QVI credential not issued by the configured root of trust");
     // Accreditation by the NAB, covering the CN code
     if (A.s !== ev.accreditationSchema) return fail(code, "accreditation credential has another schema");
     if (A.a?.i !== L.a?.i || A.a?.LEI !== x.verifierLEI) return fail(code, "accreditation issued to another body");

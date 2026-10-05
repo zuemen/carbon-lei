@@ -5,7 +5,7 @@ import { keccak256, stringToBytes } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auditorAidHashOf, hashString, leiHashOf, reportKeyOf } from "../commitment.ts";
-import { METHODOLOGY_NOTE, type CredentialClaims, type Hex } from "../credential.ts";
+import { isoToSeconds, METHODOLOGY_NOTE, type CredentialClaims, type Hex } from "../credential.ts";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../disclosure.ts";
 import { claimArgsOf, DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "../issue.ts";
 import { verifyPresentation } from "../verify.ts";
@@ -139,6 +139,13 @@ describe("verifyPresentation on a local chain", () => {
     });
     const r = await verifyPresentation({ ...proof, signature: other.signature }, c.reader, { importerEORI: EORI_1 });
     expect(codes(r)[3]).toBe("fail:BAD_SIGNATURE");
+  });
+
+  it("issuance refuses a validUntil after the body's accreditation ends", async () => {
+    const base = { auditorAID: AUDITOR_AID, signer: c.verifier, registry: c.deployment.contracts.EmissionsClaimRegistry.address, chainId: 31337 };
+    const until = isoToSeconds(claims().validUntil);
+    await expect(issueCredential({ ...base, claims: claims(), accreditedUntil: until - 1n })).rejects.toThrow(/accreditation ends/);
+    await expect(issueCredential({ ...base, claims: claims(), accreditedUntil: until })).resolves.toBeDefined();
   });
 
   it("S5 wrong EORI → SHIPMENT_MISMATCH; no EORI → check 5 skipped", async () => {

@@ -74,12 +74,16 @@ async function main(argv: string[]) {
       if (!key) throw new Error("VERIFIER_PRIVATE_KEY is not set");
       const deployment = reader(values);
       const claims = readJson(values.claims as string) as CredentialClaims;
+      const signer = privateKeyToAccount(key);
+      const binding = await deployment.addressBinding(signer.address);
+      const institution = binding.leiHash === `0x${"0".repeat(64)}` ? undefined : await deployment.institution(binding.leiHash);
       const cred = await issueCredential({
         claims,
         auditorAID: values["auditor-aid"] as string,
-        signer: privateKeyToAccount(key),
+        signer,
         registry: deployment.registry,
         chainId: await deployment.client.getChainId(),
+        accreditedUntil: institution?.accreditedUntil,
       });
       const reportInput = reportInputOf(cred, {
         supplier: values.supplier as Hex,

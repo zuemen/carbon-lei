@@ -4,7 +4,7 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, utf8 } from "./encoding.ts";
 import type { CheckResult, EvidenceCheckers, EvidenceContext } from "./verify.ts";
-import { verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "./vlei.ts";
+import { DEMO_TRUST_ANCHOR, verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "./vlei.ts";
 import { checkReconciliation, type ReportExtract } from "./consistency.ts";
 
 export interface BundleRef {
@@ -21,7 +21,10 @@ function result(index: number, ok: boolean, code: string, detail: string): Check
   return { index, name: "", status: ok ? "pass" : "fail", code: ok ? "" : code, detail };
 }
 
-export function vleiCheckers(opts: { loadBundle?: (path: string) => Promise<string> } = {}): EvidenceCheckers {
+export function vleiCheckers(
+  opts: { loadBundle?: (path: string) => Promise<string>; trustAnchor?: string } = {},
+): EvidenceCheckers {
+  const trustAnchor = opts.trustAnchor ?? DEMO_TRUST_ANCHOR;
   return {
     anchor: (ev: unknown, ctx: EvidenceContext) => {
       if (!ctx.report) return result(6, false, "ANCHOR_NOT_FOUND", "the report is not registered, so there is no anchor to check");
@@ -56,6 +59,7 @@ export function vleiCheckers(opts: { loadBundle?: (path: string) => Promise<stri
         };
       }
       const r = verifyAuthority(bundle, {
+        trustAnchor,
         auditorAID: ctx.core.issuer.auditorAID,
         verifierLEI: ctx.core.issuer.verifierLEI,
         cnCode: ctx.disclosed.cnCode ?? "",

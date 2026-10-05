@@ -46,10 +46,19 @@ export interface SignedCredential extends IssuedCredential {
 
 /** Builds the credential, fills its SAID and signs it with the verification body's key (EIP-712). */
 export async function issueCredential(
-  input: Omit<IssueInput, "verifierAddress"> & { signer: LocalAccount; registry: Hex; chainId?: number },
+  input: Omit<IssueInput, "verifierAddress"> & {
+    signer: LocalAccount;
+    registry: Hex;
+    chainId?: number;
+    /** The body's accreditation end (UNIX seconds, from the allowlist); the credential may not outlive it. */
+    accreditedUntil?: bigint;
+  },
 ): Promise<SignedCredential> {
   const bad = checkNormalForms(input.claims);
   if (bad.length) throw new Error(`not in normal form: ${bad.join(", ")}`);
+  if (input.accreditedUntil !== undefined && isoToSeconds(input.claims.validUntil) > input.accreditedUntil) {
+    throw new Error("validUntil is after the verification body's accreditation ends; nobody could revoke it after that");
+  }
   const issued = buildCredential({ ...input, verifierAddress: input.signer.address });
   const signature = await signCredential(
     input.signer,

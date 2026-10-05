@@ -32,7 +32,12 @@ const r = verifyAuthority(
       ecr: read("cred-ecr.cesr"),
     },
   },
-  { auditorAID: vlei.agents.auditor.aid, verifierLEI: demo.entities.verifier.lei, cnCode: demo.product.cnCode },
+  {
+    trustAnchor: vlei.trustAnchor, // the operator's configured root of trust for this stack
+    auditorAID: vlei.agents.auditor.aid,
+    verifierLEI: demo.entities.verifier.lei,
+    cnCode: demo.product.cnCode,
+  },
 );
 console.log(r.ok ? `OK: ${r.detail}` : `REFUSED: ${r.code} — ${r.detail}`);
 if (!r.ok) process.exit(1);
