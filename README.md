@@ -11,6 +11,11 @@
 | Documentation | [Architecture](docs/ARCHITECTURE.md) · [Security](docs/SECURITY.md) · [Climate impact](docs/CLIMATE_IMPACT.md) · [Adoption](docs/ADOPTION.md) · [PACT mapping](docs/PACT_MAPPING.md) · [FAQ](docs/FAQ.md) · [vLEI setup](docs/VLEI_SETUP.md) |
 | For reviewers | [Measurements](#measurements) · [Six questions reviewers ask](#six-questions-reviewers-ask) · [Footprint of CarbonLEI](docs/CLIMATE_IMPACT.md#footprint-of-carbonlei) · [Sources: 20 references (EUR-Lex, TAXUD, Eurostat, ISO, PACT and others)](#sources) |
 
+[![The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment](docs/img/buyer-verified.png)](https://zuemen.github.io/carbon-lei/)
+<sub>Screenshot of the live page on Sepolia, taken 2026-10-05 (not a mock-up).</sub>
+
+**In 60 seconds:** open the [live demo](https://zuemen.github.io/carbon-lei/) (it opens on the Buyer tab) → press **Load the demo proof**, then **Verify**: eight checks, two of them read live from the Sepolia contract → open **Try to break it** and watch the counterexamples get rejected.
+
 A ledger can show that a record has not been altered. It cannot show that the person who signed it was entitled to, or that the tonnes it covers have not been used before. CarbonLEI adds those two parts. No token is issued: CarbonLEI records claims against verified tonnage; it does not create or trade carbon credits.
 
 CarbonLEI is a prototype for the IEEE ClimateChain Global Hackathon, track **Sustainable Supply Chains** ([hackathon facts](HACKATHON.md)). We built one corridor end to end: Taiwan fasteners into the EU. It links an EU CBAM verification report to three things that anyone the supplier chooses (an importer, a customer, a bank) can check cryptographically, without access to the CBAM Registry:
