@@ -48,3 +48,21 @@ jobs:
       - name: Type check
         run: npx tsc -p sdk
       - run: npm test
+
+  slither:
+    name: slither (static analysis, fails on high impact)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install slither-analyzer==0.11.6 crytic-compile==0.4.2
+      # Medium and low results are triaged one by one in docs/SECURITY.md (section 5).
+      - name: Slither, all default detectors
+        run: slither . --compile-force-framework foundry --foundry-out-directory contracts/out --filter-paths "contracts/lib|contracts/test|contracts/script" --fail-high

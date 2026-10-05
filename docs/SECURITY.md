@@ -99,7 +99,7 @@ The Test column names the tests that cover each threat: Foundry tests (`test_…
 | `vm.warp` tests for `validUntil` and `accreditedUntil`, including: a shipment claimed before expiry stays valid after it; shipments of a body's earlier reports stay valid after the verification body's current address is updated | Done: `test_C12_claimExpiredReport`, `test_C12_claimOnExpiryDayStillAccepted`, `test_C32_isValidAtClaimedAtAfterExpiry`, `test_C25_shipmentStatusValidAfterExpiry`, `test_C15_registerAfterAccreditationExpiry`, `test_C61_accreditedUntil_sameSecondValid_plusOneInvalid_views`, `test_C3_reportFromOldAddressStillValidAfterRotation`, `test_C26_claimOnOldAddressReportAfterRotation`, `test_C90_sameBlockClaimThenSupersede_reportValidStillTrue` |
 | Coverage (`forge coverage --ir-minimum`) | Both contracts: lines 100%, statements 99.3%, branches 97.3%, functions 100% |
 | Source verified on Etherscan | `VerifierAllowlist` [0xF7AD0cbe867eb9CE4847Af3717C2d27f6434Ea5C](https://sepolia.etherscan.io/address/0xF7AD0cbe867eb9CE4847Af3717C2d27f6434Ea5C#code) and `EmissionsClaimRegistry` [0xEA52a50d3753bACD835DCd47892754b65a90ca19](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code), deployed at block 11846766 from commit `aedcb4c`; `contracts/src` has not changed since |
-| Static analysis | Slither 0.11.6 (crytic-compile 0.4.2), all default detectors (102 in this run), OpenZeppelin, tests and scripts filtered out, run on 5 October 2026 on the deployed source: 11 results, 0 high, 4 medium, 7 low, 0 informational, 0 optimization. None needed a code change: 2 are false positives and 9 are accepted with the reasons below. Not part of CI yet |
+| Static analysis | Slither 0.11.6 (crytic-compile 0.4.2), all default detectors (102 in this run), OpenZeppelin, tests and scripts filtered out, run on 5 October 2026 on the deployed source: 11 results, 0 high, 4 medium, 7 low, 0 informational, 0 optimization. None needed a code change: 2 are false positives and 9 are accepted with the reasons below. CI runs the same command on every push and fails on any high-impact result (`--fail-high`) |
 | Internal adversarial review | Two review rounds of both contracts against the interface specification before deployment: 0 high-severity findings; 1 medium and 2 low-severity findings fixed in code (the cross-scope slot squatting in T19 (8), `test_C100_crossScopeSquatDoesNotBlockTheLayer`; a second `DEFAULT_ADMIN_ROLE` holder that could outlive an ownership transfer, `test_C101_adminRoleOnlyForOwner`; `addAuditor` accepting a zero ECR SAID hash, `test_C102_addAuditorRejectsZeroEcrHash`); the other findings are documented as residual risks in §4 and §10 |
 | External audit | **Roadmap** |
 
@@ -232,7 +232,7 @@ Today CarbonLEI anchors in KERI and records `(auditorAidHash, kelSeq)` on-chain;
 | `renounceOwnership` or a self-revoked admin role (T10) | Low | Deployment checklist (§6); roadmap: disable `renounceOwnership` |
 | Volume visibility on-chain (T15) | Medium | Commitments or permissioned ledger |
 | Address linkability and re-identification from volumes (T15, §7) | Medium | Fresh supplier address per report, zero-knowledge proofs |
-| No external audit (T16) | Medium | Audit before any production use; Slither in CI |
+| No external audit (T16) | Medium | Audit before any production use (Slither runs in CI) |
 
 ---
 
