@@ -87,10 +87,18 @@ export function TrustChain() {
           <section className="sheet reveal" aria-label="Impostor">
             <p className="sheet-kicker">Not in the chain</p>
             <h3>{data.impostor.name}</h3>
-            <p>
-              Posing as a verification body: no vLEI, no accreditation — cannot join the allowlist. LEI {data.impostor.lei}{" "}
-              (fictional).
-            </p>
+            {data.attacks.attack4 ? (
+              <p>
+                Posing as a verification body. Its vLEI chain leads to a root it controls, not to the root this page
+                pins. In attack 4 a simulated theft of the operator key put it on the allowlist; check 7 rejects its
+                proof and the watcher suspended it (Try to break it, card 4). LEI {data.impostor.lei} (fictional).
+              </p>
+            ) : (
+              <p>
+                Posing as a verification body: no vLEI, no accreditation — cannot join the allowlist. LEI {data.impostor.lei}{" "}
+                (fictional).
+              </p>
+            )}
           </section>
           <section className="sheet reveal" aria-label="Who writes the allowlist">
             <p className="sheet-kicker">Who writes the allowlist</p>

@@ -83,8 +83,13 @@ export interface Party {
 export async function reconnect(state: PrivateState, key: AgentKey): Promise<Party> {
   const a = state.agents[key];
   if (!a) throw new Error(`agent ${key} missing from ${STATE_PATH}`);
-  const client = await connectAgent(a.bran);
-  const hab = await client.identifiers().get(key);
-  const oobis = (await client.oobis().get(key, "agent")).oobis as string[];
-  return { key, client, aid: { name: key, prefix: hab.prefix, oobi: oobis[0] } };
+  return { key, ...(await reconnectAgent(a.bran, key)) };
+}
+
+/** Connects to the agent for `bran` and loads its AID `name` (any agent set, e.g. the attack 4 chain). */
+export async function reconnectAgent(bran: string, name: string): Promise<{ client: SignifyClient; aid: Aid }> {
+  const client = await connectAgent(bran);
+  const hab = await client.identifiers().get(name);
+  const oobis = (await client.oobis().get(name, "agent")).oobis as string[];
+  return { client, aid: { name, prefix: hab.prefix, oobi: oobis[0] } };
 }

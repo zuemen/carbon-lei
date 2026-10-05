@@ -31,3 +31,5 @@ Thumbs.db
 
 # local demo runs (anvil)
 fixtures/local-*.json
+# attack 4 synthetic impostor chain (demo-scenario --synthetic-impostor; local tests only)
+fixtures/local-impostor/

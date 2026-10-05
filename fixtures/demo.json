@@ -61,6 +61,54 @@
       "name": "Demo Impostor Verifier (fictional)",
       "lei": "ZZZZ00FAKEVERFICT143",
       "reportId": "VR-FAKE-0001"
+    },
+    "impostorChain": {
+      "note": "Attack 4 only: a vLEI chain the impostor builds for itself under its own root, which is not the pinned root of trust. The verification body of this chain is entities.impostor. All fictional.",
+      "root": {
+        "name": "Self-Made Root (fictional)",
+        "role": "the impostor's own root, not the pinned root of trust"
+      },
+      "qvi": {
+        "name": "Self-Made QVI (fictional)",
+        "lei": "ZZZZ00FAKEQVIFICT158"
+      },
+      "nab": {
+        "name": "Self-Made Accreditation Body (fictional)",
+        "lei": "ZZZZ00FAKENABFICT158",
+        "country": "DE"
+      },
+      "body": {
+        "accreditationNumber": "FAKE-ACC-CBAM-0001",
+        "accreditedUntil": "2030-12-31T00:00:00Z"
+      },
+      "auditor": {
+        "name": "Max Demo (fictional person)",
+        "role": "CBAM Lead Auditor"
+      },
+      "supplier": {
+        "name": "Demo Bolt Works Ltd. (fictional)",
+        "lei": "ZZZZ00TWBOLTSDEMO277",
+        "country": "TW",
+        "unLocode": "TWKHH",
+        "operatorId": "TWZZZZ00TWBOLTSDEMO277",
+        "installations": [
+          {
+            "id": "TW-ZZZZ00TWBOLTSDEMO277-0001",
+            "name": "Demo Bolt Works Plant 1 (fictional)"
+          }
+        ]
+      },
+      "report": {
+        "verificationReportId": "VR-FAKE-0001",
+        "installation": "TW-ZZZZ00TWBOLTSDEMO277-0001",
+        "reportingPeriod": "2026-01-01/2026-12-31",
+        "cbamRoute": "C",
+        "verifiedTonnes": "600",
+        "specificEmbeddedEmissions_tCO2e_per_t": "1.8",
+        "valueType": "actual",
+        "issuedAt": "2027-03-25T00:00:00Z",
+        "validUntil": "2027-12-31T00:00:00Z"
+      }
     }
   },
   "product": {

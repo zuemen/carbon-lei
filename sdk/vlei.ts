@@ -211,9 +211,10 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     // LE of the body, issued by the QVI
     if (L.s !== SCHEMA.LE || L.a?.LEI !== x.verifierLEI) return fail(code, "body LE vLEI missing or for another LEI");
     if (L.e?.qvi?.n !== Q.d || L.i !== Q.a?.i) return fail(code, "body LE vLEI not issued by the QVI");
-    // QVI, issued by the root of trust
-    if (ev.trustAnchor && ev.trustAnchor !== x.trustAnchor) return fail(code, "the evidence names another root of trust");
+    // QVI, issued by the root of trust. The issuer is checked first: for a chain built under another
+    // root (attack 4) that is the reason that matters, whatever root the bundle names.
     if (Q.s !== SCHEMA.QVI || Q.i !== x.trustAnchor) return fail(code, "QVI credential not issued by the configured root of trust");
+    if (ev.trustAnchor && ev.trustAnchor !== x.trustAnchor) return fail(code, "the evidence names another root of trust");
     // Accreditation by the NAB, covering the CN code
     if (A.s !== ev.accreditationSchema) return fail(code, "accreditation credential has another schema");
     if (A.a?.i !== L.a?.i || A.a?.LEI !== x.verifierLEI) return fail(code, "accreditation issued to another body");

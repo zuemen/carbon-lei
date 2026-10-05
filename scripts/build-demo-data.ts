@@ -11,19 +11,32 @@ import { parseArgs } from "node:util";
 import { getAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry, sepolia } from "viem/chains";
-import type { CachedSnapshot, DemoData, DemoTx, TrustNode } from "../demo/src/data.ts";
+import type { Attack4, CachedSnapshot, DemoData, DemoTx, TrustNode } from "../demo/src/data.ts";
 import { ChainReader, SEPOLIA_RPCS } from "../sdk/chain.ts";
 import { auditorAidHashOf, hashString, leiHashOf } from "../sdk/commitment.ts";
 import type { Hex } from "../sdk/credential.ts";
 import type { Presentation } from "../sdk/disclosure.ts";
-import { claimArgsOf, DEMO_DISCLOSURE, present } from "../sdk/issue.ts";
+import { claimArgsOf, DEMO_DISCLOSURE, present, reportInputOf } from "../sdk/issue.ts";
 import { verifyPresentation } from "../sdk/verify.ts";
+import { DEMO_TRUST_ANCHOR } from "../sdk/vlei.ts";
+import {
+  IMPOSTOR_CHAIN,
+  IMPOSTOR_LEI,
+  IMPOSTOR_PUBLIC_DIR,
+  impostorCheckers,
+  impostorFiles,
+  impostorProof,
+  impostorVerificationPath,
+  loadImpostorVlei,
+  type ImpostorFiles,
+} from "./impostor.ts";
 import {
   ANVIL_KEYS,
   DEFAULT_LOCAL_RPC,
   EVIDENCE_DIR,
   IMPORTER_1,
   IMPORTER_2,
+  IMPOSTOR_TX_STEPS,
   ROOT,
   SCENARIO_STEPS,
   SHIPMENT_1,
@@ -34,6 +47,7 @@ import {
   isMain,
   isoOf,
   loadCredential,
+  loadImpostorCredential,
   loadTxLog,
   loadVlei,
   readJson,
@@ -215,6 +229,24 @@ export function checkDemoData(d: DemoData): string[] {
   }
   s(d.attacks?.secondImporter?.quantityTonnes, "attacks.secondImporter.quantityTonnes");
   if (d.attacks?.attack3 !== null) tx(d.attacks?.attack3 as DemoTx, "attacks.attack3");
+  const a4 = d.attacks?.attack4;
+  if (a4 !== undefined) {
+    if (a4.evidence !== "keria" && a4.evidence !== "synthetic") bad.push("attacks.attack4.evidence");
+    if (d.mode === "hosted" && a4.evidence !== "keria") bad.push("attacks.attack4.evidence (synthetic on a hosted page)");
+    s(a4.exportDate, "attacks.attack4.exportDate");
+    s(a4.body?.name, "attacks.attack4.body.name"); s(a4.body?.lei, "attacks.attack4.body.lei"); hex(a4.body?.address, "attacks.attack4.body.address", 20);
+    s(a4.impostorRoot?.name, "attacks.attack4.impostorRoot.name"); s(a4.impostorRoot?.aid, "attacks.attack4.impostorRoot.aid");
+    s(a4.pinnedRoot, "attacks.attack4.pinnedRoot");
+    if (a4.impostorRoot?.aid === a4.pinnedRoot) bad.push("attacks.attack4.impostorRoot (equals the pinned root)");
+    s(a4.supplier?.name, "attacks.attack4.supplier.name"); s(a4.supplier?.installationName, "attacks.attack4.supplier.installationName");
+    s(a4.proof?.core, "attacks.attack4.proof.core"); hex(a4.proof?.signature, "attacks.attack4.proof.signature", 65);
+    if (!a4.proof?.anchorEvidence || !a4.proof?.authorityEvidence) bad.push("attacks.attack4.proof evidence");
+    for (const k of ["addVerifier", "addAuditor", "register", "suspend"] as const) tx(a4.txs?.[k], `attacks.attack4.txs.${k}`);
+    hex(a4.dryRun?.caller, "attacks.attack4.dryRun.caller", 20);
+    for (const [k, v] of Object.entries(a4.dryRun?.input ?? {})) s(v, `attacks.attack4.dryRun.input.${k}`);
+    if (!a4.verification) bad.push("attacks.attack4.verification");
+    if (!Array.isArray(a4.evidenceFiles)) bad.push("attacks.attack4.evidenceFiles");
+  }
   if (!Array.isArray(d.txs)) bad.push("txs");
   else d.txs.forEach((t, i) => tx(t, `txs[${i}]`));
   if (!Array.isArray(d.trustChain)) bad.push("trustChain");
@@ -239,9 +271,92 @@ export function checkDemoData(d: DemoData): string[] {
   return bad;
 }
 
+// ------------------------------------------------------------------ attack 4
+
+const ATTACK4_CRED_LABELS: Record<string, string> = {
+  "cred-qvi.cesr": "QVI credential, impostor's root → its QVI",
+  "cred-le-nab.cesr": "LE credential, its QVI → its accreditation body",
+  "cred-le-body.cesr": "LE credential, its QVI → the impostor body",
+  "cred-accreditation.cesr": "Accreditation, its accreditation body → the impostor body",
+  "cred-ecr.cesr": "ECR credential, the impostor body → its auditor",
+};
+
+/**
+ * Attack 4, only when its four transactions, the impostor's credential and its evidence (authority bundle
+ * and anchor) exist. Returns null otherwise, so the page shows no attack 4 card.
+ */
+async function buildAttack4(
+  network: NetworkName,
+  reader: ChainReader,
+  log: TxLog,
+): Promise<{ attack4: Attack4; files: ImpostorFiles; evidence: string[]; dryRun: { errorName: string; args: string[] } } | null> {
+  const cf = loadImpostorCredential(network);
+  const txs = IMPOSTOR_TX_STEPS.map((s) => log.txs.find((t) => t.step === s && t.result === "success"));
+  if (!cf || txs.some((t) => !t)) {
+    if (cf || txs.some(Boolean)) console.log("  attack 4: credential or transactions not all recorded; left out");
+    return null;
+  }
+  const files = impostorFiles(cf.impostorEvidence ?? "keria");
+  if (network === "sepolia" && files.kind !== "keria") throw new Error("attack 4: synthetic evidence on Sepolia");
+  const cred = toSigned(cf);
+  let iv, built;
+  try {
+    iv = loadImpostorVlei(files);
+    built = impostorProof(cred, files);
+  } catch (e) {
+    console.log(`  attack 4: evidence missing (${(e as Error).message}); left out`);
+    return null;
+  }
+  if (cf.registry.toLowerCase() !== reader.registry.toLowerCase()) throw new Error("attack 4: credential signed for another registry");
+  if (iv.trustAnchor === DEMO_TRUST_ANCHOR) throw new Error("attack 4: the impostor's root is the pinned root");
+  const rep = await reader.report(cf.reportKey);
+  if (rep.registeredAt === 0n) throw new Error("attack 4: the impostor's report is not registered on this chain");
+  const verification = await verifyPresentation(built.proof, reader, { checkers: impostorCheckers(files) });
+  const input = reportInputOf(cred, { supplier: rep.supplier, kelSeq: rep.kelSeq });
+  const r = await reader.dryRun("registerReport", [input], rep.verifier);
+  const dryRun = r.reverted ? { errorName: r.errorName, args: r.args.map(str) } : { errorName: "NONE (would succeed)", args: [] };
+  const beforePath = impostorVerificationPath(network);
+  const before = existsSync(beforePath) ? readJson<any>(beforePath) : null;
+
+  const evidence = readdirSync(files.evidenceDir)
+    .filter((f) => statSync(resolve(files.evidenceDir, f)).isFile())
+    .filter((f) => !/^anchor-/.test(f) || f === `anchor-${cf.credSAID}.json`)
+    .sort();
+  const label = (f: string) =>
+    f === "authority-bundle.json"
+      ? "Impostor's authority chain (leads to its own root)"
+      : f === `anchor-${cf.credSAID}.json`
+        ? "Impostor auditor's KEL anchor of the impostor's credential"
+        : f === "index.json"
+          ? "Impostor's evidence index"
+          : (ATTACK4_CRED_LABELS[f] ?? (/^kel-(.+)\.json$/.test(f) ? `Key event log: ${f.slice(4, -5)}` : f));
+  const [addVerifier, addAuditor, register, suspend] = txs as DemoTx[];
+  const attack4: Attack4 = {
+    evidence: files.kind,
+    exportDate: iv.updatedAt.slice(0, 10),
+    body: { name: demo.entities.impostor.name, lei: IMPOSTOR_LEI, address: getAddress(rep.verifier) },
+    impostorRoot: { name: IMPOSTOR_CHAIN.root.name, aid: iv.trustAnchor },
+    pinnedRoot: DEMO_TRUST_ANCHOR,
+    supplier: { name: IMPOSTOR_CHAIN.supplier.name, installationName: cf.claims.installationName },
+    proof: built.proof,
+    txs: { addVerifier, addAuditor, register, suspend },
+    dryRun: {
+      input: Object.fromEntries(Object.entries(input).map(([k, v]) => [k, str(v)])),
+      caller: getAddress(rep.verifier),
+    },
+    verification: JSON.parse(toJson(verification)),
+    beforeSuspension: before ? { block: before.block, time: before.time, verification: before.verification } : null,
+    evidenceFiles: evidence.map((f) => ({ label: label(f), path: `${IMPOSTOR_PUBLIC_DIR}/${f}` })),
+  };
+  return { attack4, files, evidence, dryRun };
+}
+
 // ------------------------------------------------------------------ build
 
-export async function buildDemoData(network: NetworkName, rpcArg?: string): Promise<{ data: DemoData; evidenceSrc: string[] }> {
+export async function buildDemoData(
+  network: NetworkName,
+  rpcArg?: string,
+): Promise<{ data: DemoData; evidenceSrc: string[]; impostorEvidence?: { dir: string; files: string[] } }> {
   const credFile = loadCredential(network, 1);
   if (!credFile) throw new Error(`fixtures/${network}-credential.json not found; run demo-scenario first`);
   const depFile = readJson<DeploymentFile>(deploymentPath(network));
@@ -397,6 +512,8 @@ export async function buildDemoData(network: NetworkName, rpcArg?: string): Prom
     verification: JSON.parse(toJson(verification)),
     dryRuns: { sameBatch: await dry(sameBatch), secondImporter: await dry(second) },
   };
+  const a4 = await buildAttack4(network, reader, log);
+  if (a4) cached.dryRuns.impostorAfterSuspension = a4.dryRun;
 
   const { nodes, exportDate } = buildTrustChain(vlei, log, evidenceSrc, credByFile);
   const c = credFile.claims;
@@ -443,6 +560,7 @@ export async function buildDemoData(network: NetworkName, rpcArg?: string): Prom
       sameBatch: { args: argsOut(sameBatch), caller: addresses.supplier },
       secondImporter: { args: argsOut(second), caller: addresses.supplier, quantityTonnes: SHIPMENT_2.quantityTonnes },
       attack3,
+      ...(a4 ? { attack4: a4.attack4 } : {}),
     },
     txs,
     trustChain: nodes,
@@ -460,7 +578,7 @@ export async function buildDemoData(network: NetworkName, rpcArg?: string): Prom
     },
     cached,
   };
-  return { data, evidenceSrc };
+  return { data, evidenceSrc, ...(a4 ? { impostorEvidence: { dir: a4.files.evidenceDir, files: a4.evidence } } : {}) };
 }
 
 async function main() {
@@ -471,16 +589,22 @@ async function main() {
   if (network !== "local" && network !== "sepolia") throw new Error("--network local|sepolia is required");
   const out = resolve(values.out ?? resolve(ROOT, "demo/public/demo-data.json"));
 
-  const { data, evidenceSrc } = await buildDemoData(network, values.rpc);
+  const { data, evidenceSrc, impostorEvidence } = await buildDemoData(network, values.rpc);
   const problems = checkDemoData(data);
   if (problems.length) throw new Error(`demo data does not match DemoData: ${problems.join(", ")}`);
 
-  // demo/public/evidence/ is generated: rebuild it from the current evidence set.
+  // demo/public/evidence/ is generated: rebuild it from the current evidence set
+  // (attack 4's evidence goes to demo/public/evidence/impostor/).
   const dir = resolve(dirname(out), "evidence");
   rmSync(dir, { recursive: true, force: true });
   if (evidenceSrc.length) {
     mkdirSync(dir, { recursive: true });
     for (const f of evidenceSrc) copyFileSync(resolve(EVIDENCE_DIR, f), resolve(dir, f));
+  }
+  if (impostorEvidence) {
+    const impDir = resolve(dirname(out), IMPOSTOR_PUBLIC_DIR);
+    mkdirSync(impDir, { recursive: true });
+    for (const f of impostorEvidence.files) copyFileSync(resolve(impostorEvidence.dir, f), resolve(impDir, f));
   }
   writeJson(out, data);
 
@@ -490,6 +614,15 @@ async function main() {
   console.log(`  verification: ${v.overall} · ${v.checks.map((x) => `${x.index}:${x.status}${x.code ? `(${x.code})` : ""}`).join(" ")}`);
   console.log(`  dry runs: ${Object.entries(data.cached?.dryRuns ?? {}).map(([k, r]) => `${k}=${r.errorName}`).join(", ")}`);
   console.log(`  remainingKg ${data.cached?.remainingKg} · evidence files ${data.evidence.files.length} · exportDate "${data.exportDate}"`);
+  const a4 = data.attacks.attack4;
+  if (a4) {
+    const v4 = a4.verification as typeof v;
+    console.log(`  attack 4 (${a4.evidence}): ${v4.overall} · ${v4.checks.map((x) => `${x.index}:${x.status}${x.code ? `(${x.code})` : ""}`).join(" ")}`);
+    console.log(`  attack 4 check 7: ${(v4.checks.find((x) => x.index === 7) as { detail?: string } | undefined)?.detail}`);
+    console.log(`  attack 4 evidence files ${a4.evidenceFiles.length} · before suspension ${a4.beforeSuspension ? "recorded" : "not recorded"}`);
+  } else {
+    console.log("  attack 4: not included");
+  }
 }
 
 if (isMain(import.meta.url)) {

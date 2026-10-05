@@ -89,6 +89,31 @@ test("E3 the three attacks are rejected with the right reasons", async ({ page }
   else await expect(page.getByText("not recorded yet")).toBeVisible();
 });
 
+test("E3b attack 4 (when recorded): the impostor's proof fails check 7 at the pinned root; suspension; NotActiveVerifier", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./#try-to-break-it");
+  await expect(page.getByRole("heading", { name: "Try to break it" })).toBeVisible();
+  const verify = page.getByRole("button", { name: "Verify the impostor's proof" });
+  if (!data.attacks.attack4) {
+    await expect(verify).toHaveCount(0);
+    return;
+  }
+  await expect(page.getByRole("heading", { name: "4 · The owner key is stolen: an impostor body is put on the allowlist" })).toBeVisible();
+  await verify.click();
+  const checks = page.locator("ol.a4-checks > li");
+  await expect(checks).toHaveCount(8);
+  for (const i of [0, 1, 2, 5]) await expect(checks.nth(i).locator(".badge")).toHaveText("✓ Passed"); // checks 1, 2, 3, 6
+  // Check 4 passes, or needs review once the watcher's suspension falls within 24 h after the registration.
+  await expect(checks.nth(3).locator(".badge")).toHaveText(/✓ Passed|! Needs review/);
+  await expect(checks.nth(4).locator(".badge")).toHaveText("– Not run"); // no shipment in this proof
+  await expect(checks.nth(6).locator(".badge")).toHaveText("✕ Failed");
+  await expect(checks.nth(6)).toContainText("QVI credential not issued by the configured root of trust");
+  await expect(page.getByText(/reverted NotActiveVerifier/).first()).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
 test("E5 primary RPC down → switches to the backup node", async ({ page }) => {
   const [primary] = await rpcs(page);
   await page.route(`${primary}**`, (r) => r.abort());

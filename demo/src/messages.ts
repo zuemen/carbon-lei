@@ -62,7 +62,7 @@ export const CODE_TEXT: Record<string, string> = {
   SHIPMENT_MISMATCH: "This batch was not claimed for you, or not for this quantity.",
   ANCHOR_NOT_FOUND: "The auditor's signed history (KERI log) contains no record of this report.",
   AUTHORITY_INVALID:
-    "The chain of authority behind the auditor is broken: their role credential, their verification body's vLEI, or its accreditation is missing, revoked or expired.",
+    "The chain of authority behind the auditor is broken: their role credential, their verification body's vLEI, or its accreditation is missing, revoked or expired, or the chain does not lead to the root of trust this page is configured with.",
 };
 
 export function revertText(name: string, args: readonly unknown[] = []): string {

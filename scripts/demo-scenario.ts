@@ -2,13 +2,25 @@
 // in fixtures/<network>-tx.json. Steps already recorded with their expected result are skipped.
 //
 // Usage: node scripts/demo-scenario.ts --network local|sepolia [--rpc <url>] [--steps a,b,…] [--kel-seq <n>]
-//   steps: issue, fund, addVerifier, addAuditor, register1, claim1, revokeAuditor, attack3
+//          [--synthetic-impostor]
+//   steps: issue, fund, addVerifier, addAuditor, register1, claim1, revokeAuditor, attack3,
+//          impostorIssue, impostorFund, impostorAdd, impostorRegister, impostorVerify, impostorSuspend, impostorDryRun
 //   default: addVerifier,addAuditor,register1,claim1
+//
+// Attack 4 (scripts/impostor.ts), in this order: impostorIssue (the impostor signs a credential, no tx) →
+//   anchor it in the impostor auditor's KEL (npm run vlei:impostor:anchor) → impostorFund (Sepolia only) →
+//   impostorAdd (SIMULATED OWNER-KEY COMPROMISE: the owner key puts the impostor body and its auditor on the
+//   allowlist) → impostorRegister → impostorVerify (records the verification before the suspension) →
+//   impostorSuspend (watcher) → impostorDryRun (expects NotActiveVerifier). The impostor names its own
+//   wallet as the supplier of its fictional installation (no shipment is ever claimed against it).
+//   --synthetic-impostor (local only): the impostor's vLEI chain and anchor are generated without KERIA
+//   into fixtures/local-impostor/ (git-ignored) instead of being read from fixtures/vlei-impostor.json.
 //
 // local:   anvil development keys (0 owner, 1 watcher, 2 body, 3 supplier, 4 impostor); deploys the
 //          contracts when they are missing and writes fixtures/local-deployment.json.
 // sepolia: addresses from contracts/deployments/11155111.json; keys from DEPLOYER_PRIVATE_KEY (owner),
 //          WATCHER_PRIVATE_KEY, VERIFIER_PRIVATE_KEY (body), SUPPLIER_PRIVATE_KEY; IMPOSTOR_ADDRESS;
+//          IMPOSTOR_PRIVATE_KEY (attack 4 steps that sign or send as the impostor);
 //          RPC from SEPOLIA_RPC_URL (or --rpc). The script reads only the process environment.
 import { pickReconciledClaims, reconcile, type ReportExtract } from "../sdk/consistency.ts";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -35,6 +47,22 @@ import { METHODOLOGY_NOTE, isoToSeconds, tonnesToKg, type CredentialClaims, type
 import { signCredential } from "../sdk/eip712.ts";
 import { newSalt } from "../sdk/encoding.ts";
 import { claimArgsOf, issueCredential, reportInputOf, type SignedCredential } from "../sdk/issue.ts";
+import { verifyPresentation } from "../sdk/verify.ts";
+import {
+  IMPOSTOR_CHAIN,
+  IMPOSTOR_LEI,
+  impostorCheckers,
+  impostorClaims,
+  impostorCredentialPath,
+  impostorFiles,
+  impostorProof,
+  impostorVerificationPath,
+  loadImpostorVlei,
+  writeSyntheticAnchor,
+  writeSyntheticImpostor,
+  type ImpostorEvidenceKind,
+  type ImpostorFiles,
+} from "./impostor.ts";
 
 // ------------------------------------------------------------------ paths and files
 
@@ -83,9 +111,27 @@ export const LABELS: Record<string, string> = {
   fundWatcher: "Test ETH sent to the watcher (0.03)",
   fundBody: "Test ETH sent to the verification body (0.05)",
   fundSupplier: "Test ETH sent to the supplier (0.05)",
+  fundImpostor: "Attack 4: test ETH sent to the impostor's wallet (0.02)",
+  impostorAddVerifier: "Attack 4 (simulated owner-key compromise): impostor body added to the allowlist",
+  impostorAddAuditor: "Attack 4 (simulated owner-key compromise): impostor's auditor added",
+  impostorRegister: "Attack 4: impostor registers its own report — accepted (status 1)",
+  impostorSuspend: "Attack 4: watcher suspends the impostor body",
 };
 /** Steps shown on the demo page, in scenario order. */
-export const SCENARIO_STEPS = ["addVerifier", "addAuditor", "registerReport1", "claim1", "revokeAuditor", "attack3"];
+export const SCENARIO_STEPS = [
+  "addVerifier",
+  "addAuditor",
+  "registerReport1",
+  "claim1",
+  "revokeAuditor",
+  "attack3",
+  "impostorAddVerifier",
+  "impostorAddAuditor",
+  "impostorRegister",
+  "impostorSuspend",
+];
+/** Attack 4 transactions (all four must be recorded for the demo page to show attack 4). */
+export const IMPOSTOR_TX_STEPS = ["impostorAddVerifier", "impostorAddAuditor", "impostorRegister", "impostorSuspend"] as const;
 
 /** CLI step name to recorded step id. */
 const CLI_STEPS: Record<string, string | null> = {
@@ -97,6 +143,13 @@ const CLI_STEPS: Record<string, string | null> = {
   claim1: "claim1",
   revokeAuditor: "revokeAuditor",
   attack3: "attack3",
+  impostorIssue: null,
+  impostorFund: null,
+  impostorAdd: null,
+  impostorRegister: "impostorRegister",
+  impostorVerify: null,
+  impostorSuspend: "impostorSuspend",
+  impostorDryRun: null,
 };
 const DEFAULT_STEPS = ["addVerifier", "addAuditor", "register1", "claim1"];
 
@@ -294,6 +347,13 @@ export interface CredentialFile {
   issuedWith: string;
   /** Verification report extract reconciled at issuance (check 8). */
   reportExtractFile?: string;
+  /** Attack 4 credential only: where its vLEI evidence comes from (KERIA export or local synthetic chain). */
+  impostorEvidence?: ImpostorEvidenceKind;
+}
+
+export function loadImpostorCredential(network: NetworkName): CredentialFile | null {
+  const path = impostorCredentialPath(network);
+  return existsSync(path) ? readJson<CredentialFile>(path) : null;
 }
 
 export function toSigned(f: CredentialFile): SignedCredential {
@@ -348,19 +408,40 @@ interface Ctx {
   deployment: DeploymentFile;
   account: (role: Role) => PrivateKeyAccount;
   impostor: () => Hex;
+  /** The impostor's key (attack 4): anvil key 4 locally, IMPOSTOR_PRIVATE_KEY on Sepolia. */
+  impostorAccount: () => PrivateKeyAccount;
   log: TxLog;
   vlei: VleiValues;
   kelSeqArg?: string;
+  /** Attack 4 evidence source: the KERIA export, or (local only) the synthetic chain. */
+  impostorKind: ImpostorEvidenceKind;
 }
 
-function accountsFor(network: NetworkName): { account: (r: Role) => PrivateKeyAccount; impostor: () => Hex } {
+function accountsFor(network: NetworkName): {
+  account: (r: Role) => PrivateKeyAccount;
+  impostor: () => Hex;
+  impostorAccount: () => PrivateKeyAccount;
+} {
   if (network === "local") {
     const [owner, watcher, body, supplier, impostor] = ANVIL_KEYS.map((k) => privateKeyToAccount(k));
     const byRole: Record<Role, PrivateKeyAccount> = { owner, watcher, body, supplier };
-    return { account: (r) => byRole[r], impostor: () => impostor.address };
+    return { account: (r) => byRole[r], impostor: () => impostor.address, impostorAccount: () => impostor };
   }
   const cache = new Map<Role, PrivateKeyAccount>();
+  let impostorAcc: PrivateKeyAccount | undefined;
   return {
+    impostorAccount: () => {
+      if (!impostorAcc) {
+        const k = process.env.IMPOSTOR_PRIVATE_KEY;
+        if (!k) throw new Error("IMPOSTOR_PRIVATE_KEY is not set (needed for the impostor's attack 4 steps on Sepolia)");
+        impostorAcc = privateKeyToAccount((k.startsWith("0x") ? k : `0x${k}`) as Hex);
+        const listed = process.env.IMPOSTOR_ADDRESS;
+        if (listed && getAddress(listed) !== impostorAcc.address) {
+          throw new Error("IMPOSTOR_PRIVATE_KEY does not belong to IMPOSTOR_ADDRESS");
+        }
+      }
+      return impostorAcc;
+    },
     account: (r) => {
       if (!cache.has(r)) {
         const k = process.env[ENV_KEYS[r]];
@@ -600,10 +681,10 @@ async function issueAndSave(ctx: Ctx, index: 1 | 2): Promise<CredentialFile> {
   return file;
 }
 
-/** kelSeq: --kel-seq, else fixtures/evidence/anchor-<credSAID>.json, else 1 on a local chain. */
-export function kelSeqFor(network: NetworkName, credSAID: string, arg?: string): bigint {
+/** kelSeq: --kel-seq, else <dir>/anchor-<credSAID>.json (default fixtures/evidence), else 1 on a local chain. */
+export function kelSeqFor(network: NetworkName, credSAID: string, arg?: string, dir = EVIDENCE_DIR): bigint {
   if (arg !== undefined) return BigInt(arg);
-  const path = resolve(EVIDENCE_DIR, `anchor-${credSAID}.json`);
+  const path = resolve(dir, `anchor-${credSAID}.json`);
   if (existsSync(path)) {
     const flat = flatten(readJson(path));
     for (const [p, v] of flat) {
@@ -621,7 +702,7 @@ export function kelSeqFor(network: NetworkName, credSAID: string, arg?: string):
     throw new Error(`${path} has no kelSeq, sn or s field`);
   }
   if (network === "local") return 1n;
-  throw new Error(`no kelSeq: pass --kel-seq or add fixtures/evidence/anchor-${credSAID}.json`);
+  throw new Error(`no kelSeq: pass --kel-seq or add ${path}`);
 }
 
 // ------------------------------------------------------------------ steps
@@ -654,6 +735,7 @@ async function stepFund(ctx: Ctx) {
 async function runStep(ctx: Ctx, name: string) {
   if (!(name in CLI_STEPS)) throw new Error(`unknown step ${name}; use ${Object.keys(CLI_STEPS).join(", ")}`);
   if (name === "fund") return stepFund(ctx);
+  if (name.startsWith("impostor")) return runImpostorStep(ctx, name);
   if (name === "issue") {
     const c = await ensureCredential(ctx, 1);
     console.log(`- issue: credSAID ${c.credSAID} · reportKey ${c.reportKey}`);
@@ -766,6 +848,190 @@ async function stepAttack3(ctx: Ctx) {
   await record(ctx, "attack3", receipt);
 }
 
+// ------------------------------------------------------- attack 4: impostor body
+
+function impostorFilesFor(ctx: Ctx): ImpostorFiles {
+  if (ctx.impostorKind === "synthetic") {
+    if (ctx.network !== "local") throw new Error("--synthetic-impostor is for a local anvil only");
+    return writeSyntheticImpostor();
+  }
+  return impostorFiles("keria");
+}
+
+/** The impostor's report input: its own wallet named as the supplier (no shipment is ever claimed). */
+function impostorReportInput(ctx: Ctx, c: CredentialFile, files: ImpostorFiles) {
+  if (files.kind === "synthetic" && !existsSync(resolve(files.evidenceDir, `anchor-${c.credSAID}.json`))) writeSyntheticAnchor(c.credSAID);
+  const kelSeq = kelSeqFor(ctx.network, c.credSAID, ctx.kelSeqArg, files.evidenceDir);
+  return { input: reportInputOf(toSigned(c), { supplier: ctx.impostorAccount().address, kelSeq }), kelSeq };
+}
+
+/** Loads the impostor's credential, or issues it once with the impostor's key. Never re-issues a registered one. */
+async function ensureImpostorCredential(ctx: Ctx, files: ImpostorFiles): Promise<CredentialFile> {
+  const iv = loadImpostorVlei(files);
+  const registry = ctx.deployment.contracts.EmissionsClaimRegistry.address;
+  const chainId = ctx.deployment.chainId;
+  const path = impostorCredentialPath(ctx.network);
+  const existing = loadImpostorCredential(ctx.network);
+  if (existing) {
+    const same =
+      existing.auditorAID === iv.auditorAid &&
+      existing.impostorEvidence === files.kind &&
+      existing.registry.toLowerCase() === registry.toLowerCase() &&
+      existing.chainId === chainId;
+    if (same) return existing;
+    const registered =
+      existing.registry.toLowerCase() === registry.toLowerCase() &&
+      (await new ChainReader(ctx.pub, toDeployment(ctx.deployment)).report(existing.reportKey)).registeredAt !== 0n;
+    if (ctx.network !== "local" || registered) {
+      throw new Error(
+        `${path} was issued for another auditor, evidence source or registry and is ` +
+          (registered ? "already registered; " : "not re-issued on Sepolia; ") +
+          "remove it by hand only if you really mean to start attack 4 over",
+      );
+    }
+    console.log("  impostor credential: auditor, evidence source or registry changed and not registered here; issuing again");
+  }
+  const signer = ctx.impostorAccount();
+  const cred = await issueCredential({ claims: impostorClaims(), auditorAID: iv.auditorAid, signer, registry, chainId });
+  const file: CredentialFile = {
+    network: ctx.network,
+    chainId,
+    registry,
+    credSAID: cred.core.d,
+    reportKey: reportKeyOf(cred.core.d),
+    auditorAID: iv.auditorAid,
+    placeholderAuditor: false,
+    coreJson: cred.coreJson,
+    signature: cred.signature,
+    claims: cred.claims,
+    disclosures: cred.disclosures,
+    issuedWith: "scripts/demo-scenario.ts impostorIssue (sdk issueCredential, EIP-712 by the impostor's wallet)",
+    impostorEvidence: files.kind,
+  };
+  writeJson(path, file);
+  console.log(`  impostor credential issued: credSAID ${file.credSAID} (signed by ${signer.address})`);
+  if (files.kind === "synthetic") console.log(`  synthetic anchor: ${writeSyntheticAnchor(file.credSAID)}`);
+  else console.log(`  next: npm run vlei:impostor:anchor -- ${file.credSAID}`);
+  return file;
+}
+
+async function runImpostorStep(ctx: Ctx, name: string) {
+  const files = impostorFilesFor(ctx);
+  const imp = ctx.impostorAccount();
+  noteAddress(ctx, "impostor", imp.address);
+  if (IMPOSTOR_LEI === VERIFIER_LEI) throw new Error("the impostor's LEI must differ from the demo body's");
+  const impLeiHash = leiHashOf(IMPOSTOR_LEI);
+
+  switch (name) {
+    case "impostorIssue": {
+      const c = await ensureImpostorCredential(ctx, files);
+      console.log(`- impostorIssue: credSAID ${c.credSAID} · reportKey ${c.reportKey} · evidence ${files.kind}`);
+      return;
+    }
+    case "impostorFund": {
+      if (ctx.network === "local") {
+        console.log("- impostorFund: skipped (anvil accounts are pre-funded)");
+        return;
+      }
+      if (recorded(ctx, "fundImpostor", "success")) {
+        console.log("- fundImpostor: already recorded, skipped");
+        return;
+      }
+      const balance = await ctx.pub.getBalance({ address: imp.address });
+      if (balance >= parseEther("0.01")) {
+        console.log(`- impostorFund: skipped (impostor holds ${Number(balance) / 1e18} ETH)`);
+        return;
+      }
+      console.log("- fundImpostor");
+      const hash = await wallet(ctx, ctx.account("owner")).sendTransaction({ to: imp.address, value: parseEther("0.02") } as never);
+      await record(ctx, "fundImpostor", await wait(ctx, hash));
+      return;
+    }
+    case "impostorAdd": {
+      const iv = loadImpostorVlei(files);
+      if (imp.address.toLowerCase() === ctx.account("owner").address.toLowerCase()) throw new Error("impostor and owner share a key");
+      console.log("- impostorAdd: SIMULATED OWNER-KEY COMPROMISE — the owner key lists a body whose vLEI chain is not under the pinned root");
+      if (recorded(ctx, "impostorAddVerifier", "success")) console.log("- impostorAddVerifier: already recorded, skipped");
+      else {
+        console.log("- impostorAddVerifier");
+        await sendStep(ctx, "impostorAddVerifier", ctx.account("owner"), "allowlist", "addVerifier", [
+          {
+            leiHash: impLeiHash,
+            verifier: imp.address,
+            leCredSaidHash: hashString(iv.bodyLeSaid),
+            accreditationSaidHash: hashString(iv.accreditationSaid),
+            accreditedUntil: isoToSeconds(IMPOSTOR_CHAIN.body.accreditedUntil),
+          },
+        ]);
+      }
+      if (recorded(ctx, "impostorAddAuditor", "success")) console.log("- impostorAddAuditor: already recorded, skipped");
+      else {
+        console.log("- impostorAddAuditor");
+        await sendStep(ctx, "impostorAddAuditor", ctx.account("owner"), "allowlist", "addAuditor", [
+          { auditorAidHash: auditorAidHashOf(iv.auditorAid), leiHash: impLeiHash, ecrSaidHash: hashString(iv.ecrSaid) },
+        ]);
+      }
+      return;
+    }
+    case "impostorRegister": {
+      const prev = recorded(ctx, "impostorRegister", "success");
+      if (prev) {
+        console.log(`- impostorRegister: already recorded (${prev.hash}), skipped`);
+        return;
+      }
+      const c = await ensureImpostorCredential(ctx, files);
+      const { input, kelSeq } = impostorReportInput(ctx, c, files);
+      console.log(`- impostorRegister: credSAID ${c.credSAID} · kelSeq ${kelSeq} · supplier = the impostor's own wallet`);
+      await sendStep(ctx, "impostorRegister", imp, "registry", "registerReport", [input]);
+      return;
+    }
+    case "impostorVerify": {
+      const c = loadImpostorCredential(ctx.network);
+      if (!c) throw new Error("impostorVerify: no impostor credential; run impostorIssue and impostorRegister first");
+      const reader = new ChainReader(ctx.pub, toDeployment(ctx.deployment));
+      const { proof } = impostorProof(toSigned(c), files);
+      const v = await verifyPresentation(proof, reader, { checkers: impostorCheckers(files) });
+      const head = await ctx.pub.getBlock();
+      const suspendedBefore = (await reader.suspensions(impLeiHash)).length > 0;
+      writeJson(impostorVerificationPath(ctx.network), {
+        note: "Verification of the impostor's proof (attack 4) with the pinned root of trust, recorded by scripts/demo-scenario.ts impostorVerify.",
+        block: Number(head.number),
+        time: isoOf(head.timestamp),
+        suspendedBefore,
+        verification: JSON.parse(toJson(v)),
+      });
+      console.log(`- impostorVerify: ${v.overall} · ${v.checks.map((x) => `${x.index}:${x.status}${x.code ? `(${x.code})` : ""}`).join(" ")}`);
+      const c7 = v.checks.find((x) => x.index === 7);
+      console.log(`  check 7: ${c7?.detail}`);
+      if (suspendedBefore) console.warn("  ! recorded after the suspension: check 4 may show CONTESTED");
+      const ok = (i: number) => v.checks.find((x) => x.index === i)?.status === "pass";
+      if (![1, 2, 3, 4, 6].every(ok) || c7?.status !== "fail") {
+        throw new Error("impostorVerify: expected checks 1–4 and 6 to pass and check 7 to fail");
+      }
+      return;
+    }
+    case "impostorSuspend": {
+      const prev = recorded(ctx, "impostorSuspend", "success");
+      if (prev) console.log(`- impostorSuspend: already recorded (${prev.hash}), skipped`);
+      else {
+        console.log("- impostorSuspend");
+        await sendStep(ctx, "impostorSuspend", ctx.account("watcher"), "allowlist", "suspendVerifier", [impLeiHash]);
+      }
+      return runImpostorStep(ctx, "impostorDryRun");
+    }
+    case "impostorDryRun": {
+      const c = loadImpostorCredential(ctx.network);
+      if (!c) throw new Error("impostorDryRun: no impostor credential");
+      const { input } = impostorReportInput(ctx, c, files);
+      const r = await new ChainReader(ctx.pub, toDeployment(ctx.deployment)).dryRun("registerReport", [input], imp.address);
+      const got = r.reverted ? `${r.errorName}(${r.args.map(String).join(", ")})` : "would succeed";
+      console.log(`- impostorDryRun: registerReport from the impostor → ${got}`);
+      if (!r.reverted || r.errorName !== "NotActiveVerifier") throw new Error("impostorDryRun: expected NotActiveVerifier");
+      return;
+    }
+  }
+}
+
 // ------------------------------------------------------------------ main
 
 export function isMain(metaUrl: string) {
@@ -779,10 +1045,13 @@ async function main() {
       rpc: { type: "string" },
       steps: { type: "string" },
       "kel-seq": { type: "string" },
+      "synthetic-impostor": { type: "boolean", default: false },
     },
   });
   const network = values.network as NetworkName;
   if (network !== "local" && network !== "sepolia") throw new Error("--network local|sepolia is required");
+  if (values["synthetic-impostor"] && network !== "local") throw new Error("--synthetic-impostor is for a local anvil only");
+  const impostorKind: ImpostorEvidenceKind = values["synthetic-impostor"] ? "synthetic" : "keria";
   const steps = values.steps ? values.steps.split(",").map((s) => s.trim()).filter(Boolean) : DEFAULT_STEPS;
   for (const s of steps) if (!(s in CLI_STEPS)) throw new Error(`unknown step ${s}`);
 
@@ -795,7 +1064,18 @@ async function main() {
 
   const accounts = accountsFor(network);
   const vlei = loadVlei(network);
-  const base = { network, chain, rpc, pub, account: accounts.account, impostor: accounts.impostor, vlei, kelSeqArg: values["kel-seq"] };
+  const base = {
+    network,
+    chain,
+    rpc,
+    pub,
+    account: accounts.account,
+    impostor: accounts.impostor,
+    impostorAccount: accounts.impostorAccount,
+    vlei,
+    kelSeqArg: values["kel-seq"],
+    impostorKind,
+  };
 
   let deployment: DeploymentFile;
   let fresh = false;

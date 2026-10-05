@@ -8,7 +8,10 @@ import type { Presentation } from "../../sdk/disclosure.ts";
 export type TxResult = "success" | "reverted";
 
 export interface DemoTx {
-  /** Stable step id, e.g. "addVerifier", "addAuditor", "registerReport1", "claim1", "revokeAuditor", "attack3". */
+  /**
+   * Stable step id, e.g. "addVerifier", "addAuditor", "registerReport1", "claim1", "revokeAuditor", "attack3",
+   * and for attack 4 "impostorAddVerifier", "impostorAddAuditor", "impostorRegister", "impostorSuspend".
+   */
   step: string;
   label: string;
   hash: Hex;
@@ -43,6 +46,32 @@ export interface CachedSnapshot {
   dryRuns: Record<string, { errorName: string; args: string[] }>;
 }
 
+/**
+ * Attack 4: a simulated owner-key compromise puts an impostor verification body, whose vLEI chain
+ * leads to its own root, on the allowlist. Its registration succeeds; check 7 rejects its proof.
+ */
+export interface Attack4 {
+  /** Where the impostor's vLEI evidence comes from: the local KERI run, or a synthetic chain (local tests only). */
+  evidence: "keria" | "synthetic";
+  /** Date of the impostor's evidence export (YYYY-MM-DD). */
+  exportDate: string;
+  body: { name: string; lei: string; address: Hex };
+  /** The root the impostor's chain leads to, and the root the page pins (DEMO_TRUST_ANCHOR). */
+  impostorRoot: { name: string; aid: string };
+  pinnedRoot: string;
+  supplier: { name: string; installationName: string };
+  /** The impostor's proof (no shipment; authority bundle at evidence/impostor/). */
+  proof: Presentation;
+  txs: { addVerifier: DemoTx; addAuditor: DemoTx; register: DemoTx; suspend: DemoTx };
+  /** registerReport from the impostor after the suspension (eth_call); bigint fields as decimal strings. */
+  dryRun: { input: Record<string, string>; caller: Hex };
+  /** The verification of the proof taken when the data was built. */
+  verification: unknown;
+  /** The same verification recorded by the scenario before the watcher's suspension, if recorded. */
+  beforeSuspension: { block: number; time: string; verification: unknown } | null;
+  evidenceFiles: { label: string; path: string }[];
+}
+
 export interface DemoData {
   version: 1;
   mode: "hosted" | "local";
@@ -71,11 +100,12 @@ export interface DemoData {
     issuedAt: string;
   };
   shipment: { batchId: string; quantityTonnes: string; shipmentDate: string; importerSalt: Hex };
-  /** Attack 2a/2b dry-run arguments (claimShipment) and attack 3 transaction. */
+  /** Attack 2a/2b dry-run arguments (claimShipment), attack 3 transaction, attack 4 (when recorded). */
   attacks: {
     sameBatch: { args: [Hex, Hex, string, Hex]; caller: Hex };
     secondImporter: { args: [Hex, Hex, string, Hex]; caller: Hex; quantityTonnes: string };
     attack3: DemoTx | null;
+    attack4?: Attack4;
   };
   txs: DemoTx[];
   trustChain: TrustNode[];

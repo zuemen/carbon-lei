@@ -4,7 +4,10 @@
 // and the Ed25519 signature locally. If the SAID is already anchored, the existing event is exported
 // and no new event is created (pass --force to anchor again).
 //   node verifier/src/anchor.ts <credSAID> [--force]
+// anchorCredential() is the same export for any auditor and output folder (attack 4 uses it for the
+// impostor's auditor in verifier/src/setup-impostor.ts).
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { Siger, Verfer } from "signify-ts";
@@ -51,23 +54,34 @@ function hasSeal(ked: Json, credSaid: string): boolean {
   return ked.t === "ixn" && Array.isArray(ked.a) && ked.a.some((s: Json) => s?.d === credSaid);
 }
 
+/** An auditor's agent connection and AID (the demo auditor, or the attack 4 impostor's auditor). */
+export type AnchorParty = Pick<Party, "client" | "aid">;
+
 /** First KEL event sealing `credSaid`, or, with `eventSaid`, exactly that event. */
-async function findAnchor(p: Party, credSaid: string, eventSaid?: string): Promise<{ ked: Json; atc: string } | undefined> {
+async function findAnchor(p: AnchorParty, credSaid: string, eventSaid?: string): Promise<{ ked: Json; atc: string } | undefined> {
   const events = (await p.client.keyEvents().get(p.aid.prefix)) as { ked: Json; atc: string }[];
   return events.find((e) => hasSeal(e.ked, credSaid) && (!eventSaid || e.ked.d === eventSaid));
 }
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const force = args.includes("--force");
-  const credSaid = args.find((a) => !a.startsWith("--"));
-  if (!credSaid || !SAID_RE.test(credSaid)) {
-    console.error("usage: node verifier/src/anchor.ts <credSAID: 44-char CESR Blake3 SAID starting with E> [--force]");
-    process.exit(2);
-  }
+export interface AnchorResult {
+  /** File written: <outDir>/anchor-<credSAID>.json. */
+  path: string;
+  out: Json;
+  /** False when the exported event failed its own checks (the file is still written, for inspection). */
+  ok: boolean;
+}
 
-  const auditor = await reconnect(requireState(), "auditor");
-  let anchored = force ? undefined : await findAnchor(auditor, credSaid);
+/**
+ * Anchors `credSaid` in `auditor`'s KEL (or reuses the existing anchor unless `force`) and writes
+ * the export to <outDir>/anchor-<credSAID>.json.
+ */
+export async function anchorCredential(
+  auditor: AnchorParty,
+  credSaid: string,
+  outDir: string,
+  opts: { force?: boolean } = {},
+): Promise<AnchorResult> {
+  let anchored = opts.force ? undefined : await findAnchor(auditor, credSaid);
   let fresh: { raw: string; sigs: string[] } | undefined;
 
   if (anchored) {
@@ -120,18 +134,38 @@ async function main(): Promise<void> {
     checks: { saidRecomputed: saidOk, sizeMatchesVersion: sizeOk, signatureValid: sigOk, matchesSubmittedEvent: matchesSubmitted },
     exportedAt: new Date().toISOString(),
   };
-  const path = resolve(EVIDENCE_DIR, `anchor-${credSaid}.json`);
+  const path = resolve(outDir, `anchor-${credSaid}.json`);
   writeJson(path, out);
+  return { path, out, ok: saidOk && sizeOk && sigOk && matchesSubmitted !== false };
+}
 
-  if (!saidOk || !sizeOk || !sigOk || matchesSubmitted === false) {
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const force = args.includes("--force");
+  const credSaid = args.find((a) => !a.startsWith("--"));
+  if (!credSaid || !SAID_RE.test(credSaid)) {
+    console.error("usage: node verifier/src/anchor.ts <credSAID: 44-char CESR Blake3 SAID starting with E> [--force]");
+    process.exit(2);
+  }
+
+  const auditor = await reconnect(requireState(), "auditor");
+  const { path, out, ok } = await anchorCredential(auditor, credSaid, EVIDENCE_DIR, { force });
+  if (!ok) {
     console.error("anchor export failed its own checks", out.checks);
     process.exit(1);
   }
   log(`wrote ${path}`);
-  console.log(JSON.stringify({ credSAID: credSaid, aid: auditor.aid.prefix, kelSeq, eventSAID: ked.d }));
+  console.log(JSON.stringify({ credSAID: credSaid, aid: auditor.aid.prefix, kelSeq: out.kelSeq, eventSAID: out.event.said }));
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+/** True when this file is the script node was started with (not imported by another script). */
+export function isEntryPoint(metaUrl: string): boolean {
+  return !!process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(metaUrl).toLowerCase();
+}
+
+if (isEntryPoint(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

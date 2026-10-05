@@ -25,7 +25,10 @@
     "demo:data:sepolia": "node scripts/build-demo-data.ts --network sepolia",
     "vlei:watch": "npm run vlei:watch -w verifier --",
     "vlei:revoke": "npm run vlei:revoke -w verifier --",
-    "vlei:watch:sepolia": "node --env-file=.env verifier/src/watch.ts --send"
+    "vlei:watch:sepolia": "node --env-file=.env verifier/src/watch.ts --send",
+    "vlei:impostor:setup": "npm run vlei:impostor:setup -w verifier",
+    "vlei:impostor:export": "npm run vlei:impostor:export -w verifier",
+    "vlei:impostor:anchor": "npm run vlei:impostor:anchor -w verifier --"
   },
   "type": "module"
 }

@@ -67,7 +67,11 @@ export function OnchainProof() {
             </tbody>
           </table>
         </div>
-        <p className="fine">Attacks 2a and 2b are dry runs (eth_call) and leave no transaction.</p>
+        <p className="fine">
+          Attacks 2a and 2b{data.attacks.attack4 ? ", and attack 4's registration after the suspension," : ""} are dry runs
+          (eth_call) and leave no transaction.
+          {data.attacks.attack4 ? " Attack 4's allowlist additions use the operator key to simulate its theft." : ""}
+        </p>
       </section>
 
       <section className="sheet reveal" aria-label="Data scope">
