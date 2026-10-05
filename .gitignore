@@ -28,3 +28,6 @@ verifier/.data/
 Thumbs.db
 .vscode/
 .cache/
+
+# local demo runs (anvil)
+fixtures/local-*.json

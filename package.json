@@ -17,6 +17,12 @@
     "contracts:deploy": "forge script contracts/script/Deploy.s.sol --rpc-url sepolia --broadcast --verify --verifier etherscan && node scripts/record-deployment.mjs 11155111",
     "carbonlei": "node sdk/cli.ts",
     "vlei:up": "npm run vlei:up -w verifier",
-    "vlei:setup": "npm run vlei:setup -w verifier"
-  }
+    "vlei:setup": "npm run vlei:setup -w verifier",
+    "demo:local": "node scripts/demo-local.ts",
+    "demo:scenario": "node scripts/demo-scenario.ts",
+    "demo:data": "node scripts/build-demo-data.ts",
+    "demo:sepolia": "node --env-file=.env scripts/demo-scenario.ts --network sepolia",
+    "demo:data:sepolia": "node scripts/build-demo-data.ts --network sepolia"
+  },
+  "type": "module"
 }
