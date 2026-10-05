@@ -2,10 +2,13 @@
 // in fixtures/<network>-tx.json. Steps already recorded with their expected result are skipped.
 //
 // Usage: node scripts/demo-scenario.ts --network local|sepolia [--rpc <url>] [--steps a,b,…] [--kel-seq <n>]
-//          [--synthetic-impostor]
+//          [--synthetic-impostor] [--record <stepId>=<txHash>]
 //   steps: issue, fund, addVerifier, addAuditor, register1, claim1, revokeAuditor, attack3,
 //          impostorIssue, impostorFund, impostorAdd, impostorRegister, impostorVerify, impostorSuspend, impostorDryRun
-//   default: addVerifier,addAuditor,register1,claim1
+//   default: addVerifier,addAuditor,register1,claim1 (none when --record is given without --steps)
+//   --record: logs a transaction that was mined but not recorded (receipt wait timed out, RPC dropped, Ctrl-C),
+//          after checking its contract, function and status; the step's dry run would otherwise revert forever.
+//          stepId is a recorded step id (addVerifier, …, impostorAddVerifier, impostorAddAuditor, impostorRegister, …).
 //
 // Attack 4 (scripts/impostor.ts), in this order: impostorIssue (the impostor signs a credential, no tx) →
 //   anchor it in the impostor auditor's KEL (npm run vlei:impostor:anchor) → impostorFund (Sepolia only) →
@@ -30,6 +33,7 @@ import { parseArgs } from "node:util";
 import {
   createPublicClient,
   createWalletClient,
+  decodeFunctionData,
   getAddress,
   http,
   parseEther,
@@ -51,6 +55,7 @@ import { verifyPresentation } from "../sdk/verify.ts";
 import {
   IMPOSTOR_CHAIN,
   IMPOSTOR_LEI,
+  impostorAnchorPath,
   impostorCheckers,
   impostorClaims,
   impostorCredentialPath,
@@ -111,7 +116,7 @@ export const LABELS: Record<string, string> = {
   fundWatcher: "Test ETH sent to the watcher (0.03)",
   fundBody: "Test ETH sent to the verification body (0.05)",
   fundSupplier: "Test ETH sent to the supplier (0.05)",
-  fundImpostor: "Attack 4: test ETH sent to the impostor's wallet (0.02)",
+  fundImpostor: "Attack 4: test ETH sent to the impostor's wallet",
   impostorAddVerifier: "Attack 4 (simulated owner-key compromise): impostor body added to the allowlist",
   impostorAddAuditor: "Attack 4 (simulated owner-key compromise): impostor's auditor added",
   impostorRegister: "Attack 4: impostor registers its own report — accepted (status 1)",
@@ -132,6 +137,20 @@ export const SCENARIO_STEPS = [
 ];
 /** Attack 4 transactions (all four must be recorded for the demo page to show attack 4). */
 export const IMPOSTOR_TX_STEPS = ["impostorAddVerifier", "impostorAddAuditor", "impostorRegister", "impostorSuspend"] as const;
+
+/** Contract and function of each scenario step, checked by --record before it logs a transaction. */
+const RECORD_CALLS: Record<string, ["allowlist" | "registry", string]> = {
+  addVerifier: ["allowlist", "addVerifier"],
+  addAuditor: ["allowlist", "addAuditor"],
+  registerReport1: ["registry", "registerReport"],
+  claim1: ["registry", "claimShipment"],
+  revokeAuditor: ["allowlist", "revokeAuditor"],
+  attack3: ["registry", "registerReport"],
+  impostorAddVerifier: ["allowlist", "addVerifier"],
+  impostorAddAuditor: ["allowlist", "addAuditor"],
+  impostorRegister: ["registry", "registerReport"],
+  impostorSuspend: ["allowlist", "suspendVerifier"],
+};
 
 /** CLI step name to recorded step id. */
 const CLI_STEPS: Record<string, string | null> = {
@@ -515,10 +534,27 @@ async function sendStep(
     ({ request } = await ctx.pub.simulateContract({ address, abi, functionName, args, account: from } as never));
   } catch (err) {
     const { errorName, args: errArgs } = decodeRevert(err);
-    throw new Error(`${step}: dry run reverted with ${errorName}(${errArgs.map(String).join(", ")}); nothing sent`);
+    // These mean the step's effect is already on chain: a transaction that was mined but not logged (wait timeout, RPC drop, Ctrl-C).
+    const already = [
+      "VerifierExists",
+      "AuditorExists",
+      "ReportExists",
+      "AlreadySuspended",
+      "AddressAlreadyBound",
+      "AlreadyRevoked",
+      "BatchAlreadyClaimed",
+    ].includes(errorName);
+    throw new Error(
+      `${step}: dry run reverted with ${errorName}(${errArgs.map(String).join(", ")}); nothing sent` +
+        (already ? ` — if this step was mined but not logged, record it with --record ${step}=<txHash>` : ""),
+    );
   }
   const hash = await wallet(ctx, from).writeContract(request as never);
-  const receipt = await wait(ctx, hash);
+  const receipt = await wait(ctx, hash).catch((err: unknown) => {
+    // Sent but not confirmed in time: rerunning the step would only hit the dry-run revert above, so name the hash.
+    const why = err instanceof Error ? err.message.split("\n")[0] : String(err);
+    throw new Error(`${step}: sent ${hash} but got no receipt (${why}); once it is mined, record it with --record ${step}=${hash}`);
+  });
   if (receipt.status !== "success") {
     await record(ctx, `${step}:failed`, receipt, `${LABELS[step]} — unexpected revert`);
     throw new Error(`${step}: transaction ${hash} reverted`);
@@ -860,8 +896,14 @@ function impostorFilesFor(ctx: Ctx): ImpostorFiles {
 
 /** The impostor's report input: its own wallet named as the supplier (no shipment is ever claimed). */
 function impostorReportInput(ctx: Ctx, c: CredentialFile, files: ImpostorFiles) {
-  if (files.kind === "synthetic" && !existsSync(resolve(files.evidenceDir, `anchor-${c.credSAID}.json`))) writeSyntheticAnchor(c.credSAID);
-  const kelSeq = kelSeqFor(ctx.network, c.credSAID, ctx.kelSeqArg, files.evidenceDir);
+  const anchorFile = impostorAnchorPath(files, c.credSAID);
+  if (files.kind === "synthetic" && !existsSync(anchorFile)) writeSyntheticAnchor(c.credSAID);
+  // KERIA evidence: the kelSeq must come from the anchor file, or check 6 fails (ANCHOR_NOT_FOUND) after a registration
+  // that cannot be undone. --kel-seq is ignored here.
+  if (files.kind === "keria" && !existsSync(anchorFile)) {
+    throw new Error(`${anchorFile} not found: run "npm run vlei:impostor:anchor" first (--kel-seq is ignored for the impostor)`);
+  }
+  const kelSeq = kelSeqFor(ctx.network, c.credSAID, files.kind === "keria" ? undefined : ctx.kelSeqArg, files.evidenceDir);
   return { input: reportInputOf(toSigned(c), { supplier: ctx.impostorAccount().address, kelSeq }), kelSeq };
 }
 
@@ -917,8 +959,9 @@ async function ensureImpostorCredential(ctx: Ctx, files: ImpostorFiles): Promise
 
 async function runImpostorStep(ctx: Ctx, name: string) {
   const files = impostorFilesFor(ctx);
-  const imp = ctx.impostorAccount();
-  noteAddress(ctx, "impostor", imp.address);
+  // impostorFund needs only the address (IMPOSTOR_ADDRESS); every other step signs or checks against the impostor's key.
+  const impAddress = name === "impostorFund" ? ctx.impostor() : ctx.impostorAccount().address;
+  noteAddress(ctx, "impostor", impAddress);
   if (IMPOSTOR_LEI === VERIFIER_LEI) throw new Error("the impostor's LEI must differ from the demo body's");
   const impLeiHash = leiHashOf(IMPOSTOR_LEI);
 
@@ -933,23 +976,22 @@ async function runImpostorStep(ctx: Ctx, name: string) {
         console.log("- impostorFund: skipped (anvil accounts are pre-funded)");
         return;
       }
-      if (recorded(ctx, "fundImpostor", "success")) {
-        console.log("- fundImpostor: already recorded, skipped");
+      // Gated on the balance at today's gas price, not on the log: an earlier top-up may no longer cover registerReport.
+      const balance = await ctx.pub.getBalance({ address: impAddress });
+      const need = (await ctx.pub.getGasPrice()) * 600_000n; // registerReport ~370k gas, with headroom
+      if (balance >= need) {
+        console.log(`- impostorFund: skipped (impostor holds ${Number(balance) / 1e18} ETH, needs about ${Number(need) / 1e18})`);
         return;
       }
-      const balance = await ctx.pub.getBalance({ address: imp.address });
-      if (balance >= parseEther("0.01")) {
-        console.log(`- impostorFund: skipped (impostor holds ${Number(balance) / 1e18} ETH)`);
-        return;
-      }
-      console.log("- fundImpostor");
-      const hash = await wallet(ctx, ctx.account("owner")).sendTransaction({ to: imp.address, value: parseEther("0.02") } as never);
+      const value = need * 2n > parseEther("0.02") ? need * 2n : parseEther("0.02");
+      console.log(`- fundImpostor (${Number(value) / 1e18} ETH)`);
+      const hash = await wallet(ctx, ctx.account("owner")).sendTransaction({ to: impAddress, value } as never);
       await record(ctx, "fundImpostor", await wait(ctx, hash));
       return;
     }
     case "impostorAdd": {
       const iv = loadImpostorVlei(files);
-      if (imp.address.toLowerCase() === ctx.account("owner").address.toLowerCase()) throw new Error("impostor and owner share a key");
+      if (impAddress.toLowerCase() === ctx.account("owner").address.toLowerCase()) throw new Error("impostor and owner share a key");
       console.log("- impostorAdd: SIMULATED OWNER-KEY COMPROMISE — the owner key lists a body whose vLEI chain is not under the pinned root");
       if (recorded(ctx, "impostorAddVerifier", "success")) console.log("- impostorAddVerifier: already recorded, skipped");
       else {
@@ -957,7 +999,7 @@ async function runImpostorStep(ctx: Ctx, name: string) {
         await sendStep(ctx, "impostorAddVerifier", ctx.account("owner"), "allowlist", "addVerifier", [
           {
             leiHash: impLeiHash,
-            verifier: imp.address,
+            verifier: impAddress,
             leCredSaidHash: hashString(iv.bodyLeSaid),
             accreditationSaidHash: hashString(iv.accreditationSaid),
             accreditedUntil: isoToSeconds(IMPOSTOR_CHAIN.body.accreditedUntil),
@@ -982,7 +1024,7 @@ async function runImpostorStep(ctx: Ctx, name: string) {
       const c = await ensureImpostorCredential(ctx, files);
       const { input, kelSeq } = impostorReportInput(ctx, c, files);
       console.log(`- impostorRegister: credSAID ${c.credSAID} · kelSeq ${kelSeq} · supplier = the impostor's own wallet`);
-      await sendStep(ctx, "impostorRegister", imp, "registry", "registerReport", [input]);
+      await sendStep(ctx, "impostorRegister", ctx.impostorAccount(), "registry", "registerReport", [input]);
       return;
     }
     case "impostorVerify": {
@@ -1006,7 +1048,9 @@ async function runImpostorStep(ctx: Ctx, name: string) {
       if (suspendedBefore) console.warn("  ! recorded after the suspension: check 4 may show CONTESTED");
       const ok = (i: number) => v.checks.find((x) => x.index === i)?.status === "pass";
       if (![1, 2, 3, 4, 6].every(ok) || c7?.status !== "fail") {
-        throw new Error("impostorVerify: expected checks 1–4 and 6 to pass and check 7 to fail");
+        // Not fatal: the impostor must not stay on the allowlist because a check came out differently.
+        console.error("! impostorVerify: expected checks 1–4 and 6 to pass and check 7 to fail; continuing so impostorSuspend still runs");
+        process.exitCode = 1;
       }
       return;
     }
@@ -1023,7 +1067,12 @@ async function runImpostorStep(ctx: Ctx, name: string) {
       const c = loadImpostorCredential(ctx.network);
       if (!c) throw new Error("impostorDryRun: no impostor credential");
       const { input } = impostorReportInput(ctx, c, files);
-      const r = await new ChainReader(ctx.pub, toDeployment(ctx.deployment)).dryRun("registerReport", [input], imp.address);
+      const reader = new ChainReader(ctx.pub, toDeployment(ctx.deployment));
+      let r = await reader.dryRun("registerReport", [input], impAddress);
+      for (let i = 0; i < 5 && r.reverted && r.errorName === "ReportExists"; i++) {
+        await new Promise((f) => setTimeout(f, 3000)); // the RPC may lag the suspension by a block
+        r = await reader.dryRun("registerReport", [input], impAddress);
+      }
       const got = r.reverted ? `${r.errorName}(${r.args.map(String).join(", ")})` : "would succeed";
       console.log(`- impostorDryRun: registerReport from the impostor → ${got}`);
       if (!r.reverted || r.errorName !== "NotActiveVerifier") throw new Error("impostorDryRun: expected NotActiveVerifier");
@@ -1046,13 +1095,15 @@ async function main() {
       steps: { type: "string" },
       "kel-seq": { type: "string" },
       "synthetic-impostor": { type: "boolean", default: false },
+      record: { type: "string" },
     },
   });
   const network = values.network as NetworkName;
   if (network !== "local" && network !== "sepolia") throw new Error("--network local|sepolia is required");
   if (values["synthetic-impostor"] && network !== "local") throw new Error("--synthetic-impostor is for a local anvil only");
   const impostorKind: ImpostorEvidenceKind = values["synthetic-impostor"] ? "synthetic" : "keria";
-  const steps = values.steps ? values.steps.split(",").map((s) => s.trim()).filter(Boolean) : DEFAULT_STEPS;
+  // With --record and no --steps, only the record is made (the default steps are not run).
+  const steps = values.steps ? values.steps.split(",").map((s) => s.trim()).filter(Boolean) : values.record ? [] : DEFAULT_STEPS;
   for (const s of steps) if (!(s in CLI_STEPS)) throw new Error(`unknown step ${s}`);
 
   const chain = network === "local" ? foundry : sepolia;
@@ -1107,6 +1158,26 @@ async function main() {
   saveLog(ctx);
 
   console.log(`demo scenario on ${network} (chain ${chainId}) · registry ${deployment.contracts.EmissionsClaimRegistry.address}`);
+  // --record <stepId>=<txHash>: records a transaction that was mined but not logged (wait timeout, RPC drop, Ctrl-C).
+  // Without it such a step can never be logged: its dry run reverts with VerifierExists, ReportExists, ... and nothing is sent.
+  if (values.record) {
+    const [step, hash] = values.record.split("=");
+    if (!(step in RECORD_CALLS) || !/^0x[0-9a-fA-F]{64}$/.test(hash ?? "")) {
+      throw new Error(`--record <stepId>=<txHash>, with stepId one of ${Object.keys(RECORD_CALLS).join(", ")}`);
+    }
+    const expected: TxResult = step === "attack3" ? "reverted" : "success";
+    if (recorded(ctx, step, expected)) throw new Error(`${step} is already recorded`);
+    const [which, fn] = RECORD_CALLS[step];
+    const { address, abi } = target(ctx, which);
+    const receipt = await pub.getTransactionReceipt({ hash: hash as Hex });
+    if (receipt.to?.toLowerCase() !== address.toLowerCase()) throw new Error(`${hash} is not a call to the ${which} contract`);
+    const { input } = await pub.getTransaction({ hash: hash as Hex });
+    const { functionName } = decodeFunctionData({ abi, data: input });
+    if (functionName !== fn) throw new Error(`${hash} calls ${functionName}, expected ${fn}; not recording it as ${step}`);
+    if (receipt.status !== expected) throw new Error(`${hash} has status ${receipt.status}, expected ${expected}; not recording it as ${step}`);
+    console.log(`- record ${step}`);
+    await record(ctx, step, receipt);
+  }
   for (const s of steps) await runStep(ctx, s);
   saveLog(ctx);
   console.log(`tx log: ${txLogPath(network)}`);

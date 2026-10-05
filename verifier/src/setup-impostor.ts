@@ -195,9 +195,13 @@ async function setup(): Promise<void> {
   lap(`Accreditation ${accCred.said}, ECR ${ecrCred.said}`);
 
   saveImpState(state);
+  // A re-run that issues nothing keeps updatedAt: export stamps the authority bundle with it, so a new value would change
+  // the bundle's sha256 and break the hash recorded in demo-data.json by an earlier build.
+  const fresh = [qviCred, leNab, leBody, accCred, ecrCred].some((c) => c.fresh);
+  const prev = existsSync(IMP_FIXTURE_PATH) ? readJson(IMP_FIXTURE_PATH) : null;
   const fixture = impostorFixture({
     createdAt: state.createdAt,
-    updatedAt: new Date().toISOString(),
+    updatedAt: fresh || typeof prev?.updatedAt !== "string" ? new Date().toISOString() : prev.updatedAt,
     info,
     aids: Object.fromEntries(IMP_KEYS.map((k) => [k, { prefix: parties[k].aid.prefix, oobi: parties[k].aid.oobi }])) as Record<
       ImpKey,
@@ -279,6 +283,14 @@ async function anchor(args: string[]): Promise<void> {
   const force = args.includes("--force");
   const ni = args.indexOf("--network");
   const network = ni >= 0 ? args[ni + 1] : "sepolia";
+  if (force) {
+    // --force appends another ixn and overwrites the anchor file; a report registered with the old kelSeq would then
+    // fail check 6, and the kelSeq on chain cannot be changed.
+    const txLog = resolve(REPO_ROOT, `fixtures/${network}-tx.json`);
+    const registered =
+      existsSync(txLog) && (readJson(txLog).txs as Json[]).some((t) => t.step === "impostorRegister" && t.result === "success");
+    if (registered) throw new Error("--force refused: the impostor's report is already registered with the kelSeq of the existing anchor");
+  }
   let credSaid = args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--network");
   if (!credSaid) {
     const path = resolve(REPO_ROOT, `fixtures/${network}-credential-impostor.json`);
