@@ -1,0 +1,35 @@
+{
+  "note": "Structured fields of the fictional verification report VR-DEMO-0001 (field names follow the annex of IR (EU) 2025/2546). Emissions values are illustrative — not official CBAM methodology.",
+  "extract": {
+    "reportId": "VR-DEMO-0001",
+    "reportingPeriod": "2026-01-01/2026-12-31",
+    "installationId": "TW-ZZZZ00TWSCREWDEMO185-0001",
+    "verifierName": "Demo Verification GmbH (fictional)",
+    "accreditationNumber": "DEMO-ACC-CBAM-0001",
+    "nabName": "Demo Accreditation Body (fictional)",
+    "accreditedUntil": "2030-12-31",
+    "accreditationScope": [
+      "CN 7318"
+    ],
+    "leadAuditor": "Lena Demo (fictional person)",
+    "siteVisit": "physical",
+    "siteVisitDates": "2027-02-08/2027-02-09",
+    "materialityThreshold": "5%",
+    "quantityPerCn": [
+      {
+        "cnCode": "7318",
+        "quantity": "500"
+      }
+    ],
+    "specificEmbeddedEmissionsPerCn": [
+      {
+        "cnCode": "7318",
+        "value": "1.8"
+      }
+    ],
+    "assuranceLevel": "reasonable",
+    "signedBy": "Lena Demo (fictional person), CBAM Lead Auditor",
+    "signedAt": "2027-03-15",
+    "firstVerifiedPeriod": true
+  }
+}

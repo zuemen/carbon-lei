@@ -5,6 +5,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, utf8 } from "./encoding.ts";
 import type { CheckResult, EvidenceCheckers, EvidenceContext } from "./verify.ts";
 import { verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "./vlei.ts";
+import { checkReconciliation, type ReportExtract } from "./consistency.ts";
 
 export interface BundleRef {
   bundle: string;
@@ -62,6 +63,10 @@ export function vleiCheckers(opts: { loadBundle?: (path: string) => Promise<stri
         onchain,
       });
       return result(7, r.ok, r.code, r.detail);
+    },
+    reconciliation: (extract: Record<string, unknown>, ctx: EvidenceContext) => {
+      const r = checkReconciliation(extract as unknown as ReportExtract, ctx.disclosed, ctx.core.reconciliation);
+      return { index: 8, name: "", status: r.status, code: r.code, detail: r.detail };
     },
   };
 }
