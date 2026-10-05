@@ -1,8 +1,9 @@
 # CarbonLEI — hackathon facts
 
 This repository is an entry to the **IEEE ClimateChain Global Hackathon 2026**, track **Sustainable Supply Chains**.
-The repository was created on 2026-09-23 with documentation only; all code was written and committed after the
-submission period opened (2026-10-05 04:00 UTC), which the commit history shows.
+The repository was created on 2026-09-23 with documentation only. Work on the code started on 2026-10-05, about one
+hour before the submission period opened (04:00 UTC); every code commit was made after it opened, as the commit history
+shows. The rules do not restrict when work starts; we state it so the history reads as it happened.
 
 | Item | Value |
 |---|---|
