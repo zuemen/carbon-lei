@@ -2,6 +2,7 @@
 // Usage: node scripts/record-deployment.mjs [chainId]
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { getAddress } from "viem";
 
 const chainId = process.argv[2] ?? "11155111";
 const run = JSON.parse(
@@ -13,7 +14,7 @@ for (const tx of run.transactions) {
   if (tx.transactionType !== "CREATE") continue;
   const receipt = receipts.get(tx.hash);
   contracts[tx.contractName] = {
-    address: tx.contractAddress,
+    address: getAddress(tx.contractAddress),
     txHash: tx.hash,
     block: Number(BigInt(receipt.blockNumber)),
     gasUsed: Number(BigInt(receipt.gasUsed)),
@@ -24,7 +25,8 @@ const commit = execSync("git rev-parse HEAD").toString().trim();
 const out = {
   chainId: Number(chainId),
   network: chainId === "11155111" ? "sepolia" : "unknown",
-  deployedAt: new Date(run.timestamp * 1000).toISOString(),
+  // Foundry writes the broadcast timestamp in milliseconds
+  deployedAt: new Date(run.timestamp > 1e12 ? run.timestamp : run.timestamp * 1000).toISOString(),
   commit,
   contracts,
 };

@@ -1,0 +1,27 @@
+{
+  "chainId": 11155111,
+  "network": "sepolia",
+  "deployedAt": "2026-10-05T04:03:10.899Z",
+  "commit": "a5edd44c2538cf112077fa451ee5137e64ae6539",
+  "contracts": {
+    "VerifierAllowlist": {
+      "address": "0x70aA4b15b5dA8daCE15E8504577736DDE632A82B",
+      "txHash": "0x27a9b38bc8fae65a4c8bed484aedf3d3af744e1b0c6e50ebc89acb1b15d1ce01",
+      "block": 11846437,
+      "gasUsed": 1305144,
+      "constructorArguments": [
+        "0xD192343C04d56b5E2d8474b5845A66D07B039324",
+        "0x4d86ca97F6E7F9fECe8A77caCc963dA50a2DE042"
+      ]
+    },
+    "EmissionsClaimRegistry": {
+      "address": "0x72152A40f91C4357Ed53635C3fd3C41D023D78ba",
+      "txHash": "0xe4ae91dfbd5f30577f5a8c31632a2c87fc6a4502bc3be84203c6747f447fa0ff",
+      "block": 11846437,
+      "gasUsed": 1296067,
+      "constructorArguments": [
+        "0x70aA4b15b5dA8daCE15E8504577736DDE632A82B"
+      ]
+    }
+  }
+}
