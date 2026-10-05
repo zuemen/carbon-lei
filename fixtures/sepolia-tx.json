@@ -1,0 +1,45 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "addresses": {
+    "owner": "0xD192343C04d56b5E2d8474b5845A66D07B039324",
+    "watcher": "0x4d86ca97F6E7F9fECe8A77caCc963dA50a2DE042",
+    "impostor": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93",
+    "body": "0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45",
+    "supplier": "0xaA21B52F3b78F1f0fdACd34d50AfB68D6590f725"
+  },
+  "txs": [
+    {
+      "step": "addVerifier",
+      "label": "Verification body added to the allowlist",
+      "hash": "0x7d393bda2d7ec11ca4f453ec9ff4b55cafb9a100aa66789eb4909237fc4ef1b6",
+      "block": 11846773,
+      "time": "2026-10-05T05:13:48Z",
+      "result": "success"
+    },
+    {
+      "step": "addAuditor",
+      "label": "Auditor added",
+      "hash": "0x1c0be29a41dec1cd2442168213ef3ce1f8785c9f54ec5d99aa269ba247fd416e",
+      "block": 11846774,
+      "time": "2026-10-05T05:14:00Z",
+      "result": "success"
+    },
+    {
+      "step": "registerReport1",
+      "label": "Report registered",
+      "hash": "0x5cba53bb5a438883252721407dba8e58962ef71f1f91493c266a4ae561981de2",
+      "block": 11846781,
+      "time": "2026-10-05T05:15:36Z",
+      "result": "success"
+    },
+    {
+      "step": "claim1",
+      "label": "Batch claimed (200 t)",
+      "hash": "0x2f873bd582ac399f83fcea28ffb048100d4d002f9a03e43b61e46991ae288484",
+      "block": 11846782,
+      "time": "2026-10-05T05:15:48Z",
+      "result": "success"
+    }
+  ]
+}
