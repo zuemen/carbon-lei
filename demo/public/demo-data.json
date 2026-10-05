@@ -238,7 +238,8 @@
       "hash": "0x7d393bda2d7ec11ca4f453ec9ff4b55cafb9a100aa66789eb4909237fc4ef1b6",
       "block": 11846773,
       "time": "2026-10-05T05:13:48Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 163521
     },
     {
       "step": "addAuditor",
@@ -246,7 +247,8 @@
       "hash": "0x1c0be29a41dec1cd2442168213ef3ce1f8785c9f54ec5d99aa269ba247fd416e",
       "block": 11846774,
       "time": "2026-10-05T05:14:00Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 75119
     },
     {
       "step": "registerReport1",
@@ -254,7 +256,8 @@
       "hash": "0x5cba53bb5a438883252721407dba8e58962ef71f1f91493c266a4ae561981de2",
       "block": 11846781,
       "time": "2026-10-05T05:15:36Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 368616
     },
     {
       "step": "claim1",
@@ -262,7 +265,8 @@
       "hash": "0x2f873bd582ac399f83fcea28ffb048100d4d002f9a03e43b61e46991ae288484",
       "block": 11846782,
       "time": "2026-10-05T05:15:48Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 155449
     }
   ],
   "trustChain": [
@@ -321,8 +325,8 @@
     "defaultValue": "2.978",
     "verifiedValue": "1.8",
     "quantityTonnes": "200",
-    "priceEur": "75.28",
-    "quarter": "Q2 2026"
+    "priceEur": "82.32",
+    "quarter": "Q3 2026"
   },
   "evidence": {
     "anchor": "evidence/anchor-ELXG3ZjKZ5rsmJ8WljbM2vW2PJL9FesRnlVgh0hVTZvx.json",
@@ -387,8 +391,8 @@
     ]
   },
   "cached": {
-    "block": 11846936,
-    "time": "2026-10-05T05:48:00Z",
+    "block": 11848813,
+    "time": "2026-10-05T12:27:48Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {

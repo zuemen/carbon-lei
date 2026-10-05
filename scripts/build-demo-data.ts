@@ -49,7 +49,7 @@ import {
 } from "./demo-scenario.ts";
 
 /** Carbon price used for the comparison until the quarterly update. */
-const PRICE = { priceEur: "75.28", quarter: "Q2 2026" };
+const PRICE = { priceEur: "82.32", quarter: "Q3 2026" };
 
 const str = (v: unknown): string => (typeof v === "bigint" ? v.toString() : typeof v === "string" ? v : JSON.stringify(v));
 const argsOut = (a: readonly [Hex, Hex, bigint, Hex]): [Hex, Hex, string, Hex] => [a[0], a[1], a[2].toString(), a[3]];

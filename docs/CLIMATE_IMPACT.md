@@ -5,13 +5,13 @@
 
 All companies are fictional. All emissions values for the demo producer are illustrative — not official CBAM methodology. Money figures are gross and illustrative only. The free-allocation adjustment is deducted from both default and actual declarations, so it changes the gap between them only slightly; we show gross figures until the precursor benchmark is confirmed (Section 2a).
 
-**Certificate price used.** All € figures use the Q2 2026 CBAM certificate price of €75.28 per tCO2e, published by the Commission on 6 July 2026 [7]. The Q3 2026 price was scheduled for publication on 5 October 2026; when we checked the Commission's price page that day (05:27 UTC), the Q3 price had not been published yet.
+**Certificate price used.** All € figures use the Q3 2026 CBAM certificate price of €82.32 per tCO2e, published by the Commission on 5 October 2026 [7] (Q2 2026: €75.28; Q1 2026: €75.36).
 
 ## Summary
 
 **What CarbonLEI contributes.** CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne can be claimed only once on the ledger, across importers, and software can check who signed a value and whether they were authorised at that time. That is environmental transparency and carbon tracking that a PDF copy of a verification report cannot give. Its limits, and how it differs from the figures below, are in Section 4.4.
 
-**Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 t of difference to the unmarked default plus 135.5 t of mark-up. At the Q2 2026 certificate price of €75.28 that is about €44,340, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t.
+**Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 t of difference to the unmarked default plus 135.5 t of mark-up. At the Q3 2026 certificate price of €82.32 that is about €48,486, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t.
 
 CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no double counting, and a reward for low-carbon producers. Only the third one could lead to a physical reduction, and we do not quantify it.
 
@@ -87,9 +87,9 @@ How to read the gap:
 
 - **453.5 tCO2e** is the difference between this plant's (illustrative) intensity and the unmarked default reference.
 - The rest of the gap (for example 589 − 453.5 = 135.5 tCO2e in 2026) is the mark-up. It is a regulatory surcharge for missing verified data, not emissions.
-- **Money, gross and illustrative:** multiply the gap by the CBAM certificate price P (€ per tCO2e) for the period. At the Q2 2026 price of €75.28 [7], the 2026 gap is about €89 per tonne, or about €44,340 for the 500 t report; from 2028 it is about €129 per tonne at the same price. Before the free-allocation adjustment, which is deducted in both cases and changes the gap only slightly (Section 2a). Not adjusted for any carbon price paid in the country of origin.
+- **Money, gross and illustrative:** multiply the gap by the CBAM certificate price P (€ per tCO2e) for the period. At the Q3 2026 price of €82.32 [7], the 2026 gap is about €97 per tonne, or about €48,486 for the 500 t report; from 2028 it is about €142 per tonne at the same price. Before the free-allocation adjustment, which is deducted in both cases and changes the gap only slightly (Section 2a). Not adjusted for any carbon price paid in the country of origin.
 
-The Buyer tab of the hosted demo (EU importer or downstream customer) shows the same comparison for the demo shipment of 200 t: 595.6 tCO2e at the 2026 default of 2.978 against 360 tCO2e at the verified 1.8, a declared-emissions gap of 235.6 tCO2e, or about €17,736 gross at the Q2 2026 price of €75.28. The card labels the figure as illustrative, before the free-allocation adjustment, and as a gap in what is declared, not a physical reduction.
+The Buyer tab of the hosted demo (EU importer or downstream customer) shows the same comparison for the demo shipment of 200 t: 595.6 tCO2e at the 2026 default of 2.978 against 360 tCO2e at the verified 1.8, a declared-emissions gap of 235.6 tCO2e, or about €19,395 gross at the Q3 2026 price of €82.32. The card labels the figure as illustrative, before the free-allocation adjustment, and as a gap in what is declared, not a physical reduction.
 
 ---
 
@@ -146,13 +146,13 @@ These are **scenarios under stated assumptions, not forecasts.** Every input mar
 
 ### 4.2 Results per year
 
-V = installations × 500 t. P = €75.28, the Q2 2026 certificate price, held fixed (assumption).
+V = installations × 500 t. P = €82.32, the Q3 2026 certificate price, held fixed (assumption).
 
-| Scenario | Volume V (t) | Declared-emissions gap vs 2026 default (tCO2e) | Gap vs default from 2028 (tCO2e) | Price signal, gross, 2026 (€ million per year at P = €75.28) | Price signal, gross, from 2028 (€ million per year at P = €75.28) |
+| Scenario | Volume V (t) | Declared-emissions gap vs 2026 default (tCO2e) | Gap vs default from 2028 (tCO2e) | Price signal, gross, 2026 (€ million per year at P = €82.32) | Price signal, gross, from 2028 (€ million per year at P = €82.32) |
 |---|---|---|---|---|---|
-| 10 installations | 5,000 | 5,890 | 8,595 | 0.44 | 0.65 |
-| 100 installations | 50,000 | 58,900 | 85,950 | 4.43 | 6.47 |
-| 1,000 installations (more than all 2025 EU imports of CN 7318 from Taiwan; Section 4.3) | 500,000 | 589,000 | 859,500 | 44.34 | 64.70 |
+| 10 installations | 5,000 | 5,890 | 8,595 | 0.48 | 0.71 |
+| 100 installations | 50,000 | 58,900 | 85,950 | 4.85 | 7.08 |
+| 1,000 installations (more than all 2025 EU imports of CN 7318 from Taiwan; Section 4.3) | 500,000 | 589,000 | 859,500 | 48.49 | 70.75 |
 
 Formulas:
 
@@ -205,7 +205,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 - **Declared gap is not a reduction.** Effects 1 and 2 change accounting and cost. Only effect 3 reduces emissions, and only if producers invest.
 - **No empirical double-claim rate.** A4 is a sensitivity parameter.
 - **Incentive to switch steel.** The incentive to switch production routes is reduced by the free-allocation adjustment until 2034 (Section 2a). We found no public case of a fastener producer switching steel sources because of CBAM.
-- **Price.** The € figures use the Q2 2026 certificate price. CBAM certificates are priced quarterly in 2026 and weekly from 2027 [7], so the € figures move with the price; the tCO2e figures do not.
+- **Price.** The € figures use the Q3 2026 certificate price. CBAM certificates are priced quarterly in 2026 and weekly from 2027 [7], so the € figures move with the price; the tCO2e figures do not.
 - **Scope.** The default values used here are direct emissions only, as listed for CN 7318 [1]. A full product carbon footprint has a wider boundary (see [PACT_MAPPING.md](PACT_MAPPING.md#3-semantic-differences)).
 - **Regulation changes.** Default values and mark-ups can be revised.
 - **Linear model.** No rebound, leakage or market-share effects.
@@ -242,7 +242,7 @@ Accessed 2026-09-23 unless stated.
 4. German Environment Agency (UBA), press release No. 36/2024, 6 September 2024. https://www.umweltbundesamt.de/en/press/pressinformation/uba-refuses-to-approve-certificates-for-eight-uer
 5. Commission Implementing Regulation (EU) 2025/2546, Annex (template of the verification report), point 2.6(h). https://eur-lex.europa.eu/eli/reg_impl/2025/2546/oj
 6. Eurostat Comext DS-045409, CN 7318, reporter EU, partners TW and extra-EU, 2025 (dataset updated 15 September 2026); shares computed by the team. https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/DS-045409?format=JSON&freq=A&reporter=EU&partner=TW&product=7318&flow=1&time=2025
-7. European Commission, "Price of CBAM certificates" (Q1 2026: €75.36, published 7 April 2026; Q2 2026: €75.28, published 6 July 2026; Q3 2026 scheduled for 5 October 2026 and not yet shown when accessed), accessed 2026-10-05. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en
+7. European Commission, "Price of CBAM certificates" (Q1 2026: €75.36, published 7 April 2026; Q2 2026: €75.28, published 6 July 2026; Q3 2026: €82.32, published 5 October 2026), accessed 2026-10-05. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en
 8. Taiwan Ministry of Environment, press meeting, 2 April 2026. https://www.moenv.gov.tw/policies-and-laws/meetings/35593.html
 9. Taiwan Ministry of Environment, press release, 1 March 2026. https://enews.moenv.gov.tw/page/3b3c62c78849f32f/29e658c3-eba2-4087-a3bd-c9808640fc67
 10. European Commission, "Guidance on access request procedure – for CBAM operators, non-EU companies", v3.00, 26 January 2026, pp. 10 and 19. https://taxation-customs.ec.europa.eu/document/download/9361fade-6f19-4799-b2ef-f6a4ff681af2_en
