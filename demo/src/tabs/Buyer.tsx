@@ -99,7 +99,7 @@ function VerifySummary({ result, onSeeComparison }: { result: VerificationResult
 }
 
 export function Buyer() {
-  const { data, reader, offline, proofText, setProofText, proofFromSupplier, go } = useApp();
+  const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer } = useApp();
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
@@ -171,6 +171,45 @@ export function Buyer() {
   const cmp = data.comparison;
   const { q, dq, vq, gap, eur } = comparisonFigures(cmp);
   const claimTx = data.txs.find((t) => t.step === "claim1");
+
+  // A file the importer can keep with its own records. Built in the browser from this page's checks; not signed.
+  function downloadRecord() {
+    if (!result) return;
+    let credSAID = "";
+    let batchId = "";
+    try {
+      const p = JSON.parse(proofText) as Presentation;
+      credSAID = JSON.parse(p.core).d;
+      batchId = p.shipment?.batchId ?? "";
+    } catch {
+      // the checks above already reported a malformed proof
+    }
+    const claim = claimTx && batchId === data.shipment.batchId ? claimTx : undefined;
+    const record = {
+      kind: "CarbonLEI verification record (demo)",
+      notice:
+        "Generated in your browser from the checks below. Not signed, not a CBAM Registry document and not a CBAM declaration. All companies are fictional; emissions values are illustrative.",
+      createdAt: new Date().toISOString(),
+      network: {
+        name: data.network.name,
+        chainId: data.network.chainId,
+        registry: data.deployment.contracts.EmissionsClaimRegistry.address,
+      },
+      credSAID,
+      batchId,
+      importerEORI: data.importer.eori,
+      overall: result.overall,
+      checks: result.checks.map(({ index, name, status, code, detail }) => ({ index, name, status, code, detail })),
+      accepted: { quantityTonnes: q, verifiedIntensity_tCO2e_per_t: cmp.verifiedValue, declared_tCO2e: vq },
+      onChainClaim: claim ? { tx: claim.hash, block: claim.block, time: claim.time, url: explorer("tx", claim.hash) } : null,
+    };
+    const url = URL.createObjectURL(new Blob([`${JSON.stringify(record, null, 2)}\n`], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `carbonlei-verification-${batchId || "record"}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   return (
     <>
@@ -350,6 +389,14 @@ export function Buyer() {
             — no transaction is sent. On-chain record for this batch: the supplier's claim{" "}
             {claimTx ? <TxLink hash={claimTx.hash} /> : "(not recorded)"}
           </p>
+        )}
+        {accepted && (
+          <div className="btn-row">
+            <button className="btn btn-ghost" onClick={downloadRecord}>
+              Download verification record (JSON)
+            </button>
+            <span className="fine">For your own records: the checks, the credential ID and the on-chain claim. Not a CBAM document.</span>
+          </div>
         )}
       </section>
     </>

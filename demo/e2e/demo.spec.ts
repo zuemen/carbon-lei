@@ -29,6 +29,14 @@ test("E2 the demo proof passes checks 1–5; E4 comparison card; E11 accept show
   if (await accept.isEnabled()) {
     await accept.click();
     await expect(page.getByText(/Accepted \(demo\)/)).toBeVisible();
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download verification record (JSON)" }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe("carbonlei-verification-BATCH-DEMO-2026-0001.json");
+    const record = JSON.parse(await (await import("node:fs/promises")).readFile((await file.path()) as string, "utf8"));
+    expect(record.overall).toBe("VALID");
+    expect(record.checks).toHaveLength(9);
+    expect(record.notice).toContain("Not signed, not a CBAM Registry document");
   }
 });
 
