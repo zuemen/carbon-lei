@@ -1,0 +1,69 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "addresses": {
+    "owner": "0xD192343C04d56b5E2d8474b5845A66D07B039324",
+    "watcher": "0x4d86ca97F6E7F9fECe8A77caCc963dA50a2DE042",
+    "impostor": "0xa5f6ad42cDDB539fDdA8cdd765604C1AE32D0D93",
+    "body": "0xde347Dc94fb6a67e0d96E104E9aC1b44Bfde2D45",
+    "supplier": "0xaA21B52F3b78F1f0fdACd34d50AfB68D6590f725"
+  },
+  "txs": [
+    {
+      "step": "fundWatcher",
+      "label": "Test ETH sent to the watcher (0.03)",
+      "hash": "0x4973c413f61f6fb2482034884905cf2d830704dd2bf08b58729ff7b866e06044",
+      "block": 11846603,
+      "time": "2026-10-05T04:37:36Z",
+      "result": "success"
+    },
+    {
+      "step": "fundBody",
+      "label": "Test ETH sent to the verification body (0.05)",
+      "hash": "0xa91d8ebec8bf8bcccd3a8fbbba0128f51f942d5c509b294ac9854e00646526f3",
+      "block": 11846604,
+      "time": "2026-10-05T04:37:48Z",
+      "result": "success"
+    },
+    {
+      "step": "fundSupplier",
+      "label": "Test ETH sent to the supplier (0.05)",
+      "hash": "0x79d652277e91594bcb5671cc7f97187d05bb4f2b1d7bd786045d10b850048061",
+      "block": 11846605,
+      "time": "2026-10-05T04:38:00Z",
+      "result": "success"
+    },
+    {
+      "step": "addVerifier",
+      "label": "Verification body added to the allowlist",
+      "hash": "0xb93244e2e9b0c5f60e69a731a719d6764c1211f1298df00e2837df1fd31c6af3",
+      "block": 11846623,
+      "time": "2026-10-05T04:41:48Z",
+      "result": "success"
+    },
+    {
+      "step": "addAuditor",
+      "label": "Auditor added",
+      "hash": "0xad28ec6b154b5e2beeecd3a6e8f6df8000230b55d6dbec51ada57bcecf300025",
+      "block": 11846624,
+      "time": "2026-10-05T04:42:00Z",
+      "result": "success"
+    },
+    {
+      "step": "registerReport1",
+      "label": "Report registered",
+      "hash": "0xa793d606229ee721e0c204a26a492bdb74c07995856e847466c8ccebb8adb2b1",
+      "block": 11846626,
+      "time": "2026-10-05T04:42:24Z",
+      "result": "success"
+    },
+    {
+      "step": "claim1",
+      "label": "Batch claimed (200 t)",
+      "hash": "0xdc399babd23676e693bfce229e92820159d04813534140a9b412173957ca2b45",
+      "block": 11846628,
+      "time": "2026-10-05T04:42:48Z",
+      "result": "success"
+    }
+  ]
+}
