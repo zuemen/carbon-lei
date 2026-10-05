@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useApp } from "./App.tsx";
-import { short } from "./data.ts";
+import { EVIDENCE_WHY, short } from "./data.ts";
+
+export { EVIDENCE_WHY, fmt } from "./data.ts";
 
 export function TxLink({ hash, label }: { hash: string; label?: string }) {
   const { explorer } = useApp();
@@ -65,9 +67,6 @@ export function SourceLabel({ source }: { source: Source }) {
   );
 }
 
-export const EVIDENCE_WHY =
-  "The vLEI credential chain is checked against evidence exported from a local KERI run. KERI agents need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.";
-
 export function TabHead({ title, lede, children }: { title: string; lede?: ReactNode; children?: ReactNode }) {
   return (
     <div className="tab-head reveal">
@@ -77,6 +76,3 @@ export function TabHead({ title, lede, children }: { title: string; lede?: React
     </div>
   );
 }
-
-export const fmt = (n: number, digits = 1) =>
-  n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits });

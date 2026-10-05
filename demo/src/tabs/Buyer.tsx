@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
 import { useApp } from "../App.tsx";
 import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source } from "../components.tsx";
+import { comparisonFigures } from "../data.ts";
 import { CODE_TEXT } from "../messages.ts";
 import { evidenceCheckers } from "../evidence.ts";
 
@@ -44,6 +45,59 @@ export function tamperedProof(p: Presentation, value = "1.2"): Presentation {
   };
 }
 
+/** Scrolls an element to just below the sticky tab bar (its height depends on the screen width). */
+function scrollBelowTabbar(el: HTMLElement) {
+  const bar = document.querySelector(".tabbar")?.getBoundingClientRect().height ?? 0;
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - bar - 12, behavior: smooth ? "smooth" : "auto" });
+}
+
+/** One line under the Verify button: how many checks passed and, only for a valid proof, the declared-emissions gap. */
+function VerifySummary({ result, onSeeComparison }: { result: VerificationResult; onSeeComparison: () => void }) {
+  const { data } = useApp();
+  const f = comparisonFigures(data.comparison);
+  const kinds = CHECKS.map((c) => kindOf(result.checks.find((r) => r.index === c.n)));
+  const passed = kinds.filter((k) => k === "pass").length;
+  const review = kinds.filter((k) => k === "review").length;
+  const notRun = kinds.filter((k) => k === "skip" || k === "idle").length;
+  const counts =
+    `${passed} of ${CHECKS.length} checks passed` +
+    (review ? `, ${review} need${review === 1 ? "s" : ""} review` : "") +
+    (notRun ? `, ${notRun} not run` : "");
+
+  if (result.overall === "INVALID") {
+    const first = result.checks.find((c) => c.status === "fail");
+    const what = !first || first.index === 0 ? "the proof could not be read" : `check ${first.index} failed`;
+    const why = first ? (CODE_TEXT[first.code] ?? first.detail) : "";
+    return (
+      <p className="verify-summary bad">
+        <span aria-hidden="true">✕ </span>
+        <strong>Rejected — {what}</strong>
+        {why ? `: ${why}` : "."} {counts}. Do not rely on this proof's value: no declared-emissions gap is shown.
+      </p>
+    );
+  }
+  if (result.overall === "CONTESTED") {
+    return (
+      <p className="verify-summary review">
+        <span aria-hidden="true">! </span>
+        <strong>Needs review</strong> — {counts}. Do not rely on the verified value until a person has reviewed the
+        report: no declared-emissions gap is shown.
+      </p>
+    );
+  }
+  return (
+    <p className="verify-summary ok">
+      <span aria-hidden="true">✓ </span>
+      <strong>{counts}</strong> · declared-emissions gap for this {fmt(f.q)} t shipment: {fmt(f.gap)} tCO2e (≈ €
+      {fmt(f.eur, 0)} gross, illustrative){" "}
+      <button type="button" className="link-btn" onClick={onSeeComparison}>
+        See comparison ↓
+      </button>
+    </p>
+  );
+}
+
 export function Buyer() {
   const { data, reader, offline, proofText, setProofText, proofFromSupplier, go } = useApp();
   const [result, setResult] = useState<VerificationResult | null>(null);
@@ -52,6 +106,22 @@ export function Buyer() {
   const [accepted, setAccepted] = useState(false);
   const [tampered, setTampered] = useState(false);
   const [fromQr, setFromQr] = useState(false);
+  // Bumped when a verification finishes; on narrow screens the checks are then scrolled into view.
+  const [finished, setFinished] = useState(0);
+  const checksRef = useRef<HTMLElement>(null);
+  const cmpRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!finished || !window.matchMedia("(max-width: 600px)").matches) return;
+    if (checksRef.current) scrollBelowTabbar(checksRef.current);
+  }, [finished]);
+
+  function seeComparison() {
+    const el = cmpRef.current;
+    if (!el) return;
+    scrollBelowTabbar(el);
+    el.focus({ preventScroll: true });
+  }
 
   // The product passport QR opens #buyer?said=<credSAID>&batch=<batchId>: load the matching demo proof.
   useEffect(() => {
@@ -75,7 +145,10 @@ export function Buyer() {
       return;
     }
     if (offline) {
-      if (data.cached?.verification) setResult(data.cached.verification as VerificationResult);
+      if (data.cached?.verification) {
+        setResult(data.cached.verification as VerificationResult);
+        setFinished((n) => n + 1);
+      }
       return;
     }
     if (!reader) {
@@ -85,6 +158,7 @@ export function Buyer() {
     setRunning(true);
     try {
       setResult(await verifyPresentation(proof, reader, { importerEORI: data.importer.eori, checkers: evidenceCheckers(data) }));
+      setFinished((n) => n + 1);
     } catch (e) {
       setError(`Verification could not finish: ${(e as Error).message}`);
     } finally {
@@ -95,11 +169,7 @@ export function Buyer() {
   const byIndex = new Map(result?.checks.map((c) => [c.index, c]));
   const malformed = result?.checks.find((c) => c.index === 0 && c.status === "fail");
   const cmp = data.comparison;
-  const q = Number(cmp.quantityTonnes);
-  const dq = Number(cmp.defaultValue) * q;
-  const vq = Number(cmp.verifiedValue) * q;
-  const gap = dq - vq;
-  const eur = gap * Number(cmp.priceEur);
+  const { q, dq, vq, gap, eur } = comparisonFigures(cmp);
   const claimTx = data.txs.find((t) => t.step === "claim1");
 
   return (
@@ -112,7 +182,7 @@ export function Buyer() {
       <div className="grid-2">
         <section className="sheet reveal" aria-labelledby="proof-h">
           <p className="sheet-kicker" id="proof-h">
-            Supplier's proof · {data.importer.name}
+            Supplier's proof for {data.importer.name}
           </p>
           <div className="btn-row">
             <button
@@ -128,6 +198,9 @@ export function Buyer() {
             <button className="btn" disabled={running || !proofText || (!reader && !offline)} onClick={() => run(proofText)}>
               {running ? "Verifying…" : "Verify"}
             </button>
+          </div>
+          <div className="verify-summary-slot" role="status">
+            {result && !running && <VerifySummary result={result} onSeeComparison={seeComparison} />}
           </div>
           {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}
           {fromQr && <p className="fine">Proof loaded from the product passport QR code ({data.shipment.batchId}). Press Verify.</p>}
@@ -167,7 +240,7 @@ export function Buyer() {
           )}
         </section>
 
-        <section className="sheet reveal" aria-labelledby="checks-h">
+        <section className="sheet reveal" aria-labelledby="checks-h" ref={checksRef}>
           <p className="sheet-kicker" id="checks-h">
             Eight checks: seven verification checks plus one rule-based reconciliation check
           </p>
@@ -236,7 +309,14 @@ export function Buyer() {
         </section>
       </div>
 
-      <section className="sheet reveal" aria-labelledby="cmp-h" style={{ marginTop: 28 }}>
+      <section
+        className="sheet reveal"
+        id="comparison"
+        aria-labelledby="cmp-h"
+        style={{ marginTop: 28 }}
+        ref={cmpRef}
+        tabIndex={-1}
+      >
         <p className="sheet-kicker" id="cmp-h">
           Verified value vs CBAM default
         </p>

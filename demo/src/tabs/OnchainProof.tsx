@@ -32,27 +32,36 @@ export function OnchainProof() {
         <p className="sheet-kicker" id="tx-h">
           Transactions behind this demo{offline && data.cached ? ` (cached ${data.cached.time.slice(0, 10)})` : ""}
         </p>
+        {/* Explicit roles keep the table semantics when narrow screens restyle each row as a card. */}
         <div className="table-wrap">
-          <table className="ledger">
-            <thead>
-              <tr>
-                <th scope="col">Step</th>
-                <th scope="col">Transaction</th>
-                <th scope="col">Block</th>
-                <th scope="col">Time (UTC)</th>
-                <th scope="col">Result</th>
+          <table className="ledger tx-ledger" role="table">
+            <thead role="rowgroup">
+              <tr role="row">
+                <th scope="col" role="columnheader">Step</th>
+                <th scope="col" role="columnheader">Transaction</th>
+                <th scope="col" role="columnheader">Block</th>
+                <th scope="col" role="columnheader">Time (UTC)</th>
+                <th scope="col" role="columnheader">Result</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {data.txs.map((t) => (
-                <tr key={t.hash}>
-                  <td>{t.label}</td>
-                  <td>
+                <tr key={t.hash} role="row">
+                  <td role="cell" data-label="Step">
+                    {t.label}
+                  </td>
+                  <td role="cell" data-label="Transaction">
                     <TxLink hash={t.hash} />
                   </td>
-                  <td>{t.block}</td>
-                  <td>{t.time.replace("T", " ").slice(0, 16)}</td>
-                  <td>{t.result === "success" ? "✓ Success (status 1)" : "✕ Reverted (status 0)"}</td>
+                  <td role="cell" data-label="Block">
+                    {t.block}
+                  </td>
+                  <td role="cell" data-label="Time (UTC)">
+                    {t.time.replace("T", " ").slice(0, 16)}
+                  </td>
+                  <td role="cell" data-label="Result" className={t.result === "success" ? "tx-ok" : "tx-bad"}>
+                    {t.result === "success" ? "✓ Success (status 1)" : "✕ Reverted (status 0)"}
+                  </td>
                 </tr>
               ))}
             </tbody>

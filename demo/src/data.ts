@@ -94,3 +94,21 @@ export async function loadDemoData(): Promise<DemoData> {
 
 export const short = (h: string, head = 6, tail = 4) =>
   h.length > head + tail + 2 ? `${h.slice(0, head)}…${h.slice(-tail)}` : h;
+
+export const fmt = (n: number, digits = 1) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits });
+
+/**
+ * Figures behind the Buyer tab's "Verified value vs CBAM default" card. The first screen and the
+ * summary under the Verify button use the same function, so their numbers always match the card.
+ */
+export function comparisonFigures(cmp: DemoData["comparison"]) {
+  const q = Number(cmp.quantityTonnes);
+  const dq = Number(cmp.defaultValue) * q;
+  const vq = Number(cmp.verifiedValue) * q;
+  const gap = dq - vq;
+  return { q, dq, vq, gap, eur: gap * Number(cmp.priceEur) };
+}
+
+export const EVIDENCE_WHY =
+  "The vLEI credential chain is checked against evidence exported from a local KERI run. KERI agents need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.";

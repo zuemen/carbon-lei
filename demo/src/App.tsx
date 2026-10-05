@@ -1,6 +1,6 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
-import { loadDemoData, type DemoData } from "./data.ts";
+import { comparisonFigures, EVIDENCE_WHY, fmt, loadDemoData, type DemoData } from "./data.ts";
 
 // Tabs and the chain client load on demand, so the first screen needs only the page shell.
 const Buyer = lazy(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
@@ -181,12 +181,7 @@ export function App() {
             </a>
           </div>
         </header>
-        <p className="subtitle">Who signed this carbon number, were they authorised, and has it been used?</p>
-        <p className="readonly-note">
-          Read-only demo — no wallet needed. On-chain checks run live against Sepolia in your browser. The vLEI
-          credential chain is checked against evidence exported from a local KERI run on {data.exportDate} — KERI agents
-          need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.
-        </p>
+        <Lead data={data} />
         <ConnectionLine conn={conn} onRetry={() => connect(data)} onCached={() => setConn({ kind: "offline" })} cachedDate={data.cached?.time} />
       </div>
 
@@ -225,7 +220,7 @@ export function App() {
                 </button>
               </span>
             ))}
-            {stepIndex < 0 && <span className="path-hint">You are on a background tab. Pick a step to continue.</span>}
+            {stepIndex < 0 && <span className="path-hint">Background reading. The demo itself is the three steps above.</span>}
           </div>
         </div>
       </nav>
@@ -264,6 +259,46 @@ export function App() {
         </div>
       </footer>
     </AppContext.Provider>
+  );
+}
+
+/**
+ * First screen: what is at stake (same figures as the Buyer tab's comparison card), the question the demo
+ * answers, and — smaller but still visible — that the vLEI chain is checked against exported evidence.
+ */
+function Lead({ data }: { data: DemoData }) {
+  const [why, setWhy] = useState(false);
+  const cmp = data.comparison;
+  const f = comparisonFigures(cmp);
+  return (
+    <>
+      <p className="stake">
+        Declaring this supplier's verified {cmp.verifiedValue} tCO2e/t instead of the CBAM default of{" "}
+        {cmp.defaultValue} tCO2e/t (with 2026 mark-up) means{" "}
+        <strong className="stake-num">{fmt(f.gap)} tCO2e less declared</strong> on one {fmt(f.q)} t shipment{" "}
+        <span className="stake-note">— illustrative, gross: a gap in what is declared, not a physical reduction.</span>
+      </p>
+      <p className="subtitle">
+        Before an importer relies on that number: who signed it, were they authorised, and were these tonnes already
+        claimed?
+      </p>
+      <p className="readonly-note">
+        Read-only, no wallet needed · on-chain checks live on Sepolia · vLEI chain: exported evidence (
+        {data.exportDate}), not live —{" "}
+        <button
+          type="button"
+          className="link-btn"
+          aria-expanded={why}
+          aria-controls="evidence-why"
+          onClick={() => setWhy((w) => !w)}
+        >
+          why?
+        </button>
+      </p>
+      <p id="evidence-why" className="why-note" hidden={!why}>
+        {EVIDENCE_WHY}
+      </p>
+    </>
   );
 }
 

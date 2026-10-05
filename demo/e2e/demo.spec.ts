@@ -21,13 +21,43 @@ test("E2 the demo proof passes checks 1–5; E4 comparison card; E11 accept show
   await page.getByRole("button", { name: "Verify", exact: true }).click();
   const checks = page.locator("ol.checks > li");
   for (const i of [0, 1, 2, 3, 4]) await expect(checks.nth(i).locator(".badge")).toHaveText("✓ Passed");
-  await expect(page.getByText("2.978 tCO2e/t")).toBeVisible();
-  await expect(page.getByText("A gap in what is declared, not a physical reduction.")).toBeVisible();
+  // Scoped to the card: the first screen repeats both phrases.
+  const card = page.locator("#comparison");
+  await expect(card.getByText("2.978 tCO2e/t")).toBeVisible();
+  await expect(card.getByText("A gap in what is declared, not a physical reduction.")).toBeVisible();
   const accept = page.getByRole("button", { name: "Accept verified value" });
   if (await accept.isEnabled()) {
     await accept.click();
     await expect(page.getByText(/Accepted \(demo\)/)).toBeVisible();
   }
+});
+
+test("Buyer summary under Verify: checks passed and the card's gap; a failed check is said plainly, without the gap", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const c = data.comparison;
+  const q = Number(c.quantityTonnes);
+  const gap = Number(c.defaultValue) * q - Number(c.verifiedValue) * q;
+  const f = (n: number, d = 1) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: d });
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  const summary = page.locator(".verify-summary");
+  await expect(summary).toBeVisible();
+  const passed = await page.locator("ol.checks > li .badge", { hasText: "✓ Passed" }).count();
+  await expect(summary).toContainText(`${passed} of 8 checks passed`);
+  if (await page.locator(".stamp", { hasText: "Verified" }).count()) {
+    await expect(summary).toContainText(
+      `declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (≈ €${f(gap * Number(c.priceEur), 0)} gross, illustrative)`,
+    );
+    await expect(page.locator(".gap-line")).toHaveText(`Declared-emissions gap: ${f(gap)} tCO2e`);
+    await summary.getByRole("button", { name: "See comparison ↓" }).click();
+    await expect(page.locator("#comparison")).toBeInViewport();
+  } else {
+    await expect(summary).not.toContainText("declared-emissions gap for this");
+  }
+  await page.getByRole("button", { name: "Tamper with one number" }).click();
+  await expect(summary).toContainText("Rejected — check 2 failed: A disclosed value was changed");
+  await expect(summary).not.toContainText("declared-emissions gap for this");
 });
 
 test("E10 Tamper with one number → check 2 fails", async ({ page }) => {

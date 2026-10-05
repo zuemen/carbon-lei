@@ -261,7 +261,7 @@ npm ci && forge build
 npm test -w sdk             # 74 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
 npx playwright install chromium
 npm test -w verifier        # 21 tests: revocation seal detection and the watcher (no KERI stack needed)
-npm run e2e -w demo         # 9 browser tests against a local dev server; set DEMO_URL to test the hosted page
+npm run e2e -w demo         # 10 browser tests against a local dev server; set DEMO_URL to test the hosted page
 ```
 
 Test counts, coverage and fuzz runs: see [Measurements](#measurements) · CI: [ci.yml runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml)
@@ -296,7 +296,7 @@ Measured on 2026-10-05. Gas comes from the Sepolia receipts of the deployment bu
 | Coverage, both contracts | lines 100%, statements 99.3%, branches 97.3%, functions 100% | Target set before measuring: every revert path covered; the branch figure shows it is not fully met | `forge coverage --ir-minimum` |
 | Invariant fuzz | 256 runs × 128 calls = 32,768 calls per invariant, 8 invariant functions, 0 violations | Foundry's default is 256 runs × depth 500; we keep the default run count with depth 128 | Invariant tests over random sequences of register (including revisions and take-overs), claim, revoke, suspend, lift, auditor revocation, address rotation and time jumps |
 | Cross-language test vectors | Solidity and TypeScript compute the same keys, commitments and EIP-712 digest, and recover the same signer; the credential SAID equals keripy 1.2.13's | An independent implementation (keripy) for the SAID | [`fixtures/vectors.json`](fixtures/vectors.json), `sdk/scripts/check-said-keripy.sh` |
-| Browser tests (Playwright) | 9 of 9 against a local dev server; 9 of 9 against the hosted page (2026-10-05) | Thresholds set before measuring, for example the Buyer tab visible within 5 s | `demo/e2e/demo.spec.ts`; the first screen loads only the page shell (entry script 72 kB gzip); tabs and the chain client load on demand |
+| Browser tests (Playwright) | 10 of 10 against a local dev server; [PENDING-IMPL: hosted run] against the hosted page | Thresholds set before measuring, for example the Buyer tab visible within 5 s | `demo/e2e/demo.spec.ts`; the first screen loads only the page shell (entry script 72 kB gzip); tabs and the chain client load on demand |
 
 ## Standards alignment
 
