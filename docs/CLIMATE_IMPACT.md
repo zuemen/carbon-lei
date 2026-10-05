@@ -9,14 +9,16 @@ All companies are fictional. All emissions values for the demo producer are illu
 
 ## Summary
 
+**What CarbonLEI contributes.** CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne can be claimed only once on the ledger, across importers, and software can check who signed a value and whether they were authorised at that time. That is environmental transparency and carbon tracking that a PDF copy of a verification report cannot give. Its limits, and how it differs from the figures below, are in Section 4.4.
+
 **Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 t of difference to the unmarked default plus 135.5 t of mark-up. At the Q2 2026 certificate price of €75.28 that is about €44,340, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t.
 
-CarbonLEI bears on emissions accounting in three ways. Only the third one could lead to a physical reduction, and we do not quantify it.
+CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no double counting, and a reward for low-carbon producers. Only the third one could lead to a physical reduction, and we do not quantify it.
 
 | Effect | What changes | Physical reduction? |
 |---|---|---|
-| 1. Trusted actual values replace default values | Declared embedded emissions reflect the verified plant, not a marked-up default | No. It changes what is declared and paid |
-| 2. Double counting is blocked | A verified low value cannot cover more tonnes than the report verified | No. It stops real emissions from disappearing from declarations |
+| 1. Trusted actual values replace default values | Declared embedded emissions reflect the verified plant, not a marked-up default | It changes what is declared and paid; no physical reduction by itself |
+| 2. Double counting is blocked | A verified low value cannot cover more tonnes than the report verified | It keeps real emissions from disappearing from declarations; no physical reduction by itself |
 | 3. Low-carbon producers are rewarded | Effects 1 and 2 make a lower verified intensity worth money, which is an incentive to invest | Incentive only. Largely offset by free allocation until about 2030; full from 2034. Not quantified |
 
 Unit: the declared-emissions gap in tCO2e per tonne of goods, and its cost in € per tonne. Baseline: the CBAM default value with mark-up.
@@ -168,7 +170,7 @@ Physical reductions are not quantified. See Section 2a for why the CBAM incentiv
 
 ### 4.4 Attribution: what CarbonLEI itself adds
 
-The figures in Sections 2 and 4.2 are the effect of declaring a verified value instead of a default value. Any verified CBAM value has that effect, with or without CarbonLEI. What CarbonLEI itself adds is stated below in qualitative terms only; we give no figure for it.
+What CarbonLEI itself adds is the integrity of verified data: software can check who signed a verified value and whether they were authorised, wherever the value travels, and the tonnage ledger lets each verified tonne be claimed only once across importers. That is its contribution to environmental transparency and carbon tracking. The figures in Sections 2 and 4.2 are a different thing: the effect of declaring a verified value instead of a default value, which any verified CBAM value has, with or without CarbonLEI. CarbonLEI's own contribution is stated below in qualitative terms only; we give no figure for it.
 
 #### Where the effect falls
 
@@ -176,7 +178,7 @@ The figures in Sections 2 and 4.2 are the effect of declaring a verified value i
 |---|---|---|
 | Who receives the verified value | Declarants that receive the operator's data and report through the Registry | Downstream buyers, banks, product passports, and declarants that receive the e-signed PDF copy from an unregistered operator in 2027 |
 | What CarbonLEI adds | A machine-checkable record of who signed and with what authority; no new emissions data | The verification body's authority stays machine-checkable wherever the report travels, and buyers can apply a voluntary tonnage cap across importers |
-| Effect on declared emissions | About zero at the margin: the verified value already replaces the default value there | Not quantified: we cannot estimate how many verified values will travel outside the Registry |
+| Effect on declared emissions | The contribution there is the checkable record in the row above; CarbonLEI's added effect on declared emissions is about zero at the margin, because the verified value already replaces the default value there | Not quantified: we cannot estimate how many verified values will travel outside the Registry |
 
 **The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, so real emissions stay in declarations; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover; CarbonLEI lets buyers add that cap voluntarily. We do not quantify the ledger's effect, because we found no empirical rate of double claims (A4 in Section 4.1).
 

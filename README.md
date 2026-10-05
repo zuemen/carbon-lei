@@ -11,7 +11,7 @@
 | Documentation | [Architecture](docs/ARCHITECTURE.md) · [Security](docs/SECURITY.md) · [Climate impact](docs/CLIMATE_IMPACT.md) · [Adoption](docs/ADOPTION.md) · [PACT mapping](docs/PACT_MAPPING.md) · [FAQ](docs/FAQ.md) · [vLEI setup](docs/VLEI_SETUP.md) |
 | For reviewers | [Measurements](#measurements) · [Six questions reviewers ask](#six-questions-reviewers-ask) · [Footprint of CarbonLEI](docs/CLIMATE_IMPACT.md#footprint-of-carbonlei) · [Sources: 20 references (EUR-Lex, TAXUD, Eurostat, ISO, PACT and others)](#sources) |
 
-A ledger can show that a record has not been altered. It cannot show that the person who signed it was entitled to, or that the tonnes it covers have not been used before. CarbonLEI adds those two parts.
+A ledger can show that a record has not been altered. It cannot show that the person who signed it was entitled to, or that the tonnes it covers have not been used before. CarbonLEI adds those two parts. No token is issued: CarbonLEI records claims against verified tonnage; it does not create or trade carbon credits.
 
 CarbonLEI is a prototype for the IEEE ClimateChain Global Hackathon, track **Sustainable Supply Chains** ([hackathon facts](HACKATHON.md)). We built one corridor end to end: Taiwan fasteners into the EU. It links an EU CBAM verification report to three things that anyone the supplier chooses (an importer, a customer, a bank) can check cryptographically, without access to the CBAM Registry:
 
@@ -22,6 +22,24 @@ CarbonLEI is a prototype for the IEEE ClimateChain Global Hackathon, track **Sus
 What the supplier gives each buyer is **the supplier's proof**: a selective-disclosure presentation of its signed emissions credential, showing only the fields the supplier chooses to disclose. How this relates to the official CBAM Registry: [Where CarbonLEI sits](#where-carbonlei-sits-and-why-a-ledger).
 
 All companies, people and LEIs in this repository are fictional. All emissions values are illustrative — not official CBAM methodology. Each fictional LEI returns 404 from the GLEIF API, and no GLEIF record carries the legal name of any fictional company (checked 2026-10-05).
+
+<details><summary>Glossary</summary>
+
+- **CBAM**: the EU Carbon Border Adjustment Mechanism; EU importers of goods such as steel screws declare the goods' embedded emissions and pay for them with CBAM certificates.
+- **LEI**: Legal Entity Identifier, the ISO 17442 code for a legal entity, published by GLEIF.
+- **vLEI**: verifiable LEI, a credential chained to GLEIF's root of trust (simulated in the demo) that proves an organisation's LEI (Legal Entity vLEI) or a person's role in it.
+- **KERI**: Key Event Receipt Infrastructure, the key-management protocol under the vLEI; each identifier has its own signed key event log.
+- **ACDC**: Authentic Chained Data Container, the KERI credential format of the vLEI, accreditation and ECR credentials.
+- **ECR**: Engagement Context Role, a vLEI role credential; here the verification body issues it to its lead auditor with the role `CBAM Lead Auditor`.
+- **QVI**: Qualified vLEI Issuer, an organisation qualified by GLEIF to issue Legal Entity vLEIs.
+- **NAB**: national accreditation body, which accredits CBAM verifiers and can suspend or withdraw accreditation; the CBAM accreditation credential it issues in the demo is our own design.
+- **SAID**: self-addressing identifier, a hash of the data it names, so any edit changes the ID; `credSAID` names the emissions credential.
+- **KEL**: key event log, a KERI identifier's signed, append-only log; the lead auditor anchors `credSAID` in theirs.
+- **EORI**: Economic Operators Registration and Identification number, the EU customs ID of an importer; it goes on-chain only as a salted commitment.
+- **CN**: Combined Nomenclature, the EU goods classification; CN 7318 is screws, bolts and nuts.
+- **EIP-712**: the Ethereum standard for signing typed data; the verification body's wallet signs the credential with it, and verifier check 3 recovers the signer.
+
+</details>
 
 ## Who uses CarbonLEI
 
@@ -53,7 +71,7 @@ A CBAM verification report carries a number such as "1.8 tCO2e per tonne of scre
 
 ### Climate impact in one paragraph
 
-CarbonLEI does not measure or cut emissions itself. It makes the authority behind verified CBAM emissions data checkable, and the data single-use, which changes what importers declare and pay. For a fictional Taiwanese screw maker with an illustrative verified intensity of 1.8 tCO2e per tonne, the 2026 default value of 2.978 overstates declared emissions by about 1.18 tCO2e per tonne of screws. At the Q2 2026 CBAM certificate price of €75.28 [20], that gap is worth about €89 per tonne, gross, before the free-allocation adjustment; the marked-up default rises to about 3.25 in 2027 and 3.519 from 2028, and from 2028 the gap is worth about €129 at the same certificate price. This price gap is the incentive to obtain credible verified data and, over time, to switch to lower-carbon steel. That second incentive is largely offset by free allocation until about 2030 and becomes complete in 2034, so we do not claim a quantified physical reduction. Illustrative — not official CBAM methodology.
+CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne can be claimed only once on the ledger, across importers, and software can check who signed a value and whether they were authorised at that time. That is environmental transparency and carbon tracking that a PDF copy cannot give. Checkable, single-use verified data changes what importers declare and pay. For a fictional Taiwanese screw maker with an illustrative verified intensity of 1.8 tCO2e per tonne, the 2026 default value of 2.978 overstates declared emissions by about 1.18 tCO2e per tonne of screws. At the Q2 2026 CBAM certificate price of €75.28 [20], that gap is worth about €89 per tonne, gross, before the free-allocation adjustment; the marked-up default rises to about 3.25 in 2027 and 3.519 from 2028, and from 2028 the gap is worth about €129 at the same certificate price. This price gap is the incentive to obtain credible verified data and, over time, to switch to lower-carbon steel. That second incentive is largely offset by free allocation until about 2030 and becomes complete in 2034, so we do not claim a quantified physical reduction; CarbonLEI does not measure or cut emissions itself. Illustrative — not official CBAM methodology.
 
 The gap depends on the verified value. At 1.5 tCO2e per tonne, the 2026 gap would be about 1.48 t per tonne; at 2.5, about 0.48 t.
 
