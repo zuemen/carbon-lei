@@ -90,6 +90,7 @@ export function Supplier() {
       shipment: data.shipment,
       ...(data.proof.anchorEvidence ? { anchorEvidence: data.proof.anchorEvidence } : {}),
       ...(data.proof.authorityEvidence ? { authorityEvidence: data.proof.authorityEvidence } : {}),
+      ...(data.proof.reportExtract ? { reportExtract: data.proof.reportExtract } : {}),
     };
     setProof(p);
   }

@@ -102,6 +102,18 @@ contract RegistryTest is Base {
         assertEq(registry.remainingKg(K1), 400_000);
     }
 
+    function test_C26_claimBeforeRotationStaysValidAfterRotation() public {
+        _regK1();
+        _claim(supplier, K1, batch(1), 100_000);
+        _rotate(L1, v1n);
+        (,,, address verifier,, bool ok) = registry.shipmentStatus(batch(1));
+        assertEq(verifier, v1, "shipment keeps the registering address");
+        assertTrue(ok, "shipment claimed before the rotation stays valid");
+        assertTrue(registry.isValid(K1), "report registered before the rotation stays valid");
+        _claim(supplier, K1, batch(2), 50_000);
+        assertEq(registry.remainingKg(K1), 350_000);
+    }
+
     function test_C26_oldAddressCannotRegisterAfterClaim() public {
         _regK1();
         _rotate(L1, v1n);

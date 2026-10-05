@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
 import { useApp } from "../App.tsx";
@@ -51,6 +51,18 @@ export function Buyer() {
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [tampered, setTampered] = useState(false);
+  const [fromQr, setFromQr] = useState(false);
+
+  // The product passport QR opens #buyer?said=<credSAID>&batch=<batchId>: load the matching demo proof.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+    const said = q.get("said");
+    if (!said || proofText) return;
+    if (said === JSON.parse(data.proof.core).d && (!q.get("batch") || q.get("batch") === data.shipment.batchId)) {
+      setProofText(JSON.stringify(data.proof, null, 2));
+      setFromQr(true);
+    }
+  }, [data, proofText, setProofText]);
 
   async function run(text: string) {
     setError("");
@@ -118,6 +130,7 @@ export function Buyer() {
             </button>
           </div>
           {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}
+          {fromQr && <p className="fine">Proof loaded from the product passport QR code ({data.shipment.batchId}). Press Verify.</p>}
           <label className="field-label" htmlFor="proof-in">
             Paste the supplier's proof
           </label>

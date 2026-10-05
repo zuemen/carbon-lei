@@ -66,7 +66,7 @@ export function SourceLabel({ source }: { source: Source }) {
 }
 
 export const EVIDENCE_WHY =
-  "The vLEI credential chain is checked against evidence exported from a local KERI run. KERI agents need a server we do not host here; run the local mode (README › Quick start) to check the chain live.";
+  "The vLEI credential chain is checked against evidence exported from a local KERI run. KERI agents need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.";
 
 export function TabHead({ title, lede, children }: { title: string; lede?: ReactNode; children?: ReactNode }) {
   return (

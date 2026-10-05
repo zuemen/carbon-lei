@@ -40,7 +40,7 @@ export function Attacks() {
   async function dry(id: "a2a" | "a2b") {
     const spec = id === "a2a" ? data.attacks.sameBatch : data.attacks.secondImporter;
     if (offline || !reader) {
-      const c = data.cached?.dryRuns[id];
+      const c = data.cached?.dryRuns[id === "a2a" ? "sameBatch" : "secondImporter"];
       setOut((o) => ({
         ...o,
         [id]: c

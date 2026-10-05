@@ -84,3 +84,11 @@ test("E7 On-chain proof lists the contracts and the demo transactions", async ({
   await expect(page.getByRole("heading", { name: "On-chain proof" })).toBeVisible();
   await expect(page.locator("table.ledger tbody tr")).not.toHaveCount(0);
 });
+
+test("E8 the product passport QR link opens the Buyer tab with the matching proof", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const said = JSON.parse(data.proof.core).d;
+  await page.goto(`./#buyer?said=${encodeURIComponent(said)}&batch=${encodeURIComponent(data.shipment.batchId)}`);
+  await expect(page.getByText(/Proof loaded from the product passport QR code/)).toBeVisible();
+  await expect(page.locator("#proof-in")).toHaveValue(/"core"/);
+});

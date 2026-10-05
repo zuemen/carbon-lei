@@ -185,7 +185,7 @@ export function App() {
         <p className="readonly-note">
           Read-only demo — no wallet needed. On-chain checks run live against Sepolia in your browser. The vLEI
           credential chain is checked against evidence exported from a local KERI run on {data.exportDate} — KERI agents
-          need a server we do not host here; run the local mode (README › Quick start) to check the chain live.
+          need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.
         </p>
         <ConnectionLine conn={conn} onRetry={() => connect(data)} onCached={() => setConn({ kind: "offline" })} cachedDate={data.cached?.time} />
       </div>
