@@ -16,8 +16,18 @@ All companies, people and LEIs in this repository are fictional. All emissions v
 | Contract tests: unit, scenario and invariant fuzz tests | 277 tests | [`contracts/test/`](contracts/test) |
 | SDK: credential model, self-addressing ID (SAID), selective disclosure, commitments, EIP-712 signature, verification of a supplier's proof against the chain | built, tested | [`sdk/`](sdk) |
 | Cross-language test vectors: the same keys, commitments and EIP-712 digest computed in Solidity and TypeScript; the SAID cross-checked with keripy | passing | [`fixtures/vectors.json`](fixtures/vectors.json) |
-| Sepolia deployment with verified source | next | — |
+| Sepolia deployment with source verified on Etherscan | deployed 2026-10-05 | [On Sepolia](#on-sepolia) |
 | vLEI evidence (KERI anchor, authority chain), demo web page, documentation | planned | — |
+
+## On Sepolia
+
+Ethereum Sepolia (chain ID 11155111), a proof-of-stake test network. Source code verified on Etherscan.
+Deployment record with transaction hashes, blocks and the commit it was built from: [`contracts/deployments/11155111.json`](contracts/deployments/11155111.json).
+
+| Contract | Address |
+|---|---|
+| VerifierAllowlist | [`0x70aA4b15b5dA8daCE15E8504577736DDE632A82B`](https://sepolia.etherscan.io/address/0x70aA4b15b5dA8daCE15E8504577736DDE632A82B#code) |
+| EmissionsClaimRegistry | [`0x72152A40f91C4357Ed53635C3fd3C41D023D78ba`](https://sepolia.etherscan.io/address/0x72152A40f91C4357Ed53635C3fd3C41D023D78ba#code) |
 
 ## Run the tests
 
