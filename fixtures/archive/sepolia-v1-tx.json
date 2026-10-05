@@ -15,7 +15,8 @@
       "hash": "0x4973c413f61f6fb2482034884905cf2d830704dd2bf08b58729ff7b866e06044",
       "block": 11846603,
       "time": "2026-10-05T04:37:36Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 21000
     },
     {
       "step": "fundBody",
@@ -23,7 +24,8 @@
       "hash": "0xa91d8ebec8bf8bcccd3a8fbbba0128f51f942d5c509b294ac9854e00646526f3",
       "block": 11846604,
       "time": "2026-10-05T04:37:48Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 21000
     },
     {
       "step": "fundSupplier",
@@ -31,7 +33,8 @@
       "hash": "0x79d652277e91594bcb5671cc7f97187d05bb4f2b1d7bd786045d10b850048061",
       "block": 11846605,
       "time": "2026-10-05T04:38:00Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 21000
     },
     {
       "step": "addVerifier",
@@ -39,7 +42,8 @@
       "hash": "0xb93244e2e9b0c5f60e69a731a719d6764c1211f1298df00e2837df1fd31c6af3",
       "block": 11846623,
       "time": "2026-10-05T04:41:48Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 163521
     },
     {
       "step": "addAuditor",
@@ -47,7 +51,8 @@
       "hash": "0xad28ec6b154b5e2beeecd3a6e8f6df8000230b55d6dbec51ada57bcecf300025",
       "block": 11846624,
       "time": "2026-10-05T04:42:00Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 75119
     },
     {
       "step": "registerReport1",
@@ -55,7 +60,8 @@
       "hash": "0xa793d606229ee721e0c204a26a492bdb74c07995856e847466c8ccebb8adb2b1",
       "block": 11846626,
       "time": "2026-10-05T04:42:24Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 368628
     },
     {
       "step": "claim1",
@@ -63,7 +69,8 @@
       "hash": "0xdc399babd23676e693bfce229e92820159d04813534140a9b412173957ca2b45",
       "block": 11846628,
       "time": "2026-10-05T04:42:48Z",
-      "result": "success"
+      "result": "success",
+      "gasUsed": 155449
     }
   ]
 }

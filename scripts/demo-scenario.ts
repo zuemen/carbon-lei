@@ -398,6 +398,7 @@ async function record(ctx: Ctx, step: string, receipt: TransactionReceipt, label
     block: Number(receipt.blockNumber),
     time: isoOf(block.timestamp),
     result: receipt.status === "success" ? "success" : "reverted",
+    gasUsed: Number(receipt.gasUsed),
   };
   ctx.log.txs.push(tx);
   saveLog(ctx);

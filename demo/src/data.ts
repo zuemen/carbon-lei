@@ -16,6 +16,8 @@ export interface DemoTx {
   /** ISO 8601 UTC time of the block. */
   time: string;
   result: TxResult;
+  /** Gas used, from the transaction receipt. */
+  gasUsed?: number;
 }
 
 export interface TrustNode {
