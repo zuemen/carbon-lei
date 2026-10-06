@@ -1,0 +1,1801 @@
+{
+  "description": "Raw output of scripts/bench-verify.ts: SDK verifyPresentation on the demo proof with the importer's EORI and the vLEI checkers (checks 0-8), times in milliseconds. Percentiles are nearest-rank. One machine, one network; not a load test.",
+  "startedAt": "2026-10-06T18:26:01.203Z",
+  "finishedAt": "2026-10-06T18:27:31.125Z",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "machine": {
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "memoryGiB": 16,
+    "os": "darwin 25.3.0 arm64",
+    "node": "v22.20.0",
+    "commit": "1a603b7"
+  },
+  "sizes": {
+    "proofFile": "fixtures/sepolia-demo-proof.json",
+    "proofBytes": 9906,
+    "proofGzipBytes": 5755,
+    "evidenceBundleFile": "fixtures/evidence/authority-bundle.json",
+    "evidenceBundleBytes": 89146,
+    "evidenceBundleGzipBytes": 11194,
+    "gzipNote": "gzip level 9 (node:zlib); the KEL anchor evidence is inline in the proof"
+  },
+  "n": 20,
+  "storage": {
+    "method": "eth_getStorageAt on every word of the demo report's records at the latest block; base slots from `forge inspect EmissionsClaimRegistry storage-layout`. The demo report is a first report in its scope with one claim against it",
+    "blockNumber": 11857611,
+    "reportRecord": {
+      "words": 13,
+      "nonZero": 10
+    },
+    "reportScope": {
+      "words": 3,
+      "nonZero": 3
+    },
+    "credScope": {
+      "words": 2,
+      "nonZero": 2
+    },
+    "shipment": {
+      "words": 4,
+      "nonZero": 4
+    }
+  },
+  "projection": {
+    "label": "PROJECTED, NOT MEASURED: computed from the measured gas and storage figures; no ETH-to-currency conversion",
+    "gasFormula": "gas(N, M) = 368616 * N + 155449 * M (N reports, M shipment claims)",
+    "slotFormula": "slots(N, M) = 14 * N + 4 * M + L, where L <= N is the number of reports with at least one claim; bytes = 32 * slots",
+    "assumptions": [
+      "every report is a first report in a new installation and reporting period (ReportRecord 10 non-zero words + ReportScope 3 + CredScope.latestReportKey 1 = 14); a revision or take-over writes a different set of words and has not been measured here",
+      "every claim is priced at the measured first-claim gas; a later claim against the same report does not turn CredScope.claimedKg from zero to non-zero, so it should cost less (not measured)",
+      "onboarding (addVerifier 163,521 gas, addAuditor 75,119 gas) is once per body and per auditor and is not included",
+      "neither contract has a loop or a growing array: registerReport and claimShipment write fixed sets of mapping entries, so the gas per operation does not depend on N or M",
+      "L2 would be lower; not measured"
+    ],
+    "perOperationEth": {
+      "registerReport": {
+        "gas": 368616,
+        "eth": {
+          "1 gwei": "0.000368616",
+          "5 gwei": "0.00184308",
+          "20 gwei": "0.00737232"
+        }
+      },
+      "claimShipment": {
+        "gas": 155449,
+        "eth": {
+          "1 gwei": "0.000155449",
+          "5 gwei": "0.000777245",
+          "20 gwei": "0.00310898"
+        }
+      },
+      "oneReportOneClaim": {
+        "gas": 524065,
+        "eth": {
+          "1 gwei": "0.000524065",
+          "5 gwei": "0.002620325",
+          "20 gwei": "0.0104813"
+        }
+      }
+    },
+    "cases": [
+      {
+        "N": 1,
+        "M": 1,
+        "gas": 524065,
+        "eth": {
+          "1 gwei": "0.000524065",
+          "5 gwei": "0.002620325",
+          "20 gwei": "0.0104813"
+        },
+        "slots": 19,
+        "bytes": 608,
+        "slotNote": "L = min(N, M)"
+      },
+      {
+        "N": 10,
+        "M": 100,
+        "gas": 19231060,
+        "eth": {
+          "1 gwei": "0.01923106",
+          "5 gwei": "0.0961553",
+          "20 gwei": "0.3846212"
+        },
+        "slots": 550,
+        "bytes": 17600,
+        "slotNote": "L = min(N, M)"
+      },
+      {
+        "N": 100,
+        "M": 1000,
+        "gas": 192310600,
+        "eth": {
+          "1 gwei": "0.1923106",
+          "5 gwei": "0.961553",
+          "20 gwei": "3.846212"
+        },
+        "slots": 5500,
+        "bytes": 176000,
+        "slotNote": "L = min(N, M)"
+      },
+      {
+        "N": 1000,
+        "M": 10000,
+        "gas": 1923106000,
+        "eth": {
+          "1 gwei": "1.923106",
+          "5 gwei": "9.61553",
+          "20 gwei": "38.46212"
+        },
+        "slots": 55000,
+        "bytes": 1760000,
+        "slotNote": "L = min(N, M)"
+      }
+    ],
+    "verifier": {
+      "viewCalls": "7 eth_call per verification, each a fixed number of mapping lookups (sdk/verify.ts round 0 and 1, sdk/checkers.ts; contracts/src/EmissionsClaimRegistry.sol reports, shipmentStatus, remainingKg, reportScopes, isValidAt; VerifierAllowlist institutions, auditors): independent of N and M",
+      "eventSearches": "eth_getLogs per verification = 2 * ceil(S / 10000), S = the blocks from a block before registeredAt to a block after registeredAt + 24 h, found by interpolation search (sdk/chain.ts blockRangeForTimes; AuditorRevoked and VerifierSuspended, filtered by indexed topics): S <= 24 h of blocks (7200 at 12 s) + a margin of at most 512 blocks on each side once the search has converged, so 2 requests, independent of the age of the deployment and of N and M",
+      "blockSearch": "eth_getBlockByNumber per verification = 1 (block B) + 1 (the deployment block, read once per reader) + at most 16 for the search (2 bounds, at most 4 rounds of 2 parallel reads each); also independent of the age of the deployment",
+      "fallback": "if a block read fails, the whole range from the deployment block is searched, as before: 2 * ceil(blockSpan / 10000) eth_getLogs, blockSpan = latest block - deployment block + 1 (fail-safe, never a narrower range)",
+      "measuredBlockSpan": 10845,
+      "measuredGetLogs": 2,
+      "fullScanGetLogs": 4,
+      "projectedGetLogs": {
+        "assumption": "7200 blocks per day (12 s slots, no missed slots)",
+        "30 days": 2,
+        "1 year": 2,
+        "fullScanFallback": {
+          "30 days": 44,
+          "1 year": 526
+        }
+      }
+    }
+  },
+  "cold": {
+    "method": "a new Node process and a new viem client per run; `ms` is the verifyPresentation call, `sinceProcessStartMs` adds module loading, `processWallMs` is measured by the parent from spawn to exit",
+    "summaryMs": {
+      "p50": 1447.4,
+      "p95": 1750.4,
+      "min": 1399,
+      "max": 1938
+    },
+    "summaryProcessWallMs": {
+      "p50": 1849.5,
+      "p95": 2136.6,
+      "min": 1803.8,
+      "max": 2350.1
+    },
+    "summaryRpcRequests": {
+      "p50": 16,
+      "p95": 16,
+      "min": 16,
+      "max": 16
+    },
+    "runs": [
+      {
+        "ms": 1447.4,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2519.8,
+          "eth_chainId": 443.2,
+          "eth_call": 1970,
+          "eth_getLogs": 520.9
+        },
+        "rpcWaitMsSum": 5453.7,
+        "rpcBusyMs": 1435.6,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1824.1,
+        "processWallMs": 1848
+      },
+      {
+        "ms": 1703.6,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 485.3,
+          "eth_getBlockByNumber": 2826.2,
+          "eth_call": 2392.9,
+          "eth_getLogs": 548.9
+        },
+        "rpcWaitMsSum": 6253.4,
+        "rpcBusyMs": 1693.7,
+        "overall": "VALID",
+        "sinceProcessStartMs": 2084.9,
+        "processWallMs": 2108.2
+      },
+      {
+        "ms": 1488.2,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 465.9,
+          "eth_getBlockByNumber": 2487.9,
+          "eth_call": 2298.8,
+          "eth_getLogs": 480.8
+        },
+        "rpcWaitMsSum": 5733.3,
+        "rpcBusyMs": 1478.3,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1865.9,
+        "processWallMs": 1888.7
+      },
+      {
+        "ms": 1399.2,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2259.3,
+          "eth_chainId": 434.2,
+          "eth_call": 2257.4,
+          "eth_getLogs": 485.5
+        },
+        "rpcWaitMsSum": 5436.4,
+        "rpcBusyMs": 1389.9,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1781.4,
+        "processWallMs": 1805.5
+      },
+      {
+        "ms": 1424.6,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2429.3,
+          "eth_chainId": 472.4,
+          "eth_call": 2132.4,
+          "eth_getLogs": 478.1
+        },
+        "rpcWaitMsSum": 5512,
+        "rpcBusyMs": 1414.8,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1800.1,
+        "processWallMs": 1823
+      },
+      {
+        "ms": 1510.1,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2483.8,
+          "eth_chainId": 424.1,
+          "eth_call": 2322.9,
+          "eth_getLogs": 488.8
+        },
+        "rpcWaitMsSum": 5719.8,
+        "rpcBusyMs": 1498.8,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1892.7,
+        "processWallMs": 1916.3
+      },
+      {
+        "ms": 1587.2,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 433.2,
+          "eth_getBlockByNumber": 2464.2,
+          "eth_call": 2432.4,
+          "eth_getLogs": 632
+        },
+        "rpcWaitMsSum": 5961.9,
+        "rpcBusyMs": 1577.3,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1965.5,
+        "processWallMs": 1988.6
+      },
+      {
+        "ms": 1453.9,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 512.6,
+          "eth_getBlockByNumber": 2574.6,
+          "eth_call": 1983.9,
+          "eth_getLogs": 498.6
+        },
+        "rpcWaitMsSum": 5569.6,
+        "rpcBusyMs": 1444.4,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1834.5,
+        "processWallMs": 1857.1
+      },
+      {
+        "ms": 1447,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2576.4,
+          "eth_chainId": 442.2,
+          "eth_call": 2139.6,
+          "eth_getLogs": 482.3
+        },
+        "rpcWaitMsSum": 5640.6,
+        "rpcBusyMs": 1437.4,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1825.9,
+        "processWallMs": 1849.5
+      },
+      {
+        "ms": 1426.1,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 453.6,
+          "eth_getBlockByNumber": 2513.9,
+          "eth_call": 1932.7,
+          "eth_getLogs": 476.7
+        },
+        "rpcWaitMsSum": 5376.9,
+        "rpcBusyMs": 1416.5,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1806,
+        "processWallMs": 1829.4
+      },
+      {
+        "ms": 1399,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 413.2,
+          "eth_getBlockByNumber": 2237.9,
+          "eth_call": 2350.5,
+          "eth_getLogs": 550.4
+        },
+        "rpcWaitMsSum": 5552,
+        "rpcBusyMs": 1390.1,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1780.4,
+        "processWallMs": 1803.8
+      },
+      {
+        "ms": 1750.4,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 432.5,
+          "eth_getBlockByNumber": 2677,
+          "eth_call": 2024.9,
+          "eth_getLogs": 1109.7
+        },
+        "rpcWaitMsSum": 6244.1,
+        "rpcBusyMs": 1739.5,
+        "overall": "VALID",
+        "sinceProcessStartMs": 2114.8,
+        "processWallMs": 2136.6
+      },
+      {
+        "ms": 1416.8,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2469.4,
+          "eth_chainId": 479.2,
+          "eth_call": 1969.4,
+          "eth_getLogs": 490.7
+        },
+        "rpcWaitMsSum": 5408.9,
+        "rpcBusyMs": 1405,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1786,
+        "processWallMs": 1814
+      },
+      {
+        "ms": 1416.1,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 2043.6,
+          "eth_chainId": 427.5,
+          "eth_call": 2447,
+          "eth_getLogs": 552.6
+        },
+        "rpcWaitMsSum": 5470.7,
+        "rpcBusyMs": 1407.1,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1789.5,
+        "processWallMs": 1814.3
+      },
+      {
+        "ms": 1463.2,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 504.9,
+          "eth_getBlockByNumber": 2505,
+          "eth_call": 2288.8,
+          "eth_getLogs": 489.6
+        },
+        "rpcWaitMsSum": 5788.4,
+        "rpcBusyMs": 1451.6,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1833,
+        "processWallMs": 1856.3
+      },
+      {
+        "ms": 1938,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 422.5,
+          "eth_getBlockByNumber": 2557.9,
+          "eth_call": 3861.9,
+          "eth_getLogs": 609.9
+        },
+        "rpcWaitMsSum": 7452.1,
+        "rpcBusyMs": 1928.4,
+        "overall": "VALID",
+        "sinceProcessStartMs": 2320.1,
+        "processWallMs": 2350.1
+      },
+      {
+        "ms": 1465.4,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 499.2,
+          "eth_getBlockByNumber": 2553.6,
+          "eth_call": 2297.4,
+          "eth_getLogs": 475.2
+        },
+        "rpcWaitMsSum": 5825.5,
+        "rpcBusyMs": 1453.4,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1836.7,
+        "processWallMs": 1868.1
+      },
+      {
+        "ms": 1441.7,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 433.9,
+          "eth_getBlockByNumber": 2521.7,
+          "eth_call": 1963.4,
+          "eth_getLogs": 496.1
+        },
+        "rpcWaitMsSum": 5415.1,
+        "rpcBusyMs": 1429.4,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1813.8,
+        "processWallMs": 1845.5
+      },
+      {
+        "ms": 1411.6,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 440.1,
+          "eth_getBlockByNumber": 2219.9,
+          "eth_call": 2402.9,
+          "eth_getLogs": 501.4
+        },
+        "rpcWaitMsSum": 5564.1,
+        "rpcBusyMs": 1400.9,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1795.4,
+        "processWallMs": 1823.8
+      },
+      {
+        "ms": 1465.5,
+        "rpcRequests": 16,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 447.8,
+          "eth_getBlockByNumber": 2675.2,
+          "eth_call": 1952.5,
+          "eth_getLogs": 523.2
+        },
+        "rpcWaitMsSum": 5598.9,
+        "rpcBusyMs": 1455.9,
+        "overall": "VALID",
+        "sinceProcessStartMs": 1833.5,
+        "processWallMs": 1857.1
+      }
+    ]
+  },
+  "warm": {
+    "method": "one viem client, runs back to back after one unrecorded warm-up run",
+    "summaryMs": {
+      "p50": 844.1,
+      "p95": 981.2,
+      "min": 824.9,
+      "max": 1048.7
+    },
+    "summaryRpcRequests": {
+      "p50": 11,
+      "p95": 11,
+      "min": 11,
+      "max": 11
+    },
+    "runs": [
+      {
+        "ms": 864.7,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 230.5,
+          "eth_getBlockByNumber": 248.4,
+          "eth_call": 1815.2,
+          "eth_getLogs": 576.7
+        },
+        "rpcWaitMsSum": 2870.8,
+        "rpcBusyMs": 862.1,
+        "overall": "VALID"
+      },
+      {
+        "ms": 857.9,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 242.3,
+          "eth_getBlockByNumber": 249.9,
+          "eth_call": 1721.7,
+          "eth_getLogs": 483.5
+        },
+        "rpcWaitMsSum": 2697.5,
+        "rpcBusyMs": 777.8,
+        "overall": "VALID"
+      },
+      {
+        "ms": 825.5,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 235.5,
+          "eth_getBlockByNumber": 242.4,
+          "eth_call": 1689.5,
+          "eth_getLogs": 478
+        },
+        "rpcWaitMsSum": 2645.4,
+        "rpcBusyMs": 747.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 939,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 300.6,
+          "eth_getBlockByNumber": 311,
+          "eth_call": 1954.3,
+          "eth_getLogs": 639.9
+        },
+        "rpcWaitMsSum": 3205.9,
+        "rpcBusyMs": 923.1,
+        "overall": "VALID"
+      },
+      {
+        "ms": 847.4,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 232.6,
+          "eth_getBlockByNumber": 242.6,
+          "eth_call": 1694.7,
+          "eth_getLogs": 485.9
+        },
+        "rpcWaitMsSum": 2655.7,
+        "rpcBusyMs": 769.2,
+        "overall": "VALID"
+      },
+      {
+        "ms": 981.2,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 237.8,
+          "eth_getBlockByNumber": 266.5,
+          "eth_call": 1737.3,
+          "eth_getLogs": 720.1
+        },
+        "rpcWaitMsSum": 2961.6,
+        "rpcBusyMs": 979.9,
+        "overall": "VALID"
+      },
+      {
+        "ms": 1048.7,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 239.3,
+          "eth_getBlockByNumber": 264.5,
+          "eth_call": 1925.9,
+          "eth_getLogs": 475
+        },
+        "rpcWaitMsSum": 2904.7,
+        "rpcBusyMs": 974,
+        "overall": "VALID"
+      },
+      {
+        "ms": 840.4,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 226.5,
+          "eth_getBlockByNumber": 243.9,
+          "eth_call": 1697.9,
+          "eth_getLogs": 486.2
+        },
+        "rpcWaitMsSum": 2654.5,
+        "rpcBusyMs": 760.9,
+        "overall": "VALID"
+      },
+      {
+        "ms": 973.5,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 238.3,
+          "eth_getBlockByNumber": 266,
+          "eth_call": 2022.1,
+          "eth_getLogs": 488.3
+        },
+        "rpcWaitMsSum": 3014.6,
+        "rpcBusyMs": 895.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 824.9,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 229,
+          "eth_getBlockByNumber": 254.7,
+          "eth_call": 1748.3,
+          "eth_getLogs": 479.1
+        },
+        "rpcWaitMsSum": 2711.1,
+        "rpcBusyMs": 824.1,
+        "overall": "VALID"
+      },
+      {
+        "ms": 844.1,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 230.3,
+          "eth_getBlockByNumber": 257.9,
+          "eth_call": 1678.5,
+          "eth_getLogs": 479.4
+        },
+        "rpcWaitMsSum": 2646.2,
+        "rpcBusyMs": 774,
+        "overall": "VALID"
+      },
+      {
+        "ms": 827.3,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 231.8,
+          "eth_getBlockByNumber": 249.6,
+          "eth_call": 1691.5,
+          "eth_getLogs": 475.2
+        },
+        "rpcWaitMsSum": 2648.2,
+        "rpcBusyMs": 756.9,
+        "overall": "VALID"
+      },
+      {
+        "ms": 965.2,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 333.5,
+          "eth_getBlockByNumber": 333.9,
+          "eth_call": 1883.2,
+          "eth_getLogs": 585.8
+        },
+        "rpcWaitMsSum": 3136.5,
+        "rpcBusyMs": 964.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 842.9,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 229,
+          "eth_getBlockByNumber": 235.9,
+          "eth_call": 1818.8,
+          "eth_getLogs": 742.4
+        },
+        "rpcWaitMsSum": 3026.2,
+        "rpcBusyMs": 842.1,
+        "overall": "VALID"
+      },
+      {
+        "ms": 828.6,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 250.3,
+          "eth_getBlockByNumber": 250.4,
+          "eth_call": 1680.5,
+          "eth_getLogs": 472.2
+        },
+        "rpcWaitMsSum": 2653.3,
+        "rpcBusyMs": 758.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 912.7,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 316.7,
+          "eth_getBlockByNumber": 317.1,
+          "eth_call": 1757.1,
+          "eth_getLogs": 579.6
+        },
+        "rpcWaitMsSum": 2970.2,
+        "rpcBusyMs": 843.1,
+        "overall": "VALID"
+      },
+      {
+        "ms": 838.7,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 237,
+          "eth_getBlockByNumber": 254.1,
+          "eth_call": 1684.1,
+          "eth_getLogs": 479
+        },
+        "rpcWaitMsSum": 2654.3,
+        "rpcBusyMs": 769.5,
+        "overall": "VALID"
+      },
+      {
+        "ms": 833.6,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 233.3,
+          "eth_getBlockByNumber": 237.8,
+          "eth_call": 1705.7,
+          "eth_getLogs": 480.7
+        },
+        "rpcWaitMsSum": 2657.5,
+        "rpcBusyMs": 763.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 835.9,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 232,
+          "eth_getBlockByNumber": 249.2,
+          "eth_call": 1684.2,
+          "eth_getLogs": 480.2
+        },
+        "rpcWaitMsSum": 2645.6,
+        "rpcBusyMs": 766.5,
+        "overall": "VALID"
+      },
+      {
+        "ms": 886.8,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 269.6,
+          "eth_getBlockByNumber": 288,
+          "eth_call": 1854.2,
+          "eth_getLogs": 475.9
+        },
+        "rpcWaitMsSum": 2887.6,
+        "rpcBusyMs": 817.4,
+        "overall": "VALID"
+      }
+    ]
+  },
+  "warmFullScan": {
+    "method": "as warm, but the reader searches the CONTESTED events from the deployment block (ChainReaderOptions.fullEventScan, the behaviour before the time-window search), for comparison; run right after the warm series",
+    "summaryMs": {
+      "p50": 846.1,
+      "p95": 981.8,
+      "min": 807.3,
+      "max": 1032.6
+    },
+    "summaryRpcRequests": {
+      "p50": 13,
+      "p95": 13,
+      "min": 13,
+      "max": 13
+    },
+    "runs": [
+      {
+        "ms": 859.9,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 262.1,
+          "eth_getBlockByNumber": 262.5,
+          "eth_call": 1764.7,
+          "eth_getLogs": 1161.3
+        },
+        "rpcWaitMsSum": 3450.8,
+        "rpcBusyMs": 789.8,
+        "overall": "VALID"
+      },
+      {
+        "ms": 809.6,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 236.8,
+          "eth_getBlockByNumber": 239.1,
+          "eth_call": 1682.8,
+          "eth_getLogs": 984.7
+        },
+        "rpcWaitMsSum": 3143.5,
+        "rpcBusyMs": 740.2,
+        "overall": "VALID"
+      },
+      {
+        "ms": 846.1,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 230,
+          "eth_getBlockByNumber": 255.5,
+          "eth_call": 1696.6,
+          "eth_getLogs": 966.1
+        },
+        "rpcWaitMsSum": 3148.3,
+        "rpcBusyMs": 776.2,
+        "overall": "VALID"
+      },
+      {
+        "ms": 816.2,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 235.2,
+          "eth_getBlockByNumber": 248,
+          "eth_call": 1702.1,
+          "eth_getLogs": 977.1
+        },
+        "rpcWaitMsSum": 3162.3,
+        "rpcBusyMs": 747,
+        "overall": "VALID"
+      },
+      {
+        "ms": 928.5,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 313.7,
+          "eth_getBlockByNumber": 313.8,
+          "eth_call": 1936.9,
+          "eth_getLogs": 1122.8
+        },
+        "rpcWaitMsSum": 3687.4,
+        "rpcBusyMs": 927.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 1032.6,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 262.7,
+          "eth_getBlockByNumber": 262.8,
+          "eth_call": 2009.1,
+          "eth_getLogs": 958.6
+        },
+        "rpcWaitMsSum": 3493.2,
+        "rpcBusyMs": 962.5,
+        "overall": "VALID"
+      },
+      {
+        "ms": 839.8,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 231.8,
+          "eth_getBlockByNumber": 245.3,
+          "eth_call": 1700,
+          "eth_getLogs": 1037.3
+        },
+        "rpcWaitMsSum": 3214.4,
+        "rpcBusyMs": 770.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 807.3,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 231.8,
+          "eth_getBlockByNumber": 249.7,
+          "eth_call": 1656.6,
+          "eth_getLogs": 946.2
+        },
+        "rpcWaitMsSum": 3084.3,
+        "rpcBusyMs": 738.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 846.4,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 228.3,
+          "eth_getBlockByNumber": 240.3,
+          "eth_call": 1719.6,
+          "eth_getLogs": 959.8
+        },
+        "rpcWaitMsSum": 3148.1,
+        "rpcBusyMs": 773.3,
+        "overall": "VALID"
+      },
+      {
+        "ms": 936,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 229.3,
+          "eth_getBlockByNumber": 340.1,
+          "eth_call": 1792.6,
+          "eth_getLogs": 1152.7
+        },
+        "rpcWaitMsSum": 3514.5,
+        "rpcBusyMs": 866.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 815.2,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 237.1,
+          "eth_getBlockByNumber": 241.8,
+          "eth_call": 1675,
+          "eth_getLogs": 977.3
+        },
+        "rpcWaitMsSum": 3131.4,
+        "rpcBusyMs": 746.1,
+        "overall": "VALID"
+      },
+      {
+        "ms": 821.4,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 230.8,
+          "eth_getBlockByNumber": 253.6,
+          "eth_call": 1728.2,
+          "eth_getLogs": 957.3
+        },
+        "rpcWaitMsSum": 3169.9,
+        "rpcBusyMs": 820.8,
+        "overall": "VALID"
+      },
+      {
+        "ms": 981.8,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 239.6,
+          "eth_getBlockByNumber": 251.4,
+          "eth_call": 1870.9,
+          "eth_getLogs": 1054.5
+        },
+        "rpcWaitMsSum": 3416.5,
+        "rpcBusyMs": 912.3,
+        "overall": "VALID"
+      },
+      {
+        "ms": 813.2,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_getBlockByNumber": 1,
+          "eth_chainId": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_getBlockByNumber": 241.4,
+          "eth_chainId": 246.9,
+          "eth_call": 1731.5,
+          "eth_getLogs": 1256.7
+        },
+        "rpcWaitMsSum": 3476.5,
+        "rpcBusyMs": 812.5,
+        "overall": "VALID"
+      },
+      {
+        "ms": 830.2,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 232.5,
+          "eth_getBlockByNumber": 246.7,
+          "eth_call": 1713.9,
+          "eth_getLogs": 951.5
+        },
+        "rpcWaitMsSum": 3144.6,
+        "rpcBusyMs": 760.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 830.7,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 229.2,
+          "eth_getBlockByNumber": 258.2,
+          "eth_call": 1710.1,
+          "eth_getLogs": 975.3
+        },
+        "rpcWaitMsSum": 3172.8,
+        "rpcBusyMs": 761.6,
+        "overall": "VALID"
+      },
+      {
+        "ms": 925.2,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 306.9,
+          "eth_getBlockByNumber": 332.9,
+          "eth_call": 1808.4,
+          "eth_getLogs": 967.3
+        },
+        "rpcWaitMsSum": 3415.5,
+        "rpcBusyMs": 856.3,
+        "overall": "VALID"
+      },
+      {
+        "ms": 861.7,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 230.1,
+          "eth_getBlockByNumber": 248.2,
+          "eth_call": 1870,
+          "eth_getLogs": 950.5
+        },
+        "rpcWaitMsSum": 3298.9,
+        "rpcBusyMs": 792.8,
+        "overall": "VALID"
+      },
+      {
+        "ms": 847.3,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 233.2,
+          "eth_getBlockByNumber": 262.1,
+          "eth_call": 1802.3,
+          "eth_getLogs": 953.7
+        },
+        "rpcWaitMsSum": 3251.3,
+        "rpcBusyMs": 846.6,
+        "overall": "VALID"
+      },
+      {
+        "ms": 908.6,
+        "rpcRequests": 13,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 4
+        },
+        "byMethodMs": {
+          "eth_chainId": 295.1,
+          "eth_getBlockByNumber": 303.4,
+          "eth_call": 1919.5,
+          "eth_getLogs": 1100.1
+        },
+        "rpcWaitMsSum": 3618,
+        "rpcBusyMs": 907.9,
+        "overall": "VALID"
+      }
+    ]
+  },
+  "anvil": {
+    "method": "local anvil fork of the same RPC pinned to forkBlock, one viem client, runs back to back after one unrecorded warm-up run that fills anvil's fork cache; `rpcBusyMs` is the time with at least one request in flight, so `ms - rpcBusyMs` bounds the computation time from below",
+    "forkBlock": 11857610,
+    "summaryMs": {
+      "p50": 86.3,
+      "p95": 91.2,
+      "min": 84.5,
+      "max": 91.3
+    },
+    "summaryRpcBusyMs": {
+      "p50": 75.7,
+      "p95": 76.7,
+      "min": 7,
+      "max": 79.9
+    },
+    "summaryOutsideRpcMs": {
+      "p50": 10.5,
+      "p95": 79,
+      "min": 10.2,
+      "max": 83.7
+    },
+    "summaryRpcRequests": {
+      "p50": 11,
+      "p95": 11,
+      "min": 11,
+      "max": 11
+    },
+    "runs": [
+      {
+        "ms": 86.4,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.9,
+          "eth_getBlockByNumber": 0.9,
+          "eth_call": 89.2,
+          "eth_getLogs": 70.6
+        },
+        "rpcWaitMsSum": 161.8,
+        "rpcBusyMs": 75.9,
+        "overall": "VALID"
+      },
+      {
+        "ms": 87.1,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.9,
+          "eth_call": 90.4,
+          "eth_getLogs": 2
+        },
+        "rpcWaitMsSum": 94,
+        "rpcBusyMs": 76.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.4,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.8,
+          "eth_getBlockByNumber": 0.9,
+          "eth_call": 89.2,
+          "eth_getLogs": 1.8
+        },
+        "rpcWaitMsSum": 92.7,
+        "rpcBusyMs": 75.9,
+        "overall": "VALID"
+      },
+      {
+        "ms": 91.2,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 98.5,
+          "eth_getLogs": 5.9
+        },
+        "rpcWaitMsSum": 106.5,
+        "rpcBusyMs": 79.9,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.8,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.9,
+          "eth_getBlockByNumber": 0.9,
+          "eth_call": 89.7,
+          "eth_getLogs": 2.2
+        },
+        "rpcWaitMsSum": 93.8,
+        "rpcBusyMs": 76.2,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.7,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 21.9,
+          "eth_getLogs": 2.1
+        },
+        "rpcWaitMsSum": 25.4,
+        "rpcBusyMs": 7.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.7,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.8,
+          "eth_getBlockByNumber": 0.8,
+          "eth_call": 89.4,
+          "eth_getLogs": 1.9
+        },
+        "rpcWaitMsSum": 92.9,
+        "rpcBusyMs": 76.2,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.1,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 89.6,
+          "eth_getLogs": 2
+        },
+        "rpcWaitMsSum": 93,
+        "rpcBusyMs": 75.6,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.2,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.8,
+          "eth_call": 88.8,
+          "eth_getLogs": 1.8
+        },
+        "rpcWaitMsSum": 92.2,
+        "rpcBusyMs": 75.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.2,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.8,
+          "eth_getBlockByNumber": 0.9,
+          "eth_call": 89,
+          "eth_getLogs": 1.8
+        },
+        "rpcWaitMsSum": 92.3,
+        "rpcBusyMs": 75.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 85.8,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.6,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 88.1,
+          "eth_getLogs": 1.6
+        },
+        "rpcWaitMsSum": 91.1,
+        "rpcBusyMs": 75.4,
+        "overall": "VALID"
+      },
+      {
+        "ms": 87.2,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.6,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 89.8,
+          "eth_getLogs": 1.8
+        },
+        "rpcWaitMsSum": 93.1,
+        "rpcBusyMs": 76.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.4,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.8,
+          "eth_call": 89,
+          "eth_getLogs": 1.8
+        },
+        "rpcWaitMsSum": 92.4,
+        "rpcBusyMs": 75.8,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.1,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.8,
+          "eth_call": 89.1,
+          "eth_getLogs": 1.9
+        },
+        "rpcWaitMsSum": 92.5,
+        "rpcBusyMs": 75.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 85.6,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.6,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 88.6,
+          "eth_getLogs": 2.1
+        },
+        "rpcWaitMsSum": 91.8,
+        "rpcBusyMs": 75.2,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.1,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.7,
+          "eth_getBlockByNumber": 0.8,
+          "eth_call": 89.2,
+          "eth_getLogs": 1.8
+        },
+        "rpcWaitMsSum": 92.6,
+        "rpcBusyMs": 75.7,
+        "overall": "VALID"
+      },
+      {
+        "ms": 84.5,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.6,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 87.2,
+          "eth_getLogs": 1.7
+        },
+        "rpcWaitMsSum": 90.1,
+        "rpcBusyMs": 74.3,
+        "overall": "VALID"
+      },
+      {
+        "ms": 91.3,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.6,
+          "eth_getBlockByNumber": 0.6,
+          "eth_call": 21.7,
+          "eth_getLogs": 2.7
+        },
+        "rpcWaitMsSum": 25.6,
+        "rpcBusyMs": 7.6,
+        "overall": "VALID"
+      },
+      {
+        "ms": 86.3,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 1.1,
+          "eth_getBlockByNumber": 1.1,
+          "eth_call": 89,
+          "eth_getLogs": 1.1
+        },
+        "rpcWaitMsSum": 92.3,
+        "rpcBusyMs": 75.8,
+        "overall": "VALID"
+      },
+      {
+        "ms": 85.1,
+        "rpcRequests": 11,
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 2
+        },
+        "byMethodMs": {
+          "eth_chainId": 0.6,
+          "eth_getBlockByNumber": 0.7,
+          "eth_call": 20,
+          "eth_getLogs": 1.3
+        },
+        "rpcWaitMsSum": 22.5,
+        "rpcBusyMs": 7,
+        "overall": "VALID"
+      }
+    ]
+  }
+}
