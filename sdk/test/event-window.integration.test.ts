@@ -121,7 +121,7 @@ async function both(cr: SignedCredential, opts: { contestedWindowHours?: number 
 }
 
 const check4 = (r: VerificationResult) => `${r.checks[4].status}:${r.checks[4].code}`;
-const span = async () => (await c.pub.getBlockNumber()) - BigInt(c.deployment.contracts.VerifierAllowlist.block) + 1n;
+const span = async () => (await c.pub.getBlockNumber({ cacheTime: 0 })) - BigInt(c.deployment.contracts.VerifierAllowlist.block) + 1n;
 const fullScanLogs = (blocks: bigint) => 2 * Math.ceil(Number(blocks) / Number(LOG_CHUNK));
 /** Upper bound on getBlock reads: block B and the deployment block, then per bound two reads per round. */
 const MAX_GET_BLOCK = 2 + 2 * 2 * SEARCH_ROUNDS;
