@@ -197,19 +197,29 @@ export async function verifyPresentation(
       : result(2, "pass", "", `${Object.keys(disclosed).length} fields disclosed, ${hidden} hidden by supplier`),
   );
 
-  // Chain reads go out in rounds of parallel requests: everything that depends only on the proof
-  // first, then everything that depends on the registered report. A read whose answer may not be
-  // needed starts early but is awaited only where the checks use it, in the same order as before,
-  // so a failing read is reported exactly as if the reads ran one after another.
+  // All chain reads are pinned to one block: round 0 reads the latest block B (number and
+  // timestamp); every view call after that reads block B and every event search ends at B, so the
+  // checks see one consistent snapshot even if new blocks arrive while they run.
+  // After round 0 the reads go out in rounds of parallel requests: everything that depends only on
+  // the proof first, then everything that depends on the registered report. A read whose answer may
+  // not be needed starts early but is awaited only where the checks use it, in the same order as
+  // before, so a failing read is reported exactly as if the reads ran one after another.
   const reportKey = reportKeyOf(core.d);
   const batchKey = p.shipment ? batchKeyOf(reportKey, p.shipment.batchId, get("batchSalt") as Hex) : undefined;
   const expectedScopeKey = reportScopeKeyOf(get("installationId"), get("reportingPeriod"));
   const chainIdP = early(reader.client.getChainId());
-  const repP = early(reader.report(reportKey));
-  const statusP = batchKey ? early(reader.shipmentStatus(batchKey)) : undefined;
-  const latestP = early(reader.latestBlock());
-  const remainingP = early(reader.remainingKg(reportKey));
-  const expectedScopeP = early(reader.reportScope(expectedScopeKey));
+  const head = await reader.latestBlock();
+  // A load-balanced RPC can answer from a node that is behind: fail closed rather than check an old state.
+  if (head.number < reader.deployedBlock) {
+    throw new Error(
+      `RPC node is behind: its latest block ${head.number} is before the contracts were deployed (block ${reader.deployedBlock}); try again or use another RPC`,
+    );
+  }
+  const rd = reader.at(head.number);
+  const repP = early(rd.report(reportKey));
+  const statusP = batchKey ? early(rd.shipmentStatus(batchKey)) : undefined;
+  const remainingP = early(rd.remainingKg(reportKey));
+  const expectedScopeP = early(rd.reportScope(expectedScopeKey));
 
   // ----------------------------------------------------------------- 3 signature
   const chainId = await chainIdP;
@@ -219,7 +229,7 @@ export async function verifyPresentation(
     verifiedKg = tonnesToKg(get("verifiedTonnes"));
     validUntilSec = isoToSeconds(core.validUntil);
     const signer = await recoverIssuer(
-      reader.registry,
+      rd.registry,
       {
         credSAID: core.d,
         supplierCommit: supplierCommitOf(get("supplierLEI"), get("idSalt") as Hex),
@@ -241,17 +251,22 @@ export async function verifyPresentation(
   // ------------------------------------------------------------- 4 on-chain report
   const onchain: OnchainView = { reportKey };
   const rep = await repP;
+  if (rep.registeredAt !== 0n && head.timestamp < rep.registeredAt) {
+    throw new Error(
+      `RPC node is behind: its block ${head.number} (time ${head.timestamp}) is older than the report's registration (time ${rep.registeredAt}); try again or use another RPC`,
+    );
+  }
   let status: ShipmentStatus | undefined;
   if (statusP) {
     status = await statusP;
     onchain.batchKey = batchKey;
   }
   const atClaim = status !== undefined && status.claimedAt !== 0n && lower(status.reportKey) === lower(reportKey);
-  const t = atClaim && status ? status.claimedAt : (await latestP).timestamp;
+  const t = atClaim && status ? status.claimedAt : head.timestamp;
   let contested = false;
 
   // Checks 6-8 only need the report and the disclosed fields: start them now, alongside check 4's reads.
-  const ctx: EvidenceContext = { core, disclosed, report: rep.registeredAt === 0n ? undefined : rep, reader };
+  const ctx: EvidenceContext = { core, disclosed, report: rep.registeredAt === 0n ? undefined : rep, reader: rd };
   const c = opts.checkers ?? {};
   const { anchor, authority, reconciliation } = c;
   const anchorP =
@@ -284,20 +299,18 @@ export async function verifyPresentation(
 
     // Second round of reads (they depend on the registered report and on t).
     const scopeP =
-      rep.reportScopeKey === expectedScopeKey ? expectedScopeP : early(reader.reportScope(rep.reportScopeKey));
-    const supersededByP = rep.supersededBy !== ZERO32 ? early(reader.report(rep.supersededBy)) : undefined;
+      rep.reportScopeKey === expectedScopeKey ? expectedScopeP : early(rd.reportScope(rep.reportScopeKey));
+    const supersededByP = rep.supersededBy !== ZERO32 ? early(rd.report(rep.supersededBy)) : undefined;
     const unboundAtP = early(
       scopeP.then((s) =>
-        rep.reportIdHash === s.reportIdHash ? 0n : reader.reportIdUnboundAt(rep.reportScopeKey, rep.reportIdHash),
+        rep.reportIdHash === s.reportIdHash ? 0n : rd.reportIdUnboundAt(rep.reportScopeKey, rep.reportIdHash),
       ),
     );
-    const prevP = rep.supersedes !== ZERO32 ? early(reader.report(rep.supersedes)) : undefined;
-    const contractValidP = early(reader.isValidAt(reportKey, t));
-    // 4l events, searched up to the latest block read above
-    const revocationsP = early(
-      latestP.then(({ number }) => reader.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash, number)),
-    );
-    const suspensionsP = early(latestP.then(({ number }) => reader.suspensions(rep.issuerLeiHash, number)));
+    const prevP = rep.supersedes !== ZERO32 ? early(rd.report(rep.supersedes)) : undefined;
+    const contractValidP = early(rd.isValidAt(reportKey, t));
+    // 4l events, searched up to block B (the snapshot)
+    const revocationsP = early(rd.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash, head.number));
+    const suspensionsP = early(rd.suspensions(rep.issuerLeiHash, head.number));
 
     // 4b revoked
     const revoked = rep.revokedAt !== 0n;
@@ -321,7 +334,7 @@ export async function verifyPresentation(
         ? "replaced by a revision in the same credential layer"
         : "the report scope moved to another report (whole-report revision or takeover by another body)";
       const successor = replacedInLayer ? rep.supersededBy : scope.latestReportKey;
-      const succ = await reader.report(successor);
+      const succ = await rd.report(successor);
       if (succ.issuerLeiHash !== rep.issuerLeiHash) detail += "; issuing body changed";
       fails.push(["REPORT_INVALID/SUPERSEDED", detail]);
     } else if (sameBlockException) {

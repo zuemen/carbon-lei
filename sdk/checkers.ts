@@ -15,6 +15,19 @@ export interface BundleRef {
 const isRef = (x: unknown): x is BundleRef =>
   typeof x === "object" && x !== null && typeof (x as BundleRef).bundle === "string" && typeof (x as BundleRef).sha256 === "string";
 
+/**
+ * A bundle reference may only name a file under `evidence/`: letters, digits and `_ . / -`,
+ * no `..` segment and no leading `/`. Anything else is never loaded (check 7 fails).
+ */
+export function isSafeBundlePath(path: unknown): path is string {
+  return (
+    typeof path === "string" &&
+    /^evidence\/[A-Za-z0-9_./-]+$/.test(path) &&
+    !path.includes("..") &&
+    !path.startsWith("/")
+  );
+}
+
 export const sha256Hex = (text: string) => bytesToHex(sha256(utf8(text)));
 
 function result(index: number, ok: boolean, code: string, detail: string): CheckResult {
@@ -46,6 +59,14 @@ export function vleiCheckers(
       let bundle: AuthorityEvidence;
       if (isRef(ev)) {
         if (!opts.loadBundle) return result(7, false, "AUTHORITY_INVALID", "authority evidence is a reference and cannot be loaded here");
+        if (!isSafeBundlePath(ev.bundle)) {
+          return result(
+            7,
+            false,
+            "AUTHORITY_INVALID",
+            "the authority evidence path is not allowed (it must be a file under evidence/, without '..'); not loaded",
+          );
+        }
         const text = await opts.loadBundle(ev.bundle);
         if (sha256Hex(text) !== ev.sha256.toLowerCase()) {
           return result(7, false, "AUTHORITY_INVALID", "the authority evidence file does not match its hash in the proof");

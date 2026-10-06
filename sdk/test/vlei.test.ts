@@ -1,7 +1,8 @@
 // Checks 6 and 7 against the evidence exported from the local KERI run (fixtures/evidence).
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { ed25519 } from "@noble/curves/ed25519.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { isSafeBundlePath, sha256Hex, vleiCheckers } from "../checkers.ts";
 import { hashString } from "../commitment.ts";
 import { base64url, utf8 } from "../encoding.ts";
 import { controllerSigs, parseAttachments, verifyIssuance } from "../kel.ts";
@@ -390,5 +391,47 @@ describe.skipIf(!hasImpostor)("attack 4: the impostor's exported chain (fixtures
     expect(verifyAuthority({ ...forged, cesr: relabelled }, x)).toEqual(
       invalid("QVI credential: the issuer's inception event is not self-addressing (its SAID is not the issuer's AID)"),
     );
+  });
+});
+
+describe("check 7: the bundle path in the proof", () => {
+  const ctx = {
+    core: { issuer: { auditorAID: anchor.auditor, verifierLEI: "ZZZZ00EUVERIFDEMO152" } },
+    disclosed: { cnCode: "7318" },
+    reader: {},
+  } as never;
+
+  it("a path outside evidence/ is refused before anything is loaded", async () => {
+    const bad = [
+      "../secret.json",
+      "/evidence/authority-bundle.json",
+      "evidence/../../etc/passwd",
+      "evidence/..",
+      "https://attacker.example/evidence/x.json",
+      "//attacker.example/evidence/x.json",
+      "evidence/a b.json",
+      "evidence/%2e%2e/x.json",
+      "evidence\\x.json",
+      "evidence/",
+      "authority-bundle.json",
+    ];
+    for (const path of bad) {
+      expect(isSafeBundlePath(path), path).toBe(false);
+      const loadBundle = vi.fn(async () => "{}");
+      const r = await vleiCheckers({ loadBundle }).authority!({ bundle: path, sha256: sha256Hex("{}") }, ctx);
+      expect(r, path).toMatchObject({ status: "fail", code: "AUTHORITY_INVALID" });
+      expect(r.detail).toContain("path is not allowed");
+      expect(loadBundle).not.toHaveBeenCalled();
+    }
+  });
+
+  it("the demo's paths are allowed and loaded", async () => {
+    for (const path of ["evidence/authority-bundle.json", "evidence/impostor/authority-bundle.json"]) {
+      expect(isSafeBundlePath(path)).toBe(true);
+      const loadBundle = vi.fn(async () => "{}");
+      const r = await vleiCheckers({ loadBundle }).authority!({ bundle: path, sha256: "00" }, ctx);
+      expect(loadBundle).toHaveBeenCalledWith(path);
+      expect(r.detail).toContain("does not match its hash");
+    }
   });
 });

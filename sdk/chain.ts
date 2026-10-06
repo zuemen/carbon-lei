@@ -70,14 +70,29 @@ export class ChainReader {
   readonly allowlist: Hex;
   readonly registry: Hex;
   readonly fromBlock: bigint;
+  /** Block in which the later of the two contracts was deployed. */
+  readonly deployedBlock: bigint;
+  /** When set (see `at`), every view call and event search reads this block, not the latest one. */
+  readonly blockNumber?: bigint;
+  private readonly deployment: Deployment;
 
-  constructor(client: PublicClient, deployment: Deployment) {
+  constructor(client: PublicClient, deployment: Deployment, blockNumber?: bigint) {
     this.client = client;
+    this.deployment = deployment;
+    this.blockNumber = blockNumber;
     this.allowlist = deployment.contracts.VerifierAllowlist.address;
     this.registry = deployment.contracts.EmissionsClaimRegistry.address;
     this.fromBlock = BigInt(
       Math.min(deployment.contracts.VerifierAllowlist.block, deployment.contracts.EmissionsClaimRegistry.block),
     );
+    this.deployedBlock = BigInt(
+      Math.max(deployment.contracts.VerifierAllowlist.block, deployment.contracts.EmissionsClaimRegistry.block),
+    );
+  }
+
+  /** A reader on the same RPC whose views and event searches all read block `blockNumber` (one snapshot). */
+  at(blockNumber: bigint): ChainReader {
+    return new ChainReader(this.client, this.deployment, blockNumber);
   }
 
   static forSepolia(deployment: Deployment, rpcUrls: string[] = SEPOLIA_RPCS): ChainReader {
@@ -95,6 +110,7 @@ export class ChainReader {
       abi: emissionsClaimRegistryAbi,
       functionName,
       args,
+      blockNumber: this.blockNumber,
     } as never) as Promise<T>;
   }
 
@@ -104,6 +120,7 @@ export class ChainReader {
       abi: verifierAllowlistAbi,
       functionName,
       args,
+      blockNumber: this.blockNumber,
     } as never) as Promise<T>;
   }
 
@@ -173,15 +190,15 @@ export class ChainReader {
     return (await this.latestBlock()).timestamp;
   }
 
-  /** Number and timestamp of the latest block, in one request. */
+  /** Number and timestamp of the latest block, in one request (of the pinned block, for a reader from `at`). */
   async latestBlock(): Promise<{ number: bigint; timestamp: bigint }> {
-    const b = await this.client.getBlock();
+    const b = await this.client.getBlock(this.blockNumber === undefined ? undefined : { blockNumber: this.blockNumber });
     return { number: b.number, timestamp: b.timestamp };
   }
 
   /**
    * `AuditorRevoked(auditorAidHash, leiHash)` events, with their `revokedAt`.
-   * `toBlock` (default: the latest block) lets a caller search up to a block it has already read.
+   * `toBlock` (default: the pinned block, else the latest block) lets a caller search up to a block it has already read.
    */
   async auditorRevocations(auditorAidHash: Hex, leiHash: Hex, toBlock?: bigint): Promise<TimedEvent[]> {
     const logs = await this.chunkedLogs(
@@ -217,7 +234,7 @@ export class ChainReader {
     toBlock?: bigint,
   ) {
     type Log = { args: unknown; blockNumber: bigint; transactionHash: Hex };
-    const latest = toBlock ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
+    const latest = toBlock ?? this.blockNumber ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
     const ranges: [bigint, bigint][] = [];
     for (let from = this.fromBlock; from <= latest; from += LOG_CHUNK) {
       ranges.push([from, from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest]);

@@ -1,11 +1,12 @@
 // End-to-end on a local anvil chain: register, claim, then verify the supplier's proof,
 // and check that each kind of tampering is caught by the right check.
 import { readFileSync } from "node:fs";
-import { keccak256, stringToBytes } from "viem";
+import { keccak256, stringToBytes, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auditorAidHashOf, hashString, leiHashOf, reportKeyOf } from "../commitment.ts";
 import { isoToSeconds, METHODOLOGY_NOTE, type CredentialClaims, type Hex } from "../credential.ts";
+import { ChainReader } from "../chain.ts";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../disclosure.ts";
 import { claimArgsOf, DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "../issue.ts";
 import { verifyPresentation } from "../verify.ts";
@@ -97,6 +98,43 @@ afterAll(() => c?.stop());
 
 const codes = (r: Awaited<ReturnType<typeof verifyPresentation>>) =>
   Object.fromEntries(r.checks.map((x) => [x.index, `${x.status}:${x.code}`]));
+
+/**
+ * A reader whose RPC reports block `head` as its latest (a node that has not seen later blocks yet,
+ * or a node that is behind), optionally with another timestamp. Records the block every view call
+ * and every event search reads.
+ */
+function readerWithHead(head: bigint, timestamp?: bigint) {
+  const reads: (bigint | undefined)[] = [];
+  const logTo: bigint[] = [];
+  const client = new Proxy(c.pub, {
+    get(target, prop, recv) {
+      if (prop === "getBlock") {
+        return async (args?: { blockNumber?: bigint }) => {
+          const b = await target.getBlock({ blockNumber: args?.blockNumber ?? head });
+          return timestamp === undefined ? b : { ...b, timestamp };
+        };
+      }
+      if (prop === "readContract") {
+        return (args: { blockNumber?: bigint }) => {
+          reads.push(args.blockNumber);
+          return target.readContract(args as never);
+        };
+      }
+      if (prop === "getContractEvents") {
+        return (args: { toBlock: bigint }) => {
+          logTo.push(args.toBlock);
+          return target.getContractEvents(args as never);
+        };
+      }
+      return Reflect.get(target, prop, recv);
+    },
+  }) as PublicClient;
+  return { reader: new ChainReader(client, c.deployment), reads, logTo };
+}
+
+let recent: SignedCredential;
+let revokeBlock: bigint;
 
 describe("verifyPresentation on a local chain", () => {
   it("S9 genuine proof: checks 0–5 pass, hidden fields counted, 6–7 need evidence", async () => {
@@ -206,14 +244,55 @@ describe("verifyPresentation on a local chain", () => {
   });
 
   it("auditor revoked within 24 h of registration → CONTESTED (not a failure)", async () => {
-    const recent = await issue({ cnCode: "7318", cbamRoute: "E", verificationReportId: "VR-DEMO-0001-R1", issuedAt: "2026-10-03T00:00:00Z" });
+    recent = await issue({ cnCode: "7318", cbamRoute: "E", verificationReportId: "VR-DEMO-0001-R1", issuedAt: "2026-10-03T00:00:00Z" });
     await register(recent);
     await c.test.increaseTime({ seconds: 3600 });
-    await send(c, c.watcher, "allowlist", "revokeAuditor", [auditorAidHashOf(AUDITOR_AID), leiHashOf(demo.entities.verifier.lei)]);
+    const rcpt = await send(c, c.watcher, "allowlist", "revokeAuditor", [auditorAidHashOf(AUDITOR_AID), leiHashOf(demo.entities.verifier.lei)]);
+    revokeBlock = rcpt.blockNumber;
     const r = await verifyPresentation(present(recent, DEMO_DISCLOSURE), c.reader);
     expect(codes(r)[4]).toBe("pass:CONTESTED");
     const r48 = await verifyPresentation(present(recent, DEMO_DISCLOSURE), c.reader, { contestedWindowHours: 0.5 });
     expect(codes(r48)[4]).toBe("pass:");
+  });
+
+  it("one snapshot: a revocation in a block after the snapshot block is not seen; inside it → CONTESTED", async () => {
+    // The node's latest block is the one before the revocation: the whole check reads that block.
+    const before = readerWithHead(revokeBlock - 1n);
+    const r = await verifyPresentation(present(recent, DEMO_DISCLOSURE), before.reader);
+    expect(codes(r)[4]).toBe("pass:");
+    expect(before.reads.length).toBeGreaterThan(0);
+    expect(before.reads.every((b) => b === revokeBlock - 1n)).toBe(true);
+    expect(before.logTo.length).toBeGreaterThan(0);
+    expect(before.logTo.every((b) => b <= revokeBlock - 1n)).toBe(true);
+    // Once the node has the revocation block, the same proof is CONTESTED, read at that block.
+    const at = readerWithHead(revokeBlock);
+    const r2 = await verifyPresentation(present(recent, DEMO_DISCLOSURE), at.reader);
+    expect(codes(r2)[4]).toBe("pass:CONTESTED");
+    expect(at.reads.every((b) => b === revokeBlock)).toBe(true);
+    // The evidence checkers read through the same pinned reader (check 7's allowlist reads).
+    const pinned: (bigint | undefined)[] = [];
+    await verifyPresentation({ ...present(recent, DEMO_DISCLOSURE), authorityEvidence: {} }, at.reader, {
+      checkers: {
+        authority: async (_ev, ctx) => {
+          await ctx.reader.institution(leiHashOf(demo.entities.verifier.lei));
+          pinned.push(ctx.reader.blockNumber);
+          return { index: 7, name: "", status: "pass", code: "", detail: "" };
+        },
+      },
+    });
+    expect(pinned).toEqual([revokeBlock]);
+    expect(at.reads.every((b) => b === revokeBlock)).toBe(true);
+  });
+
+  it("a node that is behind (head before the deployment, or older than the report) → throws, no result", async () => {
+    const deployed = BigInt(c.deployment.contracts.EmissionsClaimRegistry.block);
+    await expect(verifyPresentation(present(recent, DEMO_DISCLOSURE), readerWithHead(deployed - 1n).reader)).rejects.toThrow(
+      /RPC node is behind/,
+    );
+    // A block that has the report, with a timestamp before its registration.
+    await expect(verifyPresentation(present(recent, DEMO_DISCLOSURE), readerWithHead(revokeBlock, 1n).reader)).rejects.toThrow(
+      /RPC node is behind: .* older than the report's registration/,
+    );
   });
 
   it("past validUntil → REPORT_INVALID/EXPIRED (checked now, no shipment)", async () => {
