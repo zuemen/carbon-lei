@@ -11,6 +11,8 @@ coverage/
 
 # foundry
 contracts/out*/
+# hevm reads build output from ./out (docs/SECURITY.md §9.2)
+/out/
 contracts/cache*/
 contracts/broadcast/
 lcov.info

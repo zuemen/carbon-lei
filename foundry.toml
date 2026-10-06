@@ -39,3 +39,19 @@ sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
 # Time-based validity is the design (validUntil, accreditation, suspension intervals);
 # validator timestamp drift of a few seconds does not change any outcome that matters here.
 exclude_lints = ["block-timestamp"]
+
+# Symbolic check of P1 and P2 (docs/SECURITY.md §9) with the solc SMTChecker:
+# `FOUNDRY_PROFILE=smt forge build`. Analysis only; it compiles just the test-only harness
+# and does not change the bytecode of the deployed contracts. Results are inconclusive and it is
+# not run in CI (see §9.2).
+[profile.smt]
+test = "contracts/test/smt"
+out = "contracts/out-smt"
+cache_path = "contracts/cache-smt"
+
+[profile.smt.model_checker]
+contracts = { "contracts/test/smt/RegistrySmtHarness.sol" = ["RegistrySmtHarness"] }
+engine = "chc"
+targets = ["assert", "overflow"]
+timeout = 60000
+show_unproved = true
