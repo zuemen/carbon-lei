@@ -36,7 +36,7 @@ The pilot is phase 1 of the [adoption path](ADOPTION.md#5-adoption-path): around
 | vLEI chain (KERI agents, credentials) | Local KERIA stack, simulated GLEIF root, fictional parties | Real credentials from the QVI and the NAB; where the body's and auditor's KERI agents are hosted is to be agreed with the body |
 | Verification (eight checks) | In the browser (GitHub Pages), the SDK and the CLI | The same code; a hosted verifier API is on the roadmap |
 | Watcher | One process, ECR revocations only; suspensions sent by hand | Several independent watchers with liveness alerts (roadmap item to build for the pilot) |
-| vLEI evidence for check 7 | Exported once from the local agents; no witness receipts checked | Exported from the real agents; checking witness receipts at verification time is on the roadmap ([SECURITY §4.1](SECURITY.md#41-limits-of-the-vlei-checks-in-the-prototype)) |
+| vLEI evidence for check 7 | Exported once from the local agents; witness receipts verified from the exported evidence, witnesses not queried | Exported from the real agents; querying the witnesses at verification time is on the roadmap ([SECURITY §4.1](SECURITY.md#41-limits-of-the-vlei-checks-in-the-prototype)) |
 | PACT export | `carbonlei export-pact`, validated against the PACT v3.0.3 schema | Each importer tries the JSON in its existing CBAM declaration software (not tested with any specific tool so far) |
 
 ## 4. Success metrics
@@ -89,7 +89,7 @@ The pilot would measure these. We set no targets here: the prototype has no real
 | Cold start: the tonnage cap protects only importers that check the same report | Two or three importers of the same operator; single-importer benefits ([ADOPTION §2.1](ADOPTION.md#21-benefits-with-a-single-importer)) |
 | Volumes visible on-chain | Salted identifiers; the operator agrees in weeks 1–2 to what is shown; a permissioned chain is an option |
 | A single owner or watcher key | Multisig owner from week 1; more than one watcher |
-| Check 7 does not check witness receipts | Build witness-receipt checks before the drill in weeks 7–9, or report check 7 with that limit |
+| Checks 6 and 7 do not query witnesses (the receipts come from the presented evidence) | Build witness queries before the drill in weeks 7–9, or report checks 6 and 7 with that limit |
 | Batch IDs are not bound to the physical goods | Try binding a batch to the customs declaration or mill heat numbers with one importer |
 | No external audit of the contracts | Audit before any production use; Slither runs in CI |
 
