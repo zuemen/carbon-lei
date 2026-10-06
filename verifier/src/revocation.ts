@@ -6,7 +6,11 @@
 // ({ ked, atc }), bare event dicts, or messages from sdk parseCesr() ({ raw, ked }).
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { fromBase64url } from "../../sdk/encoding.ts";
+import { controllerSigs } from "../../sdk/kel.ts";
 import { computeSaid } from "../../sdk/said.ts";
+
+// Shared with check 7 (sdk/kel.ts), which runs in the browser too.
+export { controllerSigs, type IndexedSig } from "../../sdk/kel.ts";
 
 export type Json = Record<string, any>;
 
@@ -31,7 +35,6 @@ export interface SealHit {
   atc?: string;
 }
 
-const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const ESTABLISHMENT = new Set(["icp", "rot", "dip", "drt"]);
 
 function isRecord(e: KelInput): e is { ked: Json; atc?: string; raw?: string } {
@@ -89,44 +92,6 @@ export function findRevocationSeal(events: readonly KelInput[], credSaid: string
 /** The KEL event anchoring the credential's TEL `iss` event: seal { i: credSaid, s: "0" }. */
 export function findIssuanceSeal(events: readonly KelInput[], credSaid: string, opts: { issuer?: string } = {}) {
   return findCredentialSeal(events, credSaid, "0", opts);
-}
-
-function b64Int(s: string): number {
-  let n = 0;
-  for (const ch of s) {
-    const v = B64.indexOf(ch);
-    if (v < 0) throw new Error(`bad base64 char ${ch}`);
-    n = n * 64 + v;
-  }
-  return n;
-}
-
-export interface IndexedSig {
-  qb64: string;
-  index: number;
-  raw: Uint8Array;
-}
-
-/**
- * Controller indexed Ed25519 signatures from a KEL record attachment: skips an optional
- * attachment-group counter (-V## / -0V#####), then reads -A## followed by ## signatures
- * (88 characters each; code A = both lists, code B = current list only; index in the 2nd char).
- */
-export function controllerSigs(atc: string): IndexedSig[] {
-  let i = 0;
-  if (atc.startsWith("-V")) i = 4;
-  else if (atc.startsWith("-0V")) i = 8;
-  if (atc.slice(i, i + 2) !== "-A") throw new Error(`no controller signatures in attachment: ${atc.slice(0, 16)}...`);
-  const count = b64Int(atc.slice(i + 2, i + 4));
-  i += 4;
-  const out: IndexedSig[] = [];
-  for (let k = 0; k < count; k++) {
-    const qb64 = atc.slice(i, i + 88);
-    if (qb64.length !== 88 || (qb64[0] !== "A" && qb64[0] !== "B")) throw new Error(`unsupported indexed signature ${qb64.slice(0, 2)}`);
-    out.push({ qb64, index: b64Int(qb64[1]), raw: fromBase64url("AA" + qb64.slice(2)).slice(2) });
-    i += 88;
-  }
-  return out;
 }
 
 function verKeyRaw(qb64: string): Uint8Array {
