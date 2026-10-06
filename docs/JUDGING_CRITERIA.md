@@ -42,6 +42,6 @@ The organiser's page gives these weights. It also gives a second split (70% tech
 
 ## Scripted task timing (not user testing)
 
-**Open the page → Load → Verify → "8 of 8 checks passed": 2 clicks, median 3.0 s (n = 5, range 2.5–4.2 s).** A second session of n = 5 on the same day gave median 3.1 s (3.0–4.0 s); an earlier one gave median 10.6 s (6.0–11.6 s). We did not isolate the cause of the spread; checks 4 and 5 read live from public Sepolia endpoints.
+**Open the page → Load → Verify → "8 of 8 checks passed": 2 clicks; three sessions of n = 5 on the same day gave medians of 10.6 s (6.0–11.6 s), 3.0 s (2.5–4.2 s) and 3.1 s (3.0–4.0 s), in that order.** We did not isolate the cause of the spread; checks 4 and 5 read live from public Sepolia endpoints.
 
 Method: `node scripts/time-task.mjs` ([script](../scripts/time-task.mjs)), Playwright 1.63 with headless Chromium, a fresh browser context per run, against https://zuemen.github.io/carbon-lei/ on 2026-10-06 between 16:49 and 16:55 UTC, from one macOS laptop. The timer starts before page navigation and stops when "8 of 8" is visible. The script clicks as soon as each button is ready and reads nothing, so the time is a lower bound for a person; it says nothing about whether a person understands the result.
