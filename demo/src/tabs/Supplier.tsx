@@ -112,7 +112,7 @@ export function Supplier() {
             <dd>{data.importer.name}</dd>
           </dl>
           <p className="fine">Pre-claimed in this demo; editable in local mode.</p>
-          <div className="tonnage" aria-label="Verified tonnage ledger">
+          <div className="tonnage" role="group" aria-label="Verified tonnage ledger">
             <div className="tonnage-bar" role="img" aria-label={`${pct}% of the verified tonnes claimed`}>
               <div className="tonnage-fill" style={{ width: `${pct}%` }} />
             </div>

@@ -1,4 +1,4 @@
-import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, type KeyboardEvent, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
 import { comparisonFigures, EVIDENCE_WHY, fmt, loadDemoData, type DemoData } from "./data.ts";
 import { kgToT } from "./messages.ts";
@@ -194,6 +194,20 @@ export function App() {
   }
 
   const stepIndex = STEPS.findIndex((s) => s.tab === tab);
+  // Tab list keys (WAI-ARIA tabs pattern, automatic activation): arrows move between tabs, Home and End jump to the ends.
+  const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const i = TABS.findIndex((t) => t.id === tab);
+    const next =
+      e.key === "ArrowRight" ? (i + 1) % TABS.length
+      : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length
+      : e.key === "Home" ? 0
+      : e.key === "End" ? TABS.length - 1
+      : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    go(TABS[next].id);
+    document.getElementById(`tab-${TABS[next].id}`)?.focus();
+  };
   return (
     <AppContext.Provider value={ctx}>
       <div className="wrap">
@@ -210,13 +224,15 @@ export function App() {
             </a>
           </div>
         </header>
-        <Lead data={data} reader={reader} offline={conn.kind === "offline"} onTry={() => go("try-to-break-it", "attack-2b")} />
-        <ConnectionLine conn={conn} onRetry={() => connect(data)} onCached={() => setConn({ kind: "offline" })} cachedDate={data.cached?.time} />
+        <section aria-label="At a glance">
+          <Lead data={data} reader={reader} offline={conn.kind === "offline"} onTry={() => go("try-to-break-it", "attack-2b")} />
+          <ConnectionLine conn={conn} onRetry={() => connect(data)} onCached={() => setConn({ kind: "offline" })} cachedDate={data.cached?.time} />
+        </section>
       </div>
 
       <nav className="tabbar" aria-label="Demo sections">
         <div className="wrap">
-          <div className="tabs" role="tablist">
+          <div className="tabs" role="tablist" onKeyDown={onTabKey}>
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -268,15 +284,17 @@ export function App() {
         </div>
       )}
 
-      <main id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="wrap">
-        <Suspense fallback={<p aria-live="polite">Loading…</p>}>
-          {tab === "verification-body" && <VerificationBody />}
-          {tab === "supplier" && <Supplier />}
-          {tab === "buyer" && <Buyer />}
-          {tab === "try-to-break-it" && <Attacks />}
-          {tab === "trust-chain" && <TrustChain />}
-          {tab === "on-chain-proof" && <OnchainProof />}
-        </Suspense>
+      <main className="wrap">
+        <div id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+          <Suspense fallback={<p aria-live="polite">Loading…</p>}>
+            {tab === "verification-body" && <VerificationBody />}
+            {tab === "supplier" && <Supplier />}
+            {tab === "buyer" && <Buyer />}
+            {tab === "try-to-break-it" && <Attacks />}
+            {tab === "trust-chain" && <TrustChain />}
+            {tab === "on-chain-proof" && <OnchainProof />}
+          </Suspense>
+        </div>
       </main>
 
       <footer className="wrap">

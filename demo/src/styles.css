@@ -258,7 +258,8 @@ table.ledger td { border-bottom: 1px dashed #cfc5b2; padding: 9px 10px 9px 0; ve
 .passport { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 16px; align-items: center; border: 1.5px solid var(--ink); padding: 14px; background: #fffdf8; }
 .passport img { width: 132px; height: 132px; image-rendering: pixelated; }
 
-.checkbox-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; font: 400 13px/1.5 var(--mono); }
+/* Row gap 5px: adjacent checkboxes sit 24.5 px apart (WCAG 2.2 target spacing of 24 px; was 23.5 px). */
+.checkbox-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 16px; font: 400 13px/1.5 var(--mono); }
 .checkbox-list label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
 .checkbox-list input { margin-top: 3px; accent-color: var(--green); }
 

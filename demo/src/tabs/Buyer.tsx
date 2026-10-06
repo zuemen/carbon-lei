@@ -220,7 +220,7 @@ function ProofSummary({ text }: { text: string }) {
     return null;
   }
   return (
-    <div className="proof-summary" aria-label="What this proof states (not yet checked)">
+    <div className="proof-summary" role="group" aria-label="What this proof states (not yet checked)">
       <dl className="fields">
         {SUMMARY_FIELDS.filter(([k]) => fields[k] !== undefined).map(([k, label, unit]) => (
           <Fragment key={k}>
@@ -469,7 +469,7 @@ export function Buyer() {
           <p className="sheet-kicker" id="checks-h">
             Eight checks: seven verification checks plus one rule-based reconciliation check
           </p>
-          <div className="legend" aria-label="Source labels">
+          <div className="legend" role="group" aria-label="Source labels">
             <span>◉ live · Sepolia = read from Sepolia now (contract state, or the chain ID for check 3)</span>
             <span>◎ live · your browser = recomputed on this page</span>
             <span>▤ exported evidence = from a local KERI run ({data.exportDate})</span>
