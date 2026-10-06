@@ -151,7 +151,8 @@
         "matchesSubmittedEvent": true
       },
       "exportedAt": "2026-10-05T05:14:57.796Z",
-      "establishmentRaw": "{\"v\":\"KERI10JSON0001b7_\",\"t\":\"icp\",\"d\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"i\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DExo4cobvdi9zhHw95JcFgFG4fAgBJRd0P_X1sBk9GIA\"],\"nt\":\"1\",\"n\":[\"EBxQ-LcVr0-pJgzqlWh3isBT83mtRpDyg6Jj-R1usNtP\"],\"bt\":\"2\",\"b\":[\"BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha\",\"BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM\",\"BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX\"],\"c\":[],\"a\":[]}"
+      "establishmentRaw": "{\"v\":\"KERI10JSON0001b7_\",\"t\":\"icp\",\"d\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"i\":\"EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DExo4cobvdi9zhHw95JcFgFG4fAgBJRd0P_X1sBk9GIA\"],\"nt\":\"1\",\"n\":[\"EBxQ-LcVr0-pJgzqlWh3isBT83mtRpDyg6Jj-R1usNtP\"],\"bt\":\"2\",\"b\":[\"BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha\",\"BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM\",\"BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX\"],\"c\":[],\"a\":[]}",
+      "establishmentAttachment": "-VBq-AABAABwZSkV7JAlLGvFLFzRvPpYrvE7R8nEvdAEbaT9E1Qt4hKbrwGECh3NsQYrurnxeeD7ecQ21vm2XCubgwV3SO8B-BADAADdvpVkcaKItV9gE65qWow4V6YkTBTJcqvgEbfZlQEp-JUu6aaTiQm4ew_ylXVRp4BQg4ati4cRwT7Msb4aCd0MABAlY4-AlXPOFWDhb1uD1xjTQ1R69t_ca-Esibp9zxslpUqoBiCemAo9QpDBcNO8Tti4JaRdrWFpAYB-yZDK0wQNACAkNb7NSclHk_FPyUVnse2AboD8tth5HzWkVuAVNYUGcYJzb2pnMI9wa_6WyInagRx652k5Fj28Y2VSE35uibkO-EAB0AAAAAAAAAAAAAAAAAAAAAAA1AAG2026-10-05T04c33c01d379629p00c00"
     },
     "authorityEvidence": {
       "bundle": "evidence/authority-bundle.json",
@@ -324,7 +325,8 @@
             "matchesSubmittedEvent": true
           },
           "exportedAt": "2026-10-05T14:27:13.081Z",
-          "establishmentRaw": "{\"v\":\"KERI10JSON0001b7_\",\"t\":\"icp\",\"d\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"i\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DIKu1niqjMzE7h5NPadgM1WSdtC3V3hfuudh7ngms05H\"],\"nt\":\"1\",\"n\":[\"EEE9bEOIHbTnCn3tPnRYnuFLYZ44H6rtsbHEdjBwXiXv\"],\"bt\":\"2\",\"b\":[\"BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha\",\"BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM\",\"BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX\"],\"c\":[],\"a\":[]}"
+          "establishmentRaw": "{\"v\":\"KERI10JSON0001b7_\",\"t\":\"icp\",\"d\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"i\":\"EP6ZqlOoEbBVffjZx1-3q-w1wcIpsxT3RP67W4Z7ZqPK\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DIKu1niqjMzE7h5NPadgM1WSdtC3V3hfuudh7ngms05H\"],\"nt\":\"1\",\"n\":[\"EEE9bEOIHbTnCn3tPnRYnuFLYZ44H6rtsbHEdjBwXiXv\"],\"bt\":\"2\",\"b\":[\"BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha\",\"BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM\",\"BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX\"],\"c\":[],\"a\":[]}",
+          "establishmentAttachment": "-VBq-AABAADhZIOnQuG5jp7glviKsAHldRxlr7Xb9ZlgPFsqhvp-8tU58X1RdwDsDlGZ1XyiXF_q-PhF9ZmTNNGNbq0E_ZMB-BADAACV85DdIVerNGadaL79clpy0XZ4iXxos3n8ZCh436qT3WxtjDwRMH5KsbprPhgkI-cwvxfZAnpasTdqGMYCHnEIABACgy-VS6ZLyr0npBNvGXCsuyUIuoFbZmyaaSlKp8bf8r9csoDqgGtj01CAEX9glS9AevlgJocTtRiN-V9REowNACDaDat9UzoITmdfg3mQXscyUJYtlxlTN8V6ksGhLXXZ1GWh9ydhFXISp8Zqp-k7IFBC51s1Oq-Ihc_9DA8t7IUP-EAB0AAAAAAAAAAAAAAAAAAAAAAA1AAG2026-10-05T14c25c52d251828p00c00"
         },
         "authorityEvidence": {
           "bundle": "evidence/impostor/authority-bundle.json",
@@ -436,7 +438,7 @@
             "name": "Auditor anchor (KEL)",
             "status": "pass",
             "code": "",
-            "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
+            "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event; witness receipts: 2 of 3 on this event, 3 of 3 on the inception event (threshold 2)"
           },
           {
             "index": 7,
@@ -489,7 +491,7 @@
           "remainingKg": "600000"
         },
         "primaryCode": "AUTHORITY_INVALID",
-        "checkedAt": "1791274704"
+        "checkedAt": "1791280020"
       },
       "beforeSuspension": {
         "block": 11849378,
@@ -875,8 +877,8 @@
     ]
   },
   "cached": {
-    "block": 11854667,
-    "time": "2026-10-06T08:18:24Z",
+    "block": 11855106,
+    "time": "2026-10-06T09:46:48Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {
@@ -934,14 +936,14 @@
           "name": "Auditor anchor (KEL)",
           "status": "pass",
           "code": "",
-          "detail": "KERI event #3 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event"
+          "detail": "KERI event #3 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event; witness receipts: 3 of 3 on this event, 3 of 3 on the inception event (threshold 2)"
         },
         {
           "index": 7,
           "name": "Authority chain (vLEI)",
           "status": "pass",
           "code": "",
-          "detail": "root → QVI → verification body (LE vLEI) → auditor (ECR, CBAM Lead Auditor); accredited by the NAB for CN 7318; each issuance signed in its issuer's KEL; hashes match the on-chain allowlist"
+          "detail": "root → QVI → verification body (LE vLEI) → auditor (ECR, CBAM Lead Auditor); accredited by the NAB for CN 7318; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts; hashes match the on-chain allowlist"
         },
         {
           "index": 8,

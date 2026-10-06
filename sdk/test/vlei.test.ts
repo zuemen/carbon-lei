@@ -19,7 +19,9 @@ import {
 const dir = new URL("../../fixtures/evidence/", import.meta.url);
 const read = (f: string) => readFileSync(new URL(f, dir), "utf8");
 const vlei = JSON.parse(readFileSync(new URL("../../fixtures/vlei.json", import.meta.url), "utf8"));
-const anchorFile = readdirSync(dir).find((f) => f.startsWith("anchor-")) as string;
+// The anchor of the Sepolia demo credential, so stray local anchor files cannot change the test.
+const demoCredSaid: string = JSON.parse(readFileSync(new URL("../../fixtures/sepolia-credential.json", import.meta.url), "utf8")).credSAID;
+const anchorFile = readdirSync(dir).find((f) => f === `anchor-${demoCredSaid}.json`) as string;
 const anchor = JSON.parse(read(anchorFile)) as AnchorEvidence;
 const auditorIcpMsg = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i === anchor.auditor);
 const auditorIcp = auditorIcpMsg?.raw;
