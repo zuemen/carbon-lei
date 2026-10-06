@@ -42,7 +42,8 @@ export function TrustChain() {
       <TabHead title="Who is allowed to sign" lede="Background: who is allowed to sign. You can skip this on a first visit.">
         <p className="fine">
           Each node is a verifiable credential. Status shown as of the evidence export on {data.exportDate} (hosted demo);
-          the anchoring event is re-verified live in your browser.
+          the anchoring event's signature is re-checked in your browser from that evidence. Signatures are Ed25519 (KERI)
+          and secp256k1 ECDSA (Ethereum); neither is post-quantum safe.
         </p>
       </TabHead>
       <div className="grid-2">
@@ -109,7 +110,9 @@ export function TrustChain() {
               rotate a body's address; a separate watcher key syncs an auditor's revocation automatically (a watcher process
               polls the body's key event log) and, in this demo, sends suspensions by hand. Neither key
               can edit, revoke or re-assign a report or its tonnage. Every allowlist write is an on-chain event, and each
-              addition carries credential hashes (SAIDs) you can re-check. Roadmap: a multisig of accreditation bodies.
+              addition carries credential hashes (SAIDs) you can re-check. The contract trusts these keys: a stolen operator
+              key can list a fake body whose reports the contract accepts, and only the verifier's pinned root of trust
+              catches it (Try to break it, card 4). Roadmap: a multisig of accreditation bodies.
             </p>
           </section>
         </div>

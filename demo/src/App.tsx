@@ -302,6 +302,10 @@ export function App() {
         <div className="footer">
           <span>All companies fictional. Emissions values illustrative — not official CBAM methodology.</span>
           <span>
+            <a href="https://github.com/zuemen/carbon-lei/blob/main/docs/CLIMATE_IMPACT.md">Climate impact assessment</a>
+            {" · "}
+            <a href="https://github.com/zuemen/carbon-lei/blob/main/docs/SECURITY.md">Security model</a>
+            {" · "}
             <a href="https://github.com/zuemen/carbon-lei">Source on GitHub</a>
           </span>
         </div>

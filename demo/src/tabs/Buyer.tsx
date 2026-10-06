@@ -17,7 +17,7 @@ const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 5, text: "This batch was claimed for you, for this quantity", source: "sepolia" },
   {
     n: 6,
-    text: "The auditor recorded this report in their own signed history (KERI key event log) — signature re-checked live in your browser",
+    text: "The auditor recorded this report in their own signed history (KERI key event log) — signature re-checked in your browser from the exported event; witnesses are not queried",
     source: "browser",
   },
   { n: 7, text: "The auditor is authorised by an accredited verification body", source: "evidence" },
@@ -136,7 +136,8 @@ function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
       </p>
       <p className="whatif-point">
         That value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed
-        before — what the checks above answer. Who captures it is a commercial matter between buyer and producer.
+        before — what the checks above answer. Who captures it is a commercial matter between buyer and producer. CarbonLEI does not measure or change
+        emissions: any physical effect depends on producers acting on that value, and this demo does not quantify it.
       </p>
     </div>
   );
@@ -532,7 +533,9 @@ export function Buyer() {
               )}
               <p>
                 {result.hidden} field{result.hidden === 1 ? "" : "s"} hidden by supplier.
-                {result.primaryCode ? ` First failure: ${result.primaryCode}.` : ""}
+                {result.primaryCode ? ` First failure: ${result.primaryCode}.` : ""} These checks cover who signed the value, their authority (up to this demo's simulated root of trust) and
+                the tonnage claim. They do not show that the emissions figure itself is correct, and they do not replace
+                the verification report or the CBAM Registry.
               </p>
               <button className="btn btn-ghost" onClick={() => go("try-to-break-it")}>
                 Try to break it →
@@ -575,7 +578,7 @@ export function Buyer() {
           <button className="btn" onClick={() => setAccepted(true)} disabled={!result || result.overall !== "VALID"}>
             Accept verified value
           </button>
-          {!result && <span className="fine">Verify the proof first.</span>}
+          {!result && <span className="fine">Verify the proof first. Accepting stays in this browser: nothing is sent to the CBAM Registry or on-chain.</span>}
         </div>
         {accepted && (
           <p className="fine" role="status">
