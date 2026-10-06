@@ -489,7 +489,7 @@
           "remainingKg": "600000"
         },
         "primaryCode": "AUTHORITY_INVALID",
-        "checkedAt": "1791271116"
+        "checkedAt": "1791271392"
       },
       "beforeSuspension": {
         "block": 11849378,
@@ -874,8 +874,8 @@
     ]
   },
   "cached": {
-    "block": 11854367,
-    "time": "2026-10-06T07:18:24Z",
+    "block": 11854390,
+    "time": "2026-10-06T07:23:00Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {
@@ -940,7 +940,7 @@
           "name": "Authority chain (vLEI)",
           "status": "pass",
           "code": "",
-          "detail": "root → QVI → verification body (LE vLEI) → auditor (ECR, CBAM Lead Auditor); accredited by the NAB for CN 7318; hashes match the on-chain allowlist"
+          "detail": "root → QVI → verification body (LE vLEI) → auditor (ECR, CBAM Lead Auditor); accredited by the NAB for CN 7318; each issuance signed in its issuer's KEL; hashes match the on-chain allowlist"
         },
         {
           "index": 8,
