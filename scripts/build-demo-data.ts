@@ -451,13 +451,17 @@ export async function buildDemoData(
     shipmentDate: SHIPMENT_1.shipmentDate as string,
     importerSalt: credFile.importerSalt as Hex,
   };
-  // Check 6: the anchor event plus the auditor's inception event (binds the signing key to the AID).
+  // Check 6: the anchor event plus the auditor's inception event (binds the signing key to the AID)
+  // with its attachment (the inception's witness receipts).
   const anchorEvidence = anchorName ? readJson<any>(resolve(EVIDENCE_DIR, anchorName)) : null;
   if (anchorEvidence && !anchorEvidence.establishmentRaw && evidenceSrc.includes("cred-ecr.cesr")) {
     const icp = parseCesr(readFileSync(resolve(EVIDENCE_DIR, "cred-ecr.cesr"), "utf8")).find(
       (m) => m.ked.t === "icp" && m.ked.i === anchorEvidence.auditor,
     );
-    if (icp) anchorEvidence.establishmentRaw = icp.raw;
+    if (icp) {
+      anchorEvidence.establishmentRaw = icp.raw;
+      if (icp.atc) anchorEvidence.establishmentAttachment = icp.atc;
+    }
   }
   // Check 7: the credential chain travels as a hashed reference to the bundle served next to the page.
   const bundleName = evidenceSrc.find((f) => f === "authority-bundle.json");
