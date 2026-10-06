@@ -1,0 +1,88 @@
+{
+  "note": "Revocation of a credential, detected in the issuer's KEL: the event at kelSeq carries the seal { i: credSAID, s: '1', d: <TEL rev event SAID> }. Read by an independent agent after a witness key-state query; no local credential status was used. Verify: SAID = Blake3-256 over `event.raw` with `d` replaced by 44 '#'; signature = Ed25519 over the UTF-8 bytes of `event.raw` with the issuer's current signing key.",
+  "credSAID": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
+  "credential": "ecr",
+  "issuer": {
+    "agent": "verifier",
+    "aid": "EB_Z75CkiUqrBb1C0KH6-yQL3lRUXJJzwhz6Q9aXi8vy"
+  },
+  "holder": {
+    "agent": "auditor",
+    "aid": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE"
+  },
+  "observer": {
+    "agent": "importer",
+    "aid": "EMlTTP70PxdlZ9nQw8S81uogvYFcpaFnzS_qigm4W0D0",
+    "method": "keyStates().query + keyEvents().get"
+  },
+  "detectedAt": "2026-10-06T07:17:19.856Z",
+  "watchStartedAt": "2026-10-06T07:16:38.928Z",
+  "polls": 3,
+  "intervalSeconds": 15,
+  "kelSeq": 3,
+  "seal": {
+    "i": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
+    "s": "1",
+    "d": "EEkmtPfSxOQmO3lN8pcZOjSRUjfV3caQV0QC6cLyvquM"
+  },
+  "revEventSAID": "EEkmtPfSxOQmO3lN8pcZOjSRUjfV3caQV0QC6cLyvquM",
+  "event": {
+    "raw": "{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EJAkinvv1UrvfdIvU2_YoLWdqiwT43UYLKO0DLkbGrlS\",\"i\":\"EB_Z75CkiUqrBb1C0KH6-yQL3lRUXJJzwhz6Q9aXi8vy\",\"s\":\"3\",\"p\":\"EDOeFwAGhu_Vson8Zc-Ae5zGbyCUQLdXX7X-87Mkj5ff\",\"a\":[{\"i\":\"ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN\",\"s\":\"1\",\"d\":\"EEkmtPfSxOQmO3lN8pcZOjSRUjfV3caQV0QC6cLyvquM\"}]}",
+    "said": "EJAkinvv1UrvfdIvU2_YoLWdqiwT43UYLKO0DLkbGrlS",
+    "type": "ixn",
+    "sn": "3",
+    "prior": "EDOeFwAGhu_Vson8Zc-Ae5zGbyCUQLdXX7X-87Mkj5ff",
+    "seals": [
+      {
+        "i": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
+        "s": "1",
+        "d": "EEkmtPfSxOQmO3lN8pcZOjSRUjfV3caQV0QC6cLyvquM"
+      }
+    ]
+  },
+  "kelAttachment": "-VBq-AABAADnwUUMsnZqqi-Whz-TEc4PLjI-1Cy6siv9jaBF8TL7AyO_rlXSuHYkyay5yiroU1bJ_aFolIRqNvC5DAjYsxUD-BADAAAujL0CltYiLk-YJJNDlG-kk8e-C361GG4UroG5N1URgTksr8Sc5cneYnoIwPOXLxAUY_kamTtqm80uN4NgWFoMABDvg8884ofyJRQ24gmvVElqORg68JASGcY2Dhge0QkMYnAjKS3OhATiYeP29BtWhFPYUebvjyfswH561Etv3jABACDgb6DvvqezxhgMp0jsKQpG5nm99hFLzoOL4dnntBraLGp_B0V25mJXUprI6LfOE_QxcmFPxLyY8JbOyjc6IEIO-EAB0AAAAAAAAAAAAAAAAAAAAAAD1AAG2026-10-06T07c17c16d799720p00c00",
+  "issuance": {
+    "kelSeq": 2,
+    "seal": {
+      "i": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
+      "s": "0",
+      "d": "EO2AJ9GY2_N9tZ28TJm5FMkAFklfmZhA712HxLqa8bCX"
+    },
+    "eventSAID": "EDOeFwAGhu_Vson8Zc-Ae5zGbyCUQLdXX7X-87Mkj5ff"
+  },
+  "checks": {
+    "saidRecomputed": true,
+    "sizeMatchesVersion": true,
+    "priorLinked": true,
+    "signatureValid": true,
+    "establishmentEvent": {
+      "sn": 0,
+      "said": "EB_Z75CkiUqrBb1C0KH6-yQL3lRUXJJzwhz6Q9aXi8vy"
+    },
+    "signingKeys": [
+      "DMiu5NjzFC2-BXepf43-muu3VL6VLpeer0uJ1TWUjEQ7"
+    ],
+    "signatures": [
+      {
+        "qb64": "AADnwUUMsnZqqi-Whz-TEc4PLjI-1Cy6siv9jaBF8TL7AyO_rlXSuHYkyay5yiroU1bJ_aFolIRqNvC5DAjYsxUD",
+        "index": 0,
+        "valid": true
+      }
+    ]
+  },
+  "chainSync": {
+    "network": "sepolia",
+    "step": "revokeAuditor",
+    "command": "node scripts/demo-scenario.ts --network sepolia --steps revokeAuditor",
+    "sent": true,
+    "attempts": 1,
+    "exitCode": 0,
+    "finishedAt": "2026-10-06T07:17:39.811Z",
+    "tx": {
+      "hash": "0x4bcd646960c9c129b957e60f267606862a1c36ca6dc976d753e9803ddff0c674",
+      "block": 11854363,
+      "time": "2026-10-06T07:17:36Z"
+    },
+    "secondsFromDetectionToBlock": 16
+  }
+}

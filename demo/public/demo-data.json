@@ -229,7 +229,15 @@
       "caller": "0xaA21B52F3b78F1f0fdACd34d50AfB68D6590f725",
       "quantityTonnes": "400"
     },
-    "attack3": null,
+    "attack3": {
+      "step": "attack3",
+      "label": "Attack 3: new report after the revocation — reverted (status 0)",
+      "hash": "0xa8b6b8a8ba067de0ffda301688d64ff6c8c7662563930881c7fecc82e1e65fc5",
+      "block": 11854366,
+      "time": "2026-10-06T07:18:12Z",
+      "result": "reverted",
+      "gasUsed": 41315
+    },
     "attack4": {
       "evidence": "keria",
       "exportDate": "2026-10-05",
@@ -481,7 +489,7 @@
           "remainingKg": "600000"
         },
         "primaryCode": "AUTHORITY_INVALID",
-        "checkedAt": "1791210576"
+        "checkedAt": "1791271116"
       },
       "beforeSuspension": {
         "block": 11849378,
@@ -720,6 +728,24 @@
       "time": "2026-10-05T14:28:36Z",
       "result": "success",
       "gasUsed": 30750
+    },
+    {
+      "step": "revokeAuditor",
+      "label": "Auditor revocation synced",
+      "hash": "0x4bcd646960c9c129b957e60f267606862a1c36ca6dc976d753e9803ddff0c674",
+      "block": 11854363,
+      "time": "2026-10-06T07:17:36Z",
+      "result": "success",
+      "gasUsed": 32029
+    },
+    {
+      "step": "attack3",
+      "label": "Attack 3: new report after the revocation — reverted (status 0)",
+      "hash": "0xa8b6b8a8ba067de0ffda301688d64ff6c8c7662563930881c7fecc82e1e65fc5",
+      "block": 11854366,
+      "time": "2026-10-06T07:18:12Z",
+      "result": "reverted",
+      "gasUsed": 41315
     }
   ],
   "trustChain": [
@@ -766,7 +792,7 @@
       "role": "CBAM Lead Auditor (ECR)",
       "aid": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE",
       "credentialSaid": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
-      "status": "valid",
+      "status": "revoked",
       "evidenceFile": "evidence/cred-ecr.cesr"
     }
   ],
@@ -840,12 +866,16 @@
       {
         "label": "Key event log: verifier",
         "path": "evidence/kel-verifier.json"
+      },
+      {
+        "label": "revocation-ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN.json",
+        "path": "evidence/revocation-ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN.json"
       }
     ]
   },
   "cached": {
-    "block": 11849384,
-    "time": "2026-10-05T14:29:36Z",
+    "block": 11854367,
+    "time": "2026-10-06T07:18:24Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {

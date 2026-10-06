@@ -89,6 +89,24 @@
       "time": "2026-10-05T14:28:36Z",
       "result": "success",
       "gasUsed": 30750
+    },
+    {
+      "step": "revokeAuditor",
+      "label": "Auditor revocation synced",
+      "hash": "0x4bcd646960c9c129b957e60f267606862a1c36ca6dc976d753e9803ddff0c674",
+      "block": 11854363,
+      "time": "2026-10-06T07:17:36Z",
+      "result": "success",
+      "gasUsed": 32029
+    },
+    {
+      "step": "attack3",
+      "label": "Attack 3: new report after the revocation — reverted (status 0)",
+      "hash": "0xa8b6b8a8ba067de0ffda301688d64ff6c8c7662563930881c7fecc82e1e65fc5",
+      "block": 11854366,
+      "time": "2026-10-06T07:18:12Z",
+      "result": "reverted",
+      "gasUsed": 41315
     }
   ]
 }
