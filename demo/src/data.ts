@@ -33,6 +33,8 @@ export interface TrustNode {
   /** Status in the exported evidence. */
   status: "valid" | "revoked" | "suspended" | "expired";
   evidenceFile?: string;
+  /** What happened after the export (for example a revocation synced on-chain later). */
+  note?: string;
 }
 
 export interface CachedSnapshot {

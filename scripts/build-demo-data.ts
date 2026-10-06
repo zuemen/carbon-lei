@@ -116,7 +116,7 @@ function buildTrustChain(
     if (c && (c.revoked === true || typeof c.revokedAt === "string")) return "revoked";
     return raw && c ? "valid" : undefined;
   };
-  const revokedOnChain = log.txs.some((t) => t.step === "revokeAuditor" && t.result === "success");
+  const revokeTx = log.txs.find((t) => t.step === "revokeAuditor" && t.result === "success");
   const evidenceFor = (said?: string) => {
     if (!said) return undefined;
     const f = [...credByFile].find(([, c]) => c.said === said)?.[0] ?? evidenceFiles.find((x) => x.includes(said));
@@ -171,8 +171,13 @@ function buildTrustChain(
         role: `${e.auditor.role} (ECR)${mark(["auditorAid", "ecrSaid"])}`,
         aid: vlei.values.auditorAid,
         credentialSaid: vlei.values.ecrSaid,
-        // The export may predate the revocation; fall back to the on-chain sync.
-        status: credStatus("ecr") === "revoked" || revokedOnChain ? "revoked" : (credStatus("ecr") ?? "valid"),
+        // Status as exported; a revocation after the export is reported separately, not merged into it.
+        status: credStatus("ecr") ?? "valid",
+        ...(revokeTx && credStatus("ecr") !== "revoked"
+          ? {
+              note: `Revoked by the verification body after this export; the watcher synced it on-chain on ${revokeTx.time.slice(0, 10)} (block ${revokeTx.block}). Reports registered more than 24 h earlier, such as report 1, stay valid on-chain.`,
+            }
+          : {}),
       }),
     ],
   };

@@ -489,7 +489,7 @@
           "remainingKg": "600000"
         },
         "primaryCode": "AUTHORITY_INVALID",
-        "checkedAt": "1791271392"
+        "checkedAt": "1791274704"
       },
       "beforeSuspension": {
         "block": 11849378,
@@ -792,7 +792,8 @@
       "role": "CBAM Lead Auditor (ECR)",
       "aid": "EGHjZo9vQa0uxcbQIr2fgWdCglUH0vj5Rva3UZuhDwHE",
       "credentialSaid": "ELKomHMFqcJ-Gjt5uDRbe1MztQWaX0MyuwSC6I4B32qN",
-      "status": "revoked",
+      "status": "valid",
+      "note": "Revoked by the verification body after this export; the watcher synced it on-chain on 2026-10-06 (block 11854363). Reports registered more than 24 h earlier, such as report 1, stay valid on-chain.",
       "evidenceFile": "evidence/cred-ecr.cesr"
     }
   ],
@@ -874,8 +875,8 @@
     ]
   },
   "cached": {
-    "block": 11854390,
-    "time": "2026-10-06T07:23:00Z",
+    "block": 11854667,
+    "time": "2026-10-06T08:18:24Z",
     "remainingKg": "300000",
     "reportValid": true,
     "shipment": {

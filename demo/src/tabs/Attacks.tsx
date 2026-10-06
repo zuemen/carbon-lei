@@ -318,7 +318,7 @@ export function Attacks() {
               <span className="stamp red">Rejected</span>
               <p>
                 Reverted: <code>AuditorNotAuthorized</code> — {revertText("AuditorNotAuthorized")} The report registered
-                before the revocation sync stays valid.
+                before the revocation sync stays valid on-chain.
               </p>
             </div>
           )}

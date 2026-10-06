@@ -29,4 +29,4 @@ Judging criteria: Climate Impact · Innovation & Creativity · Technical Executi
 - Contracts are deployed to the Sepolia testnet only. Keys come from environment variables; `.env` is git-ignored.
 
 ## AI usage disclosure
-Parts of this project are developed with an AI coding assistant (Claude). All code is reviewed and owned by the team.
+Parts of this project are developed with an AI coding assistant (Claude). All code is reviewed and owned by the team. The video narration is a synthetic voice (Microsoft Edge TTS) reading a script written and reviewed by the team.

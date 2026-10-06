@@ -72,6 +72,7 @@ export function TrustChain() {
                   {n.id === "auditor" && (
                     <div>
                       Credential (exported {data.exportDate}): {STATUS[n.status]} · On-chain allowlist (live): {auditorOnChain}
+                      {n.note && <div className="fine">{n.note}</div>}
                     </div>
                   )}
                 </div>

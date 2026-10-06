@@ -229,6 +229,14 @@ export function Buyer() {
   const cmp = data.comparison;
   const { q, dq, vq, gap, eur } = comparisonFigures(cmp);
   const claimTx = data.txs.find((t) => t.step === "claim1");
+  const revokeTx = data.txs.find((t) => t.step === "revokeAuditor" && t.result === "success");
+  const isDemoProof = (() => {
+    try {
+      return JSON.parse((JSON.parse(proofText) as Presentation).core).d === JSON.parse(data.proof.core).d;
+    } catch {
+      return false;
+    }
+  })();
 
   // A file the importer can keep with its own records. Built in the browser from this page's checks; not signed.
   function downloadRecord() {
@@ -343,7 +351,7 @@ export function Buyer() {
             Eight checks: seven verification checks plus one rule-based reconciliation check
           </p>
           <div className="legend" aria-label="Source labels">
-            <span>◉ live · Sepolia = read from the contract now</span>
+            <span>◉ live · Sepolia = read from Sepolia now (contract state, or the chain ID for check 3)</span>
             <span>◎ live · your browser = recomputed on this page</span>
             <span>▤ exported evidence = from a local KERI run ({data.exportDate})</span>
             <span>≡ rule-based · advisory = can flag, never fails</span>
@@ -384,6 +392,14 @@ export function Buyer() {
               );
             })}
           </ol>
+          {result && !running && revokeTx && isDemoProof && (
+            <p className="fine">
+              This report's auditor was revoked later ({revokeTx.time.slice(0, 10)}, synced on-chain in block {revokeTx.block}).
+              Check 4 judges authority at registration time, so the report stays valid on-chain. Check 7 reads the vLEI
+              evidence exported on {data.exportDate}, before the revocation; evidence exported after it would show the
+              revocation and fail check 7 (Try to break it, card 3).
+            </p>
+          )}
           {result && !running && (
             <div className="overall">
               {result.overall === "VALID" ? (
