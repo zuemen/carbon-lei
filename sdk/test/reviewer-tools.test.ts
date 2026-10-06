@@ -8,6 +8,7 @@ import type { ChainReader } from "../chain.ts";
 import type { Hex } from "../credential.ts";
 import { decodeDisclosure, type Presentation } from "../disclosure.ts";
 import { verifyPresentation } from "../verify.ts";
+import { disclosureCounts, disclosureSummary } from "../summary.ts";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const readme = read("README.md");
@@ -132,5 +133,30 @@ describe("verify:tampered", () => {
       ["fail", "DISCLOSURE_TAMPERED"],
       ["pass", ""],
     ]);
+  });
+});
+
+describe("verify summary line", () => {
+  const proof = JSON.parse(read("fixtures/sepolia-demo-proof.json")) as Presentation;
+  const tampered = JSON.parse(read("fixtures/sepolia-demo-proof.tampered.json")) as Presentation;
+
+  it("demo proof: 5 fields hidden by the supplier, no disclosure rejected", async () => {
+    const r = await verifyPresentation(proof, emptyChain());
+    expect(disclosureCounts(proof, r)).toEqual({ hidden: 5, rejected: 0 });
+    expect(disclosureSummary(proof, r)).toBe("5 field(s) hidden by supplier");
+  });
+
+  it("tampered proof: the changed disclosure is counted as rejected, not as hidden by the supplier", async () => {
+    const r = await verifyPresentation(tampered, emptyChain());
+    expect(r.hidden).toBe(6); // the result itself is unchanged: a rejected disclosure reveals no signed value
+    expect(disclosureCounts(tampered, r)).toEqual({ hidden: 5, rejected: 1 });
+    expect(disclosureSummary(tampered, r)).toBe("5 field(s) hidden by supplier; 1 disclosure(s) rejected");
+  });
+
+  it("a malformed proof stops at check 0: no disclosure is reported as rejected", async () => {
+    const bad = { ...proof, disclosures: [...proof.disclosures, "not-a-disclosure"] };
+    const r = await verifyPresentation(bad, emptyChain());
+    expect(r.checks.map((c) => [c.index, c.code])).toEqual([[0, "PRESENTATION_MALFORMED"]]);
+    expect(disclosureCounts(bad, r)).toEqual({ hidden: 0, rejected: 0 });
   });
 });

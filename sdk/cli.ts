@@ -13,6 +13,7 @@ import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "./issue.ts";
 import { exportPactFromProof } from "./pact.ts";
 import { verifyPresentation } from "./verify.ts";
+import { disclosureSummary } from "./summary.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
@@ -181,7 +182,7 @@ async function main(argv: string[]) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
       }
-      const summary = [`${r.overall}${r.primaryCode ? ` (${r.primaryCode})` : ""}`, `${r.hidden} field(s) hidden by supplier`];
+      const summary = [`${r.overall}${r.primaryCode ? ` (${r.primaryCode})` : ""}`, disclosureSummary(proof, r)];
       const advisory = r.checks.find((c) => c.index === 8 && c.status === "warn");
       if (advisory) summary.push(`check 8 advisory: ${advisoryNote(proof, r.disclosed, advisory.code)}`);
       console.log(`\n${summary.join("; ")}`);
