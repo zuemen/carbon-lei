@@ -139,6 +139,20 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 | 2. Network | After pilot | Several verification bodies and NABs; governance body with NAB and QVI representatives; several watchers; production chain decision (EVM L2 or permissioned EVM) | Independent operation without the project team |
 | 3. Extension | Later | Other CBAM goods, product passports, business wallets (see §6) | — |
 
+### 5.1 Participation: when the cap binds
+
+The tonnage cap binds only among buyers that check proofs against the same ledger, that is, the same contract deployment. An importer that does not take part can still claim the same verified value elsewhere, and CarbonLEI cannot stop it. The cap is voluntary, not a CBAM rule.
+
+Who has a reason to enforce it:
+
+- **Verification bodies.** CarbonLEI's verification treats a report credential as valid only once it is registered: a proof whose report is not on-chain fails check 4 (`REPORT_INVALID/NOT_REGISTERED`). A body whose customers check proofs therefore has a reason to register every report it issues.
+- **Buyers.** An importer or downstream customer can make a passing proof a condition for accepting a verified value instead of the default value (§2.1).
+- **Banks and downstream buyers** can ask for the same proof in due diligence on the goods they finance or buy.
+
+Who would run it: a trust-registry operator, holding the allowlist owner key (§4). Options include a consortium of verification bodies, an accreditation body, an industry association, or a trade or climate agency (§3). These are options, not current arrangements; in the prototype, a single test key holds this role.
+
+No real organisation takes part today, and none has been contacted ([PILOT.md](PILOT.md)).
+
 ---
 
 ## 6. Scalability roadmap
@@ -185,7 +199,7 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 |---|---|
 | vLEI uptake cannot be measured publicly. GLEIF's website listed 8 QVIs on 23 September 2026 [15], and GLEIF does not publish how many vLEIs have been issued | Only verification bodies and their lead auditors need vLEI credentials (plus an accreditation body that issues the accreditation credential itself); operators need no vLEI (their LEI identifies them); checks 1–5 need no KERI evidence (§4); verification bodies are few and concentrated |
 | CBAM does not recognise vLEI or on-chain records | Position as a complementary verification layer; keep the official Registry flow unchanged (§1.1). On-chain receipts are offered as supporting evidence only (§2.1) |
-| Cold start. The tonnage ledger can stop over-use across importers only when the importers relying on the same report check it | Single-importer benefits (§2.1); cross-importer protection grows with adoption; start with one verification body and its customers |
+| Cold start. The tonnage ledger can stop over-use across importers only when the importers relying on the same report check it | Single-importer benefits (§2.1); cross-importer protection grows with adoption (§5.1); start with one verification body and its customers |
 | Volumes visible on-chain | Salted identifiers; roadmap for commitments or a permissioned ledger (see [SECURITY.md](SECURITY.md#7-privacy-of-on-chain-data)) |
 | Central allowlist operator | Multisig and governance roadmap |
 | Regulation changes (default values, downstream scope) | Data model uses CN codes and periods; mapping updates without contract changes |

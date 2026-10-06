@@ -162,6 +162,8 @@ Formulas:
 - Price signal, gross and illustrative = gap × P, before the free-allocation adjustment.
 - Emissions kept in declarations = V × A4 × (A5 − 1.8): real emissions that would otherwise vanish from CBAM declarations through over-claiming of verified tonnage. We do not tabulate it, because A4 has no empirical basis; the tonnage ledger's effect is not quantified.
 
+Per 1,000 t of verified goods, each percentage point of tonnage claimed a second time would hide 11.78 tCO2e against the 2026 marked-up default (9.07 against the unmarked default, the A5 value used in the formula above). We know of no observed over-claiming rate, so we state no total.
+
 These totals are the declared-emissions gap at stake wherever verified values replace default values. They are not CarbonLEI's own contribution; see Section 4.4.
 
 Physical reductions are not quantified. See Section 2a for why the CBAM incentive to switch to lower-carbon steel is largely offset until about 2030.
@@ -205,6 +207,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 
 - **Illustrative inputs.** 1.8 tCO2e/t and 500 t are demo values. They are not measurements of any real plant and not official CBAM methodology.
 - **Declared gap is not a reduction.** Effects 1 and 2 change what is declared. Only effect 3 reduces emissions, and only if producers invest.
+- **Causal chain for effect 3.** Where a verified value is checkable, a buyer can rely on it, so a lower verified intensity carries a value in CBAM terms; whether that value reaches the producer or leads to investment is a commercial matter we do not quantify, free allocation offsets much of it until about 2030 (Section 2a), and we project no emission reduction.
 - **No empirical over-claiming rate.** A4 is a sensitivity parameter.
 - **Incentive to switch steel.** The incentive to switch production routes is reduced by the free-allocation adjustment until 2034 (Section 2a). We found no public case of a fastener producer switching steel sources because of CBAM.
 - **Price.** The € figures use the Q3 2026 certificate price. CBAM certificates are priced quarterly in 2026 and weekly from 2027 [7], so the € figures move with the price; the tCO2e figures do not.
