@@ -16,6 +16,8 @@
     "contracts:test": "forge test",
     "contracts:deploy": "forge script contracts/script/Deploy.s.sol --rpc-url sepolia --broadcast --verify --verifier etherscan && node scripts/record-deployment.mjs 11155111",
     "carbonlei": "node sdk/cli.ts",
+    "verify:demo": "node sdk/cli.ts verify --proof fixtures/sepolia-demo-proof.json --eori NLDEMO000000001",
+    "audit:onchain": "node scripts/audit-onchain.ts",
     "vlei:up": "npm run vlei:up -w verifier",
     "vlei:setup": "npm run vlei:setup -w verifier",
     "demo:local": "node scripts/demo-local.ts",

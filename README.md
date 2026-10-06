@@ -2,7 +2,7 @@
 
 **Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? vLEI credentials plus an Ethereum Sepolia ledger.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 278 contract, 110 SDK](https://img.shields.io/badge/tests-278%20contract%20%2B%20110%20SDK-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 278 contract, 114 SDK](https://img.shields.io/badge/tests-278%20contract%20%2B%20114%20SDK-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
 | | |
 |---|---|
@@ -207,6 +207,14 @@ Open [zuemen.github.io/carbon-lei](https://zuemen.github.io/carbon-lei/). The ho
 - **On-chain proof**: every transaction in the [On-chain proof](#on-chain-proof) table.
 - **Supplier**: a "Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport". It lists the CN code, the verified emissions intensity (illustrative), the verification body's LEI, the validity status and the credential. Its QR code opens the Buyer tab of the hosted page with the `credSAID` and the batch ID; the page loads the matching proof, ready to verify. We do not claim conformance with ESPR or with any DPP specification.
 
+### Terminal check (Node.js 22; no Docker, wallet or key)
+
+```bash
+git clone https://github.com/zuemen/carbon-lei && cd carbon-lei && npm ci
+npm run verify:demo     # checks 0-8 on the demo proof (fixtures/sepolia-demo-proof.json) against public Sepolia RPCs; exits 0 when VALID
+npm run audit:onchain   # every transaction and contract in the On-chain proof table, compared with its Sepolia receipt
+```
+
 ### Local (full flow)
 
 Requirements: Node.js 22 (`.nvmrc`: 22.20.0), Foundry 1.7.1 (`forge`, `anvil`), and Docker with Compose for the vLEI part. Sepolia test ETH only if you rerun the demo on Sepolia.
@@ -268,7 +276,7 @@ carbon-lei/
 ```bash
 forge test                  # 278 contract tests: unit, scenario and invariant fuzz
 npm ci && forge build
-npm test -w sdk             # 110 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
+npm test -w sdk             # 114 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
 npx playwright install chromium
 npm test -w verifier        # 28 tests: revocation seal detection, the watcher and the impostor chain (no KERI stack needed)
 npm run e2e -w demo         # 15 browser tests against a local dev server; set DEMO_URL to test the hosted page
@@ -292,7 +300,7 @@ CI (`ci.yml`) runs three jobs on every push to `main` and every pull request: `c
 
 ## Measurements
 
-Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of the deployment built from commit `aedcb4c`; coverage and the gas report come from the test suite at commit `a6e0a3e` (the contracts have not changed since); test counts from commit `eac9cb3` (2026-10-06). Every row states its baseline. Computed values, such as the declared-emissions gap of 1.18 tCO2e per tonne of goods, are in [Climate impact](docs/CLIMATE_IMPACT.md) and are illustrative.
+Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of the deployment built from commit `aedcb4c`; coverage and the gas report come from the test suite at commit `a6e0a3e` (the contracts have not changed since); test counts from commit `eac9cb3` (2026-10-06), plus the 4 reviewer-command tests added after it. Every row states its baseline. Computed values, such as the declared-emissions gap of 1.18 tCO2e per tonne of goods, are in [Climate impact](docs/CLIMATE_IMPACT.md) and are illustrative.
 
 | What | Value | Baseline | How measured |
 |---|---|---|---|
@@ -302,10 +310,11 @@ Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of th
 | Gas, `revokeReport` | 62,345 (median in the test suite) | 21,000 gas, as above | `forge test --gas-report` |
 | Gas for one report's on-chain life (register and one claim) | 524,065 gas; 0.00052 ETH at an assumed 1 gwei | The declared-emissions gap of the same 500 t report: about €48,486 in 2026, illustrative, gross, before free-allocation adjustment | Sum of the two Sepolia receipts. Sepolia ETH has no market value, and mainnet gas prices vary |
 | Threat-model matrix (tampered inputs) | 19 of 19 tampered inputs detected: 7 in the browser, 8 by comparison with the chain, 4 by a contract revert (3 dry runs and 1 real transaction on a local anvil chain) | An unsigned PDF copy: 0 of the same inputs, because it carries no signature, ledger or anchor that software can check | `sdk/test/tamper-matrix.test.ts` generates each input: changed disclosed value, changed signed field, wrong signer, wrong shipment, replayed batch, over-claim, unlisted verifier, revoked auditor, revoked or expired report, wrong registrant, issuer or scope, malformed proof. Checks 6–8 have their own tests |
-| Contract tests / SDK tests / verifier tests | 278 / 110 / 28, all passing | Each of the 25 distinct custom errors in the contracts is referenced in at least one test | Contracts: Allowlist 101, Registry 66, Supersede 63, Events 15, FixReview 10, Hardening 7, Vectors 7, Invariants 9. SDK: core 21, tamper matrix 21, verification against anvil 13, PACT 11, reconciliation 6, vLEI 23, KEL 14, CLI 1. Verifier: revocation seal detection 14, watcher 7, impostor chain 7. [CI runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) |
+| Contract tests / SDK tests / verifier tests | 278 / 114 / 28, all passing | Each of the 25 distinct custom errors in the contracts is referenced in at least one test | Contracts: Allowlist 101, Registry 66, Supersede 63, Events 15, FixReview 10, Hardening 7, Vectors 7, Invariants 9. SDK: core 21, tamper matrix 21, verification against anvil 13, PACT 11, reconciliation 6, vLEI 23, KEL 14, CLI 1, reviewer commands 4. Verifier: revocation seal detection 14, watcher 7, impostor chain 7. [CI runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) |
 | Coverage, both contracts | lines 100%, statements 99.3%, branches 97.3%, functions 100% | Target set before measuring: every revert path covered; the branch figure shows it is not fully met | `forge coverage --ir-minimum` |
 | Invariant fuzz | 256 runs × 128 calls = 32,768 calls per invariant, 8 invariant functions, 0 violations | Foundry's default is 256 runs × depth 500; we keep the default run count with depth 128 | Invariant tests over random sequences of register (including revisions and take-overs), claim, revoke, suspend, lift, auditor revocation, address rotation and time jumps |
 | Cross-language test vectors | Solidity and TypeScript compute the same keys, commitments and EIP-712 digest, and recover the same signer; the credential SAID equals keripy 1.2.13's | An independent implementation (keripy) for the SAID | [`fixtures/vectors.json`](fixtures/vectors.json), `sdk/scripts/check-said-keripy.sh` |
+| On-chain records | 12 of 12 transactions and 2 of 2 contracts in the [On-chain proof](#on-chain-proof) table match Sepolia: receipt status, block and `gasUsed`; each contract has code and was created by its deploy transaction | The values recorded in `fixtures/sepolia-tx.json` and `contracts/deployments/11155111.json` | `npm run audit:onchain` ([`scripts/audit-onchain.ts`](scripts/audit-onchain.ts)); exits 1 if any row differs |
 | Browser tests (Playwright) | 15 of 15 against a local dev server and 15 of 15 against the hosted page on 2026-10-06 (retries: 1 for the hosted run) | Thresholds set before measuring, for example the Buyer tab visible within 5 s | `demo/e2e/demo.spec.ts`; the first screen loads only the page shell (entry script 72 kB gzip); tabs and the chain client load on demand |
 
 ## Standards alignment
