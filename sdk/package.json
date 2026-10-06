@@ -20,6 +20,7 @@
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "viem": "^2.57.3"
   }
 }

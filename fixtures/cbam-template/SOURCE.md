@@ -28,6 +28,11 @@ individual copyright notices), content owned by the EU on this website is licens
 Attribution 4.0 International (CC BY 4.0) licence. This means that reuse is allowed, provided appropriate credit
 is given and changes are indicated." The files carry no individual copyright notice.
 
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/
+(legal code: https://creativecommons.org/licenses/by/4.0/legalcode). Credit as used in the demo panel:
+"© European Union, CC BY 4.0 (file renamed); see SOURCE.md". The only change is the file name of the example
+(see **Changes** above).
+
 The files themselves state: "This data collection template has been developed on behalf of the Commission by its
 consultants (Umweltbundesamt GmbH Austria)", "The views expressed in this file represent the views of the authors
 and not necessarily those of the European Commission", and a disclaimer that neither the authors nor the

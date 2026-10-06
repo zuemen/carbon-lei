@@ -3,6 +3,7 @@
 // Commission's file (opened in a spreadsheet), not computed by the importer.
 import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
+import { deflateSync, unzipSync, zipSync } from "fflate";
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import { checkNormalForms, METHODOLOGY_NOTE, type CredentialClaims, type Hex } from "../credential.ts";
@@ -10,11 +11,14 @@ import { decodeDisclosure } from "../disclosure.ts";
 import { issueCredential } from "../issue.ts";
 import {
   draftCredentialFields,
+  extractTemplateParts,
+  listZipEntries,
   NOT_IN_TEMPLATE,
   parseTemplate,
   roundDecimal,
   TemplateError,
   toUtcDate,
+  ZIP_LIMITS,
   type ParsedTemplate,
 } from "../template.ts";
 
@@ -31,10 +35,18 @@ async function synthetic(opts: {
   layout?: "2.1" | "2.1.1";
   name?: string | null;
   seeDirect?: number | null;
-  share?: number;
+  share?: number | null;
   cn?: string;
+  country?: string;
+  unLocode?: string;
+  seeIndirect?: number;
+  seeTotal?: number;
+  totals?: [number, number, number];
+  periodEnd?: unknown;
+  date1904?: boolean;
 }): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
+  if (opts.date1904) wb.properties.date1904 = true;
   const v = wb.addWorksheet("0_Versions");
   v.getCell("E9").value = "0.1";
   v.getCell("F9").value = new Date(Date.UTC(2023, 7, 21));
@@ -55,6 +67,7 @@ async function synthetic(opts: {
     M25: "Share of emissions by default value",
     N25: "Source for electricity EF",
     O25: "Embedded electricity (MWh/t)",
+    ...(v211 ? { AA15: "Total direct emissions during reporting period:" } : { Z15: "Total direct emissions during reporting period:" }),
     ...(v211
       ? { P25: "Electricity EF (tCO2/MWh)", Q25: "The main reducing agent of the precursor, if known", R25: "Steel mill identification number" }
       : { P25: "The main reducing agent of the precursor, if known", Q25: "Steel mill identification number" }),
@@ -62,19 +75,22 @@ async function synthetic(opts: {
     f(ref, label);
   if (opts.name !== null) f("G12", opts.name ?? "Synthetic Plant");
   else f("G12", undefined);
-  f("G16", "TW");
-  f("G17", "tw khh");
+  f("G16", opts.country ?? "TW");
+  f("G17", opts.unLocode ?? "tw khh");
   f("G20", new Date(Date.UTC(2026, 0, 1)));
-  f("G21", 46387); // Excel serial for 2026-12-31
-  f(v211 ? "AI15" : "AH15", 1000);
+  f("G21", opts.periodEnd ?? 46387); // Excel serial for 2026-12-31
+  const [td, ti, tt] = opts.totals ?? [1000, 400, 1400];
+  f(v211 ? "AI15" : "AH15", td);
+  f(v211 ? "AI16" : "AH16", ti);
+  f(v211 ? "AI17" : "AH17", tt);
   f("D26", "Cold heading");
   f("F26", opts.cn ?? "73181569");
   f("H26", "Bolt M8");
   f("I26", opts.seeDirect === undefined ? 1.234565 : opts.seeDirect);
-  f("J26", 0.5);
-  f("K26", 1.734565);
+  f("J26", opts.seeIndirect ?? 0.5);
+  f("K26", opts.seeTotal ?? 1.734565);
   f("L26", "tCO2e/t");
-  f("M26", opts.share ?? 0);
+  f("M26", opts.share === null ? undefined : (opts.share ?? 0));
   f("O26", 0.75);
   if (v211) {
     f("P26", 0.6666666666666666);
@@ -138,6 +154,26 @@ describe("Communication Template: the Commission's screws and nuts example (V2.1
     const missing = d.toBeSupplied.map((s) => s.field);
     expect(missing).toEqual([...NOT_IN_TEMPLATE, "nabName", "accreditationNumber"]);
     expect(t.unmapped).toEqual(missing);
+    const by = (who: string) => d.toBeSupplied.filter((s) => s.by === who).map((s) => s.field);
+    expect(by("supplier")).toEqual(["supplierLEI", "operatorId", "installationId", "cbamRoute", "energyMix", "supplierCost"]);
+    expect(by("verification body")).toEqual([
+      "verifiedTonnes",
+      "verificationReportId",
+      "verifierLEI",
+      "siteVisit",
+      "assuranceLevel",
+      "materialityThreshold",
+      "validUntil",
+      "nabName",
+      "accreditationNumber",
+    ]);
+    for (const f of ["verifiedTonnes", "energyMix"]) {
+      expect(d.toBeSupplied.find((s) => s.field === f)?.reason).toBe("not mapped: the template's activity data has a different meaning");
+    }
+    expect(d.rows.find((r) => r.field === "specificEmbeddedEmissions_tCO2e_per_t")?.rule).toMatch(
+      /CN 7318 counts direct emissions only for CBAM certificates in the definitive period \(transitional reports also listed indirect emissions\)/,
+    );
+    expect(t.warnings).toEqual([]);
     expect(draftCredentialFields(t, 1).fields.specificEmbeddedEmissions_tCO2e_per_t).toBe("1.95245");
     expect(() => draftCredentialFields(t, 2)).toThrow(/product 3 not found/);
   });
@@ -263,5 +299,179 @@ describe("Communication Template: normalisation rules", () => {
     expect(toUtcDate("2023-01-01", "x")).toBe("2023-01-01");
     expect(() => toUtcDate("31/12/2023", "G21")).toThrow(/G21: not a date/);
     expect(() => toUtcDate(45291.5, "x")).toThrow();
+  });
+
+  it("refuses ISO date strings that are not calendar days instead of rolling them over", () => {
+    expect(() => toUtcDate("2023-02-30", "G21")).toThrow(/G21: not a date: "2023-02-30"/);
+    expect(() => toUtcDate("2023-13-01", "G21")).toThrow(/not a date/);
+    expect(() => toUtcDate("2023-04-31T00:00:00Z", "G21")).toThrow(/not a date/);
+    expect(toUtcDate("2024-02-29", "x")).toBe("2024-02-29");
+  });
+
+  it("reads Excel serial numbers in the 1904 date system when the workbook uses it", async () => {
+    expect(toUtcDate(45291, "x", true)).toBe("2028-01-01"); // 1462 days after 2023-12-31, its date in the 1900 system
+    expect(toUtcDate(44925, "x", true)).toBe("2026-12-31");
+    const t = await parseTemplate(await synthetic({ version: "2.1.1", date1904: true, periodEnd: 44925 }));
+    expect(t.reportingPeriod).toEqual({ start: "2026-01-01", end: "2026-12-31" });
+  });
+});
+
+describe("Communication Template: plausibility checks", () => {
+  it("refuses a negative SEE", async () => {
+    await expect(parseTemplate(await synthetic({ version: "2.1.1", seeIndirect: -0.5, seeTotal: 0.734565 }))).rejects.toThrow(
+      /Summary_Communication!J26 \(SEE \(indirect\) of CN 73181569\) is negative/,
+    );
+  });
+
+  it("refuses SEE (total) that is not SEE (direct) + SEE (indirect) within 1e-4", async () => {
+    await expect(parseTemplate(await synthetic({ version: "2.1.1", seeTotal: 1.7347 }))).rejects.toThrow(
+      /Summary_Communication!I26:K26 \(SEE of CN 73181569\): total 1\.7347 is not direct 1\.234565 \+ indirect 0\.5/,
+    );
+    // within the tolerance: accepted
+    const t = await parseTemplate(await synthetic({ version: "2.1.1", seeTotal: 1.73465 }));
+    expect(t.products[0].seeTotal).toBe("1.73465");
+    await expect(parseTemplate(await synthetic({ version: "2.1.1", totals: [1000, 400, 1500] }))).rejects.toThrow(
+      /installation totals Summary_Communication!AI15:AI17: total 1500 is not direct 1000 \+ indirect 400/,
+    );
+  });
+
+  it("warns when the UN/LOCODE does not start with the installation's country code", async () => {
+    const ok = await parseTemplate(await synthetic({ version: "2.1.1" }));
+    expect(ok.warnings).toEqual([]);
+    const t = await parseTemplate(await synthetic({ version: "2.1.1", country: "VN", unLocode: "TW KHH" }));
+    expect(t.warnings).toEqual([
+      'UN/LOCODE "TW KHH" (Summary_Communication!G17) does not start with the country code "VN" (Summary_Communication!G16)',
+    ]);
+    expect(draftCredentialFields(t).fields.unLocode).toBe("TWKHH"); // a warning, not a refusal
+  });
+
+  it("a blank share of emissions by default values leaves the value type to be supplied, not actual", async () => {
+    const d = draftCredentialFields(await parseTemplate(await synthetic({ version: "2.1.1", share: null })));
+    expect(d.fields.valueType).toBeUndefined();
+    expect(d.toBeSupplied.find((s) => s.field === "valueType")).toEqual({
+      field: "valueType",
+      by: "supplier",
+      reason: "share of emissions by default values (Summary_Communication!M26) is blank",
+    });
+  });
+
+  it("layout guard: the totals label must be in Z15 (V2.1) or AA15 (V2.1.1)", async () => {
+    // A V2.1 layout carries the label in Z15, so read as V2.1.1 the header P25 fails first; check the label alone:
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load((await synthetic({ version: "2.1.1" })).buffer as ArrayBuffer);
+    const sc = wb.getWorksheet("Summary_Communication")!;
+    sc.getCell("AA15").value = { formula: "X", result: "Total emissions during reporting period:" } as ExcelJS.CellFormulaValue;
+    await expect(parseTemplate(new Uint8Array(await wb.xlsx.writeBuffer()))).rejects.toThrow(
+      /Summary_Communication!AA15: expected header "Total direct emissions…"/,
+    );
+  });
+});
+
+/** Writes a zip from entries whose data is already compressed, with the sizes given (they may lie). CRCs are left 0. */
+function rawZip(entries: { name: string; data: Uint8Array; method: 0 | 8; size: number }[]): Uint8Array {
+  const enc = new TextEncoder();
+  const local: Uint8Array[] = [];
+  const central: Uint8Array[] = [];
+  let offset = 0;
+  for (const e of entries) {
+    const name = enc.encode(e.name);
+    const h = new Uint8Array(30 + name.length);
+    const dv = new DataView(h.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(8, e.method, true);
+    dv.setUint32(18, e.data.length, true);
+    dv.setUint32(22, e.size, true);
+    dv.setUint16(26, name.length, true);
+    h.set(name, 30);
+    const c = new Uint8Array(46 + name.length);
+    const cv = new DataView(c.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(10, e.method, true);
+    cv.setUint32(20, e.data.length, true);
+    cv.setUint32(24, e.size, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint32(42, offset, true);
+    c.set(name, 46);
+    local.push(h, e.data);
+    central.push(c);
+    offset += h.length + e.data.length;
+  }
+  const cdSize = central.reduce((n, c) => n + c.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, offset, true);
+  const out = new Uint8Array(offset + cdSize + 22);
+  let p = 0;
+  for (const part of [...local, ...central, end]) {
+    out.set(part, p);
+    p += part.length;
+  }
+  return out;
+}
+
+describe("Communication Template: untrusted zip containers", () => {
+  const MB = 1024 * 1024;
+  // A real minimal template, re-zipped with every part deflated; the bomb replaces or joins its parts.
+  const baseParts = async () => {
+    const parts = unzipSync(await synthetic({ version: "2.1.1" }));
+    return Object.entries(parts).map(([name, raw]) => ({ name, data: deflateSync(raw), method: 8 as const, size: raw.length }));
+  };
+  // 60 MB of "<" characters deflates to about 60 kB (ratio about 1000:1); generated here, never committed.
+  let bomb: Uint8Array | undefined;
+  const bombData = () => (bomb ??= deflateSync(new Uint8Array(60 * MB).fill(0x3c), { level: 1 }));
+
+  it("parses the template re-zipped by another writer (stored entries) and keeps only the parts it reads", async () => {
+    const stored = zipSync(unzipSync(fixture(SCREWS)), { level: 0 });
+    const t = await parseTemplate(stored);
+    expect(t.products.map((p) => p.seeDirect)).toEqual(["2.00694", "1.95245"]);
+    const names = listZipEntries(extractTemplateParts(fixture(SCREWS))).map((e) => e.name).sort();
+    expect(names).toEqual([
+      "[Content_Types].xml",
+      "_rels/.rels",
+      "xl/_rels/workbook.xml.rels",
+      "xl/sharedStrings.xml",
+      "xl/styles.xml",
+      "xl/workbook.xml",
+      "xl/worksheets/sheet1.xml", // 0_Versions
+      "xl/worksheets/sheet14.xml", // Summary_Communication
+      "xl/worksheets/sheet5.xml", // A_InstData
+    ]);
+  });
+
+  it("refuses a high-ratio zip bomb (honest sizes) within 2 seconds, before inflating it", async () => {
+    const data = bombData();
+    expect(data.length).toBeLessThan(MB);
+    const parts = await baseParts();
+    const file = rawZip([...parts.filter((p) => !p.name.endsWith("sheet2.xml")), { name: "xl/worksheets/sheet2.xml", data, method: 8, size: 60 * MB }]);
+    const t0 = performance.now();
+    await expect(parseTemplate(file)).rejects.toThrow(/zip entry "xl\/worksheets\/sheet2.xml" declares 62914560 bytes uncompressed \(limit 52428800 per entry\)/);
+    expect(performance.now() - t0).toBeLessThan(2000);
+  });
+
+  it("refuses a zip bomb that understates its size, counting the bytes actually inflated, within 2 seconds", async () => {
+    const parts = await baseParts();
+    const sheets = parts.filter((p) => p.name.startsWith("xl/worksheets/sheet")).map((p) => p.name);
+    const target = sheets[sheets.length - 1]; // one of the sheets the importer reads
+    const file = rawZip([...parts.filter((p) => p.name !== target), { name: target, data: bombData(), method: 8, size: 4096 }]);
+    const t0 = performance.now();
+    await expect(parseTemplate(file)).rejects.toThrow(new RegExp(`zip entry "${target}" inflates to more than the 4096 bytes it declares`));
+    expect(performance.now() - t0).toBeLessThan(2000);
+  });
+
+  it("refuses declared sizes above 150 MB in total and more entries than the limit", async () => {
+    const parts = await baseParts();
+    const filler = (i: number) => ({ name: `xl/media/fill${i}.bin`, data: new Uint8Array(0), method: 8 as const, size: 40 * MB });
+    await expect(parseTemplate(rawZip([...parts, ...[0, 1, 2, 3].map(filler)]))).rejects.toThrow(
+      /zip entries declare more than 157286400 bytes uncompressed in total/,
+    );
+    const many = Array.from({ length: ZIP_LIMITS.maxEntries }, (_, i) => ({ name: `x/${i}`, data: new Uint8Array(0), method: 0 as const, size: 0 }));
+    await expect(parseTemplate(rawZip([...parts, ...many]))).rejects.toThrow(/zip has \d+ entries \(limit 1000\)/);
   });
 });

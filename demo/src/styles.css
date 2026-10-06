@@ -297,6 +297,10 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
 .pvv-text { font-size: 14px; margin: 12px 0 0; color: var(--ink); }
 .pvv-error { color: var(--red); }
 .pvv code { font: 500 0.92em var(--mono); overflow-wrap: anywhere; }
+/* Communication Template panel: file names, sheet cells and product names can be long unbroken strings. */
+#template-import > summary, .template-import .fine, .template-import select, .template-import td { overflow-wrap: anywhere; }
+.template-import select { max-width: 100%; }
+.template-warnings { margin: 6px 0; padding-left: 18px; color: var(--red); }
 @media (max-width: 860px) { .pvv-grid { grid-template-columns: minmax(0, 1fr); } }
 
 @media (prefers-reduced-motion: reduce) { .reveal, .stamp { animation: none; } .btn { transition: none; } }

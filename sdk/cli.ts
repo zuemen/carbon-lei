@@ -1,7 +1,7 @@
 // carbonlei CLI: issue, present, verify, export-pact, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { privateKeyToAccount } from "viem/accounts";
@@ -16,7 +16,14 @@ import { verifyPresentation } from "./verify.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
-import { draftCredentialFields, parseTemplate, type CredentialDraft, type ParsedTemplate } from "./template.ts";
+import {
+  draftCredentialFields,
+  MAX_TEMPLATE_BYTES,
+  parseTemplate,
+  TemplateError,
+  type CredentialDraft,
+  type ParsedTemplate,
+} from "./template.ts";
 
 const USAGE = `carbonlei <command> [options]
 
@@ -30,7 +37,7 @@ const USAGE = `carbonlei <command> [options]
                --product-description <text> [--rpc <url>] [--deployment <file>] [--out <pact.json>]
   import-template <file.xlsx> [--product N] [--out <draft.json>]
                reads a filled CBAM Communication Template (V2.1 or V2.1.1) and prints a draft of the
-               credential fields it can fill; the rest is left to the verification body
+               credential fields it can fill; the rest is left to the supplier and the verification body
 `;
 
 function printTemplate(t: ParsedTemplate, d: CredentialDraft, n: number): string {
@@ -48,8 +55,15 @@ function printTemplate(t: ParsedTemplate, d: CredentialDraft, n: number): string
   L.push("", `Credential field draft for product ${n} (CN ${d.product.cnCode}):`);
   const w = Math.max(...d.rows.map((r) => r.field.length));
   for (const r of d.rows) L.push(`  ${r.field.padEnd(w)}  ${r.value}   ← ${r.source}  (${r.rule})`);
-  L.push("", `Still to be supplied by the verification body (${d.toBeSupplied.length}):`);
-  for (const s of d.toBeSupplied) L.push(`  ${s.field} — ${s.reason}`);
+  for (const by of ["supplier", "verification body"] as const) {
+    const list = d.toBeSupplied.filter((s) => s.by === by);
+    L.push("", `Still to be supplied by the ${by} (${list.length}):`);
+    for (const s of list) L.push(`  ${s.field} — ${s.reason}`);
+  }
+  if (t.warnings.length) {
+    L.push("", `Warnings (${t.warnings.length}):`);
+    for (const w of t.warnings) L.push(`  ${w}`);
+  }
   L.push("", `Set by the SDK at issuance: ${d.setAtIssuance.join(", ")}`);
   L.push("This is a draft from the operator's template, not verified data.");
   return L.join("\n");
@@ -200,6 +214,8 @@ async function main(argv: string[]) {
     case "import-template": {
       const file = positionals[0];
       if (!file) throw new Error("usage: carbonlei import-template <file.xlsx> [--product N]");
+      // Refuse an oversized file before reading it into memory.
+      if (statSync(file).size > MAX_TEMPLATE_BYTES) throw new TemplateError(`file larger than ${MAX_TEMPLATE_BYTES} bytes`);
       const t = await parseTemplate(readFileSync(file));
       const n = Number(values.product);
       if (!Number.isInteger(n) || n < 1) throw new Error(`--product must be a positive integer, got ${values.product}`);

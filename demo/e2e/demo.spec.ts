@@ -1,5 +1,6 @@
 // End-to-end checks of the demo page (handbook E1–E11, plan U3).
 import { expect, test, type Page } from "@playwright/test";
+import ExcelJS from "exceljs";
 import { reportKeyOf } from "../../sdk/commitment.ts";
 import { decodeDisclosure } from "../../sdk/disclosure.ts";
 import { PACT_SPEC_VERSION, pactIdOf } from "../../sdk/pact.ts";
@@ -342,9 +343,35 @@ test("Supplier: the Communication Template panel reads the Commission's example 
   await expect(table).toBeVisible();
   await expect(table.getByRole("row", { name: /CN code 73181542 F26/ })).toBeVisible();
   await expect(table.getByRole("row", { name: /Emissions intensity \(tCO2e\/t\) 2\.00694 I26/ })).toBeVisible();
-  await expect(panel.getByText("Still to be supplied by the verification body (15)")).toBeVisible();
+  await expect(panel.getByText("Still to be supplied by the supplier (6)")).toBeVisible();
+  await expect(panel.getByText("Still to be supplied by the verification body (9)")).toBeVisible();
   await expect(panel.getByText(/^Supplier LEI — no cell in the Communication Template$/)).toBeVisible();
+  await expect(panel.getByText(/© European Union, CC BY 4\.0 \(file renamed\); see SOURCE\.md/)).toBeVisible();
+  const licences = await page.request.get(await panel.getByRole("link", { name: "third-party licenses" }).getAttribute("href") ?? "");
+  expect(licences.ok()).toBe(true);
+  expect(await licences.text()).toMatch(/exceljs [\d.]+ \(MIT\)[\s\S]*jszip [\d.]+[\s\S]*fflate [\d.]+ \(MIT\)/);
   await page.setViewportSize({ width: 390, height: 844 });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+  // Long unbroken strings (file name, installation and product names) wrap at 390 px instead of widening the page.
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(new URL("../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx", import.meta.url).pathname);
+  const sc = wb.getWorksheet("Summary_Communication")!;
+  const long = "X".repeat(160);
+  for (const ref of ["G12", "H26", "H27"]) sc.getCell(ref).value = { formula: "X", result: long } as ExcelJS.CellFormulaValue;
+  await panel.locator('input[type="file"]').setInputFiles({
+    name: `${"Long_file_name_".repeat(8)}.xlsx`,
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from(await wb.xlsx.writeBuffer()),
+  });
+  await expect(panel.getByTestId("template-summary")).toContainText(long);
+  const overflowLong = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflowLong).toBeLessThanOrEqual(0);
+  // Files above 20 MB are refused from File.size, before they are read.
+  await panel.locator('input[type="file"]').setInputFiles({
+    name: "too-large.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.alloc(20 * 1024 * 1024 + 1),
+  });
+  await expect(panel.getByRole("alert")).toHaveText(/Could not read too-large\.xlsx: file larger than 20971520 bytes .*it was not read/);
 });
