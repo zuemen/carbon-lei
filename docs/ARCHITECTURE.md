@@ -87,7 +87,7 @@ flowchart TD
   G["GLEIF root (simulated)"] -->|QVI credential| Q["QVI"]
   Q -->|LE vLEI| N["NAB"]
   Q -->|LE vLEI| V["Verification body"]
-  Q -->|LE vLEI| S["Supplier"]
+  Q -.->|"LE vLEI (optional)"| S["Supplier"]
   N -->|"CBAM accreditation credential<br/>accreditationNumber, cnScope, validUntil"| V
   V -->|"ECR: CBAM Lead Auditor"| A["Lead auditor"]
   A -->|"KEL interaction event, seal d = credSAID"| K["Auditor KEL, sequence kelSeq"]

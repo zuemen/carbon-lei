@@ -1,6 +1,7 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
 import { comparisonFigures, EVIDENCE_WHY, fmt, loadDemoData, type DemoData } from "./data.ts";
+import { kgToT } from "./messages.ts";
 
 // Tabs and the chain client load on demand, so the first screen needs only the page shell.
 const Buyer = lazy(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
@@ -37,7 +38,8 @@ interface Ctx {
   reader: ChainReader | null;
   conn: ConnState;
   offline: boolean;
-  go: (tab: TabId) => void;
+  /** Opens a tab; with `target`, scrolls to the element with that id and focuses it once the tab has rendered. */
+  go: (tab: TabId, target?: string) => void;
   proofText: string;
   setProofText: (s: string, fromSupplier?: boolean) => void;
   proofFromSupplier: boolean;
@@ -50,6 +52,13 @@ export const useApp = () => {
   if (!c) throw new Error("no app context");
   return c;
 };
+
+/** Scrolls an element to just below the sticky tab bar (its height depends on the screen width). */
+export function scrollBelowTabbar(el: HTMLElement) {
+  const bar = document.querySelector(".tabbar")?.getBoundingClientRect().height ?? 0;
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - bar - 12, behavior: smooth ? "smooth" : "auto" });
+}
 
 function tabFromHash(): TabId {
   const h = window.location.hash.replace(/^#/, "").split("?")[0];
@@ -84,6 +93,7 @@ export function App() {
   const [reader, setReader] = useState<ChainReader | null>(null);
   const [proofText, setProofTextRaw] = useState("");
   const [proofFromSupplier, setProofFromSupplier] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<string | null>(null);
   const attempt = useRef(0);
 
   useEffect(() => {
@@ -125,11 +135,30 @@ export function App() {
     if (data) void connect(data);
   }, [data, connect]);
 
-  const go = useCallback((t: TabId) => {
+  const go = useCallback((t: TabId, target?: string) => {
     window.location.hash = t;
     setTab(t);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (target) setFocusTarget(target);
+    else window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  // Tabs load on demand: wait (up to about five seconds) for the target to render, then scroll to it and focus it.
+  useEffect(() => {
+    if (!focusTarget) return;
+    let frames = 0;
+    let raf = 0;
+    const tick = () => {
+      const el = document.getElementById(focusTarget);
+      if (el) {
+        scrollBelowTabbar(el);
+        el.focus({ preventScroll: true });
+        setFocusTarget(null);
+      } else if (++frames < 300) raf = window.requestAnimationFrame(tick);
+      else setFocusTarget(null);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [focusTarget, tab]);
 
   const ctx = useMemo<Ctx | null>(() => {
     if (!data) return null;
@@ -181,7 +210,7 @@ export function App() {
             </a>
           </div>
         </header>
-        <Lead data={data} />
+        <Lead data={data} reader={reader} offline={conn.kind === "offline"} onTry={() => go("try-to-break-it", "attack-2b")} />
         <ConnectionLine conn={conn} onRetry={() => connect(data)} onCached={() => setConn({ kind: "offline" })} cachedDate={data.cached?.time} />
       </div>
 
@@ -263,10 +292,12 @@ export function App() {
 }
 
 /**
- * First screen: what is at stake (same figures as the Buyer tab's comparison card), the question the demo
- * answers, and — smaller but still visible — that the vLEI chain is checked against exported evidence.
+ * First screen: what is at stake (same figures as the Buyer tab's comparison card), the tonnage ledger
+ * refusing a double claim, the question the demo answers, and — smaller but still visible — that the
+ * vLEI chain is checked against exported evidence.
  */
-function Lead({ data }: { data: DemoData }) {
+function Lead(props: { data: DemoData; reader: ChainReader | null; offline: boolean; onTry: () => void }) {
+  const { data } = props;
   const [why, setWhy] = useState(false);
   const cmp = data.comparison;
   const f = comparisonFigures(cmp);
@@ -278,6 +309,7 @@ function Lead({ data }: { data: DemoData }) {
         <strong className="stake-num">{fmt(f.gap)} tCO2e less declared</strong> on one {fmt(f.q)} t shipment{" "}
         <span className="stake-note">— illustrative, gross: a gap in what is declared, not a physical reduction.</span>
       </p>
+      <LedgerStrip data={data} reader={props.reader} offline={props.offline} onTry={props.onTry} />
       <p className="subtitle">
         Before an importer relies on that number: who signed it, were they authorised, and were these tonnes already
         claimed?
@@ -299,6 +331,80 @@ function Lead({ data }: { data: DemoData }) {
         {EVIDENCE_WHY}
       </p>
     </>
+  );
+}
+
+const tonnesToKg = (t: string) => BigInt(Math.round(Number(t) * 1000));
+
+/**
+ * One line under the stake: the report's verified tonnes, what is claimed and what is left, and the second
+ * importer's claim that the contract refuses (Try to break it, card 2b). Same source as the Supplier tab's
+ * ledger: the live contract once connected, the cached snapshot in the offline view; until then the
+ * snapshot recorded when the demo data was built (or, without one, the demo shipment).
+ */
+function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offline: boolean; onTry: () => void }) {
+  const { data, reader, offline } = props;
+  const verifiedKg = tonnesToKg(data.report.verifiedTonnes);
+  const recordedKg = data.cached ? BigInt(data.cached.remainingKg) : verifiedKg - tonnesToKg(data.shipment.quantityTonnes);
+  const [liveKg, setLiveKg] = useState<bigint | null>(null);
+
+  useEffect(() => {
+    if (offline || !reader) return;
+    let live = true;
+    reader.remainingKg(data.credential.reportKey).then(
+      (kg) => live && setLiveKg(kg),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [reader, offline, data]);
+
+  const leftKg = !offline && liveKg !== null ? liveKg : recordedKg;
+  const claimedKg = verifiedKg - leftKg;
+  const second = data.attacks.secondImporter.quantityTonnes;
+  const refused = tonnesToKg(second) > leftKg;
+  const sep = (
+    <>
+      <span className="ledger-sep" aria-hidden="true">·</span>
+      <span className="sr-only">,</span>{" "}
+    </>
+  );
+  return (
+    <p className="ledger-strip">
+      <span className="ledger-tag">Ledger</span>{" "}
+      <span className="ledger-fig">
+        <strong className="ledger-verified">{kgToT(verifiedKg)}</strong> t verified
+      </span>{" "}
+      {sep}
+      <span className="ledger-fig">
+        <strong className="ledger-claimed">{kgToT(claimedKg)}</strong> t claimed
+      </span>{" "}
+      {sep}
+      <span className="ledger-fig">
+        <strong className="ledger-left">{kgToT(leftKg)}</strong> t left
+      </span>
+      {refused && (
+        <>
+          {" "}
+          <span className="ledger-refusal">
+            — a <strong className="ledger-second">{second}</strong>&nbsp;t claim for a second importer is{" "}
+            <strong className="ledger-refused">refused</strong>.
+          </span>
+        </>
+      )}{" "}
+      <a
+        className="ledger-try"
+        href="#try-to-break-it"
+        onClick={(e) => {
+          e.preventDefault();
+          props.onTry();
+        }}
+      >
+        Try it (2b)<span aria-hidden="true"> →</span>
+        <span className="sr-only"> on the Try to break it tab</span>
+      </a>
+    </p>
   );
 }
 

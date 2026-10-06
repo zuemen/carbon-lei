@@ -3,7 +3,7 @@ import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../
 import { exportPactFromProof, type PactProduct } from "../../../sdk/pact.ts";
 import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
 import fixture from "../../../fixtures/demo.json";
-import { useApp } from "../App.tsx";
+import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source } from "../components.tsx";
 import { comparisonFigures, whatIfFigures, type DemoData } from "../data.ts";
 import { CODE_TEXT } from "../messages.ts";
@@ -88,7 +88,7 @@ function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
   return (
     <div className="whatif" role="group" aria-labelledby="whatif-h">
       <p className="whatif-head" id="whatif-h">
-        <span aria-hidden="true">◇ </span>What a lower-carbon process is worth <span className="tag-hypo">Hypothetical</span>
+        <span aria-hidden="true">◇ </span>What a lower verified intensity is worth <span className="tag-hypo">Hypothetical</span>
       </p>
       <label className="whatif-label" htmlFor="whatif-range">
         What if the verified value were <strong>{label}</strong> tCO2e/t?
@@ -131,23 +131,15 @@ function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
         before free-allocation adjustment.
       </p>
       <p className="whatif-rate">
-        At this certificate price, every <strong>0.1 tCO2e/t</strong> that the producer's verified intensity is lower is
-        worth about <strong>€{eur2(eurPerTenth)} per tonne of goods</strong> to its EU buyer (gross, illustrative) — value
-        the buyer can pay back as a premium for verified lower-carbon goods.
+        At this certificate price, each <strong>0.1 tCO2e/t</strong> of verified intensity accounts for about{" "}
+        <strong>€{eur2(eurPerTenth)} per tonne of goods</strong> (gross, illustrative).
       </p>
       <p className="whatif-point">
-        It only reaches the producer if the buyer can trust who signed the value and that its tonnes were not claimed
-        before: what the checks above answer.
+        That value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed
+        before — what the checks above answer. Who captures it is a commercial matter between buyer and producer.
       </p>
     </div>
   );
-}
-
-/** Scrolls an element to just below the sticky tab bar (its height depends on the screen width). */
-function scrollBelowTabbar(el: HTMLElement) {
-  const bar = document.querySelector(".tabbar")?.getBoundingClientRect().height ?? 0;
-  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - bar - 12, behavior: smooth ? "smooth" : "auto" });
 }
 
 /** One line under the Verify button: how many checks passed and, only for a valid proof, the declared-emissions gap. */

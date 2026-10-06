@@ -9,19 +9,19 @@ All companies are fictional. All emissions values for the demo producer are illu
 
 ## Summary
 
-**What CarbonLEI contributes.** CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne of goods can be claimed only once within this deployment's ledger, across importers (this does not show that the physical goods are unique), and software can check who signed a value and whether the body and its auditor were authorised when the report was registered (the contract checks this at the registration block against the revocations the watcher has synced; a report registered within 24 hours before a sync is flagged CONTESTED). That is environmental transparency and carbon tracking that a PDF copy of a verification report cannot give. Its limits, and how it differs from the figures below, are in Section 4.4.
+**What CarbonLEI contributes.** CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne of goods can be claimed only once within this deployment, per credential, across importers (this does not show that the physical goods are unique; a second report for the same installation and reporting period reverts with `PeriodAlreadyCovered` unless it names the report it supersedes), and software can check who signed a value and whether the body and its auditor were authorised at the block that registered the report (revocations count from the block in which the watcher syncs them; a report registered within 24 hours before a sync is flagged CONTESTED). That is environmental transparency and carbon tracking that a PDF copy of a verification report cannot give, offered outside the Registry as supplementary evidence. Its limits, and how it differs from the figures below, are in Section 4.4.
 
 **Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 tCO2e of difference to the unmarked default plus 135.5 tCO2e of mark-up. At the Q3 2026 certificate price of €82.32 that is about €48,486, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t of goods.
 
-CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no double counting, and a reward for low-carbon producers. Only the third one could lead to a physical reduction, and we do not quantify it.
+CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no double counting, and a value attached to a lower verified intensity. Only the third one could lead to a physical reduction, and we do not quantify it.
 
 | Effect | What changes | Physical reduction? |
 |---|---|---|
-| 1. Trusted actual values replace default values | Declared embedded emissions reflect the verified plant, not a marked-up default | It changes what is declared and paid; no physical reduction by itself |
-| 2. Double counting is blocked | A verified low value cannot cover more tonnes than the report verified | It keeps real emissions from disappearing from declarations; no physical reduction by itself |
-| 3. Low-carbon producers are rewarded | Effects 1 and 2 make a lower verified intensity worth money, which is an incentive to invest | Incentive only. Largely offset by free allocation until about 2030; full from 2034. Not quantified |
+| 1. Trusted actual values replace default values | Declared embedded emissions reflect the verified plant, not a marked-up default | It changes what is declared; no physical reduction by itself |
+| 2. Double counting is blocked | A verified low value cannot cover more tonnes than the report verified | The cap holds within this deployment, per credential; no physical reduction by itself |
+| 3. A lower verified intensity has a value | Effects 1 and 2 give a lower verified intensity a value in CBAM terms: each 0.1 tCO2e/t accounts for about €8.23 per tonne of goods at €82.32 (gross, illustrative). Who captures it is a commercial matter between buyer and producer; where it reaches the producer, it is an incentive to invest | Incentive only. Largely offset by free allocation until about 2030; full from 2034. Not quantified |
 
-Unit: the declared-emissions gap in tCO2e per tonne of goods, and its cost in € per tonne. Baseline: the CBAM default value with mark-up.
+Unit: the declared-emissions gap in tCO2e per tonne of goods, and its value in € per tonne at the certificate price. Baseline: the CBAM default value with mark-up.
 
 In the demo, the ledger rejects a 400 t claim for a second importer against the 500 t report, which has 300 t left after a 200 t claim: the contract reverts with `ExceedsVerifiedTonnage` (300,000 kg remaining, 400,000 kg requested). The hosted demo shows this as a dry run against the live Sepolia contract, and the same case is one of the 19 tampering cases in the SDK test suite (Section 3).
 
@@ -29,7 +29,7 @@ In the demo, the ledger rejects a 400 t claim for a second importer against the 
 
 ## 1. Why trustworthy actual values matter
 
-**Defaults cost more than verified values.** Under CBAM, an importer declares embedded emissions using either verified actual values or the Commission's default values. Defaults carry a mark-up. For CN 7318 goods (screws, bolts, nuts) from Taiwan, the default direct emission value is 2.707 tCO2e per tonne. The mark-up is 10% for 2026, 20% for 2027 and 30% from 2028 [1]. That gives 2.978 in 2026, about 3.25 in 2027 and 3.519 from 2028. Since Implementing Regulation (EU) 2026/1740, the CBAM Registry computes the marked-up values from the unmarked default; its rounding rule is not published [1].
+**Default values carry a mark-up.** Under CBAM, an importer declares embedded emissions using either verified actual values or the Commission's default values. For CN 7318 goods (screws, bolts, nuts) from Taiwan, the default direct emission value is 2.707 tCO2e per tonne. The mark-up is 10% for 2026, 20% for 2027 and 30% from 2028 [1]. That gives 2.978 in 2026, about 3.25 in 2027 and 3.519 from 2028. Since Implementing Regulation (EU) 2026/1740, the CBAM Registry computes the marked-up values from the unmarked default; its rounding rule is not published [1].
 
 **Why there is a mark-up.** Default values include a mark-up "to account for the deviations of an individual installation with emission levels higher than the relevant average emission intensity of the producer country". Because of "the difficulties to verify that installation-specific data from third countries is of a sufficiently high quality", the Commission estimates that deviation from Union installations [1, recital 4].
 
@@ -37,13 +37,13 @@ In the demo, the ledger rejects a 400 t claim for a second importer against the 
 
 **Verification itself can be gamed.** In 2024 the German Environment Agency refused to approve certificates for around 215,000 tonnes of CO2; they concerned upstream emission reduction projects under Germany's fuel greenhouse-gas quota scheme, not CBAM or the EU ETS [4]. CarbonLEI does not prevent a wrong number; it makes the signer and their authority checkable.
 
-**What CarbonLEI adds.** A verified value is only useful if the importer can trust three things:
+**What CarbonLEI adds.** Outside the Registry, as supplementary evidence, CarbonLEI lets a buyer check three things about a verified value in software:
 
 1. it was signed by an authorised person on behalf of an accredited verifier [5];
-2. that authority was valid when the report was registered;
-3. the verified tonnes have not been used before.
+2. that authority was valid at the block that registered the report (revocations count from the block in which the watcher syncs them; a report registered within 24 hours before a sync is flagged CONTESTED);
+3. the verified tonnes have not been claimed before, within this deployment, per credential.
 
-CarbonLEI makes all three checkable. It does not measure emissions and does not replace the verification.
+It does not measure emissions and does not replace the verification.
 
 ---
 
@@ -89,7 +89,7 @@ How to read the gap:
 - The rest of the gap (for example 589 − 453.5 = 135.5 tCO2e in 2026) is the mark-up. It is a regulatory surcharge for missing verified data, not emissions.
 - **Money, gross and illustrative:** multiply the gap by the CBAM certificate price P (€ per tCO2e) for the period. At the Q3 2026 price of €82.32 [7], the 2026 gap is about €97 per tonne, or about €48,486 for the 500 t report; from 2028 it is about €142 per tonne at the Q3 2026 price, held constant. Before the free-allocation adjustment, which is deducted in both cases and changes the gap only slightly (Section 2a). Not adjusted for any carbon price paid in the country of origin.
 
-The Buyer tab of the hosted demo (EU importer or downstream customer) shows the same comparison for the demo shipment of 200 t: 595.6 tCO2e at the 2026 default of 2.978 against 360 tCO2e at the verified 1.8, a declared-emissions gap of 235.6 tCO2e, or about €19,395 gross at the Q3 2026 price of €82.32. The card labels the figure as illustrative, before the free-allocation adjustment, and as a gap in what is declared, not a physical reduction.
+The Buyer tab of the hosted demo (EU importer or downstream customer) shows the same comparison for the demo shipment of 200 t: 595.6 tCO2e at the 2026 default of 2.978 against 360 tCO2e at the verified 1.8, a declared-emissions gap of 235.6 tCO2e, or about €19,395 gross at the Q3 2026 price of €82.32. The card labels the figure as illustrative, before the free-allocation adjustment, and as a gap in what is declared, not a physical reduction. Below it, a hypothetical card, "What a lower verified intensity is worth", lets the reader move the verified intensity: each 0.1 tCO2e/t of verified intensity accounts for about €8.23 per tonne of goods (gross, illustrative; 0.1 × €82.32). That value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed before. Who captures it is a commercial matter between buyer and producer.
 
 ---
 
@@ -170,7 +170,7 @@ Physical reductions are not quantified. See Section 2a for why the CBAM incentiv
 
 ### 4.4 Attribution: what CarbonLEI itself adds
 
-What CarbonLEI itself adds is the integrity of verified data: software can check who signed a verified value and whether they were authorised, wherever the value travels, and the tonnage ledger lets each verified tonne of goods be claimed only once within this deployment's ledger, across importers; it does not show that the physical goods are unique. That is its contribution to environmental transparency and carbon tracking. The figures in Sections 2 and 4.2 are a different thing: the effect of declaring a verified value instead of a default value, which any verified CBAM value has, with or without CarbonLEI. CarbonLEI's own contribution is stated below in qualitative terms only; we give no figure for it.
+What CarbonLEI itself adds is the integrity of verified data: software can check who signed a verified value and whether they were authorised at the block that registered the report (as far as the watcher has synced revocations), wherever the value travels, and the tonnage ledger lets each verified tonne of goods be claimed only once within this deployment, per credential, across importers (a second report for the same installation and reporting period reverts with `PeriodAlreadyCovered` unless it names the report it supersedes); it does not show that the physical goods are unique. That is its contribution to environmental transparency and carbon tracking. The figures in Sections 2 and 4.2 are a different thing: the effect of declaring a verified value instead of a default value, which any verified CBAM value has, with or without CarbonLEI. CarbonLEI's own contribution is stated below in qualitative terms only; we give no figure for it.
 
 #### Where the effect falls
 
@@ -180,7 +180,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 | What CarbonLEI adds | A machine-checkable record of who signed and with what authority; no new emissions data | The verification body's authority stays machine-checkable wherever the report travels, and buyers can apply a voluntary tonnage cap across importers |
 | Effect on declared emissions | The contribution there is the checkable record in the row above; CarbonLEI's added effect on declared emissions is about zero at the margin, because the verified value already replaces the default value there | Not quantified: we cannot estimate how many verified values will travel outside the Registry |
 
-**The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, so real emissions stay in declarations; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover; CarbonLEI lets buyers add that cap voluntarily. We do not quantify the ledger's effect, because we found no empirical rate of double claims (A4 in Section 4.1).
+**The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, within this deployment, per credential; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover; CarbonLEI lets buyers add that cap voluntarily. We do not quantify the ledger's effect, because we found no empirical rate of double claims (A4 in Section 4.1).
 
 ---
 
@@ -202,7 +202,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 ## 6. Limits of this estimate
 
 - **Illustrative inputs.** 1.8 tCO2e/t and 500 t are demo values. They are not measurements of any real plant and not official CBAM methodology.
-- **Declared gap is not a reduction.** Effects 1 and 2 change accounting and cost. Only effect 3 reduces emissions, and only if producers invest.
+- **Declared gap is not a reduction.** Effects 1 and 2 change what is declared. Only effect 3 reduces emissions, and only if producers invest.
 - **No empirical double-claim rate.** A4 is a sensitivity parameter.
 - **Incentive to switch steel.** The incentive to switch production routes is reduced by the free-allocation adjustment until 2034 (Section 2a). We found no public case of a fastener producer switching steel sources because of CBAM.
 - **Price.** The € figures use the Q3 2026 certificate price. CBAM certificates are priced quarterly in 2026 and weekly from 2027 [7], so the € figures move with the price; the tCO2e figures do not.

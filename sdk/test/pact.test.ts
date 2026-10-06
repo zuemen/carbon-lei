@@ -11,7 +11,16 @@ import { decodeDisclosure } from "../disclosure.ts";
 import { DEMO_DISCLOSURE } from "../issue.ts";
 import type { ChainReader, ReportRecord } from "../chain.ts";
 import type { Presentation } from "../disclosure.ts";
-import { exclusiveEnd, exportPact, exportPactFromProof, pactIdOf, type PactContext } from "../pact.ts";
+import { DISCLOSABLE, REQUIRED_DISCLOSURES } from "../credential.ts";
+import {
+  EXTENSION_SCHEMA_URL,
+  exclusiveEnd,
+  exportPact,
+  exportPactFromProof,
+  pactIdOf,
+  type PactContext,
+  type PactProduct,
+} from "../pact.ts";
 import type { VerificationResult } from "../verify.ts";
 
 const SPEC_URL = "https://raw.githubusercontent.com/wbcsd/data-exchange-protocol/v3.0.3/spec/v3/openapi.yaml";
@@ -44,6 +53,16 @@ const ctx = (over: Partial<PactContext> = {}): PactContext => ({
   ...over,
 });
 
+/** JSON Schema 2020-12 validator with the standard formats checked. */
+function newAjv(strict: boolean) {
+  // CommonJS packages under NodeNext: the class and the plugin sit on `.default`.
+  const Ajv2020 = (Ajv2020Module as unknown as { default: typeof Ajv2020Module }).default ?? Ajv2020Module;
+  const addFormats = (addFormatsModule as unknown as { default: typeof addFormatsModule }).default ?? addFormatsModule;
+  const ajv = new (Ajv2020 as unknown as new (o: object) => any)({ strict, allErrors: true });
+  (addFormats as unknown as (a: unknown) => void)(ajv);
+  return ajv;
+}
+
 let validate: (x: unknown) => boolean;
 let errors: () => unknown;
 
@@ -67,11 +86,7 @@ beforeAll(async () => {
     defs[name] = JSON.parse(text.replaceAll("#/components/schemas/", "#/$defs/"));
     for (const m of text.matchAll(/#\/components\/schemas\/([A-Za-z0-9_]+)/g)) queue.push(m[1]);
   }
-  // CommonJS packages under NodeNext: the class and the plugin sit on `.default`.
-  const Ajv2020 = (Ajv2020Module as unknown as { default: typeof Ajv2020Module }).default ?? Ajv2020Module;
-  const addFormats = (addFormatsModule as unknown as { default: typeof addFormatsModule }).default ?? addFormatsModule;
-  const ajv = new (Ajv2020 as unknown as new (o: object) => any)({ strict: false, allErrors: true });
-  (addFormats as unknown as (a: unknown) => void)(ajv);
+  const ajv = newAjv(false);
   ajv.addSchema({ $id: "https://pact.local/openapi.json", $defs: defs });
   const fn = ajv.compile({ $ref: "https://pact.local/openapi.json#/$defs/ProductFootprint" });
   validate = (x) => fn(x) as boolean;
@@ -161,5 +176,91 @@ describe("PACT v3.0.3 export (S8)", () => {
     await expect(exportPactFromProof(proof, result, rd(rec({ revokedAt: 5n })), product)).rejects.toThrow(/revoked/);
     const failed = { ...result, checks: checks.map((x) => (x.index === 2 ? { ...x, status: "fail" as const } : x)) };
     await expect(exportPactFromProof(proof, failed as VerificationResult, rd(rec()), product)).rejects.toThrow(/nothing exported/);
+  });
+});
+
+// The extension schema named by `dataSchema` is published with the demo page: demo/public/ is served
+// at https://zuemen.github.io/carbon-lei/ (GitHub Pages), so the URL's path below /carbon-lei/ is the file.
+describe("CarbonLEI extension schema (dataSchema)", () => {
+  const url = new URL(EXTENSION_SCHEMA_URL);
+  const file = new URL(`../../demo/public/${url.pathname.replace(/^\/carbon-lei\//, "")}`, import.meta.url);
+  const schema = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
+  // Strict mode: the schema itself must not use unknown keywords or ambiguous constructs.
+  const check = schema ? newAjv(true).compile(schema) : () => false;
+  const ok = (data: unknown) => {
+    const pass = check(data) as boolean;
+    if (!pass) console.log(JSON.stringify((check as { errors?: unknown }).errors, null, 2));
+    return pass;
+  };
+  const dataOf = (pf: Record<string, unknown>) => (pf.extensions as { data: Record<string, any> }[])[0].data;
+
+  it("is served next to the demo page under the URL the export names, with that URL as its $id", () => {
+    expect(url.origin).toBe("https://zuemen.github.io");
+    expect(url.pathname.startsWith("/carbon-lei/")).toBe(true);
+    expect(existsSync(file)).toBe(true);
+    expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+    expect(schema.$id).toBe(EXTENSION_SCHEMA_URL);
+  });
+
+  it("the demo page's export (demo-data.json proof, Buyer tab arguments) validates against it", async () => {
+    const data = JSON.parse(readFileSync(new URL("../../demo/public/demo-data.json", import.meta.url), "utf8"));
+    const core = JSON.parse(data.proof.core);
+    const shown = Object.fromEntries(
+      (data.proof.disclosures as string[]).map((d) => decodeDisclosure(d)).map((d) => [d.name, d.value]),
+    );
+    const zero = `0x${"0".repeat(64)}`;
+    const rd = {
+      report: async () => ({ kelSeq: BigInt(data.credential.kelSeq), registeredAt: 1n, revokedAt: 0n, supersedes: zero, credScopeKey: zero }),
+      registry: data.deployment.contracts.EmissionsClaimRegistry.address,
+      client: { getChainId: async () => data.network.chainId },
+    } as unknown as ChainReader;
+    const checks = [1, 2, 3, 4, 5].map((index) => ({ index, name: "", status: "pass" as const, code: "", detail: "" }));
+    const result = { overall: "VALID", checks, disclosed: shown, hidden: 0, primaryCode: "" } as VerificationResult;
+    // The same product arguments as PACT_PRODUCT in demo/src/tabs/Buyer.tsx.
+    const product: PactProduct = {
+      companyName: demo.entities.supplier.name,
+      productNameCompany: demo.product.productNameCompany,
+      productDescription: `${demo.product.description} — CBAM direct embedded emissions only, not a full PCF (illustrative)`,
+      productId: "hex-bolt-m10",
+    };
+    const pf = await exportPactFromProof(data.proof as Presentation, result, rd, product);
+    const ext = (pf.extensions as Record<string, unknown>[])[0];
+    expect(ext.dataSchema).toBe(EXTENSION_SCHEMA_URL);
+    expect(ok(ext.data)).toBe(true);
+    expect(dataOf(pf).carbonlei.credSAID).toBe(core.d);
+    expect(dataOf(pf).carbonlei.registry.reportKey).toBe(data.credential.reportKey);
+    expect(validate(pf)).toBe(true);
+  });
+
+  it("also fits every disclosure choice: all CBAM fields shown, or only the required ones", () => {
+    const all: Record<string, string> = {};
+    for (const name of DISCLOSABLE) all[name] = decodeDisclosure(v.disclosures[name]).value;
+    const full = dataOf(exportPact(ctx({ disclosed: all })));
+    expect(full.cbam.operatorId).toBeDefined();
+    expect(full.cbam.installationName).toBeDefined();
+    expect(ok(full)).toBe(true);
+    const few: Record<string, string> = {};
+    for (const name of [...REQUIRED_DISCLOSURES, "specificEmbeddedEmissions_tCO2e_per_t"]) few[name] = all[name];
+    const minimal = dataOf(exportPact(ctx({ disclosed: few, onchain: undefined })));
+    expect(Object.keys(minimal.cbam).sort()).toEqual(["boundary", "cbamRoute", "cnCode", "installationId", "verificationReportId", "verifiedTonnes"]);
+    expect(ok(minimal)).toBe(true);
+  });
+
+  it("rejects what the exporter never writes: unknown or hidden fields, a numeric kelSeq, a missing record", () => {
+    const base = () => JSON.parse(JSON.stringify(dataOf(exportPact(ctx()))));
+    const mutate = (f: (d: Record<string, any>) => void) => {
+      const d = base();
+      f(d);
+      return check(d) as boolean;
+    };
+    expect(mutate(() => {})).toBe(true);
+    expect(mutate((d) => (d.cbam.energyMix = "x"))).toBe(false);
+    expect(mutate((d) => (d.extra = {}))).toBe(false);
+    expect(mutate((d) => (d.cbam.boundary = "cradle-to-gate"))).toBe(false);
+    expect(mutate((d) => delete d.cbam.cnCode)).toBe(false);
+    expect(mutate((d) => (d.cbam.cnCode = "7318 15"))).toBe(false);
+    expect(mutate((d) => (d.carbonlei.kelSeq = 3))).toBe(false);
+    expect(mutate((d) => (d.carbonlei.registry.chainId = "11155111"))).toBe(false);
+    expect(mutate((d) => delete d.carbonlei.registry)).toBe(false);
   });
 });

@@ -94,6 +94,15 @@ test("Buyer what-if slider: hypothetical figures follow the formula at the card'
   await expect(out.locator("dd").nth(2)).toHaveText(`€${f(gap * price, 0)}`);
   await expect(card.locator(".whatif-rate")).toContainText(`about €${e2(0.1 * price)} per tonne of goods`);
   await expect(card.locator(".whatif-rate")).toContainText("(gross, illustrative)");
+  // Neutral wording: what a lower verified intensity is worth, not who gains it.
+  await expect(card.locator(".whatif-head")).toContainText("What a lower verified intensity is worth");
+  await expect(card.locator(".whatif-head .tag-hypo")).toHaveText("Hypothetical");
+  await expect(card.locator(".whatif-rate")).toContainText("each 0.1 tCO2e/t of verified intensity accounts for about");
+  await expect(card.locator(".whatif-point")).toContainText(
+    "That value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed before",
+  );
+  await expect(card.locator(".whatif-point")).toContainText("Who captures it is a commercial matter between buyer and producer.");
+  await expect(card.locator(".whatif")).not.toContainText(/premium|pay less|\btax|\bsav(e|es|ed|ing|ings)\b/i);
   // Keyboard: three steps down, then to the CBAM default (gap 0).
   await slider.focus();
   for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowLeft");
@@ -107,6 +116,60 @@ test("Buyer what-if slider: hypothetical figures follow the formula at the card'
   // The verified figures above the slider never change.
   await expect(card.locator(".gap-line")).toHaveText(`Declared-emissions gap: ${f(gap)} tCO2e`);
   await expect(card.locator(".compare")).toContainText(`${c.verifiedValue} tCO2e/t`);
+});
+
+/** The Supplier tab's ledger legend: verified, claimed and remaining tonnes (once the values are read). */
+async function supplierLedger(page: Page) {
+  await page.getByRole("tab", { name: "Supplier" }).click();
+  const legend = page.locator(".tonnage-legend");
+  await expect(legend).toContainText(/Remaining [\d.]+ t/);
+  const text = await legend.innerText();
+  const num = (label: string) => new RegExp(`${label} ([\\d.]+) t`).exec(text)?.[1] ?? "";
+  return { verified: num("Verified"), claimed: num("Claimed"), left: num("Remaining") };
+}
+
+test("First screen ledger strip: the Supplier tab's ledger values, the second importer's claim refused, one line, a link to card 2b", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.goto("./#buyer");
+  await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
+  const strip = page.locator(".ledger-strip");
+  const ledger = await supplierLedger(page);
+  expect(ledger.verified).toBe(data.report.verifiedTonnes);
+  await expect(strip.locator(".ledger-verified")).toHaveText(ledger.verified);
+  await expect(strip.locator(".ledger-claimed")).toHaveText(ledger.claimed);
+  await expect(strip.locator(".ledger-left")).toHaveText(ledger.left);
+  await expect(strip.locator(".ledger-second")).toHaveText(data.attacks.secondImporter.quantityTonnes);
+  expect(Number(data.attacks.secondImporter.quantityTonnes)).toBeGreaterThan(Number(ledger.left));
+  await expect(strip.locator(".ledger-refusal")).toHaveText(
+    `— a ${data.attacks.secondImporter.quantityTonnes} t claim for a second importer is refused.`,
+  );
+  // One line at 1280 px (the default viewport here is 1280 wide).
+  expect(page.viewportSize()?.width).toBe(1280);
+  const lines = await strip.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return Math.round((el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight));
+  });
+  expect(lines).toBe(1);
+  // The link opens Try to break it and focuses card 2b.
+  await strip.getByRole("link", { name: /^Try it \(2b\)/ }).click();
+  await expect(page.getByRole("tab", { name: "Try to break it" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#attack-2b")).toBeFocused();
+  await expect(page.locator("#attack-2b")).toBeInViewport();
+});
+
+test("First screen ledger strip in the offline view: the cached ledger, as on the Supplier tab", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  test.skip(!data.cached, "no cached snapshot in this demo data");
+  for (const r of data.network.rpcs as string[]) await page.route(`${r}**`, (x) => x.abort());
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: /Show cached results/ }).click();
+  await expect(page.getByText(/Offline view — cached on/)).toBeVisible();
+  const strip = page.locator(".ledger-strip");
+  const ledger = await supplierLedger(page);
+  expect(BigInt(Math.round(Number(ledger.left) * 1000))).toBe(BigInt(data.cached.remainingKg));
+  await expect(strip.locator(".ledger-verified")).toHaveText(ledger.verified);
+  await expect(strip.locator(".ledger-claimed")).toHaveText(ledger.claimed);
+  await expect(strip.locator(".ledger-left")).toHaveText(ledger.left);
 });
 
 test("PACT download after a VALID verification: the SDK's ProductFootprint of the verified credential; none when rejected", async ({ page }) => {

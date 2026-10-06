@@ -288,7 +288,8 @@ export function Attacks() {
           <Result id="a2a" />
         </div>
 
-        <div className="attack">
+        {/* The first screen's ledger strip links here (focus target). */}
+        <div className="attack" id="attack-2b" tabIndex={-1}>
           <div>
             <h3>2b · The supplier claims {data.attacks.secondImporter.quantityTonnes} t more for a second importer</h3>
             <div className="how">Dry run against the live Sepolia contract (eth_call) — no private key</div>
