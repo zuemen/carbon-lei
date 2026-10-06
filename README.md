@@ -17,6 +17,8 @@
 
 **The contract said yes; the credential said no.** In attack 4 the contract accepted an impostor's report ([tx 0x295abe6c…013](https://sepolia.etherscan.io/tx/0x295abe6cb63e3df44e942b07397ba926dcff815a6e1e2e05870f21d0dc3d0013)) after a simulated theft of the allowlist owner key; browser check 7 rejected it with `AUTHORITY_INVALID`.
 
+All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.
+
 **Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4.
 
 <details><summary>More: links, the 60-second walk-through, scope and the fictional-data notice</summary>
