@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { exportPactFromProof, type PactProduct } from "../../../sdk/pact.ts";
+import { disclosureCounts } from "../../../sdk/summary.ts";
 import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
 import fixture from "../../../fixtures/demo.json";
 import { scrollBelowTabbar, useApp } from "../App.tsx";
@@ -311,6 +312,7 @@ export function Buyer() {
     if (offline) {
       if (data.cached?.verification) {
         setResult(data.cached.verification as VerificationResult);
+        setChecked(proof);
         setFinished((n) => n + 1);
       }
       return;
@@ -332,6 +334,9 @@ export function Buyer() {
   }
 
   const byIndex = new Map(result?.checks.map((c) => [c.index, c]));
+  const counts = result && checked ? disclosureCounts(checked, result) : null;
+  const hiddenN = counts ? counts.hidden : (result?.hidden ?? 0);
+  const hiddenText = `${hiddenN} field${hiddenN === 1 ? "" : "s"} hidden by supplier${counts?.rejected ? ` · ${counts.rejected} disclosure${counts.rejected === 1 ? "" : "s"} rejected` : ""}.`;
   const malformed = result?.checks.find((c) => c.index === 0 && c.status === "fail");
   const cmp = data.comparison;
   const { q, dq, vq, gap, eur } = comparisonFigures(cmp);
@@ -532,7 +537,7 @@ export function Buyer() {
                 <span className="stamp red">Rejected</span>
               )}
               <p>
-                {result.hidden} field{result.hidden === 1 ? "" : "s"} hidden by supplier.
+                {hiddenText}
                 {result.primaryCode ? ` First failure: ${result.primaryCode}.` : ""} These checks cover who signed the value, their authority (up to this demo's simulated root of trust) and
                 the tonnage claim. They do not show that the emissions figure itself is correct, and they do not replace
                 the verification report or the CBAM Registry.

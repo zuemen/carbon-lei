@@ -67,8 +67,11 @@ test("Buyer summary under Verify: checks passed and the card's gap; a failed che
   } else {
     await expect(summary).not.toContainText("declared-emissions gap for this");
   }
+  await expect(page.locator(".overall")).toContainText("5 fields hidden by supplier.");
+  await expect(page.locator(".overall")).not.toContainText("rejected");
   await page.getByRole("button", { name: "Tamper with one number" }).click();
   await expect(summary).toContainText("Rejected — check 2 failed: A disclosed value was changed");
+  await expect(page.locator(".overall")).toContainText("5 fields hidden by supplier · 1 disclosure rejected.");
   await expect(summary).not.toContainText("declared-emissions gap for this");
 });
 
