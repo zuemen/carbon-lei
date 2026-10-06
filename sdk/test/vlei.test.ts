@@ -4,7 +4,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { describe, expect, it } from "vitest";
 import { hashString } from "../commitment.ts";
 import { base64url, utf8 } from "../encoding.ts";
-import { controllerSigs, verifyIssuance } from "../kel.ts";
+import { controllerSigs, parseAttachments, verifyIssuance } from "../kel.ts";
 import { SAID_DUMMY, computeSaid } from "../said.ts";
 import {
   DEMO_TRUST_ANCHOR,
@@ -21,7 +21,10 @@ const read = (f: string) => readFileSync(new URL(f, dir), "utf8");
 const vlei = JSON.parse(readFileSync(new URL("../../fixtures/vlei.json", import.meta.url), "utf8"));
 const anchorFile = readdirSync(dir).find((f) => f.startsWith("anchor-")) as string;
 const anchor = JSON.parse(read(anchorFile)) as AnchorEvidence;
-const auditorIcp = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i === anchor.auditor)?.raw;
+const auditorIcpMsg = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i === anchor.auditor);
+const auditorIcp = auditorIcpMsg?.raw;
+/** The inception's attachment: its controller and witness signatures (the witness receipts check 6 needs). */
+const auditorIcpAtc = auditorIcpMsg?.atc;
 
 const authority: AuthorityEvidence = {
   trustAnchor: vlei.trustAnchor,
@@ -48,9 +51,9 @@ const expectAuth = {
 
 describe("check 6: KEL anchor", () => {
   const exp = { credSAID: anchor.credSAID, auditorAID: anchor.auditor, kelSeq: BigInt(anchor.kelSeq), auditorAidHash: hashString(anchor.auditor) };
-  it("verifies the exported anchor event, signature and key binding", () => {
+  it("verifies the exported anchor event, signature, key binding and witness receipts", () => {
     expect(auditorIcp).toBeDefined();
-    const r = verifyAnchor({ ...anchor, establishmentRaw: auditorIcp }, exp);
+    const r = verifyAnchor({ ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc }, exp);
     expect(r).toMatchObject({ ok: true });
   });
   it("rejects an anchor without the auditor's inception event (key not bound)", () => {
@@ -180,6 +183,97 @@ describe("check 7: each issuance is signed in its issuer's KEL", () => {
   });
 });
 
+// ------------------------------------------------------------------ witness receipts (exported evidence)
+// Every exported KEL event carries `-VBq-AAB<controller sig>-BAD<3 witness sigs>-EAB<first seen>`;
+// the AIDs name 3 witnesses with threshold 2 (bt "2").
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const cnt = (n: number) => B64[n >> 6] + B64[n & 63];
+/** Rewrites the witness signatures of an exported attachment (and adds `extra` groups), keeping the rest byte-exact. */
+function rewitness(atc: string, fn: (sigs: string[]) => string[], extra = ""): string {
+  expect(atc.startsWith("-V") && atc.slice(4, 8) === "-AAB" && atc.slice(96, 98) === "-B").toBe(true);
+  const inner = atc.slice(4);
+  const n = parseAttachments(atc).witness.length;
+  const sigs = parseAttachments(atc).witness.map((s) => s.qb64);
+  const next = fn(sigs);
+  const body = inner.slice(0, 92) + (next.length ? "-B" + cnt(next.length) + next.join("") : "") + extra + inner.slice(96 + 88 * n);
+  return "-V" + cnt(body.length / 4) + body;
+}
+/** A valid Ed25519 signature over `raw` at witness index `i`, by a key that is not a witness. */
+const outsiderSig = (raw: string, i: number) => "A" + B64[i] + base64url(new Uint8Array([0, 0, ...ed25519.sign(utf8(raw), new Uint8Array(32).fill(9))])).slice(2);
+const corrupt = (sigs: string[], ...at: number[]) => sigs.map((s, k) => (at.includes(k) ? flip(s, 40) : s));
+/** The stream with the attachment of every copy of the KEL event `raw` rewritten. */
+const editAtc = (stream: string, raw: string, fn: (atc: string) => string) =>
+  rebuild(parseCesr(stream).map((m) => (m.raw === raw ? { ...m, atc: fn(m.atc ?? "") } : m)));
+
+describe("check 6: witness receipts on the anchor event and the auditor's inception", () => {
+  const exp = { credSAID: anchor.credSAID, auditorAID: anchor.auditor, kelSeq: BigInt(anchor.kelSeq), auditorAidHash: hashString(anchor.auditor) };
+  const full = { ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc } as AnchorEvidence;
+  const withAnchorWits = (fn: (s: string[]) => string[], extra = "") => ({ ...full, kelAttachment: rewitness(anchor.kelAttachment as string, fn, extra) });
+  const failing = (detail: string) => ({ ok: false, code: "ANCHOR_NOT_FOUND", detail });
+
+  it("the exported anchor and inception carry 3 of 3 witness signatures (threshold 2)", () => {
+    expect(verifyAnchor(full, exp).detail).toContain("witness receipts: 3 of 3 on this event, 3 of 3 on the inception event (threshold 2)");
+  });
+  it("one receipt removed or corrupted: 2 of 3 still meet the threshold", () => {
+    expect(verifyAnchor(withAnchorWits((s) => s.slice(1)), exp)).toMatchObject({ ok: true, detail: expect.stringContaining("2 of 3 on this event") });
+    expect(verifyAnchor(withAnchorWits((s) => corrupt(s, 1)), exp)).toMatchObject({ ok: true, detail: expect.stringContaining("2 of 3 on this event") });
+  });
+  it("two corrupted, or a signature by a key outside the witness list: below the threshold", () => {
+    expect(verifyAnchor(withAnchorWits((s) => corrupt(s, 0, 2)), exp)).toEqual(failing("anchor event: 1 of 3 witness signatures verify, the threshold is 2"));
+    const raw = anchor.event.raw;
+    expect(verifyAnchor(withAnchorWits((s) => [s[0], outsiderSig(raw, 1), outsiderSig(raw, 2)]), exp)).toEqual(
+      failing("anchor event: 1 of 3 witness signatures verify, the threshold is 2"),
+    );
+    // a receipt couple by the outsider's own (non-witness) AID is not counted either
+    const outsider = "B" + base64url(new Uint8Array([0, ...ed25519.getPublicKey(new Uint8Array(32).fill(9))])).slice(1);
+    const couple = "-CAB" + outsider + "0B" + outsiderSig(raw, 0).slice(2);
+    expect(verifyAnchor(withAnchorWits((s) => [s[0]], couple), exp)).toEqual(failing("anchor event: 1 of 3 witness signatures verify, the threshold is 2"));
+  });
+  it("no receipts: stripped from the anchor event, no attachment at all, or none for the inception", () => {
+    expect(verifyAnchor(withAnchorWits(() => []), exp)).toEqual(failing("anchor event: no witness receipts in the evidence"));
+    expect(verifyAnchor({ ...full, kelAttachment: undefined }, exp)).toEqual(failing("anchor event: no witness receipts in the evidence"));
+    expect(verifyAnchor({ ...full, establishmentAttachment: undefined }, exp)).toEqual(
+      failing("the auditor's inception event: no witness receipts in the evidence"),
+    );
+    expect(verifyAnchor({ ...full, establishmentAttachment: rewitness(auditorIcpAtc as string, (s) => corrupt(s, 0, 1)) }, exp)).toEqual(
+      failing("the auditor's inception event: 1 of 3 witness signatures verify, the threshold is 2"),
+    );
+  });
+});
+
+describe("check 7: witness receipts on every KEL event walked", () => {
+  const qviAnchor = anchorIn(authority.cesr.qvi, vlei.credentials.qvi.said);
+  const sn = parseInt(qviAnchor.ked.s, 16);
+  const rootIcp = parseCesr(authority.cesr.qvi).find((m) => m.ked.t === "icp" && m.ked.i === DEMO_TRUST_ANCHOR) as Message;
+  const qviWith = (raw: string, fn: (s: string[]) => string[]) => withCesr("qvi", editAtc(authority.cesr.qvi, raw, (a) => rewitness(a, fn)));
+
+  it("the exported chain: every walked event carries the threshold of witness signatures", () => {
+    expect(qviAnchor.ked.i).toBe(DEMO_TRUST_ANCHOR);
+    expect(parseAttachments(qviAnchor.atc ?? "").witness.map((s) => s.index)).toEqual([0, 1, 2]);
+    expect(verifyAuthority(authority, expectAuth).detail).toContain("every event with its witness threshold of receipts");
+  });
+  it("one receipt removed or corrupted on the root's anchor of the QVI credential: still 2 of 3", () => {
+    expect(verifyAuthority(qviWith(qviAnchor.raw, (s) => s.slice(0, 2)), expectAuth)).toMatchObject({ ok: true });
+    expect(verifyAuthority(qviWith(qviAnchor.raw, (s) => corrupt(s, 2)), expectAuth)).toMatchObject({ ok: true });
+  });
+  it("two corrupted: fails with the threshold reason", () => {
+    expect(verifyAuthority(qviWith(qviAnchor.raw, (s) => corrupt(s, 0, 1)), expectAuth)).toEqual(
+      invalid(`QVI credential: event #${sn} of the issuer's KEL: 1 of 3 witness signatures verify, the threshold is 2`),
+    );
+  });
+  it("receipts stripped from the root's inception: fails", () => {
+    expect(verifyAuthority(qviWith(rootIcp.raw, () => []), expectAuth)).toEqual(invalid("QVI credential: event #0 of the issuer's KEL: no witness receipts in the evidence"));
+  });
+  it("signatures by a key outside the witness list are not counted (the body's anchor of the ECR, every copy)", () => {
+    const ecrAnchor = anchorIn(authority.cesr.ecr, vlei.credentials.ecr.said);
+    const raw = ecrAnchor.raw;
+    const forged = editAtc(authority.cesr.ecr, raw, (a) => rewitness(a, (s) => [outsiderSig(raw, 0), s[1], outsiderSig(raw, 2)]));
+    expect(verifyAuthority(withCesr("ecr", forged), expectAuth)).toEqual(
+      invalid(`ECR credential: event #${parseInt(ecrAnchor.ked.s, 16)} of the issuer's KEL: 1 of 3 witness signatures verify, the threshold is 2`),
+    );
+  });
+});
+
 // Attack 4 evidence exported from the local KERI run (verifier/src/setup-impostor.ts); skipped until it exists.
 const impDir = new URL("../../fixtures/evidence/impostor/", import.meta.url);
 const impVleiUrl = new URL("../../fixtures/vlei-impostor.json", import.meta.url);
@@ -218,15 +312,16 @@ describe.skipIf(!hasImpostor)("attack 4: the impostor's exported chain (fixtures
     const f = readdirSync(impDir).find((n) => n.startsWith("anchor-"));
     if (!f) return;
     const a = JSON.parse(readFileSync(new URL(f, impDir), "utf8")) as AnchorEvidence;
-    const icp = parseCesr(readFileSync(new URL("cred-ecr.cesr", impDir), "utf8")).find((m) => m.ked.t === "icp" && m.ked.i === a.auditor)?.raw;
+    const icp = parseCesr(readFileSync(new URL("cred-ecr.cesr", impDir), "utf8")).find((m) => m.ked.t === "icp" && m.ked.i === a.auditor);
     expect(a.auditor).toBe(iv.agents.impAuditor.aid);
-    const r = verifyAnchor({ ...a, establishmentRaw: icp }, {
+    const r = verifyAnchor({ ...a, establishmentRaw: icp?.raw, establishmentAttachment: icp?.atc }, {
       credSAID: a.credSAID,
       auditorAID: a.auditor,
       kelSeq: BigInt(a.kelSeq),
       auditorAidHash: hashString(a.auditor),
     });
-    expect(r).toMatchObject({ ok: true });
+    // the impostor's anchor carries 2 witness signatures, which meets its threshold of 2
+    expect(r).toMatchObject({ ok: true, detail: expect.stringContaining("2 of 3 on this event") });
   });
 
   /**

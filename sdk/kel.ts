@@ -10,9 +10,14 @@
 //     `s` counts up from 0, `p` links to the prior event, and each event carries an Ed25519 controller
 //     signature over its exact bytes that verifies with the key of the latest establishment event;
 //     a rotation must reveal the key committed to by the prior next-key digest and be signed by it;
+//   - witness receipts: each of those events carries Ed25519 signatures over its exact bytes by at least
+//     `bt` distinct witnesses of the witness list in force at that event (`b` of the inception, changed by
+//     a rotation's `br` cuts and `ba` adds), as indexed witness signatures (-B##, index i = i-th witness)
+//     or non-transferable receipt couples (-C##); a signature by a key not in the list is not counted;
 //   - the registry inception (`vcp`) names the issuer and is anchored in the same KEL.
 // Supported key state: one key with threshold "1" (the demo AIDs). Other thresholds, delegated AIDs
-// (dip, drt) and two different events at one sequence number fail closed. Witness receipts are not checked.
+// (dip, drt) and two different events at one sequence number fail closed. Witnesses are not queried:
+// the receipts are those in the presented evidence.
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { blake3 } from "@noble/hashes/blake3.js";
 import { base64url, fromBase64url, utf8 } from "./encoding.ts";
@@ -56,10 +61,167 @@ export interface IndexedSig {
   raw: Uint8Array;
 }
 
+/** A non-transferable receipt couple (-C group): the receiptor's AID, which is its Ed25519 key, and its signature. */
+export interface ReceiptCouple {
+  verfer: string;
+  raw: Uint8Array;
+}
+
+/** The signatures attached to a KERI event. Indexed witness signatures refer to the event's witness list. */
+export interface EventAttachments {
+  controller: IndexedSig[];
+  witness: IndexedSig[];
+  receipts: ReceiptCouple[];
+}
+
+/** Raw 64 bytes of an Ed25519 signature in qb64 (two pad characters stand in for the code). */
+const sigRaw = (qb64: string, codeLen: number) => fromBase64url("AA" + qb64.slice(codeLen)).slice(2);
+
+/** One qb64 primitive of `size` characters whose code matches `code`; returns the position after it. */
+function primitive(atc: string, i: number, code: RegExp, size: number, what: string): number {
+  const q = atc.slice(i, i + size);
+  if (q.length !== size || !code.test(q) || !/^[A-Za-z0-9_-]*$/.test(q)) throw new Error(`malformed ${what} in attachment`);
+  return i + size;
+}
+
+/** Indexed Ed25519 signature: code A/B with a one-character index (88 chars), or 2A/2B with a two-character index (92 chars). */
+function indexedSig(atc: string, i: number): [IndexedSig, number] {
+  if (atc[i] === "A" || atc[i] === "B") {
+    const qb64 = atc.slice(i, i + 88);
+    if (!/^[AB][A-Za-z0-9_-]{87}$/.test(qb64)) throw new Error("malformed indexed signature in attachment");
+    return [{ qb64, index: b64Int(qb64[1]), raw: sigRaw(qb64, 2) }, i + 88];
+  }
+  if (atc.startsWith("2A", i) || atc.startsWith("2B", i)) {
+    const qb64 = atc.slice(i, i + 92);
+    if (!/^2[AB][A-Za-z0-9_-]{90}$/.test(qb64)) throw new Error("malformed indexed signature in attachment");
+    return [{ qb64, index: b64Int(qb64.slice(2, 4)), raw: sigRaw(qb64, 6) }, i + 92];
+  }
+  throw new Error(`unsupported indexed signature ${atc.slice(i, i + 2)}`);
+}
+
+/** Counter `-X##`: its code letter and count. */
+function counter(atc: string, i: number): [string, number] {
+  const c = atc.slice(i, i + 4);
+  if (c.length !== 4 || c[0] !== "-") throw new Error(`unexpected attachment text ${atc.slice(i, i + 8)}...`);
+  return [c[1], b64Int(c.slice(2))];
+}
+
+/** A nested `-A##` group (signatures of a transferable receiptor, not of the event's controller): skipped. */
+function skipSigGroup(atc: string, i: number): number {
+  const [code, n] = counter(atc, i);
+  if (code !== "A") throw new Error("malformed signature group in attachment");
+  i += 4;
+  for (let k = 0; k < n; k++) i = indexedSig(atc, i)[1];
+  return i;
+}
+
+const SEQNER = /^0A/;
+const DATER = /^1AAG/;
+const PREFIX = /^[A-Za-z]/;
+
+/** Reads the counted groups in atc[i, end) into `out`. */
+function readGroups(atc: string, i: number, end: number, out: EventAttachments): void {
+  const nested = (n: number) => {
+    if (i + n * 4 > end) throw new Error("attachment group longer than the attachment");
+    readGroups(atc, i, i + n * 4, out);
+    i += n * 4;
+  };
+  while (i < end) {
+    if (atc.startsWith("-0V", i)) {
+      const n = b64Int(atc.slice(i + 3, i + 8));
+      i += 8;
+      nested(n);
+      continue;
+    }
+    if (atc.startsWith("-_AAA", i)) {
+      i = primitive(atc, i, /^-_AAA/, 8, "version code");
+      continue;
+    }
+    const [code, n] = counter(atc, i);
+    i += 4;
+    switch (code) {
+      case "V": // attachment group, counted in quadlets
+        nested(n);
+        break;
+      case "A": // controller indexed signatures
+      case "B": // witness indexed signatures
+        for (let k = 0; k < n; k++) {
+          const [sig, j] = indexedSig(atc, i);
+          (code === "A" ? out.controller : out.witness).push(sig);
+          i = j;
+        }
+        break;
+      case "C": // non-transferable receipt couples: the receiptor's key, an Ed25519 signature
+        for (let k = 0; k < n; k++) {
+          const verfer = atc.slice(i, i + 44);
+          i = primitive(atc, i, /^[BD]/, 44, "receipt couple key");
+          const cigar = atc.slice(i, i + 88);
+          i = primitive(atc, i, /^0B/, 88, "receipt couple signature");
+          out.receipts.push({ verfer, raw: sigRaw(cigar, 2) });
+        }
+        break;
+      case "D": // receipts by transferable AIDs: prefix, sn, digest, signature (not witness receipts)
+        for (let k = 0; k < n; k++) {
+          i = primitive(atc, i, PREFIX, 44, "receipt prefix");
+          i = primitive(atc, i, SEQNER, 24, "sequence number");
+          i = primitive(atc, i, PREFIX, 44, "digest");
+          i = indexedSig(atc, i)[1];
+        }
+        break;
+      case "E": // first-seen replay couples: sn, date-time
+        for (let k = 0; k < n; k++) i = primitive(atc, primitive(atc, i, SEQNER, 24, "sequence number"), DATER, 36, "date-time");
+        break;
+      case "F": // signature groups of transferable AIDs: prefix, sn, digest, -A## group
+        for (let k = 0; k < n; k++) {
+          i = primitive(atc, i, PREFIX, 44, "signer prefix");
+          i = primitive(atc, i, SEQNER, 24, "sequence number");
+          i = primitive(atc, i, PREFIX, 44, "digest");
+          i = skipSigGroup(atc, i);
+        }
+        break;
+      case "G": // seal source couples: sn, digest
+        for (let k = 0; k < n; k++) i = primitive(atc, primitive(atc, i, SEQNER, 24, "sequence number"), PREFIX, 44, "digest");
+        break;
+      case "H": // last-establishment signature groups: prefix, -A## group
+        for (let k = 0; k < n; k++) i = skipSigGroup(atc, primitive(atc, i, PREFIX, 44, "signer prefix"));
+        break;
+      case "I": // seal source triples: prefix, sn, digest
+        for (let k = 0; k < n; k++) {
+          i = primitive(atc, i, PREFIX, 44, "seal prefix");
+          i = primitive(atc, i, SEQNER, 24, "sequence number");
+          i = primitive(atc, i, PREFIX, 44, "digest");
+        }
+        break;
+      case "L": // pathed material, counted in quadlets
+        i += n * 4;
+        break;
+      default:
+        throw new Error(`unsupported attachment group -${code}`);
+    }
+  }
+  if (i !== end) throw new Error("attachment group does not end where its count says");
+}
+
+/**
+ * Signatures attached to a KERI event, as KERIA exports them: an optional attachment group
+ * (-V## / -0V#####) holding controller indexed signatures (-A##), witness indexed signatures (-B##),
+ * non-transferable receipt couples (-C##), and groups that carry no signature by the event's
+ * controller or witnesses (first-seen couples -E##, seal sources, receipts by transferable AIDs),
+ * which are skipped. Anything else throws.
+ */
+export function parseAttachments(atc: string): EventAttachments {
+  const text = atc.replace(/\s+$/, "");
+  const out: EventAttachments = { controller: [], witness: [], receipts: [] };
+  readGroups(text, 0, text.length, out);
+  return out;
+}
+
 /**
  * Controller indexed Ed25519 signatures from a KEL record attachment: skips an optional
- * attachment-group counter (-V## / -0V#####), then reads -A## followed by ## signatures
- * (88 characters each; code A = both lists, code B = current list only; index in the 2nd char).
+ * attachment-group counter (-V## / -0V#####) without checking its count, then reads -A## followed by
+ * ## signatures (88 characters each; code A = both lists, code B = current list only; index in the 2nd
+ * char). Lenient on purpose (the watcher reads live KERIA attachments with it); witness receipts are
+ * read with the strict parseAttachments.
  */
 export function controllerSigs(atc: string): IndexedSig[] {
   let i = 0;
@@ -105,6 +267,101 @@ function signedBy(m: KelMessage, key: string): boolean {
   }
 }
 
+/** Witness list (`b`) and witness threshold (`bt`, the "toad") in force at an event. */
+export interface WitnessState {
+  wits: string[];
+  toad: number;
+}
+
+const isList = (x: unknown): x is string[] => Array.isArray(x) && x.every((w) => typeof w === "string");
+
+/**
+ * The witness state set by an establishment event: an inception names its witnesses (`b`); a rotation
+ * removes `br` from the current list, then appends `ba` (KERI keeps the order, so index i is the i-th
+ * witness of the resulting list). Returns the reason when the configuration is not valid.
+ */
+export function witnessState(ked: Record<string, any>, current?: WitnessState): WitnessState | string {
+  let wits: string[];
+  if (ked.t === "icp") {
+    if (!isList(ked.b)) return "the witness list is not readable";
+    wits = ked.b;
+  } else if (ked.t === "rot") {
+    if (!current || !isList(ked.br) || !isList(ked.ba)) return "the rotation's witness changes are not readable";
+    if (new Set(ked.br).size !== ked.br.length || ked.br.some((w) => !current.wits.includes(w))) {
+      return "the rotation removes a witness that is not in the witness list";
+    }
+    const kept = current.wits.filter((w) => !ked.br.includes(w));
+    if (ked.ba.some((w) => kept.includes(w))) return "the rotation adds a witness that is already in the witness list";
+    wits = [...kept, ...ked.ba];
+  } else {
+    return `event type ${ked.t} does not set witnesses`;
+  }
+  if (new Set(wits).size !== wits.length) return "the witness list names a witness twice";
+  const toad = typeof ked.bt === "string" && /^(0|[1-9a-f][0-9a-f]*)$/.test(ked.bt) ? parseInt(ked.bt, 16) : NaN;
+  if (!Number.isInteger(toad) || toad > wits.length || (wits.length > 0 && toad < 1)) {
+    return `the witness threshold ${JSON.stringify(ked.bt)} does not fit ${wits.length} witnesses`;
+  }
+  return { wits, toad };
+}
+
+/** Ed25519 signature by a witness: a non-transferable AID ('B'), which is its own verification key. */
+function witnessSigned(wit: string, sig: Uint8Array, bytes: Uint8Array): boolean {
+  if (!/^B[A-Za-z0-9_-]{43}$/.test(wit)) return false;
+  try {
+    return ed25519.verify(sig, bytes, decodeVerKey(wit));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The witnesses in `state` whose signature over the exact event bytes is attached to one of the copies:
+ * indexed witness signatures (index i = the i-th witness of the list) and non-transferable receipt
+ * couples whose AID is in the list. Each witness counts once; a signature by any other key is not counted.
+ * Stops verifying once `enough` witnesses are found.
+ */
+export function witnessReceipts(
+  copies: readonly KelMessage[],
+  state: WitnessState,
+  enough = Infinity,
+): { verified: string[]; present: number; unreadable: boolean } {
+  const ok = new Set<string>();
+  let present = 0;
+  let unreadable = false;
+  const check = (w: string | undefined, sig: Uint8Array, bytes: Uint8Array) => {
+    if (w !== undefined && ok.size < enough && !ok.has(w) && witnessSigned(w, sig, bytes)) ok.add(w);
+  };
+  for (const c of copies) {
+    if (!c.atc) continue;
+    let att: EventAttachments;
+    try {
+      att = parseAttachments(c.atc);
+    } catch {
+      unreadable = true;
+      continue;
+    }
+    present += att.witness.length + att.receipts.length;
+    const bytes = utf8(c.raw);
+    for (const s of att.witness) check(state.wits[s.index], s.raw, bytes);
+    for (const r of att.receipts) check(state.wits.includes(r.verfer) ? r.verfer : undefined, r.raw, bytes);
+  }
+  return { verified: [...ok], present, unreadable };
+}
+
+/**
+ * Whether at least the threshold (`bt`) of the witnesses signed the event: `reason` is "" when they did.
+ * `verified` counts the witnesses whose signature verifies (all of them unless `all` is false, in which
+ * case verification stops at the threshold).
+ */
+export function witnessThreshold(copies: readonly KelMessage[], state: WitnessState, all = true): { verified: number; reason: string } {
+  if (state.toad === 0) return { verified: 0, reason: "" };
+  const r = witnessReceipts(copies, state, all ? Infinity : state.toad);
+  const verified = r.verified.length;
+  if (verified >= state.toad) return { verified, reason: "" };
+  if (!r.present) return { verified, reason: r.unreadable ? "its attachment cannot be read, so no witness receipt is counted" : "no witness receipts in the evidence" };
+  return { verified, reason: `${verified} of ${state.wits.length} witness signatures verify, the threshold is ${state.toad}` };
+}
+
 export type KelResult = { ok: true; keys: string[] } | { ok: false; reason: string };
 
 /** The KEL events of `aid` in the messages, by sequence number (an event repeated in the stream is kept once per copy). */
@@ -131,6 +388,7 @@ export function verifyKel(msgs: readonly KelMessage[], aid: string, upTo: number
   let keys: string[] = [];
   let next: string[] = [];
   let establishmentOnly = false;
+  let wit: WitnessState | undefined;
   let prior: KelMessage | undefined;
   for (let sn = 0; sn <= upTo; sn++) {
     const copies = bySn.get(sn);
@@ -157,6 +415,9 @@ export function verifyKel(msgs: readonly KelMessage[], aid: string, upTo: number
       if (k.t === "rot" && (next.length !== 1 || nextKeyDigest(k.k[0]) !== next[0])) {
         return err(`${at}: the rotation's key is not the one committed to by the prior next-key digest`);
       }
+      const w = witnessState(k, wit);
+      if (typeof w === "string") return err(`${at}: ${w}`);
+      wit = w;
       keys = k.k;
       next = Array.isArray(k.n) ? k.n : [];
       if (k.t === "icp") establishmentOnly = Array.isArray(k.c) && k.c.includes("EO");
@@ -166,6 +427,9 @@ export function verifyKel(msgs: readonly KelMessage[], aid: string, upTo: number
       return err(`${at}: event type ${k.t} is not supported`);
     }
     if (!copies.some((c) => signedBy(c, keys[0]))) return err(`${at}: the controller signature does not verify with the issuer's key`);
+    // Witness receipts: at least `bt` of the witnesses in force at this event signed its exact bytes.
+    const receipts = witnessThreshold(copies, wit as WitnessState, false);
+    if (receipts.reason) return err(`${at}: ${receipts.reason}`);
     prior = m;
   }
   return { ok: true, keys };

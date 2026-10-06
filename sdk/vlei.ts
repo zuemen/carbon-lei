@@ -6,19 +6,24 @@
 //     its seals contain { d: credSAID };
 //   - its Ed25519 signature verifies over the exact event bytes;
 //   - the signing key is the key in the auditor's inception event, whose SAID also recomputes
-//     and whose prefix is the auditor's AID (self-addressing).
+//     and whose prefix is the auditor's AID (self-addressing);
+//   - witness receipts: at least `bt` of the witnesses named in the auditor's inception event (`b`)
+//     signed the anchor event's exact bytes (from `kelAttachment`), and the inception event itself
+//     (from `establishmentAttachment`). Like the key, the witness list is the inception's: a rotation
+//     between inception and anchor is not walked here, so the signatures would not verify (fail closed).
 // Check 7 (authority): the credential chain QVI → LE (body) → ECR (auditor), plus the NAB's
 //   accreditation of the body, from exported CESR streams: every ACDC SAID recomputes, schemas,
 //   issuers, issuees, edges and LEIs line up, the QVI was issued by the configured root, the
 //   accreditation scope covers the CN code, each issuance has a TEL `iss` event and no `rev`,
 //   each issuer signed the KEL event anchoring its issuance (sdk/kel.ts: Ed25519 over the event bytes,
 //   key state walked from the issuer's self-addressing inception, so the QVI's anchor must be signed
-//   with the pinned root's key), and the on-chain allowlist hashes equal the credential SAID hashes.
+//   with the pinned root's key; every event walked also carries the witness threshold of receipts),
+//   and the on-chain allowlist hashes equal the credential SAID hashes.
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { hashString } from "./commitment.ts";
 import type { Hex } from "./credential.ts";
 import { utf8 } from "./encoding.ts";
-import { decodeIndexedSig, decodeVerKey, verifyIssuance } from "./kel.ts";
+import { decodeIndexedSig, decodeVerKey, verifyIssuance, witnessState, witnessThreshold } from "./kel.ts";
 import { computeSaid } from "./said.ts";
 
 export { decodeIndexedSig, decodeVerKey } from "./kel.ts";
@@ -85,6 +90,10 @@ export interface AnchorEvidence {
   signingKeys: { qb64: string }[];
   /** The auditor's inception event (raw JSON), binding the signing key to the AID. */
   establishmentRaw?: string;
+  /** CESR attachment of the anchor event as exported: controller and witness signatures. */
+  kelAttachment?: string | null;
+  /** CESR attachment of the auditor's inception event: its witness receipts. */
+  establishmentAttachment?: string;
 }
 
 export function verifyAnchor(
@@ -138,12 +147,23 @@ export function verifyAnchor(
     if (!Array.isArray(est.ked.k) || est.ked.k[0] !== key || est.ked.kt !== "1") {
       return fail(code, "the signing key is not the auditor's key");
     }
+    // Witness receipts, with the witnesses and threshold of the auditor's inception event.
+    const wit = witnessState(est.ked);
+    if (typeof wit === "string") return fail(code, `the auditor's inception event: ${wit}`);
+    const onAnchor = witnessThreshold([{ ...event, atc: ev.kelAttachment ?? undefined }], wit);
+    if (onAnchor.reason) return fail(code, `anchor event: ${onAnchor.reason}`);
+    const onEst = witnessThreshold([{ ...est, atc: ev.establishmentAttachment }], wit);
+    if (onEst.reason) return fail(code, `the auditor's inception event: ${onEst.reason}`);
+    const n = wit.wits.length;
+    const receipts = wit.toad
+      ? `; witness receipts: ${onAnchor.verified} of ${n} on this event, ${onEst.verified} of ${n} on the inception event (threshold ${wit.toad})`
+      : "; the auditor's AID has no witnesses";
+    return {
+      ok: true,
+      code: "",
+      detail: `KERI event #${parseInt(k.s, 16)} by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event${receipts}`,
+    };
   }
-  return {
-    ok: true,
-    code: "",
-    detail: `KERI event #${parseInt(k.s, 16)} by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event`,
-  };
 }
 
 // ---------------------------------------------------------------------- check 7
@@ -237,7 +257,7 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     return {
       ok: true,
       code: "",
-      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}; each issuance signed in its issuer's KEL${x.onchain ? "; hashes match the on-chain allowlist" : ""}`,
+      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts${x.onchain ? "; hashes match the on-chain allowlist" : ""}`,
     };
   } catch (e) {
     return fail(code, `evidence could not be read: ${(e as Error).message}`);

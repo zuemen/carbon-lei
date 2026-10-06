@@ -183,7 +183,10 @@ export function impostorProof(cred: SignedCredential, files: ImpostorFiles): Imp
     const icp = existsSync(ecr)
       ? parseCesr(readFileSync(ecr, "utf8")).find((m) => m.ked.t === "icp" && m.ked.i === anchorEvidence.auditor)
       : undefined;
-    if (icp) anchorEvidence.establishmentRaw = icp.raw;
+    if (icp) {
+      anchorEvidence.establishmentRaw = icp.raw;
+      if (icp.atc) anchorEvidence.establishmentAttachment = icp.atc; // the inception's witness receipts
+    }
   }
   const bundleFile = resolve(files.evidenceDir, "authority-bundle.json");
   if (!existsSync(bundleFile)) throw new Error(`${bundleFile} not found: export the impostor's evidence first`);
