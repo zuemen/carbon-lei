@@ -26,7 +26,7 @@ The pilot is phase 1 of the [adoption path](ADOPTION.md#5-adoption-path): around
 | Lead auditor | An ECR and a KERI identifier with its key event log | Anchors each credential's SAID in that log before registration |
 | Operator (supplier) | Its existing LEI and an EVM wallet; no vLEI | Chooses the fields to disclose (`carbonlei present`); claims each shipment (`claimShipment`) |
 | Importers | Their EORI number or a salted hash of it, for the on-chain claim | Verify each pilot shipment in the browser or with `carbonlei verify`; no wallet, nothing to install |
-| Trust-registry operator (the CarbonLEI team during the pilot) | A multisig owner key instead of the prototype's single key; one or more watcher processes | Checks each body's vLEI chain before listing it (`node verifier/src/onboard-check.ts`), then `addVerifier` and `addAuditor`; runs the watcher (`verifier/src/watch.ts`) |
+| Trust-registry operator (the CarbonLEI team during the pilot) | A multisig allowlist owner key instead of the prototype's single key; one or more watcher processes | Checks each body's vLEI chain before listing it (`node verifier/src/onboard-check.ts`), then `addVerifier` and `addAuditor`; runs the watcher (`verifier/src/watch.ts`) |
 
 ## 3. What runs where
 

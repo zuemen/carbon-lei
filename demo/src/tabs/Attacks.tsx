@@ -13,7 +13,7 @@ const BIGINT_FIELDS = new Set(["kelSeq", "verifiedKg", "validUntil"]);
 const utc = (iso: string) => `${iso.replace("T", " ").slice(0, 16)} UTC`;
 
 /**
- * Attack 4: a simulated owner-key compromise lists an impostor body whose vLEI chain leads to its own root.
+ * Attack 4: a simulated compromise of the allowlist owner key lists an impostor body whose vLEI chain leads to its own root.
  * The contract accepts its report; the page's verifier (pinned root, same code as the Buyer tab) rejects
  * the proof at check 7. Then the watcher's suspension and a dry run of a new registration.
  */
@@ -63,7 +63,7 @@ function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
       <div>
         <h3>4 · The owner key is stolen: an impostor body is put on the allowlist</h3>
         <div className="how">
-          Real transactions, simulated owner-key compromise — the proof is checked in your browser with the same verifier
+          Real transactions, simulated compromise of the allowlist owner key — the proof is checked in your browser with the same verifier
           as the Buyer tab
         </div>
         <p className="fine">

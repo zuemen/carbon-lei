@@ -49,7 +49,7 @@ export interface CachedSnapshot {
 }
 
 /**
- * Attack 4: a simulated owner-key compromise puts an impostor verification body, whose vLEI chain
+ * Attack 4: a simulated compromise of the allowlist owner key puts an impostor verification body, whose vLEI chain
  * leads to its own root, on the allowlist. Its registration succeeds; check 7 rejects its proof.
  */
 export interface Attack4 {

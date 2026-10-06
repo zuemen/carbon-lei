@@ -165,7 +165,7 @@ It writes `fixtures/evidence/anchor-<credSAID>.json`: the raw event, its control
 
 ## 8. Onboarding check and local chain demo
 
-**Onboarding check.** Before the owner key adds a verification body and its auditor to the allowlist, the vLEI chain is checked off-chain:
+**Onboarding check.** Before the allowlist owner key adds a verification body and its auditor to the allowlist, the vLEI chain is checked off-chain:
 
 ```sh
 node verifier/src/onboard-check.ts

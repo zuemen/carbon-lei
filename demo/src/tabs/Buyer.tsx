@@ -12,7 +12,7 @@ import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 1, text: "The credential has not been altered since it was issued (its content hash matches its ID)", source: "browser" },
   { n: 2, text: "No disclosed field was changed", source: "browser" },
-  { n: 3, text: "Signed by the registered verification body", source: "sepolia" },
+  { n: 3, text: "Signed by the registered verification body", source: "browser" },
   { n: 4, text: "The report is registered, valid for this shipment, and issued by this verification body and auditor", source: "sepolia" },
   { n: 5, text: "This batch was claimed for you, for this quantity", source: "sepolia" },
   {
@@ -259,14 +259,14 @@ export function Buyer() {
   const [checked, setChecked] = useState<Presentation | null>(null);
   const [pactBusy, setPactBusy] = useState(false);
   const [pactError, setPactError] = useState("");
-  // Bumped when a verification finishes; on narrow screens the checks are then scrolled into view.
+  // Bumped when a verification finishes; on narrow screens the summary line under Verify is then scrolled into view.
   const [finished, setFinished] = useState(0);
-  const checksRef = useRef<HTMLElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
   const cmpRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!finished || !window.matchMedia("(max-width: 600px)").matches) return;
-    if (checksRef.current) scrollBelowTabbar(checksRef.current);
+    if (summaryRef.current) scrollBelowTabbar(summaryRef.current);
   }, [finished]);
 
   function seeComparison() {
@@ -424,7 +424,7 @@ export function Buyer() {
               {running ? "Verifying…" : "Verify"}
             </button>
           </div>
-          <div className="verify-summary-slot" role="status">
+          <div className="verify-summary-slot" role="status" ref={summaryRef}>
             {result && !running && <VerifySummary result={result} onSeeComparison={seeComparison} />}
           </div>
           {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}
@@ -466,13 +466,13 @@ export function Buyer() {
           )}
         </section>
 
-        <section className="sheet reveal" aria-labelledby="checks-h" ref={checksRef}>
+        <section className="sheet reveal" aria-labelledby="checks-h">
           <p className="sheet-kicker" id="checks-h">
             Eight checks: seven verification checks plus one rule-based reconciliation check
           </p>
           <div className="legend" role="group" aria-label="Source labels">
-            <span>◉ live · Sepolia = read from Sepolia now (contract state, or the chain ID for check 3)</span>
-            <span>◎ live · your browser = recomputed on this page</span>
+            <span>◉ live · Sepolia = contract state read from Sepolia now</span>
+            <span>◎ live · your browser = recomputed on this page (check 3 takes only the chain ID from the Sepolia node)</span>
             <span>▤ exported evidence = from a local KERI run ({data.exportDate})</span>
             <span>≡ rule-based · advisory = can flag, never fails</span>
           </div>

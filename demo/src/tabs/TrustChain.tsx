@@ -93,7 +93,7 @@ export function TrustChain() {
             {data.attacks.attack4 ? (
               <p>
                 Posing as a verification body. Its vLEI chain leads to a root it controls, not to the root this page
-                pins. In attack 4 a simulated theft of the operator key put it on the allowlist; check 7 rejects its
+                pins. In attack 4 a simulated theft of the allowlist owner key put it on the allowlist; check 7 rejects its
                 proof and the watcher suspended it (Try to break it, card 4). LEI {data.impostor.lei} (fictional).
               </p>
             ) : (
@@ -106,12 +106,12 @@ export function TrustChain() {
           <section className="sheet reveal" aria-label="Who writes the allowlist">
             <p className="sheet-kicker">Who writes the allowlist</p>
             <p className="fine">
-              In this demo, two operator keys. The trust-registry operator adds verification bodies and auditors and can
-              rotate a body's address; a separate watcher key syncs an auditor's revocation automatically (a watcher process
+              In this demo, the allowlist owner key and the watcher key. The allowlist owner key (held by the trust-registry
+              operator) adds verification bodies and auditors and can rotate a body's address; a separate watcher key syncs an auditor's revocation automatically (a watcher process
               polls the body's key event log) and, in this demo, sends suspensions by hand. Neither key
               can edit, revoke or re-assign a report or its tonnage. Every allowlist write is an on-chain event, and each
-              addition carries credential hashes (SAIDs) you can re-check. The contract trusts these keys: a stolen operator
-              key can list a fake body whose reports the contract accepts, and only the verifier's pinned root of trust
+              addition carries credential hashes (SAIDs) you can re-check. The contract trusts these keys: a stolen allowlist
+              owner key can list a fake body whose reports the contract accepts, and only the verifier's pinned root of trust
               catches it (Try to break it, card 4). Roadmap: a multisig of accreditation bodies.
             </p>
           </section>
