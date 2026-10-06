@@ -2,7 +2,7 @@
 
 **Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? vLEI credentials plus an Ethereum Sepolia ledger.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 278 contract, 114 SDK](https://img.shields.io/badge/tests-278%20contract%20%2B%20114%20SDK-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 278 contract, 118 SDK, 28 verifier, 21 browser](https://img.shields.io/badge/tests-278%20contract%20%2B%20118%20SDK%20%2B%2028%20verifier%20%2B%2021%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
 | | |
 |---|---|
