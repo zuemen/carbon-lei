@@ -109,7 +109,13 @@ export async function audit(rows: TableRow[], recorded: Map<string, Recorded>, s
       );
     }
     for (const address of row.addresses) {
-      const code = await src.getCode({ address });
+      let code: string | undefined;
+      try {
+        code = await src.getCode({ address });
+      } catch (err) {
+        out.push({ ok: false, text: `README line ${row.line}: ${address}: ${(err as Error).message.split("\n")[0]}` });
+        continue;
+      }
       const bytes = code && code !== "0x" ? (code.length - 2) / 2 : 0;
       const created = row.txs.some((h) => recorded.get(h.toLowerCase())?.contractAddress?.toLowerCase() === address.toLowerCase());
       if (!bytes) out.push({ ok: false, text: `README line ${row.line}: ${address} has no code` });
@@ -137,15 +143,25 @@ async function main() {
   const lines = await audit(rows, recordedTxs(readJson(values.txs), readJson(values.deployment)), client as unknown as ReceiptSource);
   for (const l of lines) console.log(`${l.ok ? "OK  " : "FAIL"}  ${l.text}`);
   const bad = lines.filter((l) => !l.ok).length;
-  console.log(`\n${lines.length - bad} of ${lines.length} match (${urls.join(", ")})`);
+  if (!lines.length) {
+    console.error("no rows found in the On-chain proof table");
+    return 1;
+  }
+  const txLines = lines.filter((l) => l.text.includes("tx ")).length;
+  const txBad = lines.filter((l) => !l.ok && l.text.includes("tx ")).length;
+  const cLines = lines.length - txLines;
+  const cBad = bad - txBad;
+  console.log(`\n${txLines - txBad} of ${txLines} transactions, ${cLines - cBad} of ${cLines} contracts match (${urls.join(", ")})`);
+  if (bad) console.log("If a public RPC is unreachable, retry with: npm run audit:onchain -- --rpc <Sepolia RPC URL>");
   return bad ? 1 : 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) {
   main().then(
     (code) => process.exit(code),
     (err) => {
       console.error(`audit-onchain failed: ${(err as Error).message}`);
+      console.error("If a public RPC is unreachable, retry with: npm run audit:onchain -- --rpc <Sepolia RPC URL>");
       process.exit(1);
     },
   );

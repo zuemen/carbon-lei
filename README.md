@@ -207,13 +207,17 @@ Open [zuemen.github.io/carbon-lei](https://zuemen.github.io/carbon-lei/). The ho
 - **On-chain proof**: every transaction in the [On-chain proof](#on-chain-proof) table.
 - **Supplier**: a "Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport". It lists the CN code, the verified emissions intensity (illustrative), the verification body's LEI, the validity status and the credential. Its QR code opens the Buyer tab of the hosted page with the `credSAID` and the batch ID; the page loads the matching proof, ready to verify. We do not claim conformance with ESPR or with any DPP specification.
 
-### Terminal check (Node.js 22; no Docker, wallet or key)
+### Terminal check (Node.js 22.18 or later, `.nvmrc`: 22.20.0; no Docker, wallet or key)
 
 ```bash
-git clone https://github.com/zuemen/carbon-lei && cd carbon-lei && npm ci
-npm run verify:demo     # checks 0-8 on the demo proof (fixtures/sepolia-demo-proof.json) against public Sepolia RPCs; exits 0 when VALID
-npm run audit:onchain   # every transaction and contract in the On-chain proof table, compared with its Sepolia receipt
+git clone https://github.com/zuemen/carbon-lei
+cd carbon-lei
+npm ci
+npm run verify:demo
+npm run audit:onchain
 ```
+
+`verify:demo` runs checks 0-8 on the demo proof (`fixtures/sepolia-demo-proof.json`) against public Sepolia RPCs and exits 0 when VALID. `audit:onchain` compares every transaction and contract in the [On-chain proof](#on-chain-proof) table with its Sepolia receipt. If a public RPC is unreachable, add `-- --rpc <Sepolia RPC URL>` to either command.
 
 ### Local (full flow)
 
@@ -300,7 +304,7 @@ CI (`ci.yml`) runs three jobs on every push to `main` and every pull request: `c
 
 ## Measurements
 
-Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of the deployment built from commit `aedcb4c`; coverage and the gas report come from the test suite at commit `a6e0a3e` (the contracts have not changed since); test counts from commit `eac9cb3` (2026-10-06), plus the 4 reviewer-command tests added after it. Every row states its baseline. Computed values, such as the declared-emissions gap of 1.18 tCO2e per tonne of goods, are in [Climate impact](docs/CLIMATE_IMPACT.md) and are illustrative.
+Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of the deployment built from commit `aedcb4c`; coverage and the gas report come from the test suite at commit `a6e0a3e` (the contracts have not changed since); test counts from commit `eac9cb3` (2026-10-06), plus the 4 reviewer-command tests added in `3797d6c`. Every row states its baseline. Computed values, such as the declared-emissions gap of 1.18 tCO2e per tonne of goods, are in [Climate impact](docs/CLIMATE_IMPACT.md) and are illustrative.
 
 | What | Value | Baseline | How measured |
 |---|---|---|---|
