@@ -1,9 +1,11 @@
 // Verifier latency benchmark: runs the SDK's verifyPresentation on the demo proof
 // (fixtures/sepolia-demo-proof.json, with its evidence bundle) and records, per run, the time,
 // the number of JSON-RPC requests (counted by a wrapper around viem's http transport) and the
-// requests per method. Three series:
+// requests per method. Four series:
 //   cold:  a new Node process and a new client per run, against a public Sepolia RPC;
 //   warm:  one client, runs back to back, against the same RPC (after one unrecorded warm-up run);
+//   warmFullScan: as warm, with the CONTESTED events searched from the deployment block (the
+//          behaviour before the time-window search), for comparison;
 //   anvil: one client, runs back to back, against a local anvil fork of Sepolia pinned to one block
 //          (after one unrecorded warm-up run that fills anvil's fork cache), to separate computation
 //          from network latency. The time spent waiting for anvil is recorded per run as well.
@@ -32,7 +34,15 @@ import {
   type Transport,
 } from "viem";
 import { sepolia } from "viem/chains";
-import { ChainReader, LOG_CHUNK, SEPOLIA_RPCS, type Deployment } from "../sdk/chain.ts";
+import {
+  ChainReader,
+  LOG_CHUNK,
+  SEARCH_ROUNDS,
+  SEARCH_TOLERANCE,
+  SEPOLIA_RPCS,
+  type ChainReaderOptions,
+  type Deployment,
+} from "../sdk/chain.ts";
 import { batchKeyOf, reportKeyOf } from "../sdk/commitment.ts";
 import type { Hex } from "../sdk/credential.ts";
 import { vleiCheckers } from "../sdk/checkers.ts";
@@ -126,9 +136,15 @@ async function verifyOnce(reader: ChainReader, proof: Presentation) {
   return { ms: round(performance.now() - t0), overall: r.overall };
 }
 
-async function series(url: string, n: number, deployment: Deployment, proof: Presentation): Promise<RunRecord[]> {
+async function series(
+  url: string,
+  n: number,
+  deployment: Deployment,
+  proof: Presentation,
+  options: ChainReaderOptions = {},
+): Promise<RunRecord[]> {
   const c = countingClient(url);
-  const reader = new ChainReader(c.client, deployment);
+  const reader = new ChainReader(c.client, deployment, undefined, options);
   await verifyOnce(reader, proof); // warm-up, not recorded
   const runs: RunRecord[] = [];
   for (let i = 0; i < n; i++) {
@@ -277,7 +293,7 @@ async function demoStorage(url: string, deployment: Deployment, proof: Presentat
  * Scalability projection (computed, not measured) from the gas in the Sepolia receipts
  * (fixtures/sepolia-tx.json) and the storage words counted by `demoStorage`.
  */
-export function projection(gasRegister: number, gasClaim: number, logBlockSpan: number) {
+export function projection(gasRegister: number, gasClaim: number, logBlockSpan: number, windowedGetLogs = 2) {
   const gwei = [1, 5, 20];
   const eth = (gas: number) => Object.fromEntries(gwei.map((g) => [`${g} gwei`, formatUnits(BigInt(gas) * BigInt(g), 9)]));
   const cases: [number, number][] = [
@@ -288,6 +304,8 @@ export function projection(gasRegister: number, gasClaim: number, logBlockSpan: 
   ];
   const blocksPerDay = 7_200;
   const getLogs = (span: number) => 2 * Math.ceil(span / Number(LOG_CHUNK));
+  // 24 h of blocks plus the largest margin left on each side once the search has converged.
+  const windowLogs = getLogs(blocksPerDay + 2 * Number(SEARCH_TOLERANCE) + 1);
   return {
     label: "PROJECTED, NOT MEASURED: computed from the measured gas and storage figures; no ETH-to-currency conversion",
     gasFormula: `gas(N, M) = ${gasRegister} * N + ${gasClaim} * M (N reports, M shipment claims)`,
@@ -312,13 +330,17 @@ export function projection(gasRegister: number, gasClaim: number, logBlockSpan: 
     verifier: {
       viewCalls:
         "7 eth_call per verification, each a fixed number of mapping lookups (sdk/verify.ts round 0 and 1, sdk/checkers.ts; contracts/src/EmissionsClaimRegistry.sol reports, shipmentStatus, remainingKg, reportScopes, isValidAt; VerifierAllowlist institutions, auditors): independent of N and M",
-      eventSearches: `eth_getLogs per verification = 2 * ceil(blockSpan / ${LOG_CHUNK}), blockSpan = latest block - deployment block + 1 (sdk/chain.ts chunkedLogs; AuditorRevoked and VerifierSuspended, filtered by indexed topics): grows with the age of the deployment, not with N or M`,
+      eventSearches: `eth_getLogs per verification = 2 * ceil(S / ${LOG_CHUNK}), S = the blocks from a block before registeredAt to a block after registeredAt + 24 h, found by interpolation search (sdk/chain.ts blockRangeForTimes; AuditorRevoked and VerifierSuspended, filtered by indexed topics): S <= 24 h of blocks (${blocksPerDay} at 12 s) + a margin of at most ${SEARCH_TOLERANCE} blocks on each side once the search has converged, so 2 requests, independent of the age of the deployment and of N and M`,
+      blockSearch: `eth_getBlockByNumber per verification = 1 (block B) + 1 (the deployment block, read once per reader) + at most ${2 * 2 * SEARCH_ROUNDS} for the search (2 bounds, at most ${SEARCH_ROUNDS} rounds of 2 parallel reads each); also independent of the age of the deployment`,
+      fallback: `if a block read fails, the whole range from the deployment block is searched, as before: 2 * ceil(blockSpan / ${LOG_CHUNK}) eth_getLogs, blockSpan = latest block - deployment block + 1 (fail-safe, never a narrower range)`,
       measuredBlockSpan: logBlockSpan,
-      measuredGetLogs: getLogs(logBlockSpan),
+      measuredGetLogs: windowedGetLogs,
+      fullScanGetLogs: getLogs(logBlockSpan),
       projectedGetLogs: {
         assumption: `${blocksPerDay} blocks per day (12 s slots, no missed slots)`,
-        "30 days": getLogs(30 * blocksPerDay),
-        "1 year": getLogs(365 * blocksPerDay),
+        "30 days": windowLogs,
+        "1 year": windowLogs,
+        fullScanFallback: { "30 days": getLogs(30 * blocksPerDay), "1 year": getLogs(365 * blocksPerDay) },
       },
     },
   };
@@ -354,6 +376,11 @@ async function main() {
   console.log(`warm: ${n} runs on one client against ${url}`);
   const warm = await series(url, n, deployment, proof);
   warm.forEach((r, i) => console.log(`  warm ${i + 1}: ${r.ms} ms, ${r.rpcRequests} requests, ${r.overall}`));
+  console.log(`warmFullScan: ${n} runs on one client against ${url}, events searched from the deployment block`);
+  const warmFullScan = await series(url, n, deployment, proof, { fullEventScan: true });
+  warmFullScan.forEach((r, i) =>
+    console.log(`  warmFullScan ${i + 1}: ${r.ms} ms, ${r.rpcRequests} requests, ${r.overall}`),
+  );
 
   let anvil: { forkBlock: number; runs: RunRecord[] } | undefined;
   if (!values["no-anvil"]) {
@@ -378,7 +405,8 @@ async function main() {
   const c = deployment.contracts;
   const logBlockSpan = latest - Math.min(c.VerifierAllowlist.block, c.EmissionsClaimRegistry.block) + 1;
 
-  const all = [...cold, ...warm, ...(anvil?.runs ?? [])];
+  const all = [...cold, ...warm, ...warmFullScan, ...(anvil?.runs ?? [])];
+  const windowedGetLogs = Math.max(...[...cold, ...warm].map((r) => r.byMethod.eth_getLogs ?? 0));
   const bad = all.filter((r) => r.overall !== "VALID");
   const out = {
     description:
@@ -390,7 +418,7 @@ async function main() {
     sizes: sizes(),
     n,
     storage,
-    projection: projection(gasOf("registerReport1"), gasOf("claim1"), logBlockSpan),
+    projection: projection(gasOf("registerReport1"), gasOf("claim1"), logBlockSpan, windowedGetLogs),
     cold: {
       method:
         "a new Node process and a new viem client per run; `ms` is the verifyPresentation call, `sinceProcessStartMs` adds module loading, `processWallMs` is measured by the parent from spawn to exit",
@@ -404,6 +432,13 @@ async function main() {
       summaryMs: summary(warm.map((r) => r.ms)),
       summaryRpcRequests: summary(warm.map((r) => r.rpcRequests)),
       runs: warm,
+    },
+    warmFullScan: {
+      method:
+        "as warm, but the reader searches the CONTESTED events from the deployment block (ChainReaderOptions.fullEventScan, the behaviour before the time-window search), for comparison; run right after the warm series",
+      summaryMs: summary(warmFullScan.map((r) => r.ms)),
+      summaryRpcRequests: summary(warmFullScan.map((r) => r.rpcRequests)),
+      runs: warmFullScan,
     },
     anvil: anvil && {
       method:
@@ -420,7 +455,13 @@ async function main() {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(out, null, 2) + "\n");
   console.log(`\nwrote ${path}`);
-  console.log(JSON.stringify({ cold: out.cold.summaryMs, warm: out.warm.summaryMs, anvil: out.anvil?.summaryMs }, null, 2));
+  console.log(
+    JSON.stringify(
+      { cold: out.cold.summaryMs, warm: out.warm.summaryMs, warmFullScan: out.warmFullScan.summaryMs, anvil: out.anvil?.summaryMs },
+      null,
+      2,
+    ),
+  );
   if (bad.length) {
     console.error(`${bad.length} run(s) did not end VALID`);
     process.exitCode = 1;

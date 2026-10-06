@@ -22,6 +22,36 @@ export const SEPOLIA_RPCS = ["https://ethereum-sepolia-rpc.publicnode.com", "htt
 export const LOG_CHUNK = 10_000n;
 /** At most this many getLogs requests in flight at once (public RPCs rate-limit bursts). */
 export const LOG_PARALLEL = 4;
+/**
+ * Block search for a time window (`blockRangeForTimes`): at most this many rounds of getBlock reads
+ * per bound (2 reads in parallel per round).
+ */
+export const SEARCH_ROUNDS = 4;
+/** The search stops once a bound is known to within this many blocks (the log range then has this much margin). */
+export const SEARCH_TOLERANCE = 512n;
+/** Smallest margin, in blocks, put on each side of an interpolated estimate. */
+export const SEARCH_MIN_SLACK = 16n;
+/** Block timestamps read by the search are reused only for blocks at least this deep below the snapshot. */
+const CACHE_DEPTH = 128n;
+/** At most this many block timestamps are kept per reader (the cache is cleared when full). */
+const CACHE_BLOCKS = 4096;
+
+export interface ChainReaderOptions {
+  /**
+   * Search events from the deployment block, as before the time-window search was added
+   * (`blockRangeForTimes` then always returns the whole range). Reference mode for tests and audits.
+   */
+  fullEventScan?: boolean;
+  /** Overrides `SEARCH_TOLERANCE` (tests use 0 to make the search tighten every bound as far as it can). */
+  searchTolerance?: bigint;
+}
+
+/** A block range for an event search, and whether it was narrowed (false: the whole range from deployment). */
+export interface BlockRange {
+  fromBlock: bigint;
+  toBlock: bigint;
+  narrowed: boolean;
+}
 
 export interface Deployment {
   chainId: number;
@@ -74,12 +104,19 @@ export class ChainReader {
   readonly deployedBlock: bigint;
   /** When set (see `at`), every view call and event search reads this block, not the latest one. */
   readonly blockNumber?: bigint;
+  readonly options: ChainReaderOptions;
   private readonly deployment: Deployment;
+  /**
+   * Shared with the readers made by `at`: the deployment block's timestamp, read once, and the
+   * timestamps the block search has read of blocks at least `CACHE_DEPTH` below the snapshot.
+   */
+  private cache: { deploymentTimestamp?: Promise<bigint>; blocks: Map<bigint, bigint> } = { blocks: new Map() };
 
-  constructor(client: PublicClient, deployment: Deployment, blockNumber?: bigint) {
+  constructor(client: PublicClient, deployment: Deployment, blockNumber?: bigint, options: ChainReaderOptions = {}) {
     this.client = client;
     this.deployment = deployment;
     this.blockNumber = blockNumber;
+    this.options = options;
     this.allowlist = deployment.contracts.VerifierAllowlist.address;
     this.registry = deployment.contracts.EmissionsClaimRegistry.address;
     this.fromBlock = BigInt(
@@ -92,16 +129,33 @@ export class ChainReader {
 
   /** A reader on the same RPC whose views and event searches all read block `blockNumber` (one snapshot). */
   at(blockNumber: bigint): ChainReader {
-    return new ChainReader(this.client, this.deployment, blockNumber);
+    const r = new ChainReader(this.client, this.deployment, blockNumber, this.options);
+    r.cache = this.cache;
+    return r;
   }
 
-  static forSepolia(deployment: Deployment, rpcUrls: string[] = SEPOLIA_RPCS): ChainReader {
-    return ChainReader.forRpc(deployment, rpcUrls, sepolia);
+  /**
+   * Timestamp of the deployment block (`fromBlock`), read once per reader and the readers made from it
+   * by `at`; a failed read is not kept. The block is final, so the value does not depend on the snapshot.
+   */
+  deploymentTimestamp(): Promise<bigint> {
+    if (!this.cache.deploymentTimestamp) {
+      const p = this.client.getBlock({ blockNumber: this.fromBlock }).then((b) => b.timestamp);
+      this.cache.deploymentTimestamp = p;
+      p.catch(() => {
+        if (this.cache.deploymentTimestamp === p) this.cache.deploymentTimestamp = undefined;
+      });
+    }
+    return this.cache.deploymentTimestamp;
   }
 
-  static forRpc(deployment: Deployment, rpcUrls: string[], chain?: Chain): ChainReader {
+  static forSepolia(deployment: Deployment, rpcUrls: string[] = SEPOLIA_RPCS, options?: ChainReaderOptions): ChainReader {
+    return ChainReader.forRpc(deployment, rpcUrls, sepolia, options);
+  }
+
+  static forRpc(deployment: Deployment, rpcUrls: string[], chain?: Chain, options?: ChainReaderOptions): ChainReader {
     const transport = rpcUrls.length === 1 ? http(rpcUrls[0]) : fallback(rpcUrls.map((u) => http(u)));
-    return new ChainReader(createPublicClient({ chain, transport }) as PublicClient, deployment);
+    return new ChainReader(createPublicClient({ chain, transport }) as PublicClient, deployment, undefined, options);
   }
 
   private readRegistry<T>(functionName: string, args: readonly unknown[]): Promise<T> {
@@ -198,15 +252,18 @@ export class ChainReader {
 
   /**
    * `AuditorRevoked(auditorAidHash, leiHash)` events, with their `revokedAt`.
-   * `toBlock` (default: the pinned block, else the latest block) lets a caller search up to a block it has already read.
+   * `toBlock` (default: the pinned block, else the latest block) lets a caller search up to a block it has already read;
+   * `fromBlock` (default and lower limit: the deployment block) lets it start later, for example at a range from
+   * `blockRangeForTimes`.
    */
-  async auditorRevocations(auditorAidHash: Hex, leiHash: Hex, toBlock?: bigint): Promise<TimedEvent[]> {
+  async auditorRevocations(auditorAidHash: Hex, leiHash: Hex, toBlock?: bigint, fromBlock?: bigint): Promise<TimedEvent[]> {
     const logs = await this.chunkedLogs(
       this.allowlist,
       verifierAllowlistAbi,
       "AuditorRevoked",
       { auditorAidHash, leiHash },
       toBlock,
+      fromBlock,
     );
     return logs.map((l) => ({
       time: (l.args as { revokedAt: bigint }).revokedAt,
@@ -215,9 +272,16 @@ export class ChainReader {
     }));
   }
 
-  /** `VerifierSuspended(leiHash)` events, with their `suspendedAt`. `toBlock` as for `auditorRevocations`. */
-  async suspensions(leiHash: Hex, toBlock?: bigint): Promise<TimedEvent[]> {
-    const logs = await this.chunkedLogs(this.allowlist, verifierAllowlistAbi, "VerifierSuspended", { leiHash }, toBlock);
+  /** `VerifierSuspended(leiHash)` events, with their `suspendedAt`. `toBlock` and `fromBlock` as for `auditorRevocations`. */
+  async suspensions(leiHash: Hex, toBlock?: bigint, fromBlock?: bigint): Promise<TimedEvent[]> {
+    const logs = await this.chunkedLogs(
+      this.allowlist,
+      verifierAllowlistAbi,
+      "VerifierSuspended",
+      { leiHash },
+      toBlock,
+      fromBlock,
+    );
     return logs.map((l) => ({
       time: (l.args as { suspendedAt: bigint }).suspendedAt,
       blockNumber: l.blockNumber,
@@ -225,18 +289,85 @@ export class ChainReader {
     }));
   }
 
-  /** All matching logs from the deployment block, in block order; chunks are read a few at a time in parallel. */
+  /**
+   * A block range that contains every block, up to `head` (default: the pinned block, else the latest
+   * block), whose timestamp lies in [fromTime, toTime]. Both contracts stamp their events with
+   * `block.timestamp`, so an event whose time lies in that interval was emitted inside the range.
+   *
+   * Interpolation search: the deployment block and `head` give the average block time; each round
+   * estimates the boundary block (from the block time between the blocks read last) and reads, in
+   * parallel, the two blocks a margin either side of the estimate. The range starts at
+   * a block with timestamp < fromTime (or at the deployment block) and ends at a block with
+   * timestamp > toTime (or at `head`); timestamps never decrease from block to block, so it is never
+   * narrower than needed. A bound the search has not pinned down after `SEARCH_ROUNDS` rounds stays
+   * at the last bracketing block, which is still on the safe side. Any read error gives the whole
+   * range from the deployment block (fail-safe), as does a chain that has advanced by at most the
+   * tolerance since the deployment (nothing to search).
+   */
+  async blockRangeForTimes(
+    fromTime: bigint,
+    toTime: bigint,
+    head?: { number: bigint; timestamp: bigint },
+  ): Promise<BlockRange> {
+    const latest = head?.number ?? this.blockNumber ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
+    const whole: BlockRange = { fromBlock: this.fromBlock, toBlock: latest, narrowed: false };
+    const tol = this.options.searchTolerance ?? SEARCH_TOLERANCE;
+    if (this.options.fullEventScan || latest - this.fromBlock <= tol) return whole;
+    const until = toTime < fromTime ? fromTime : toTime;
+    try {
+      const blocks = this.cache.blocks;
+      const at = async (n: bigint): Promise<Probe> => {
+        const cached = blocks.get(n);
+        if (cached !== undefined) return { n, ts: cached };
+        const ts = (await this.client.getBlock({ blockNumber: n })).timestamp;
+        // Only blocks deep enough below the snapshot to be final are kept (a reorg cannot change them).
+        if (n + CACHE_DEPTH <= latest) {
+          if (blocks.size >= CACHE_BLOCKS) blocks.clear();
+          blocks.set(n, ts);
+        }
+        return { n, ts };
+      };
+      const [first, last] = await Promise.all([
+        this.deploymentTimestamp().then((ts) => ({ n: this.fromBlock, ts })),
+        head ? { n: head.number, ts: head.timestamp } : at(latest),
+      ]);
+      if (last.ts < first.ts) return whole;
+      // Lower bound: a block with timestamp < fromTime ("after" the boundary: timestamp >= fromTime).
+      const lower = async () => {
+        if (first.ts >= fromTime) return first.n;
+        if (last.ts < fromTime) return last.n;
+        return (await bracket(first, last, fromTime, (ts) => ts >= fromTime, at, tol)).lo.n;
+      };
+      // Upper bound: a block with timestamp > until ("after" the boundary: timestamp > until).
+      const upper = async () => {
+        if (last.ts <= until) return last.n;
+        if (first.ts > until) return first.n;
+        return (await bracket(first, last, until, (ts) => ts > until, at, tol)).hi.n;
+      };
+      const [fromBlock, toBlock] = await Promise.all([lower(), upper()]);
+      return { fromBlock, toBlock, narrowed: true };
+    } catch {
+      return whole;
+    }
+  }
+
+  /**
+   * All matching logs in [fromBlock, toBlock] (defaults: the deployment block, and the pinned block or
+   * else the latest block), in block order; chunks are read a few at a time in parallel.
+   */
   private async chunkedLogs(
     address: Hex,
     abi: readonly unknown[],
     eventName: string,
     args: Record<string, Hex>,
     toBlock?: bigint,
+    fromBlock?: bigint,
   ) {
     type Log = { args: unknown; blockNumber: bigint; transactionHash: Hex };
     const latest = toBlock ?? this.blockNumber ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
+    const start = fromBlock !== undefined && fromBlock > this.fromBlock ? fromBlock : this.fromBlock;
     const ranges: [bigint, bigint][] = [];
-    for (let from = this.fromBlock; from <= latest; from += LOG_CHUNK) {
+    for (let from = start; from <= latest; from += LOG_CHUNK) {
       ranges.push([from, from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest]);
     }
     const chunks: Log[][] = new Array(ranges.length);
@@ -274,6 +405,53 @@ export class ChainReader {
       return { reverted: true as const, ...decodeRevert(err) };
     }
   }
+}
+
+interface Probe {
+  n: bigint;
+  ts: bigint;
+}
+
+/**
+ * Narrows a bracket around the boundary where blocks become "after" `target`: on return `lo` is not
+ * after it and `hi` is (both hold on entry, and every read keeps them, because timestamps never
+ * decrease with the block number). Each round estimates the boundary block from the block time
+ * between the two blocks read last (between `lo` and `hi` until two blocks have been read), so a
+ * stretch of faster or slower blocks near the target does not slow the search down; the estimate
+ * is kept strictly inside the bracket. Each round reads the blocks `slack` either side of the
+ * estimate: 1/128 of the bracket in the first round, then a quarter of the last correction.
+ */
+async function bracket(
+  lo: Probe,
+  hi: Probe,
+  target: bigint,
+  after: (ts: bigint) => boolean,
+  at: (n: bigint) => Promise<Probe>,
+  tolerance: bigint,
+): Promise<{ lo: Probe; hi: Probe }> {
+  const interpolate = (a: Probe, b: Probe) =>
+    a.ts === b.ts ? undefined : a.n + ((target - a.ts) * (b.n - a.n)) / (b.ts - a.ts);
+  let recent: Probe[] = [];
+  let prev: bigint | undefined;
+  for (let round = 0; round < SEARCH_ROUNDS && hi.n - lo.n > 1n && hi.n - lo.n > tolerance; round++) {
+    const est =
+      (recent.length === 2 ? interpolate(recent[0], recent[1]) : undefined) ??
+      interpolate(lo, hi) ??
+      lo.n + (hi.n - lo.n) / 2n;
+    const slack =
+      SEARCH_MIN_SLACK + (prev === undefined ? (hi.n - lo.n) / 128n : (est > prev ? est - prev : prev - est) / 4n);
+    const clamp = (n: bigint) => (n <= lo.n ? lo.n + 1n : n >= hi.n ? hi.n - 1n : n);
+    const ns = [...new Set([clamp(est - slack), clamp(est + slack)])];
+    const read = await Promise.all(ns.map(at));
+    for (const p of read) {
+      if (after(p.ts)) {
+        if (p.n < hi.n) hi = p;
+      } else if (p.n > lo.n) lo = p;
+    }
+    recent = [...recent, ...read].slice(-2);
+    prev = est;
+  }
+  return { lo, hi };
 }
 
 /** Custom error name and arguments from a viem contract error. */

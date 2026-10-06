@@ -12,6 +12,7 @@ import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { emissionsClaimRegistryAbi } from "../abi.ts";
+import { ChainReader } from "../chain.ts";
 import {
   auditorAidHashOf,
   credScopeKeyOf,
@@ -157,8 +158,19 @@ function firstCatch(checks: CheckResult[]): Observed {
   return f ? caughtBy(f.index, f.code) : NOT_CAUGHT;
 }
 
+/**
+ * Verifies with the time-window event search (tolerance 0, so every bound is searched as tightly as
+ * it can be) and with the full scan from the deployment block; both results must be identical.
+ */
+async function verifyBothWays(p: Presentation, opts: VerifyOptions = {}): Promise<VerificationResult> {
+  const windowed = await verifyPresentation(p, new ChainReader(c.pub, c.deployment, undefined, { searchTolerance: 0n }), opts);
+  const full = await verifyPresentation(p, new ChainReader(c.pub, c.deployment, undefined, { fullEventScan: true }), opts);
+  expect(windowed).toEqual(full);
+  return windowed;
+}
+
 async function viaVerify(p: Presentation, opts: VerifyOptions = {}): Promise<Observed> {
-  return firstCatch((await verifyPresentation(p, c.reader, opts)).checks);
+  return firstCatch((await verifyBothWays(p, opts)).checks);
 }
 
 async function viaDryRun(
@@ -245,7 +257,7 @@ function judge(r: VerificationResult): Judged {
 
 /** Verifies a proof; when it carries a shipment and an EORI is given, check 5 must really run and pass. */
 async function judgeProof(p: Presentation, opts: VerifyOptions = {}): Promise<Judged & { result: VerificationResult }> {
-  const result = await verifyPresentation(p, c.reader, opts);
+  const result = await verifyBothWays(p, opts);
   const j = judge(result);
   if (p.shipment && opts.importerEORI && j.verdict !== "INVALID") expect(result.checks[5].status).toBe("pass");
   return { ...j, result };

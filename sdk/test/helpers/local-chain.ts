@@ -51,8 +51,9 @@ export interface LocalChain {
   stop: () => void;
 }
 
-export async function startLocalChain(port: number): Promise<LocalChain> {
-  const proc = spawn("anvil", ["--port", String(port), "--silent", "--timestamp", "1790000000"], { stdio: "ignore" });
+/** `anvilArgs`: extra anvil flags (the long-chain test uses `--hardfork cancun --prune-history` to mine fast). */
+export async function startLocalChain(port: number, anvilArgs: string[] = []): Promise<LocalChain> {
+  const proc = spawn("anvil", ["--port", String(port), "--silent", "--timestamp", "1790000000", ...anvilArgs], { stdio: "ignore" });
   const rpc = `http://127.0.0.1:${port}`;
   const pub = createPublicClient({ chain: foundry, transport: http(rpc) }) as PublicClient;
   for (let i = 0; i < 100; i++) {

@@ -95,6 +95,8 @@ function emptyChain(): ChainReader {
     client: { getChainId: async () => 11155111 },
     registry: deployment.contracts.EmissionsClaimRegistry.address,
     deployedBlock: 0n,
+    options: {},
+    deploymentTimestamp: async () => 0n,
     latestBlock: async () => ({ number: 1n, timestamp: 1n }),
     at: () => r,
     report: async () => ({ registeredAt: 0n }),

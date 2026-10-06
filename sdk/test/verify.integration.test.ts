@@ -253,6 +253,15 @@ describe("verifyPresentation on a local chain", () => {
     expect(codes(r)[4]).toBe("pass:CONTESTED");
     const r48 = await verifyPresentation(present(recent, DEMO_DISCLOSURE), c.reader, { contestedWindowHours: 0.5 });
     expect(codes(r48)[4]).toBe("pass:");
+    // The time-window event search (searched as tightly as it can be) and the full scan agree.
+    for (const contestedWindowHours of [24, 0.5, 1, 2]) {
+      const tight = new ChainReader(c.pub, c.deployment, undefined, { searchTolerance: 0n });
+      const full = new ChainReader(c.pub, c.deployment, undefined, { fullEventScan: true });
+      const p = present(recent, DEMO_DISCLOSURE);
+      expect(await verifyPresentation(p, tight, { contestedWindowHours })).toEqual(
+        await verifyPresentation(p, full, { contestedWindowHours }),
+      );
+    }
   });
 
   it("one snapshot: a revocation in a block after the snapshot block is not seen; inside it → CONTESTED", async () => {

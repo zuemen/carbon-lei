@@ -208,6 +208,8 @@ export async function verifyPresentation(
   const batchKey = p.shipment ? batchKeyOf(reportKey, p.shipment.batchId, get("batchSalt") as Hex) : undefined;
   const expectedScopeKey = reportScopeKeyOf(get("installationId"), get("reportingPeriod"));
   const chainIdP = early(reader.client.getChainId());
+  // The deployment block's timestamp anchors the block search of 4l; it does not depend on the snapshot.
+  if (!reader.options.fullEventScan) early(reader.deploymentTimestamp());
   const head = await reader.latestBlock();
   // A load-balanced RPC can answer from a node that is behind: fail closed rather than check an old state.
   if (head.number < reader.deployedBlock) {
@@ -256,6 +258,22 @@ export async function verifyPresentation(
       `RPC node is behind: its block ${head.number} (time ${head.timestamp}) is older than the report's registration (time ${rep.registeredAt}); try again or use another RPC`,
     );
   }
+  // 4l events, searched up to block B (the snapshot); they depend only on the report, so the search
+  // starts now. Only an event whose time lies in [registeredAt, registeredAt + window] can flag the
+  // report, and each event's time is the timestamp of its block, so the search covers the blocks of
+  // that interval (with a margin of blocks outside it on each side), found by interpolation search;
+  // on any error, every block from the deployment block to B.
+  const windowSecOf = () => BigInt(Math.round((opts.contestedWindowHours ?? 24) * 3600));
+  let searchUntil = head.timestamp; // an option that is not a number: search up to B (4l then throws, as before)
+  try {
+    searchUntil = rep.registeredAt + windowSecOf();
+  } catch {}
+  const rangeP =
+    rep.registeredAt === 0n ? undefined : early(rd.blockRangeForTimes(rep.registeredAt, searchUntil, head));
+  const revocationsP =
+    rangeP &&
+    early(rangeP.then((r) => rd.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash, r.toBlock, r.fromBlock)));
+  const suspensionsP = rangeP && early(rangeP.then((r) => rd.suspensions(rep.issuerLeiHash, r.toBlock, r.fromBlock)));
   let status: ShipmentStatus | undefined;
   if (statusP) {
     status = await statusP;
@@ -308,10 +326,6 @@ export async function verifyPresentation(
     );
     const prevP = rep.supersedes !== ZERO32 ? early(rd.report(rep.supersedes)) : undefined;
     const contractValidP = early(rd.isValidAt(reportKey, t));
-    // 4l events, searched up to block B (the snapshot)
-    const revocationsP = early(rd.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash, head.number));
-    const suspensionsP = early(rd.suspensions(rep.issuerLeiHash, head.number));
-
     // 4b revoked
     const revoked = rep.revokedAt !== 0n;
     if (revoked) fails.push(["REPORT_INVALID/REVOKED", "the verification body revoked this report"]);
@@ -393,8 +407,9 @@ export async function verifyPresentation(
       checks.push(result(4, "fail", fails[0][0], fails.map((f) => f[1]).join("; ")));
     } else {
       // 4l revocation window: registered shortly before the auditor was revoked or the body suspended
-      const windowSec = BigInt(Math.round((opts.contestedWindowHours ?? 24) * 3600));
-      const events = [...(await revocationsP), ...(await suspensionsP)];
+      // (the report is registered here, so both searches were started above)
+      const windowSec = windowSecOf();
+      const events = [...((await revocationsP) ?? []), ...((await suspensionsP) ?? [])];
       contested = events.some((e) => rep.registeredAt <= e.time && e.time - rep.registeredAt <= windowSec);
       const base = "registered by an authorized auditor (checked by the contract at registration)";
       checks.push(
