@@ -149,9 +149,20 @@ export function checkReconciliation(
   x: ReportExtract,
   disclosed: Record<string, string>,
   signed?: Reconciliation,
+  rejected: readonly string[] = [],
 ): { status: "pass" | "warn" | "skipped"; code: string; detail: string } {
   const c = pickReconciledClaims(disclosed);
-  if (!c) return { status: "skipped", code: "", detail: "fields needed for the reconciliation were not disclosed" };
+  if (!c) {
+    // A field that was presented but refused by check 2 is not the same as one the supplier kept hidden.
+    const refused = RECONCILED_CLAIMS.some((k) => typeof disclosed[k] !== "string" && rejected.includes(k));
+    return {
+      status: "skipped",
+      code: "",
+      detail: refused
+        ? "a disclosed field needed for the reconciliation was rejected by check 2"
+        : "fields needed for the reconciliation were not disclosed",
+    };
+  }
   const { findings, reconciliation } = reconcile(x, c);
   if (!signed) return { status: "skipped", code: "", detail: "this credential carries no reconciliation proof" };
   if (

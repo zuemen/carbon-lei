@@ -337,6 +337,8 @@ export function Buyer() {
   const counts = result && checked ? disclosureCounts(checked, result) : null;
   const hiddenN = counts ? counts.hidden : (result?.hidden ?? 0);
   const hiddenText = `${hiddenN} field${hiddenN === 1 ? "" : "s"} hidden by supplier${counts?.rejected ? ` · ${counts.rejected} disclosure${counts.rejected === 1 ? "" : "s"} rejected` : ""}.`;
+  const rejectedProof = !!result && !running && result.overall === "INVALID";
+  const rejectedCheck = rejectedProof ? result?.checks.find((c) => c.status === "fail") : undefined;
   const malformed = result?.checks.find((c) => c.index === 0 && c.status === "fail");
   const cmp = data.comparison;
   const { q, dq, vq, gap, eur } = comparisonFigures(cmp);
@@ -559,7 +561,7 @@ export function Buyer() {
         tabIndex={-1}
       >
         <p className="sheet-kicker" id="cmp-h">
-          Verified value vs CBAM default
+          {rejectedProof ? "CBAM default" : "Verified value vs CBAM default"}
         </p>
         <div className="compare">
           <div>
@@ -567,18 +569,29 @@ export function Buyer() {
             <div className="v">{cmp.defaultValue} tCO2e/t</div>
             <div className="fine">For {fmt(q)} t: {fmt(dq)} tCO2e</div>
           </div>
-          <div>
-            <div className="k">Verified value (illustrative)</div>
-            <div className="v">{cmp.verifiedValue} tCO2e/t</div>
-            <div className="fine">For {fmt(q)} t: {fmt(vq)} tCO2e</div>
-          </div>
+          {!rejectedProof && (
+            <div>
+              <div className="k">Verified value (illustrative)</div>
+              <div className="v">{cmp.verifiedValue} tCO2e/t</div>
+              <div className="fine">For {fmt(q)} t: {fmt(vq)} tCO2e</div>
+            </div>
+          )}
         </div>
-        <p className="gap-line">Declared-emissions gap: {fmt(gap)} tCO2e</p>
-        <p className="fine">
-          ≈ €{fmt(eur, 0)} gross at the {cmp.quarter} CBAM certificate price of €{cmp.priceEur} — illustrative, before
-          free-allocation adjustment.
-        </p>
-        <p className="fine">A gap in what is declared, not a physical reduction.</p>
+        {rejectedProof ? (
+          <p className="fine no-verified-value" role="status">
+            No verified value: the proof failed {rejectedCheck && rejectedCheck.index > 0 ? `check ${rejectedCheck.index}` : "the structure check"}. The
+            figures from the demo report are not shown as a result.
+          </p>
+        ) : (
+          <>
+            <p className="gap-line">Declared-emissions gap: {fmt(gap)} tCO2e</p>
+            <p className="fine">
+              ≈ €{fmt(eur, 0)} gross at the {cmp.quarter} CBAM certificate price of €{cmp.priceEur} — illustrative, before
+              free-allocation adjustment.
+            </p>
+            <p className="fine">A gap in what is declared, not a physical reduction.</p>
+          </>
+        )}
         <div className="btn-row">
           <button className="btn" onClick={() => setAccepted(true)} disabled={!result || result.overall !== "VALID"}>
             Accept verified value
@@ -616,7 +629,7 @@ export function Buyer() {
             ✕ {pactError}
           </p>
         )}
-        <WhatIf cmp={cmp} />
+        {!rejectedProof && <WhatIf cmp={cmp} />}
       </section>
     </>
   );

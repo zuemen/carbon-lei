@@ -96,7 +96,7 @@ export function vleiCheckers(
       return result(7, r.ok, r.code, r.detail);
     },
     reconciliation: (extract: Record<string, unknown>, ctx: EvidenceContext) => {
-      const r = checkReconciliation(extract as unknown as ReportExtract, ctx.disclosed, ctx.core.reconciliation);
+      const r = checkReconciliation(extract as unknown as ReportExtract, ctx.disclosed, ctx.core.reconciliation, ctx.rejected);
       return { index: 8, name: "", status: r.status, code: r.code, detail: r.detail };
     },
   };

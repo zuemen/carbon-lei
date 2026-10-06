@@ -74,6 +74,8 @@ export interface EvidenceCheckers {
 export interface EvidenceContext {
   core: CredentialCore;
   disclosed: Record<string, string>;
+  /** Names of fields that were presented but rejected by check 2 (they are not in `disclosed`). */
+  rejected?: readonly string[];
   report?: ReportRecord;
   reader: ChainReader;
 }
@@ -284,7 +286,7 @@ export async function verifyPresentation(
   let contested = false;
 
   // Checks 6-8 only need the report and the disclosed fields: start them now, alongside check 4's reads.
-  const ctx: EvidenceContext = { core, disclosed, report: rep.registeredAt === 0n ? undefined : rep, reader: rd };
+  const ctx: EvidenceContext = { core, disclosed, rejected: decoded.map((d) => d.name).filter((n) => !Object.hasOwn(disclosed, n)), report: rep.registeredAt === 0n ? undefined : rep, reader: rd };
   const c = opts.checkers ?? {};
   const { anchor, authority, reconciliation } = c;
   const anchorP =

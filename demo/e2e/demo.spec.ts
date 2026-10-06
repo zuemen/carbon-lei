@@ -73,6 +73,14 @@ test("Buyer summary under Verify: checks passed and the card's gap; a failed che
   await expect(summary).toContainText("Rejected — check 2 failed: A disclosed value was changed");
   await expect(page.locator(".overall")).toContainText("5 fields hidden by supplier · 1 disclosure rejected.");
   await expect(summary).not.toContainText("declared-emissions gap for this");
+  // The comparison card shows no verified value and no gap for a rejected proof.
+  const card = page.locator("#comparison");
+  await expect(card.locator(".no-verified-value")).toHaveText(/No verified value: the proof failed check 2/);
+  await expect(card).not.toContainText(/Declared-emissions gap/);
+  await expect(card).not.toContainText(/Verified value \(illustrative\)/);
+  await expect(card.locator(".gap-line")).toHaveCount(0);
+  await expect(card.getByLabel(/What if the verified value were/)).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "Accept verified value" })).toBeDisabled();
 });
 
 test("Buyer what-if slider: hypothetical figures follow the formula at the card's price, keyboard operable", async ({ page }) => {
@@ -226,7 +234,9 @@ test("E10 Tamper with one number → check 2 fails", async ({ page }) => {
   await page.getByRole("button", { name: "Load the demo proof" }).click();
   await page.getByRole("button", { name: "Tamper with one number" }).click();
   await expect(page.locator("ol.checks > li").nth(1).locator(".badge")).toHaveText("✕ Failed");
-  await expect(page.getByText("A disclosed value was changed after the supplier created the proof.").first()).toBeVisible();
+  await expect(page.getByText("A disclosed value was changed after the supplier created the proof.").first()).toBeVisible();  // Check 8 is skipped because check 2 rejected the field, not because the supplier hid it.
+  await expect(page.locator("ol.checks")).toContainText("rejected by check 2");
+  await expect(page.locator("ol.checks")).not.toContainText("were not disclosed");
 });
 
 test("E3 the three attacks are rejected with the right reasons", async ({ page }) => {

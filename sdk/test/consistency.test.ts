@@ -58,6 +58,16 @@ describe("check 8: reconciliation", () => {
     expect(checkReconciliation(extract, claims, undefined).status).toBe("skipped");
   });
 
+  it("says why it skipped: not disclosed, or disclosed but rejected by check 2", () => {
+    const partial = Object.fromEntries(Object.entries(claims).filter(([k]) => k !== RECONCILED_CLAIMS[0]));
+    expect(checkReconciliation(extract, partial).detail).toMatch(/not disclosed/);
+    expect(checkReconciliation(extract, partial, undefined, []).detail).toMatch(/not disclosed/);
+    expect(checkReconciliation(extract, partial, undefined, ["unrelatedField"]).detail).toMatch(/not disclosed/);
+    const r = checkReconciliation(extract, partial, undefined, [RECONCILED_CLAIMS[0]]);
+    expect(r.status).toBe("skipped");
+    expect(r.detail).toBe("a disclosed field needed for the reconciliation was rejected by check 2");
+  });
+
   it("CN scope matching by chapter, heading or full code", () => {
     expect(cnInScope("7318", ["CN 7318"])).toBe(true);
     expect(cnInScope("731815", ["73"])).toBe(true);
