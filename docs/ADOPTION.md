@@ -28,7 +28,7 @@ The CBAM Registry is the official channel, and CarbonLEI does not change it. Thi
 **What the Registry already does**
 
 - From 1 January 2027, the verifier issues the verification report in the CBAM Registry (Delegated Regulation (EU) 2025/2551, Annex II, point 2.17.3 [3]).
-- Verifiers use the Registry through EU Login accounts with two-factor authentication. When the account is opened, the verifier submits proof of representation, such as a power of attorney, and staff acting under delegation have the same permissions (CBAM Registry access documents for verifiers, p.14 [19]). Inside the Registry, the question "does this person act for this verifier?" is handled at account level.
+- Verifiers use the Registry through EU Login accounts with two-factor authentication. When the account is requested, the verifier submits proof of representation, such as a power of attorney, and staff acting under delegation have the same permissions (CBAM Registry access documents for verifiers, p.14 [19]). Inside the Registry, the question "does this person act for this verifier?" is handled at account level.
 - A verifier shall not issue a verification report where one already covers the same reporting period for the same installation. At the operator's request, the verifier may issue a revised version (Delegated Regulation (EU) 2025/2551, Annex II, point 2.17.3 [3]).
 - A registered operator can upload its data once and share it with all declarants (CBAM guidance document No. 2, p.5 [20]). It may choose to disclose only the summary of its emissions report to a declarant (Implementing Regulation (EU) 2025/2547, recital 17 [17]).
 - Customs cross-checks are carried out for each CBAM declarant (Regulation (EU) 2023/956 as amended, Art 25(3) [22]), and CBAM declarations can be reviewed after submission (Art 19 [22]).
@@ -158,7 +158,7 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 
 - **Same model, other goods.** The credential carries a CN code, a production route and a reporting period. Nothing is specific to fasteners.
 - **Cement from Türkiye.** Türkiye has its own operator identifier, the tax number (VKN), listed in the Commission's guidance [4]. There the Operator ID stays the VKN, and the LEI travels as an additional attribute.
-- **Downstream goods.** The Commission has proposed extending CBAM to downstream goods with anti-circumvention measures, from 1 January 2028, COM(2025) 989 [10]. The Council adopted its position on 12 June 2026 and the Parliament adopted its position on 15 September 2026 (as reported by cbamguide.com) [23]; the file is in negotiations between them and is not yet law. CN 7318 is already in scope; the extension concerns other goods. A tonnage ledger fits its focus on evidence of origin.
+- **Downstream goods.** The Commission has proposed extending CBAM to downstream goods with anti-circumvention measures, from 1 January 2028, COM(2025) 989 [10]. The Council adopted its position on 12 June 2026 and the Parliament adopted its position on 15 September 2026 (as reported by cbamguide.com) [23]; the file heads into trilogue negotiations between Parliament and Council; not yet agreed. CN 7318 is already in scope; the extension concerns other goods. A tonnage ledger fits its focus on evidence of origin.
 - **Carbon price paid in the country of origin.** CBAM allows a deduction for a carbon price effectively paid. The same credential pattern could carry evidence of such payments; this is not built.
 
 ### 6.3 Digital Product Passport (ESPR)

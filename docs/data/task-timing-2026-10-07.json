@@ -1,0 +1,52 @@
+{
+  "description": "Raw output of the scripted task timing on the hosted page: open the page, click \"Load the demo proof\", click \"Verify\", stop when \"8 of 8\" is visible. Headless Chromium (Playwright), a fresh browser context per run, one macOS laptop. Not user testing.",
+  "url": "https://zuemen.github.io/carbon-lei/",
+  "note": "Session 1 was run with an earlier draft of scripts/time-task.mjs that performs the same steps and stops the timer at the same point; after the timer stopped it also recorded the visible result text. Sessions 2 and 3 are the output of scripts/time-task.mjs. Times are copied unchanged from the script output. The file is named after the date it was added to the repository; the runs took place on 2026-10-06 (UTC).",
+  "sessions": [
+    {
+      "session": 1,
+      "finishedAt": "2026-10-06T16:49:34.479Z",
+      "script": "earlier draft of scripts/time-task.mjs",
+      "runs": [
+        { "run": 1, "clicks": 2, "seconds": 11.55, "text": "8 of 8 checks passed" },
+        { "run": 2, "clicks": 2, "seconds": 10.1, "text": "8 of 8 checks passed" },
+        { "run": 3, "clicks": 2, "seconds": 10.63, "text": "8 of 8 checks passed" },
+        { "run": 4, "clicks": 2, "seconds": 6.01, "text": "8 of 8 checks passed" },
+        { "run": 5, "clicks": 2, "seconds": 10.68, "text": "8 of 8 checks passed" }
+      ],
+      "median": 10.63,
+      "min": 6.01,
+      "max": 11.55
+    },
+    {
+      "session": 2,
+      "finishedAt": "2026-10-06T16:54:08.869Z",
+      "script": "scripts/time-task.mjs",
+      "runs": [
+        { "run": 1, "clicks": 2, "seconds": 4.16 },
+        { "run": 2, "clicks": 2, "seconds": 3.04 },
+        { "run": 3, "clicks": 2, "seconds": 3.01 },
+        { "run": 4, "clicks": 2, "seconds": 2.49 },
+        { "run": 5, "clicks": 2, "seconds": 2.98 }
+      ],
+      "median": 3.01,
+      "min": 2.49,
+      "max": 4.16
+    },
+    {
+      "session": 3,
+      "finishedAt": "2026-10-06T16:54:31.625Z",
+      "script": "scripts/time-task.mjs",
+      "runs": [
+        { "run": 1, "clicks": 2, "seconds": 3.53 },
+        { "run": 2, "clicks": 2, "seconds": 3.02 },
+        { "run": 3, "clicks": 2, "seconds": 3.06 },
+        { "run": 4, "clicks": 2, "seconds": 4.01 },
+        { "run": 5, "clicks": 2, "seconds": 3.02 }
+      ],
+      "median": 3.06,
+      "min": 3.02,
+      "max": 4.01
+    }
+  ]
+}

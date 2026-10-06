@@ -15,7 +15,7 @@ All companies are fictional. All emissions values for the demo producer are illu
 
 CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no over-claiming of verified tonnage, and a value attached to a lower verified intensity. Only the third one could lead to a physical reduction, and we do not quantify it.
 
-Over-claiming of verified tonnage means declaring more tonnes of goods against one verified report than it verified. It is not double counting in the GHG Protocol or PACT sense, where two companies count the same emissions in their own inventories: under CBAM, several importers may rely on the same verified intensity, as long as their tonnes together stay within what the report verified.
+Over-claiming of verified tonnage means declaring more tonnes of goods against one verified report than it verified. Here we mean one verified tonnage being claimed by more declarations than it covers, not the double counting discussed in emission inventories. Under CBAM, several importers may rely on the same verified intensity, as long as their tonnes together stay within what the report verified.
 
 | Effect | What changes | Physical reduction? |
 |---|---|---|
@@ -143,7 +143,7 @@ These are **scenarios under stated assumptions, not forecasts.** Every input mar
 | A2 | Verified intensity of participating installations | 1.8 tCO2e/t | Assumption (illustrative) | Demo value; see the sensitivity table in Section 2 |
 | A3 | Default reference | 2.707 tCO2e/t direct; 2.978 with 2026 mark-up; about 3.25 in 2027; 3.519 from 2028 | Regulatory value | IR (EU) 2025/2621 as replaced by 2026/1740, CN 7318, Taiwan [1] |
 | A4 | Share of verified tonnage that would be claimed a second time without a shared ledger | 1% (low), 5% (high) | Sensitivity parameter (no empirical basis) | We found no public statistic; the first verified CBAM reports are expected only from January 2027 |
-| A5 | True intensity of goods wrongly covered by a double claim | 2.707 tCO2e/t | Assumption | Unmarked default used as a proxy |
+| A5 | True intensity of goods wrongly covered by an over-claim | 2.707 tCO2e/t | Assumption | Unmarked default used as a proxy |
 | A6 | Scaling | Linear; no interaction, rebound or leakage effects | Assumption | Simplification |
 
 ### 4.2 Results per year
@@ -160,7 +160,7 @@ Formulas:
 
 - Declared-emissions gap = V × (default − 1.8). Not a physical reduction.
 - Price signal, gross and illustrative = gap × P, before the free-allocation adjustment.
-- Emissions kept in declarations = V × A4 × (A5 − 1.8): real emissions that would otherwise vanish from CBAM declarations through double claims. We do not tabulate it, because A4 has no empirical basis; the tonnage ledger's effect is not quantified.
+- Emissions kept in declarations = V × A4 × (A5 − 1.8): real emissions that would otherwise vanish from CBAM declarations through over-claiming of verified tonnage. We do not tabulate it, because A4 has no empirical basis; the tonnage ledger's effect is not quantified.
 
 These totals are the declared-emissions gap at stake wherever verified values replace default values. They are not CarbonLEI's own contribution; see Section 4.4.
 
@@ -182,7 +182,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 | What CarbonLEI adds | A machine-checkable record of who signed and with what authority; no new emissions data | The verification body's authority stays machine-checkable wherever the report travels, and buyers can apply a voluntary tonnage cap across importers |
 | Effect on declared emissions | The contribution there is the checkable record in the row above; CarbonLEI's added effect on declared emissions is about zero at the margin, because the verified value already replaces the default value there | Not quantified: we cannot estimate how many verified values will travel outside the Registry |
 
-**The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, within this deployment, per credential; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover. The Commission receives every declaration and can review it after submission under the CBAM rules; CarbonLEI lets buyers outside the Registry add a cap they can check for themselves, before relying on the value. We do not quantify the ledger's effect, because we found no empirical rate of double claims (A4 in Section 4.1).
+**The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, within this deployment, per credential; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover. The Commission receives every declaration and can review it after submission under the CBAM rules; CarbonLEI lets buyers outside the Registry add a cap they can check for themselves, before relying on the value. We do not quantify the ledger's effect, because we found no empirical rate of over-claiming (A4 in Section 4.1).
 
 ---
 
@@ -205,7 +205,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 
 - **Illustrative inputs.** 1.8 tCO2e/t and 500 t are demo values. They are not measurements of any real plant and not official CBAM methodology.
 - **Declared gap is not a reduction.** Effects 1 and 2 change what is declared. Only effect 3 reduces emissions, and only if producers invest.
-- **No empirical double-claim rate.** A4 is a sensitivity parameter.
+- **No empirical over-claiming rate.** A4 is a sensitivity parameter.
 - **Incentive to switch steel.** The incentive to switch production routes is reduced by the free-allocation adjustment until 2034 (Section 2a). We found no public case of a fastener producer switching steel sources because of CBAM.
 - **Price.** The € figures use the Q3 2026 certificate price. CBAM certificates are priced quarterly in 2026 and weekly from 2027 [7], so the € figures move with the price; the tCO2e figures do not.
 - **Scope.** The default values used here are direct emissions only, as listed for CN 7318 [1]. A full product carbon footprint has a wider boundary (see [PACT_MAPPING.md](PACT_MAPPING.md#3-semantic-differences)).
