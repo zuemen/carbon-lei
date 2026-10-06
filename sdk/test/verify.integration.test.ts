@@ -161,6 +161,29 @@ describe("verifyPresentation on a local chain", () => {
     expect(r.disclosed.specificEmbeddedEmissions_tCO2e_per_t).toBeUndefined();
   });
 
+  it("Tamper: the same field disclosed twice → DISCLOSURE_TAMPERED", async () => {
+    const d = proof.disclosures.find((x) => decodeDisclosure(x).name === "siteVisit")!;
+    const r = await verifyPresentation({ ...proof, disclosures: [...proof.disclosures, d] }, c.reader, { importerEORI: EORI_1 });
+    expect(codes(r)[0]).toBe("pass:");
+    expect(codes(r)[2]).toBe("fail:DISCLOSURE_TAMPERED");
+    expect(r.checks.find((x) => x.index === 2)?.detail).toBe("siteVisit disclosed twice");
+  });
+
+  it("Tamper: a signed value moved to another field name → DISCLOSURE_TAMPERED", async () => {
+    // siteVisit's disclosure (its own salt and value) re-encoded under the name assuranceLevel,
+    // replacing the genuine assuranceLevel disclosure
+    const site = decodeDisclosure(proof.disclosures.find((x) => decodeDisclosure(x).name === "siteVisit")!);
+    const i = proof.disclosures.findIndex((x) => decodeDisclosure(x).name === "assuranceLevel");
+    const moved = [...proof.disclosures];
+    moved[i] = encodeDisclosure({ ...site, name: "assuranceLevel" });
+    const r = await verifyPresentation({ ...proof, disclosures: moved }, c.reader, { importerEORI: EORI_1 });
+    expect(codes(r)[0]).toBe("pass:");
+    expect(codes(r)[2]).toBe("fail:DISCLOSURE_TAMPERED");
+    expect(r.checks.find((x) => x.index === 2)?.detail).toBe("assuranceLevel does not match the signed credential");
+    expect(r.disclosed.assuranceLevel).toBeUndefined();
+    expect(r.disclosed.siteVisit).toBe(site.value);
+  });
+
   it("S1 core edited after issuance → SAID_MISMATCH", async () => {
     const core = proof.core.replace("2026-10-01T00:00:00Z", "2026-10-02T00:00:00Z");
     const r = await verifyPresentation({ ...proof, core }, c.reader, { importerEORI: EORI_1 });

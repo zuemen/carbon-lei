@@ -31,6 +31,10 @@ contract Handler is Test {
     bytes32[] public reportKeys;
     mapping(bytes32 reportKey => uint64) internal ghostRevokedAt;
     bytes32[] public batches;
+    /// @dev The shipment record as written by the first successful claim of each batch (P2).
+    mapping(bytes32 batchKey => EmissionsClaimRegistry.Shipment) internal ghostShipment;
+    /// @dev Successful claims per batch key; P2 requires at most one.
+    mapping(bytes32 batchKey => uint256) public ghostBatchClaims;
     mapping(bytes32 credLayer => uint256) public ghostClaimedSum;
     mapping(bytes32 scope => uint64) internal ghostScopeBoundAt;
     bytes32[] public retiredScope;
@@ -163,11 +167,34 @@ contract Handler is Test {
         uint96 kg = uint96(bound(kgSeed, 1, 700_000));
         bytes32 b = keccak256(abi.encode("batch", ++nonce));
         vm.prank(rep.supplier);
-        try registry.claimShipment(k, b, kg, keccak256(abi.encode("importer", nonce))) {
+        bytes32 importer = keccak256(abi.encode("importer", nonce));
+        try registry.claimShipment(k, b, kg, importer) {
             batches.push(b);
+            ghostShipment[b] = EmissionsClaimRegistry.Shipment(k, kg, importer, uint64(block.timestamp));
+            ghostBatchClaims[b]++;
             ghostClaimedSum[rep.credScopeKey] += kg;
             successes["claim"]++;
         } catch {}
+    }
+
+    /// @dev P2: resend an already claimed batch key, against its own report or another one,
+    /// with any quantity and importer. Every success is counted; the invariant expects none.
+    function reclaim(uint256 batchSeed, uint256 reportSeed, uint256 kgSeed, uint256 flags) external {
+        if (batches.length == 0) return;
+        bytes32 b = batches[batchSeed % batches.length];
+        bytes32 k = (flags % 2 == 0) ? ghostShipment[b].reportKey : reportKeys[reportSeed % reportKeys.length];
+        EmissionsClaimRegistry.ReportRecord memory rep = report(k);
+        // small quantities, so a missing batch check would not be masked by the tonnage cap
+        uint96 kg = uint96(bound(kgSeed, 1, 1_000));
+        bytes32 importer =
+            (flags >> 1) % 2 == 0 ? ghostShipment[b].importerCommit : keccak256(abi.encode("re", ++nonce));
+        vm.prank(rep.supplier);
+        try registry.claimShipment(k, b, kg, importer) {
+            ghostBatchClaims[b]++;
+            ghostClaimedSum[rep.credScopeKey] += kg;
+            successes["reclaim"]++;
+        } catch {}
+        successes["reclaimAttempt"]++;
     }
 
     function revoke(uint256 reportSeed, uint256 bodySeed, uint256 flags) external {
@@ -275,6 +302,10 @@ contract Handler is Test {
 
     function batchCount() external view returns (uint256) {
         return batches.length;
+    }
+
+    function ghostShipmentOf(bytes32 batchKey) external view returns (EmissionsClaimRegistry.Shipment memory) {
+        return ghostShipment[batchKey];
     }
 
     function bodyCount() external view returns (uint256) {

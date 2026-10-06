@@ -32,11 +32,14 @@ contract PropertiesTest is Base {
     /// cumulative claim at or below verifiedKg, and the slot's claimedKg equals the sum of
     /// the accepted claims, so it never exceeds verifiedKg.
     function testFuzz_P1_claimsNeverExceedVerified(uint96 verifiedKg, uint96[6] memory qs) public {
-        verifiedKg = uint96(bound(verifiedKg, 1, 1e15));
+        // up to the uint96 limit of the ledger fields, so the 256-bit cap check is exercised
+        // where an unchecked uint96 addition would overflow
+        verifiedKg = uint96(bound(verifiedKg, 1, type(uint96).max));
         _reg1(KA, rid(1), P, Q, verifiedKg, bytes32(0));
         uint256 sum;
+        uint256 qMax = uint256(verifiedKg) * 2 > type(uint96).max ? type(uint96).max : uint256(verifiedKg) * 2;
         for (uint256 i = 0; i < qs.length; i++) {
-            uint96 q = uint96(bound(qs[i], 0, uint256(verifiedKg) * 2));
+            uint96 q = uint96(bound(qs[i], 0, qMax));
             bool expectOk = q != 0 && sum + q <= verifiedKg;
             assertEq(_tryClaim(KA, batch(100 + i), q), expectOk, "P1 claim accepted iff within verifiedKg");
             if (expectOk) sum += q;
@@ -101,34 +104,64 @@ contract PropertiesTest is Base {
 
     /// @dev P3: registerReport succeeds exactly when, at that block, the sender is the current
     /// address of an active body (listed, not rotated away, not suspended, accreditation not
-    /// expired) and the auditor belongs to that body and is not revoked.
-    function testFuzz_P3_registrationIffAuthorizedAtBlock(uint8 flags) public {
+    /// expired) and the auditor belongs to that body and is not revoked. The registration time
+    /// t is fuzzed around each time boundary (accreditedUntil, suspendedAt, liftedAt and the
+    /// auditor's revokedAt, each -1, 0 and +1 s); an event at t is mined before the registration.
+    function testFuzz_P3_registrationIffAuthorizedAtBlock(
+        uint8 flags,
+        uint8 edge,
+        uint8 off,
+        uint32 suspendGap,
+        uint32 liftGap,
+        uint32 revokeGap
+    ) public {
         address sender = v1;
         bytes32 aid = AID_A;
-        if (flags & 1 != 0) _suspend(L1);
-        if (flags & 2 != 0) _revokeAuditorA();
         if (flags & 4 != 0) aid = AID_B; // auditor of another body
         if (flags & 8 != 0) {
             _rotate(L1, v1n); // v1 rotated away
         }
         if (flags & 16 != 0) sender = v5; // never listed
-        if (flags & 32 != 0) vm.warp(ACCREDITED_UNTIL + 1);
 
-        uint64 nowTs = uint64(vm.getBlockTimestamp());
-        bool active = allowlist.isVerifierActiveAt(sender, nowTs);
-        bool authorized = allowlist.isAuthorizedAt(aid, sender, nowTs);
-        bool expectOk = (flags & 63) == 0;
-        assertEq(active && authorized, expectOk, "fixture: conditions match the flags");
+        uint64 base = uint64(vm.getBlockTimestamp()) + 1 days;
+        uint64 tSuspend = base + uint64(bound(suspendGap, 0, 365 days));
+        uint64 tLift = tSuspend + uint64(bound(liftGap, 1, 90 days));
+        uint64 tRevoke = base + uint64(bound(revokeGap, 0, 365 days));
+        uint64 edgeTime = [ACCREDITED_UNTIL, tSuspend, tLift, tRevoke, base][edge % 5];
+        uint64 t = edgeTime + (off % 3) - 1;
+
+        // mine the selected events whose time is at or before t, in time order
+        bool doSuspend = flags & 1 != 0 && tSuspend <= t;
+        bool doLift = doSuspend && flags & 32 != 0 && tLift <= t;
+        bool doRevoke = flags & 2 != 0 && tRevoke <= t;
+        if (doRevoke && tRevoke < tSuspend) _revokeAt(tRevoke);
+        if (doSuspend) {
+            vm.warp(tSuspend);
+            _suspend(L1);
+        }
+        if (doRevoke && tRevoke >= tSuspend && (!doLift || tRevoke < tLift)) _revokeAt(tRevoke);
+        if (doLift) {
+            vm.warp(tLift);
+            _lift(L1);
+        }
+        if (doRevoke && doLift && tRevoke >= tLift) _revokeAt(tRevoke);
+        vm.warp(t);
+
+        bool listed = flags & (8 | 16) == 0;
+        bool activeModel = listed && t <= ACCREDITED_UNTIL && !(doSuspend && !doLift);
+        bool expectOk = activeModel && flags & 4 == 0 && !doRevoke;
+        assertEq(allowlist.isVerifierActiveAt(sender, t), activeModel, "fixture: active matches the model");
+        assertEq(allowlist.isAuthorizedAt(aid, sender, t), expectOk, "fixture: authorised matches the model");
 
         EmissionsClaimRegistry.ReportInput memory r = _input(KA, rid(1), P2, Q2, KG500, bytes32(0));
         r.auditorAidHash = aid;
-        r.validUntil = uint64(vm.getBlockTimestamp()) + 365 days;
+        r.validUntil = t + 365 days;
         vm.prank(sender);
         try registry.registerReport(r) {
             assertTrue(expectOk, "P3 registered although not authorised");
             EmissionsClaimRegistry.ReportRecord memory rec = registry.reports(KA);
             assertEq(rec.verifier, sender, "P3 record names the sender");
-            assertEq(rec.registeredAt, nowTs, "P3 registered at this block");
+            assertEq(rec.registeredAt, t, "P3 registered at this block");
             assertTrue(allowlist.isVerifierActiveAt(rec.verifier, rec.registeredAt), "P3 active at registeredAt");
             assertTrue(
                 allowlist.isAuthorizedAt(rec.auditorAidHash, rec.verifier, rec.registeredAt),
@@ -154,7 +187,9 @@ contract PropertiesTest is Base {
         (, uint64 addedAt, uint64 revokedAt) = allowlist.auditors(AID_A, L1);
         assertEq(revokedAt, uint64(vm.getBlockTimestamp()));
 
-        vm.warp(vm.getBlockTimestamp() + bound(dtAfter, 0, 1000 days));
+        // stays before VALID_UNTIL (about 465 days after the fixture start), so the last
+        // assertion runs in every fuzz run
+        vm.warp(vm.getBlockTimestamp() + bound(dtAfter, 0, 400 days));
         if (suspendAndLift) {
             _suspend(L1);
             vm.warp(vm.getBlockTimestamp() + 1);
@@ -176,7 +211,8 @@ contract PropertiesTest is Base {
         vm.expectRevert(abi.encodeWithSelector(EmissionsClaimRegistry.AuditorNotAuthorized.selector, AID_A, v1));
         registry.registerReport(r);
 
-        if (nowTs <= VALID_UNTIL) assertTrue(registry.isValid(KA), "P6 earlier report keeps on-chain validity");
+        assertLe(nowTs, VALID_UNTIL, "fixture: before the report's validUntil");
+        assertTrue(registry.isValid(KA), "P6 earlier report keeps on-chain validity");
     }
 
     /// @dev P6 for reports: a report revocation is never undone; the report is invalid at every
@@ -191,6 +227,11 @@ contract PropertiesTest is Base {
         registry.revokeReport(KA);
         assertFalse(registry.isValidAt(KA, t), "P6 revoked report invalid at any t");
         assertFalse(_tryClaim(KA, batch(1), 1), "P6 revoked report not claimable");
+    }
+
+    function _revokeAt(uint64 t) internal {
+        vm.warp(t);
+        _revokeAuditorA();
     }
 
     function _revokeAuditorA() internal {

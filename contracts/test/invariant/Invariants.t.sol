@@ -27,7 +27,7 @@ contract InvariantsTest is StdInvariant, Test {
         handler.seedBody(keccak256("inv-L2"), makeAddr("inv-v2"), uint64(block.timestamp + 5 * 365 days));
         handler.seedBody(keccak256("inv-L3"), makeAddr("inv-v3"), uint64(block.timestamp + 200 days));
 
-        bytes4[] memory selectors = new bytes4[](11);
+        bytes4[] memory selectors = new bytes4[](12);
         selectors[0] = Handler.register.selector;
         selectors[1] = Handler.claim.selector;
         selectors[2] = Handler.revoke.selector;
@@ -39,6 +39,7 @@ contract InvariantsTest is StdInvariant, Test {
         selectors[8] = Handler.addAuditor.selector;
         selectors[9] = Handler.addVerifier.selector;
         selectors[10] = Handler.registerAndClaim.selector;
+        selectors[11] = Handler.reclaim.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
         targetContract(address(handler));
     }
@@ -133,13 +134,22 @@ contract InvariantsTest is StdInvariant, Test {
 
     /// @dev I6 (C41): shipments keep a positive quantity and lose validity only through revocation.
     /// I11 (C46): covered by I2 (ghost sum only grows) and the append-only batch list.
+    /// P2: the handler's `reclaim` resends claimed batch keys; each batch key has exactly one
+    /// successful claim, and its stored record is still the one the first claim wrote.
     function invariant_I6_shipments() public view {
         uint256 n = handler.batchCount();
         for (uint256 i = 0; i < n; i++) {
-            (bytes32 k, uint96 qty,,, uint64 claimedAt, bool reportValid) = registry.shipmentStatus(handler.batches(i));
+            bytes32 b = handler.batches(i);
+            (bytes32 k, uint96 qty, bytes32 importer,, uint64 claimedAt, bool reportValid) = registry.shipmentStatus(b);
             assertGt(qty, 0, "I6 qty > 0");
             assertGt(claimedAt, 0, "I6 recorded");
             assertEq(reportValid, handler.report(k).revokedAt == 0, "I6 only revocation invalidates");
+            assertEq(handler.ghostBatchClaims(b), 1, "P2 one successful claim per batch key");
+            EmissionsClaimRegistry.Shipment memory first = handler.ghostShipmentOf(b);
+            assertEq(k, first.reportKey, "P2 record unchanged: reportKey");
+            assertEq(qty, first.quantityKg, "P2 record unchanged: quantityKg");
+            assertEq(importer, first.importerCommit, "P2 record unchanged: importerCommit");
+            assertEq(claimedAt, first.claimedAt, "P2 record unchanged: claimedAt");
         }
     }
 
@@ -208,6 +218,8 @@ contract InvariantsTest is StdInvariant, Test {
         console2.log("takeover", handler.successes("takeover"));
         console2.log("takeoverOtherBody", handler.successes("takeoverOtherBody"));
         console2.log("claim", handler.successes("claim"));
+        console2.log("reclaimAttempt", handler.successes("reclaimAttempt"));
+        console2.log("reclaim (P2 expects 0)", handler.successes("reclaim"));
         console2.log("revoke", handler.successes("revoke"));
         console2.log("rotate", handler.successes("rotate"));
     }
@@ -218,6 +230,7 @@ contract InvariantsTest is StdInvariant, Test {
         // L1 registers layer 0 of scope 0 and claims against it
         handler.register(0, 0, 500_000, 0, 1 << 24 | 300 days << 24);
         handler.claim(0, 100_000);
+        handler.reclaim(0, 0, 1, 0); // same batch, same report: must revert
         // L1 adds a second credential under the same report id in layer 1
         handler.register(0, 1, 200_000, 0, uint256(1) << 40);
         // L1 revises layer 0 under a fresh id
@@ -236,6 +249,8 @@ contract InvariantsTest is StdInvariant, Test {
         handler.addVerifier(90 days);
         assertGt(handler.successes("registerNew"), 0, "registerNew");
         assertGt(handler.successes("claim"), 0, "claim");
+        assertGt(handler.successes("reclaimAttempt"), 0, "reclaimAttempt");
+        assertEq(handler.successes("reclaim"), 0, "reclaim never succeeds");
         assertGt(handler.successes("revise"), 0, "revise");
         assertGt(handler.successes("takeover"), 0, "takeover");
         assertGt(handler.successes("takeoverOtherBody"), 0, "takeoverOtherBody");

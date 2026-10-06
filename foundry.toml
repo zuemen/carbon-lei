@@ -40,10 +40,12 @@ sepolia = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
 # validator timestamp drift of a few seconds does not change any outcome that matters here.
 exclude_lints = ["block-timestamp"]
 
-# Symbolic check of P1 and P2 (docs/SECURITY.md §9) with the solc SMTChecker:
-# `FOUNDRY_PROFILE=smt forge build`. Analysis only; it compiles just the test-only harness
-# and does not change the bytecode of the deployed contracts. Results are inconclusive and it is
-# not run in CI (see §9.2).
+# solc SMTChecker run for P1 and P2 (docs/SECURITY.md §9.2): `FOUNDRY_PROFILE=smt forge build`.
+# Analysis only. It compiles the contracts and the test files in contracts/test/smt into separate
+# out and cache directories, and the model checker analyses only RegistrySmtHarness, a test-only
+# contract that inherits EmissionsClaimRegistry unchanged; the deployed bytecode does not change.
+# The checker ignores reverts with custom errors, so it proves nothing about P1 or P2 here and
+# its warnings include spurious overflows. Not run in CI.
 [profile.smt]
 test = "contracts/test/smt"
 out = "contracts/out-smt"
