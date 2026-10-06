@@ -20,6 +20,8 @@ export { sepolia as SEPOLIA_CHAIN };
 export const SEPOLIA_RPCS = ["https://ethereum-sepolia-rpc.publicnode.com", "https://rpc.sepolia.ethpandaops.io"];
 /** Largest getLogs range used against public RPCs. */
 export const LOG_CHUNK = 10_000n;
+/** At most this many getLogs requests in flight at once (public RPCs rate-limit bursts). */
+export const LOG_PARALLEL = 4;
 
 export interface Deployment {
   chainId: number;
@@ -168,15 +170,27 @@ export class ChainReader {
   }
 
   async latestTimestamp(): Promise<bigint> {
-    return (await this.client.getBlock()).timestamp;
+    return (await this.latestBlock()).timestamp;
   }
 
-  /** `AuditorRevoked(auditorAidHash, leiHash)` events, with their `revokedAt`. */
-  async auditorRevocations(auditorAidHash: Hex, leiHash: Hex): Promise<TimedEvent[]> {
-    const logs = await this.chunkedLogs(this.allowlist, verifierAllowlistAbi, "AuditorRevoked", {
-      auditorAidHash,
-      leiHash,
-    });
+  /** Number and timestamp of the latest block, in one request. */
+  async latestBlock(): Promise<{ number: bigint; timestamp: bigint }> {
+    const b = await this.client.getBlock();
+    return { number: b.number, timestamp: b.timestamp };
+  }
+
+  /**
+   * `AuditorRevoked(auditorAidHash, leiHash)` events, with their `revokedAt`.
+   * `toBlock` (default: the latest block) lets a caller search up to a block it has already read.
+   */
+  async auditorRevocations(auditorAidHash: Hex, leiHash: Hex, toBlock?: bigint): Promise<TimedEvent[]> {
+    const logs = await this.chunkedLogs(
+      this.allowlist,
+      verifierAllowlistAbi,
+      "AuditorRevoked",
+      { auditorAidHash, leiHash },
+      toBlock,
+    );
     return logs.map((l) => ({
       time: (l.args as { revokedAt: bigint }).revokedAt,
       blockNumber: l.blockNumber,
@@ -184,9 +198,9 @@ export class ChainReader {
     }));
   }
 
-  /** `VerifierSuspended(leiHash)` events, with their `suspendedAt`. */
-  async suspensions(leiHash: Hex): Promise<TimedEvent[]> {
-    const logs = await this.chunkedLogs(this.allowlist, verifierAllowlistAbi, "VerifierSuspended", { leiHash });
+  /** `VerifierSuspended(leiHash)` events, with their `suspendedAt`. `toBlock` as for `auditorRevocations`. */
+  async suspensions(leiHash: Hex, toBlock?: bigint): Promise<TimedEvent[]> {
+    const logs = await this.chunkedLogs(this.allowlist, verifierAllowlistAbi, "VerifierSuspended", { leiHash }, toBlock);
     return logs.map((l) => ({
       time: (l.args as { suspendedAt: bigint }).suspendedAt,
       blockNumber: l.blockNumber,
@@ -194,22 +208,38 @@ export class ChainReader {
     }));
   }
 
-  private async chunkedLogs(address: Hex, abi: readonly unknown[], eventName: string, args: Record<string, Hex>) {
-    const latest = await this.client.getBlockNumber({ cacheTime: 0 });
-    const out: { args: unknown; blockNumber: bigint; transactionHash: Hex }[] = [];
+  /** All matching logs from the deployment block, in block order; chunks are read a few at a time in parallel. */
+  private async chunkedLogs(
+    address: Hex,
+    abi: readonly unknown[],
+    eventName: string,
+    args: Record<string, Hex>,
+    toBlock?: bigint,
+  ) {
+    type Log = { args: unknown; blockNumber: bigint; transactionHash: Hex };
+    const latest = toBlock ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
+    const ranges: [bigint, bigint][] = [];
     for (let from = this.fromBlock; from <= latest; from += LOG_CHUNK) {
-      const to = from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest;
-      const logs = await this.client.getContractEvents({
-        address,
-        abi,
-        eventName,
-        args,
-        fromBlock: from,
-        toBlock: to,
-      } as never);
-      for (const l of logs as unknown as { args: unknown; blockNumber: bigint; transactionHash: Hex }[]) out.push(l);
+      ranges.push([from, from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest]);
     }
-    return out;
+    const chunks: Log[][] = new Array(ranges.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < ranges.length) {
+        const i = next++;
+        const [from, to] = ranges[i];
+        chunks[i] = (await this.client.getContractEvents({
+          address,
+          abi,
+          eventName,
+          args,
+          fromBlock: from,
+          toBlock: to,
+        } as never)) as unknown as Log[];
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(LOG_PARALLEL, ranges.length) }, worker));
+    return chunks.flat();
   }
 
   /** Dry run of a registry call as `account` (eth_call; no key, no transaction). Returns the revert, if any. */

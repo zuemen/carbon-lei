@@ -104,6 +104,12 @@ function result(index: number, status: CheckStatus, code = "", detail = ""): Che
   return { index, name: NAMES[index], status, code, detail };
 }
 
+/** Starts a read before its result is needed: a rejection is kept for whoever awaits it, never left unhandled. */
+function early<T>(p: Promise<T>): Promise<T> {
+  p.catch(() => {});
+  return p;
+}
+
 export async function verifyPresentation(
   p: Presentation,
   reader: ChainReader,
@@ -191,8 +197,22 @@ export async function verifyPresentation(
       : result(2, "pass", "", `${Object.keys(disclosed).length} fields disclosed, ${hidden} hidden by supplier`),
   );
 
+  // Chain reads go out in rounds of parallel requests: everything that depends only on the proof
+  // first, then everything that depends on the registered report. A read whose answer may not be
+  // needed starts early but is awaited only where the checks use it, in the same order as before,
+  // so a failing read is reported exactly as if the reads ran one after another.
+  const reportKey = reportKeyOf(core.d);
+  const batchKey = p.shipment ? batchKeyOf(reportKey, p.shipment.batchId, get("batchSalt") as Hex) : undefined;
+  const expectedScopeKey = reportScopeKeyOf(get("installationId"), get("reportingPeriod"));
+  const chainIdP = early(reader.client.getChainId());
+  const repP = early(reader.report(reportKey));
+  const statusP = batchKey ? early(reader.shipmentStatus(batchKey)) : undefined;
+  const latestP = early(reader.latestBlock());
+  const remainingP = early(reader.remainingKg(reportKey));
+  const expectedScopeP = early(reader.reportScope(expectedScopeKey));
+
   // ----------------------------------------------------------------- 3 signature
-  const chainId = await reader.client.getChainId();
+  const chainId = await chainIdP;
   let verifiedKg: bigint | undefined;
   let validUntilSec: bigint | undefined;
   try {
@@ -219,19 +239,32 @@ export async function verifyPresentation(
   }
 
   // ------------------------------------------------------------- 4 on-chain report
-  const reportKey = reportKeyOf(core.d);
   const onchain: OnchainView = { reportKey };
-  const rep = await reader.report(reportKey);
+  const rep = await repP;
   let status: ShipmentStatus | undefined;
-  let batchKey: Hex | undefined;
-  if (p.shipment) {
-    batchKey = batchKeyOf(reportKey, p.shipment.batchId, get("batchSalt") as Hex);
-    status = await reader.shipmentStatus(batchKey);
+  if (statusP) {
+    status = await statusP;
     onchain.batchKey = batchKey;
   }
   const atClaim = status !== undefined && status.claimedAt !== 0n && lower(status.reportKey) === lower(reportKey);
-  const t = atClaim && status ? status.claimedAt : await reader.latestTimestamp();
+  const t = atClaim && status ? status.claimedAt : (await latestP).timestamp;
   let contested = false;
+
+  // Checks 6-8 only need the report and the disclosed fields: start them now, alongside check 4's reads.
+  const ctx: EvidenceContext = { core, disclosed, report: rep.registeredAt === 0n ? undefined : rep, reader };
+  const c = opts.checkers ?? {};
+  const { anchor, authority, reconciliation } = c;
+  const anchorP =
+    p.anchorEvidence !== undefined && anchor ? early(Promise.resolve().then(() => anchor(p.anchorEvidence, ctx))) : undefined;
+  const authorityP =
+    p.authorityEvidence !== undefined && authority
+      ? early(Promise.resolve().then(() => authority(p.authorityEvidence, ctx)))
+      : undefined;
+  const reportExtract = p.reportExtract;
+  const reconciliationP =
+    reportExtract !== undefined && reconciliation
+      ? early(Promise.resolve().then(() => reconciliation(reportExtract, ctx)))
+      : undefined;
 
   if (rep.registeredAt === 0n) {
     checks.push(result(4, "fail", "REPORT_INVALID/NOT_REGISTERED", "no report with this credential ID on the registry"));
@@ -244,21 +277,37 @@ export async function verifyPresentation(
       issuerLeiHash: rep.issuerLeiHash,
       supersedes: rep.supersedes,
       supersededBy: rep.supersededBy,
-      remainingKg: await reader.remainingKg(reportKey),
+      remainingKg: await remainingP,
     });
     const fails: [string, string][] = [];
     const notes: string[] = [];
+
+    // Second round of reads (they depend on the registered report and on t).
+    const scopeP =
+      rep.reportScopeKey === expectedScopeKey ? expectedScopeP : early(reader.reportScope(rep.reportScopeKey));
+    const supersededByP = rep.supersededBy !== ZERO32 ? early(reader.report(rep.supersededBy)) : undefined;
+    const unboundAtP = early(
+      scopeP.then((s) =>
+        rep.reportIdHash === s.reportIdHash ? 0n : reader.reportIdUnboundAt(rep.reportScopeKey, rep.reportIdHash),
+      ),
+    );
+    const prevP = rep.supersedes !== ZERO32 ? early(reader.report(rep.supersedes)) : undefined;
+    const contractValidP = early(reader.isValidAt(reportKey, t));
+    // 4l events, searched up to the latest block read above
+    const revocationsP = early(
+      latestP.then(({ number }) => reader.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash, number)),
+    );
+    const suspensionsP = early(latestP.then(({ number }) => reader.suspensions(rep.issuerLeiHash, number)));
 
     // 4b revoked
     const revoked = rep.revokedAt !== 0n;
     if (revoked) fails.push(["REPORT_INVALID/REVOKED", "the verification body revoked this report"]);
 
     // 4d superseded or moved off the report scope
-    const scope = await reader.reportScope(rep.reportScopeKey);
+    const scope = await scopeP;
     let supersededAt = 0n;
-    if (rep.supersededBy !== ZERO32) supersededAt = (await reader.report(rep.supersededBy)).registeredAt;
-    const unboundAt =
-      rep.reportIdHash === scope.reportIdHash ? 0n : await reader.reportIdUnboundAt(rep.reportScopeKey, rep.reportIdHash);
+    if (supersededByP) supersededAt = (await supersededByP).registeredAt;
+    const unboundAt = await unboundAtP;
     const replacedInLayer = rep.supersededBy !== ZERO32 && t >= supersededAt;
     const scopeMoved = rep.reportIdHash !== scope.reportIdHash && (unboundAt === 0n || t >= unboundAt);
     const sameBlockException =
@@ -278,8 +327,8 @@ export async function verifyPresentation(
     } else if (sameBlockException) {
       notes.push("valid when shipped; replaced later in the same block");
     }
-    if (rep.supersedes !== ZERO32) {
-      const prev = await reader.report(rep.supersedes);
+    if (prevP) {
+      const prev = await prevP;
       notes.push(
         prev.credScopeKey === rep.credScopeKey
           ? "this credential revises an earlier one in the same layer"
@@ -322,7 +371,7 @@ export async function verifyPresentation(
     }
     // 4k cross-check with the contract's own answer
     const localValid = !revoked && !(replacedInLayer || scopeMoved) && !expired;
-    const contractValid = await reader.isValidAt(reportKey, t);
+    const contractValid = await contractValidP;
     if (localValid !== contractValid || (atClaim && status && status.reportValid !== !revoked)) {
       fails.push(["REPORT_INVALID", "contract and local checks disagree (SDK or ABI version?)"]);
     }
@@ -332,10 +381,7 @@ export async function verifyPresentation(
     } else {
       // 4l revocation window: registered shortly before the auditor was revoked or the body suspended
       const windowSec = BigInt(Math.round((opts.contestedWindowHours ?? 24) * 3600));
-      const events = [
-        ...(await reader.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash)),
-        ...(await reader.suspensions(rep.issuerLeiHash)),
-      ];
+      const events = [...(await revocationsP), ...(await suspensionsP)];
       contested = events.some((e) => rep.registeredAt <= e.time && e.time - rep.registeredAt <= windowSec);
       const base = "registered by an authorized auditor (checked by the contract at registration)";
       checks.push(
@@ -379,28 +425,27 @@ export async function verifyPresentation(
   }
 
   // ------------------------------------------------------------ 6, 7, 8 evidence
-  const ctx: EvidenceContext = { core, disclosed, report: rep.registeredAt === 0n ? undefined : rep, reader };
-  const c = opts.checkers ?? {};
+  // (started after the first round of reads; their results are added here, in order)
   if (p.anchorEvidence === undefined) {
     checks.push(result(6, "fail", "ANCHOR_NOT_FOUND", "no KEL anchor evidence in this proof"));
-  } else if (!c.anchor) {
+  } else if (!anchorP) {
     checks.push(result(6, "skipped", "", "anchor verification not available here"));
   } else {
-    checks.push({ ...(await c.anchor(p.anchorEvidence, ctx)), index: 6, name: NAMES[6] });
+    checks.push({ ...(await anchorP), index: 6, name: NAMES[6] });
   }
   if (p.authorityEvidence === undefined) {
     checks.push(result(7, "fail", "AUTHORITY_INVALID", "no vLEI authority evidence in this proof"));
-  } else if (!c.authority) {
+  } else if (!authorityP) {
     checks.push(result(7, "skipped", "", "authority-chain verification not available here"));
   } else {
-    checks.push({ ...(await c.authority(p.authorityEvidence, ctx)), index: 7, name: NAMES[7] });
+    checks.push({ ...(await authorityP), index: 7, name: NAMES[7] });
   }
   if (p.reportExtract === undefined) {
     checks.push(result(8, "skipped", "", "no report extract in this proof"));
-  } else if (!c.reconciliation) {
+  } else if (!reconciliationP) {
     checks.push(result(8, "skipped", "", "reconciliation not available here"));
   } else {
-    checks.push({ ...(await c.reconciliation(p.reportExtract, ctx)), index: 8, name: NAMES[8] });
+    checks.push({ ...(await reconciliationP), index: 8, name: NAMES[8] });
   }
 
   const failed = checks.filter((x) => x.status === "fail");

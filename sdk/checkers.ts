@@ -37,6 +37,12 @@ export function vleiCheckers(
       return result(6, r.ok, r.code, r.detail);
     },
     authority: async (ev: unknown, ctx: EvidenceContext) => {
+      // The two allowlist reads start together with the bundle load; awaited only after the hash check.
+      const report = ctx.report;
+      const instP = report ? ctx.reader.institution(report.issuerLeiHash) : undefined;
+      const audP = report ? ctx.reader.auditor(report.auditorAidHash, report.issuerLeiHash) : undefined;
+      instP?.catch(() => {});
+      audP?.catch(() => {});
       let bundle: AuthorityEvidence;
       if (isRef(ev)) {
         if (!opts.loadBundle) return result(7, false, "AUTHORITY_INVALID", "authority evidence is a reference and cannot be loaded here");
@@ -49,9 +55,9 @@ export function vleiCheckers(
         bundle = ev as AuthorityEvidence;
       }
       let onchain;
-      if (ctx.report) {
-        const inst = await ctx.reader.institution(ctx.report.issuerLeiHash);
-        const aud = await ctx.reader.auditor(ctx.report.auditorAidHash, ctx.report.issuerLeiHash);
+      if (instP && audP) {
+        const inst = await instP;
+        const aud = await audP;
         onchain = {
           leCredSaidHash: inst.leCredSaidHash,
           accreditationSaidHash: inst.accreditationSaidHash,

@@ -7,7 +7,7 @@ import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source } from "../components.tsx";
 import { comparisonFigures, whatIfFigures, type DemoData } from "../data.ts";
 import { CODE_TEXT } from "../messages.ts";
-import { evidenceCheckers } from "../evidence.ts";
+import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 
 const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 1, text: "The credential has not been altered since it was issued (its content hash matches its ID)", source: "browser" },
@@ -274,6 +274,16 @@ export function Buyer() {
     scrollBelowTabbar(el);
     el.focus({ preventScroll: true });
   }
+
+  // A proof in the box (loaded, pasted, from the Supplier tab or the QR code): fetch its evidence file now,
+  // so Verify does not wait for the download. Verify still checks the file's hash against the proof.
+  useEffect(() => {
+    try {
+      prefetchEvidence((JSON.parse(proofText) as Presentation).authorityEvidence);
+    } catch {
+      // not a proof (yet); Verify reports it
+    }
+  }, [proofText]);
 
   // The product passport QR opens #buyer?said=<credSAID>&batch=<batchId>: load the matching demo proof.
   useEffect(() => {
