@@ -291,6 +291,33 @@ test("E6 no horizontal scroll at 390 px", async ({ page }) => {
   }
 });
 
+test("Trust chain: name field vs signature chain panel, collapsed by default, opens by keyboard, values from the evidence", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.goto("./#trust-chain");
+  const panel = page.locator("details#name-vs-chain");
+  await expect(panel).not.toHaveAttribute("open", "");
+  await expect(page.locator("li.node")).toHaveCount(data.trustChain.length);
+  const summary = panel.locator("summary");
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(panel).toHaveAttribute("open", "");
+  const left = panel.locator(".pvv-col").nth(0);
+  const right = panel.locator(".pvv-col").nth(1);
+  await expect(left).toContainText("providerName");
+  await expect(left).toContainText("companyName");
+  await expect(left).toContainText(`"${data.proof.reportExtract.verifierName}"`);
+  await expect(left).toContainText("PACT itself does not sign who the provider is");
+  await expect(right).toContainText("LE vLEI");
+  await expect(right).toContainText(`LEI ${JSON.parse(data.proof.core).issuer.verifierLEI}`);
+  await expect(right).toContainText("ECR vLEI");
+  await expect(right).toContainText(`key event #${data.credential.kelSeq}`);
+  await expect(right).toContainText(/witnesses (\d+)\/\1/);
+  await expect(right.locator(".badge.pass")).toHaveCount(4);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
 test("E7 On-chain proof lists the contracts and the demo transactions", async ({ page }) => {
   await page.goto("./#on-chain-proof");
   await expect(page.getByRole("heading", { name: "On-chain proof" })).toBeVisible();

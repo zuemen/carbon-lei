@@ -283,7 +283,7 @@ npm ci && forge build
 npm test -w sdk             # 114 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
 npx playwright install chromium
 npm test -w verifier        # 28 tests: revocation seal detection, the watcher and the impostor chain (no KERI stack needed)
-npm run e2e -w demo         # 15 browser tests against a local dev server; set DEMO_URL to test the hosted page
+npm run e2e -w demo         # 16 browser tests against a local dev server; set DEMO_URL to test the hosted page
 ```
 
 Test counts, coverage and fuzz runs: see [Measurements](#measurements) · CI: [ci.yml runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml)
@@ -319,7 +319,7 @@ Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of th
 | Invariant fuzz | 256 runs × 128 calls = 32,768 calls per invariant, 8 invariant functions, 0 violations | Foundry's default is 256 runs × depth 500; we keep the default run count with depth 128 | Invariant tests over random sequences of register (including revisions and take-overs), claim, revoke, suspend, lift, auditor revocation, address rotation and time jumps |
 | Cross-language test vectors | Solidity and TypeScript compute the same keys, commitments and EIP-712 digest, and recover the same signer; the credential SAID equals keripy 1.2.13's | An independent implementation (keripy) for the SAID | [`fixtures/vectors.json`](fixtures/vectors.json), `sdk/scripts/check-said-keripy.sh` |
 | On-chain records | 12 of 12 transactions and 2 of 2 contracts in the [On-chain proof](#on-chain-proof) table match Sepolia: receipt status, block and `gasUsed`; each contract has code and was created by its deploy transaction | The values recorded in `fixtures/sepolia-tx.json` and `contracts/deployments/11155111.json` | `npm run audit:onchain` ([`scripts/audit-onchain.ts`](scripts/audit-onchain.ts)); exits 1 if any row differs |
-| Browser tests (Playwright) | 15 of 15 against a local dev server and 15 of 15 against the hosted page on 2026-10-06 (retries: 1 for the hosted run) | Thresholds set before measuring, for example the Buyer tab visible within 5 s | `demo/e2e/demo.spec.ts`; the first screen loads only the page shell (entry script 72 kB gzip); tabs and the chain client load on demand |
+| Browser tests (Playwright) | 16 of 16 against a local dev server on 2026-10-06; 15 of 15 against the hosted page on 2026-10-06, before the Trust chain comparison panel (test 16) was deployed (retries: 1 for the hosted run) | Thresholds set before measuring, for example the Buyer tab visible within 5 s | `demo/e2e/demo.spec.ts`; the first screen loads only the page shell (entry script 72 kB gzip); tabs and the chain client load on demand |
 
 ## Standards alignment
 

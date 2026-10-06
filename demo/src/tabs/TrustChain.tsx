@@ -3,6 +3,7 @@ import { auditorAidHashOf, leiHashOf } from "../../../sdk/commitment.ts";
 import { useApp } from "../App.tsx";
 import { EVIDENCE_WHY, TabHead } from "../components.tsx";
 import { short } from "../data.ts";
+import { PactVsVlei } from "./PactVsVlei.tsx";
 
 const STATUS = { valid: "✓ Valid", revoked: "✕ Revoked", suspended: "! Suspended", expired: "✕ Expired" } as const;
 
@@ -113,6 +114,7 @@ export function TrustChain() {
           </section>
         </div>
       </div>
+      <PactVsVlei />
     </>
   );
 }
