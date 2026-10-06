@@ -104,7 +104,8 @@ export function TrustChain() {
             <p className="sheet-kicker">Who writes the allowlist</p>
             <p className="fine">
               In this demo, two operator keys. The trust-registry operator adds verification bodies and auditors and can
-              rotate a body's address; a separate revocation watcher syncs suspensions and auditor revocations. Neither key
+              rotate a body's address; a separate watcher key syncs an auditor's revocation automatically (a watcher process
+              polls the body's key event log) and, in this demo, sends suspensions by hand. Neither key
               can edit, revoke or re-assign a report or its tonnage. Every allowlist write is an on-chain event, and each
               addition carries credential hashes (SAIDs) you can re-check. Roadmap: a multisig of accreditation bodies.
             </p>

@@ -9,9 +9,9 @@ All companies are fictional. All emissions values for the demo producer are illu
 
 ## Summary
 
-**What CarbonLEI contributes.** CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne can be claimed only once on the ledger, across importers, and software can check who signed a value and whether they were authorised at that time. That is environmental transparency and carbon tracking that a PDF copy of a verification report cannot give. Its limits, and how it differs from the figures below, are in Section 4.4.
+**What CarbonLEI contributes.** CarbonLEI protects the integrity of verified embedded-emissions data in CBAM supply chains: each verified tonne of goods can be claimed only once within this deployment's ledger, across importers (this does not show that the physical goods are unique), and software can check who signed a value and whether the body and its auditor were authorised when the report was registered (the contract checks this at the registration block against the revocations the watcher has synced; a report registered within 24 hours before a sync is flagged CONTESTED). That is environmental transparency and carbon tracking that a PDF copy of a verification report cannot give. Its limits, and how it differs from the figures below, are in Section 4.4.
 
-**Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 t of difference to the unmarked default plus 135.5 t of mark-up. At the Q3 2026 certificate price of €82.32 that is about €48,486, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t.
+**Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 tCO2e of difference to the unmarked default plus 135.5 tCO2e of mark-up. At the Q3 2026 certificate price of €82.32 that is about €48,486, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t of goods.
 
 CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no double counting, and a reward for low-carbon producers. Only the third one could lead to a physical reduction, and we do not quantify it.
 
@@ -65,7 +65,7 @@ The demo producer, Demo Fasteners Co. (fictional), has a verified report for 500
 
 ### Sensitivity to the verified value
 
-The gap depends on the verified value. At 1.5 tCO2e/t the 2026 gap is about 1.48 t per tonne; at 2.5, about 0.48 t.
+The gap depends on the verified value. At 1.5 tCO2e/t the 2026 gap is about 1.48 tCO2e per tonne; at 2.5, about 0.48 tCO2e.
 
 | Verified value (tCO2e/t, illustrative) | Gap to 2026 default of 2.978 | Gap to default of 3.519 from 2028 |
 |---|---|---|
@@ -87,7 +87,7 @@ How to read the gap:
 
 - **453.5 tCO2e** is the difference between this plant's (illustrative) intensity and the unmarked default reference.
 - The rest of the gap (for example 589 − 453.5 = 135.5 tCO2e in 2026) is the mark-up. It is a regulatory surcharge for missing verified data, not emissions.
-- **Money, gross and illustrative:** multiply the gap by the CBAM certificate price P (€ per tCO2e) for the period. At the Q3 2026 price of €82.32 [7], the 2026 gap is about €97 per tonne, or about €48,486 for the 500 t report; from 2028 it is about €142 per tonne at the same price. Before the free-allocation adjustment, which is deducted in both cases and changes the gap only slightly (Section 2a). Not adjusted for any carbon price paid in the country of origin.
+- **Money, gross and illustrative:** multiply the gap by the CBAM certificate price P (€ per tCO2e) for the period. At the Q3 2026 price of €82.32 [7], the 2026 gap is about €97 per tonne, or about €48,486 for the 500 t report; from 2028 it is about €142 per tonne at the Q3 2026 price, held constant. Before the free-allocation adjustment, which is deducted in both cases and changes the gap only slightly (Section 2a). Not adjusted for any carbon price paid in the country of origin.
 
 The Buyer tab of the hosted demo (EU importer or downstream customer) shows the same comparison for the demo shipment of 200 t: 595.6 tCO2e at the 2026 default of 2.978 against 360 tCO2e at the verified 1.8, a declared-emissions gap of 235.6 tCO2e, or about €19,395 gross at the Q3 2026 price of €82.32. The card labels the figure as illustrative, before the free-allocation adjustment, and as a gap in what is declared, not a physical reduction.
 
@@ -148,7 +148,7 @@ These are **scenarios under stated assumptions, not forecasts.** Every input mar
 
 V = installations × 500 t. P = €82.32, the Q3 2026 certificate price, held fixed (assumption).
 
-| Scenario | Volume V (t) | Declared-emissions gap vs 2026 default (tCO2e) | Gap vs default from 2028 (tCO2e) | Price signal, gross, 2026 (€ million per year at P = €82.32) | Price signal, gross, from 2028 (€ million per year at P = €82.32) |
+| Scenario | Volume V (t) | Declared-emissions gap vs 2026 default (tCO2e) | Gap vs default from 2028 (tCO2e) | Price signal, gross, 2026 (€ million per year at P = €82.32) | Price signal, gross, from 2028 (€ million per year at P = €82.32, held constant) |
 |---|---|---|---|---|---|
 | 10 installations | 5,000 | 5,890 | 8,595 | 0.48 | 0.71 |
 | 100 installations | 50,000 | 58,900 | 85,950 | 4.85 | 7.08 |
@@ -170,7 +170,7 @@ Physical reductions are not quantified. See Section 2a for why the CBAM incentiv
 
 ### 4.4 Attribution: what CarbonLEI itself adds
 
-What CarbonLEI itself adds is the integrity of verified data: software can check who signed a verified value and whether they were authorised, wherever the value travels, and the tonnage ledger lets each verified tonne be claimed only once across importers. That is its contribution to environmental transparency and carbon tracking. The figures in Sections 2 and 4.2 are a different thing: the effect of declaring a verified value instead of a default value, which any verified CBAM value has, with or without CarbonLEI. CarbonLEI's own contribution is stated below in qualitative terms only; we give no figure for it.
+What CarbonLEI itself adds is the integrity of verified data: software can check who signed a verified value and whether they were authorised, wherever the value travels, and the tonnage ledger lets each verified tonne of goods be claimed only once within this deployment's ledger, across importers; it does not show that the physical goods are unique. That is its contribution to environmental transparency and carbon tracking. The figures in Sections 2 and 4.2 are a different thing: the effect of declaring a verified value instead of a default value, which any verified CBAM value has, with or without CarbonLEI. CarbonLEI's own contribution is stated below in qualitative terms only; we give no figure for it.
 
 #### Where the effect falls
 
@@ -209,7 +209,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 - **Scope.** The default values used here are direct emissions only, as listed for CN 7318 [1]. A full product carbon footprint has a wider boundary (see [PACT_MAPPING.md](PACT_MAPPING.md#3-semantic-differences)).
 - **Regulation changes.** Default values and mark-ups can be revised.
 - **Linear model.** No rebound, leakage or market-share effects.
-- **Dependence on verification quality.** CarbonLEI proves authority and single use. It cannot make a wrong measurement right.
+- **Dependence on verification quality.** CarbonLEI checks authority and single use on its ledger. It cannot make a wrong measurement right.
 
 ---
 
@@ -228,7 +228,7 @@ The contracts run on Ethereum Sepolia, a proof-of-stake testnet; Ethereum mainne
 | Energy and emissions of those transactions, allocated | about 94 Wh and about 32 gCO2e (15 × 6.29 Wh; 15 × about 2.1 gCO2e) | Mainnet reference values applied to Sepolia transactions |
 | For comparison: declared-emissions gap per tonne of screws, 2026 | about 1.18 tCO2e (illustrative) | Section 2 |
 
-Per-transaction figures are an allocation, not a causal effect: "the energy required to propose and validate a block is independent of the number of transactions within it" [17]. The read-only checks of the hosted demo (contract calls and dry runs) send no transaction. The vLEI agents (KERIA) run locally or at the verification body. No token is issued. Verification runs no AI model: all eight checks are deterministic code, and check 8, which reconciles the verification report with the credential, applies 12 fixed rules. There is no model inference to report.
+Per-transaction figures are an allocation, not a causal effect: "the energy required to propose and validate a block is independent of the number of transactions within it" [17]. The read-only checks of the hosted demo (contract calls and dry runs) send no transaction. The vLEI agents (KERIA) run locally or at the verification body. No token is issued. Verification runs no AI model: all eight checks (seven verification checks and one advisory reconciliation check) are deterministic code, and check 8, which reconciles the verification report with the credential, applies 12 fixed rules. There is no model inference to report.
 
 ---
 
