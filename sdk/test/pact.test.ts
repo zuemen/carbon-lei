@@ -9,7 +9,10 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { reportKeyOf } from "../commitment.ts";
 import { decodeDisclosure } from "../disclosure.ts";
 import { DEMO_DISCLOSURE } from "../issue.ts";
-import { exclusiveEnd, exportPact, pactIdOf, type PactContext } from "../pact.ts";
+import type { ChainReader, ReportRecord } from "../chain.ts";
+import type { Presentation } from "../disclosure.ts";
+import { exclusiveEnd, exportPact, exportPactFromProof, pactIdOf, type PactContext } from "../pact.ts";
+import type { VerificationResult } from "../verify.ts";
 
 const SPEC_URL = "https://raw.githubusercontent.com/wbcsd/data-exchange-protocol/v3.0.3/spec/v3/openapi.yaml";
 const CACHE = new URL("../../.cache/pact-openapi-3.0.3.yaml", import.meta.url);
@@ -130,5 +133,33 @@ describe("PACT v3.0.3 export (S8)", () => {
   it("exclusive end handles month and year ends", () => {
     expect(exclusiveEnd("2026-12-31")).toBe("2027-01-01T00:00:00Z");
     expect(exclusiveEnd("2028-02-28")).toBe("2028-02-29T00:00:00Z");
+  });
+
+  it("exportPactFromProof (CLI and hosted demo): same export from a verified proof and the on-chain record", async () => {
+    const zero = `0x${"0".repeat(64)}` as const;
+    const rec = (over: Partial<ReportRecord> = {}) =>
+      ({ kelSeq: 3n, registeredAt: 1n, revokedAt: 0n, supersedes: zero, credScopeKey: zero, ...over }) as ReportRecord;
+    const rd = (r: ReportRecord) =>
+      ({ report: async () => r, registry: ctx().registry, client: { getChainId: async () => 11155111 } }) as unknown as ChainReader;
+    const proof = {
+      core: JSON.stringify({ d: v.V7.d, issuer: { auditorAID: v.inputs.auditorAID, verifierLEI: v.inputs.verifierLEI } }),
+    } as Presentation;
+    const checks = [1, 2, 3, 4, 5].map((index) => ({ index, name: "", status: "pass" as const, code: "", detail: "" }));
+    const result = { overall: "VALID", checks, disclosed, hidden: 0, primaryCode: "" } as VerificationResult;
+    const c = ctx();
+    const product = {
+      companyName: c.companyName,
+      productNameCompany: c.productNameCompany,
+      productDescription: c.productDescription,
+      productId: c.productId,
+      verifierName: c.verifierName,
+      created: c.created,
+    };
+    const pf = await exportPactFromProof(proof, result, rd(rec()), product);
+    expect(pf).toEqual(exportPact(c));
+    expect(validate(pf)).toBe(true);
+    await expect(exportPactFromProof(proof, result, rd(rec({ revokedAt: 5n })), product)).rejects.toThrow(/revoked/);
+    const failed = { ...result, checks: checks.map((x) => (x.index === 2 ? { ...x, status: "fail" as const } : x)) };
+    await expect(exportPactFromProof(proof, failed as VerificationResult, rd(rec()), product)).rejects.toThrow(/nothing exported/);
   });
 });

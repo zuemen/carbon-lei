@@ -3,8 +3,13 @@
 // it carries CBAM direct embedded emissions only, and says so in `comment`,
 // `productDescription`, `pcf.boundaryProcessesDescription` and the extension.
 // Hidden fields never enter an export.
+// Browser-safe (no Node APIs): used by `carbonlei export-pact` and by the hosted demo's Buyer tab.
 import { keccak256, stringToBytes } from "viem";
+import type { ChainReader } from "./chain.ts";
+import { reportKeyOf } from "./commitment.ts";
 import { METHODOLOGY_NOTE, splitReportingPeriod, type Hex } from "./credential.ts";
+import type { Presentation } from "./disclosure.ts";
+import type { VerificationResult } from "./verify.ts";
 
 export const PACT_SPEC_VERSION = "3.0.3";
 export const EXTENSION_SPEC_VERSION = "2.0.0";
@@ -14,6 +19,9 @@ export const PRODUCT_ID_DOMAIN = "zuemen.github.io";
 /** CN codes are maintained by the European Commission; the URN uses the issuer's domain. */
 export const CN_ISSUER_DOMAIN = "ec.europa.eu";
 export const BOUNDARY = "CBAM embedded direct emissions — not a full product carbon footprint";
+export const EXTENSION_SCHEMA_URL = "https://zuemen.github.io/carbon-lei/schemas/carbonlei-extension-0.1.0.json";
+export const DOCUMENTATION_URL = "https://github.com/zuemen/carbon-lei/blob/main/docs/PACT_MAPPING.md";
+const ZERO32 = `0x${"0".repeat(64)}`;
 
 /** Deterministic footprint id from the on-chain reportKey (UUID version 8, RFC 9562). */
 export function pactIdOf(reportKey: Hex): string {
@@ -147,4 +155,52 @@ export function exportPact(ctx: PactContext): Record<string, unknown> {
     ],
   };
   return pf;
+}
+
+/** What the exporter supplies about the product; the rest comes from the proof and the chain. */
+export type PactProduct = Pick<PactContext, "companyName" | "productNameCompany" | "productDescription" | "productId"> &
+  Partial<Pick<PactContext, "verifierName" | "extensionSchemaUrl" | "documentationUrl" | "created">>;
+
+/**
+ * Export of a verified proof. Exports nothing unless checks 1–3 passed; reads the report's on-chain
+ * record for `status`, `precedingPfIds` and the KEL sequence number.
+ */
+export async function exportPactFromProof(
+  proof: Presentation,
+  r: VerificationResult,
+  rd: ChainReader,
+  product: PactProduct,
+): Promise<Record<string, unknown>> {
+  if ([1, 2, 3].some((i) => r.checks.find((c) => c.index === i)?.status === "fail")) {
+    throw new Error(`the proof does not pass checks 1–3 (${r.primaryCode}); nothing exported`);
+  }
+  const core = JSON.parse(proof.core);
+  const reportKey = reportKeyOf(core.d);
+  const rep = await rd.report(reportKey);
+  let supersedesSameLayer: boolean | undefined;
+  if (rep.registeredAt !== 0n && rep.supersedes !== ZERO32) {
+    supersedesSameLayer = (await rd.report(rep.supersedes)).credScopeKey === rep.credScopeKey;
+  }
+  return exportPact({
+    extensionSchemaUrl: EXTENSION_SCHEMA_URL,
+    documentationUrl: DOCUMENTATION_URL,
+    ...product,
+    disclosed: r.disclosed,
+    credSAID: core.d,
+    auditorAID: core.issuer.auditorAID,
+    verifierLEI: core.issuer.verifierLEI,
+    reportKey,
+    kelSeq: rep.kelSeq,
+    registry: rd.registry,
+    chainId: await rd.client.getChainId(),
+    onchain:
+      rep.registeredAt === 0n
+        ? undefined
+        : {
+            revoked: rep.revokedAt !== 0n,
+            replaced: r.checks[4]?.code === "REPORT_INVALID/SUPERSEDED",
+            supersedes: supersedesSameLayer === undefined ? undefined : rep.supersedes,
+            supersedesSameLayer,
+          },
+  });
 }

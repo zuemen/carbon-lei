@@ -1,5 +1,8 @@
 // End-to-end checks of the demo page (handbook E1–E11, plan U3).
 import { expect, test, type Page } from "@playwright/test";
+import { reportKeyOf } from "../../sdk/commitment.ts";
+import { decodeDisclosure } from "../../sdk/disclosure.ts";
+import { PACT_SPEC_VERSION, pactIdOf } from "../../sdk/pact.ts";
 
 async function rpcs(page: Page): Promise<string[]> {
   const res = await page.request.get("demo-data.json");
@@ -66,6 +69,89 @@ test("Buyer summary under Verify: checks passed and the card's gap; a failed che
   await page.getByRole("button", { name: "Tamper with one number" }).click();
   await expect(summary).toContainText("Rejected — check 2 failed: A disclosed value was changed");
   await expect(summary).not.toContainText("declared-emissions gap for this");
+});
+
+test("Buyer what-if slider: hypothetical figures follow the formula at the card's price, keyboard operable", async ({ page }) => {
+  const c = (await (await page.request.get("demo-data.json")).json()).comparison;
+  const [def, price, q] = [Number(c.defaultValue), Number(c.priceEur), Number(c.quantityTonnes)];
+  const f = (n: number, d = 1) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const e2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  await page.goto("./#buyer");
+  const card = page.locator("#comparison");
+  const slider = card.getByLabel(/What if the verified value were/);
+  const out = card.locator(".whatif-out");
+  await expect(out).toHaveAttribute("aria-live", "polite");
+  const expectFigures = async (x: number) => {
+    const gap = Math.max(0, def - x);
+    await expect(out.locator("dd").nth(0)).toHaveText(`${f(gap, 3)} tCO2e`);
+    await expect(out.locator("dd").nth(1)).toHaveText(`€${e2(gap * price)}`);
+    await expect(out.locator("dd").nth(2)).toHaveText(`€${f(gap * price * q, 0)}`);
+  };
+  // Starts at the proof's verified value: the shipment figure equals the card's gross figure.
+  await expect(slider).toHaveValue(c.verifiedValue);
+  await expectFigures(Number(c.verifiedValue));
+  const gap = def * q - Number(c.verifiedValue) * q;
+  await expect(out.locator("dd").nth(2)).toHaveText(`€${f(gap * price, 0)}`);
+  await expect(card.locator(".whatif-rate")).toContainText(`about €${e2(0.1 * price)} per tonne of goods`);
+  await expect(card.locator(".whatif-rate")).toContainText("(gross, illustrative)");
+  // Keyboard: three steps down, then to the CBAM default (gap 0).
+  await slider.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowLeft");
+  const lower = Math.round((Number(c.verifiedValue) - 0.3) * 10) / 10;
+  await expect(slider).toHaveValue(String(lower));
+  await expect(card.locator(".whatif-label")).toHaveText(`What if the verified value were ${f(lower, 3)} tCO2e/t?`);
+  await expectFigures(lower);
+  await page.keyboard.press("End");
+  await expect(card.locator(".whatif-label")).toContainText("(the CBAM default)");
+  await expectFigures(def);
+  // The verified figures above the slider never change.
+  await expect(card.locator(".gap-line")).toHaveText(`Declared-emissions gap: ${f(gap)} tCO2e`);
+  await expect(card.locator(".compare")).toContainText(`${c.verifiedValue} tCO2e/t`);
+});
+
+test("PACT download after a VALID verification: the SDK's ProductFootprint of the verified credential; none when rejected", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const credSAID = JSON.parse(data.proof.core).d as string;
+  const disclosed = Object.fromEntries(
+    (data.proof.disclosures as string[]).map((d) => decodeDisclosure(d)).map((d) => [d.name, d.value]),
+  );
+  const pactButton = page.getByRole("button", { name: "Download PACT product footprint (JSON)" });
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  const accept = page.getByRole("button", { name: "Accept verified value" });
+  if (await accept.isEnabled()) {
+    await accept.click();
+    await expect(page.getByText("Not a conformance claim and not connected to any PACT network.")).toBeVisible();
+    const download = page.waitForEvent("download");
+    await pactButton.click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe(`carbonlei-pact-${data.shipment.batchId}.json`);
+    const pf = JSON.parse(await (await import("node:fs/promises")).readFile((await file.path()) as string, "utf8"));
+    expect(pf.specVersion).toBe(PACT_SPEC_VERSION);
+    expect(pf.specVersion).toMatch(/^3\.0\.\d+$/);
+    expect(pf.id).toBe(pactIdOf(reportKeyOf(credSAID)));
+    expect(pf.status).toBe("Active");
+    expect(pf.companyName).toBe("Demo Fasteners Co. (fictional)");
+    expect(pf.companyIds).toEqual([`urn:lei:${disclosed.supplierLEI}`]);
+    expect(pf.productIds).toEqual(["urn:pact:zuemen.github.io:product-id:hex-bolt-m10"]);
+    expect(pf.productClassifications).toEqual([`urn:pact:ec.europa.eu:cn:${data.report.cnCode}`]);
+    expect(pf.pcf.pcfExcludingBiogenicUptake).toBe(disclosed.specificEmbeddedEmissions_tCO2e_per_t);
+    expect(pf.pcf.boundaryProcessesDescription).toContain("not a full product carbon footprint");
+    const ext = pf.extensions[0].data.carbonlei;
+    expect(ext.credSAID).toBe(credSAID);
+    expect(ext.registry).toEqual({
+      chainId: data.network.chainId,
+      contract: data.deployment.contracts.EmissionsClaimRegistry.address,
+      reportKey: reportKeyOf(credSAID),
+    });
+    expect(ext.kelSeq).toBe(data.credential.kelSeq);
+  }
+  // A rejected proof gets no PACT button.
+  await page.getByRole("button", { name: "Tamper with one number" }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText("Rejected");
+  await expect(pactButton).toHaveCount(0);
 });
 
 test("E10 Tamper with one number → check 2 fails", async ({ page }) => {

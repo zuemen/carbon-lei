@@ -185,6 +185,24 @@ label.field-label { display: block; font: 600 13px/1.3 var(--mono); margin: 16px
 .compare .v { font: 600 26px/1.15 var(--serif); }
 .gap-line { font: 600 16px/1.4 var(--serif); }
 .fine { font-size: 12.5px; color: var(--ink-soft); }
+.btn-row + .btn-row { margin-top: 14px; }
+
+/* "What if" panel: dashed edge and a Hypothetical tag, so it never reads as the verified proof. */
+.whatif { margin-top: 22px; padding: 14px 16px 6px; border: 1.5px dashed var(--ink-soft); background: #fffdf8; }
+.whatif-head { font: 600 18px/1.35 var(--serif); margin: 0 0 10px; }
+.tag-hypo { display: inline-block; vertical-align: 2px; margin-left: 6px; font: 700 11.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); border: 1.5px dashed currentColor; padding: 5px 7px; background: var(--amber-wash); }
+.whatif-label { display: block; font: 500 14px/1.45 var(--sans); }
+.whatif-label strong { font: 600 15px/1.45 var(--mono); }
+.whatif-range { display: block; width: 100%; margin: 8px 0 2px; height: 28px; accent-color: var(--green); cursor: pointer; }
+.whatif-scale { display: flex; justify-content: space-between; gap: 12px; margin: 0; font-family: var(--mono); }
+.whatif-out { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1.5px solid var(--ink); margin: 10px 0 0; background: var(--sheet); }
+.whatif-out > div { padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+.whatif-out > div + div { border-left: 1.5px solid var(--ink); }
+.whatif-out dt { font: 500 12px/1.35 var(--mono); color: var(--ink-soft); }
+.whatif-out dd { margin: 4px 0 0; font: 600 21px/1.2 var(--serif); }
+.whatif-rate { font: 400 14.5px/1.5 var(--sans); margin: 12px 0 0; max-width: 78ch; }
+.whatif-rate strong { font: 600 14px/1.5 var(--mono); color: var(--green); }
+.whatif-point { font-size: 14px; margin: 10px 0 8px; padding-left: 10px; border-left: 3px solid var(--green); max-width: 78ch; }
 
 /* -------------------------------------------------------------------- attacks */
 .attack { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 18px; padding: 18px 0; border-top: 1px dashed #cfc5b2; align-items: center; }
@@ -267,6 +285,9 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
   .timeline > div + div { border-left: 0; border-top: 1.5px solid var(--ink); }
   .compare { grid-template-columns: minmax(0, 1fr); }
   .compare > div + div { border-left: 0; border-top: 1.5px solid var(--ink); }
+  .whatif { padding: 12px 12px 4px; }
+  .whatif-out { grid-template-columns: minmax(0, 1fr); }
+  .whatif-out > div + div { border-left: 0; border-top: 1.5px solid var(--ink); }
   .passport { grid-template-columns: minmax(0, 1fr); }
   .checkbox-list { grid-template-columns: minmax(0, 1fr); }
   .fields { grid-template-columns: minmax(0, 1fr); gap: 0 0; }

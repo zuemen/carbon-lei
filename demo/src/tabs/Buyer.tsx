@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
+import { exportPactFromProof, type PactProduct } from "../../../sdk/pact.ts";
 import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
+import fixture from "../../../fixtures/demo.json";
 import { useApp } from "../App.tsx";
 import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source } from "../components.tsx";
-import { comparisonFigures } from "../data.ts";
+import { comparisonFigures, whatIfFigures, type DemoData } from "../data.ts";
 import { CODE_TEXT } from "../messages.ts";
 import { evidenceCheckers } from "../evidence.ts";
 
@@ -43,6 +45,102 @@ export function tamperedProof(p: Presentation, value = "1.2"): Presentation {
       return x.name === "specificEmbeddedEmissions_tCO2e_per_t" ? encodeDisclosure({ ...x, value }) : d;
     }),
   };
+}
+
+/**
+ * Product fields of the PACT export: the same arguments as the `carbonlei export-pact` example in
+ * docs/PACT_MAPPING.md section 4, so the browser and the CLI produce the same file (only `created` differs).
+ */
+const PACT_PRODUCT: PactProduct = {
+  companyName: fixture.entities.supplier.name,
+  productNameCompany: fixture.product.productNameCompany,
+  productDescription: `${fixture.product.description} — CBAM direct embedded emissions only, not a full PCF (illustrative)`,
+  productId: "hex-bolt-m10",
+};
+
+/** Saves a JSON file built in the browser. */
+function saveJson(value: unknown, filename: string) {
+  const url = URL.createObjectURL(new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const eur2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * "What if" control in the comparison card: the same price and quantity as the card, for a hypothetical
+ * verified intensity. Never changes the proof or the verified figures above it.
+ */
+function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
+  const verified = Number(cmp.verifiedValue);
+  const def = Number(cmp.defaultValue);
+  const min = Math.min(1, verified);
+  // Steps of 0.1 from the minimum; the last step stands for the CBAM default itself.
+  const max = Math.ceil(def * 10) / 10;
+  const [pos, setPos] = useState(verified);
+  const x = Math.min(pos, def);
+  const { gapPerT, eurPerT, eurShipment, eurPerTenth } = whatIfFigures(cmp, x);
+  const q = Number(cmp.quantityTonnes);
+  const label = x === def ? `${fmt(x, 3)} (the CBAM default)` : fmt(x, 3);
+  return (
+    <div className="whatif" role="group" aria-labelledby="whatif-h">
+      <p className="whatif-head" id="whatif-h">
+        <span aria-hidden="true">◇ </span>What a lower-carbon process is worth <span className="tag-hypo">Hypothetical</span>
+      </p>
+      <label className="whatif-label" htmlFor="whatif-range">
+        What if the verified value were <strong>{label}</strong> tCO2e/t?
+      </label>
+      <input
+        id="whatif-range"
+        className="whatif-range"
+        type="range"
+        min={min}
+        max={max}
+        step={0.1}
+        value={pos}
+        aria-valuetext={`${label} tCO2e per tonne, hypothetical`}
+        onChange={(e) => setPos(Math.round(Number(e.target.value) * 10) / 10)}
+      />
+      <div className="whatif-scale fine" aria-hidden="true">
+        <span>{min.toFixed(1)}</span>
+        <span>{fmt(def, 3)} = CBAM default</span>
+      </div>
+      <p className="fine">
+        Starts at this proof's verified value ({cmp.verifiedValue}). Moving it changes nothing in the proof or in the
+        figures above.
+      </p>
+      <dl className="whatif-out" aria-live="polite" aria-atomic="true">
+        <div>
+          <dt>Declared-emissions gap per tonne of goods</dt>
+          <dd>{fmt(gapPerT, 3)} tCO2e</dd>
+        </div>
+        <div>
+          <dt>Gross € value per tonne of goods</dt>
+          <dd>€{eur2(eurPerT)}</dd>
+        </div>
+        <div>
+          <dt>Gross € value of this {fmt(q)} t shipment</dt>
+          <dd>€{fmt(eurShipment, 0)}</dd>
+        </div>
+      </dl>
+      <p className="fine">
+        Same {cmp.quarter} CBAM certificate price (€{cmp.priceEur}) and quantity as above — gross, illustrative,
+        before free-allocation adjustment.
+      </p>
+      <p className="whatif-rate">
+        At this certificate price, every <strong>0.1 tCO2e/t</strong> that the producer's verified intensity is lower is
+        worth about <strong>€{eur2(eurPerTenth)} per tonne of goods</strong> to its EU buyer (gross, illustrative) — value
+        the buyer can pay back as a premium for verified lower-carbon goods.
+      </p>
+      <p className="whatif-point">
+        It only reaches the producer if the buyer can trust who signed the value and that its tonnes were not claimed
+        before: what the checks above answer.
+      </p>
+    </div>
+  );
 }
 
 /** Scrolls an element to just below the sticky tab bar (its height depends on the screen width). */
@@ -164,6 +262,10 @@ export function Buyer() {
   const [accepted, setAccepted] = useState(false);
   const [tampered, setTampered] = useState(false);
   const [fromQr, setFromQr] = useState(false);
+  // The proof behind `result` (the text box may be edited after Verify); used by the PACT export.
+  const [checked, setChecked] = useState<Presentation | null>(null);
+  const [pactBusy, setPactBusy] = useState(false);
+  const [pactError, setPactError] = useState("");
   // Bumped when a verification finishes; on narrow screens the checks are then scrolled into view.
   const [finished, setFinished] = useState(0);
   const checksRef = useRef<HTMLElement>(null);
@@ -195,6 +297,7 @@ export function Buyer() {
   async function run(text: string) {
     setError("");
     setAccepted(false);
+    setPactError("");
     let proof: Presentation;
     try {
       proof = JSON.parse(text) as Presentation;
@@ -216,6 +319,7 @@ export function Buyer() {
     setRunning(true);
     try {
       setResult(await verifyPresentation(proof, reader, { importerEORI: data.importer.eori, checkers: evidenceCheckers(data) }));
+      setChecked(proof);
       setFinished((n) => n + 1);
     } catch (e) {
       setError(`Verification could not finish: ${(e as Error).message}`);
@@ -269,12 +373,25 @@ export function Buyer() {
       accepted: { quantityTonnes: q, verifiedIntensity_tCO2e_per_t: cmp.verifiedValue, declared_tCO2e: vq },
       onChainClaim: claim ? { tx: claim.hash, block: claim.block, time: claim.time, url: explorer("tx", claim.hash) } : null,
     };
-    const url = URL.createObjectURL(new Blob([`${JSON.stringify(record, null, 2)}\n`], { type: "application/json" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `carbonlei-verification-${batchId || "record"}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveJson(record, `carbonlei-verification-${batchId || "record"}.json`);
+  }
+
+  // PACT v3.0.3 ProductFootprint of the verified credential, built in the browser by the SDK's export
+  // (the same function as `carbonlei export-pact`). Only for a VALID result with a live connection.
+  const canExportPact = result?.overall === "VALID" && !!checked && !!reader && !offline;
+  async function downloadPact() {
+    if (!canExportPact || !checked || !reader || !result) return;
+    setPactBusy(true);
+    setPactError("");
+    try {
+      const pf = await exportPactFromProof(checked, result, reader, PACT_PRODUCT);
+      const id = checked.shipment?.batchId || (JSON.parse(checked.core) as { d: string }).d;
+      saveJson(pf, `carbonlei-pact-${id}.json`);
+    } catch (e) {
+      setPactError(`No PACT file was created: ${(e as Error).message}`);
+    } finally {
+      setPactBusy(false);
+    }
   }
 
   return (
@@ -473,6 +590,23 @@ export function Buyer() {
             <span className="fine">For your own records: the checks, the credential ID and the on-chain claim. Not a CBAM document.</span>
           </div>
         )}
+        {accepted && canExportPact && (
+          <div className="btn-row">
+            <button className="btn btn-ghost" onClick={() => void downloadPact()} disabled={pactBusy}>
+              {pactBusy ? "Reading the on-chain record…" : "Download PACT product footprint (JSON)"}
+            </button>
+            <span className="fine">
+              PACT data model v3.0.3, validated against the official schema in our tests. Not a conformance claim and not
+              connected to any PACT network.
+            </span>
+          </div>
+        )}
+        {pactError && (
+          <p className="check-detail bad" role="alert">
+            ✕ {pactError}
+          </p>
+        )}
+        <WhatIf cmp={cmp} />
       </section>
     </>
   );

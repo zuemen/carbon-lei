@@ -142,5 +142,20 @@ export function comparisonFigures(cmp: DemoData["comparison"]) {
   return { q, dq, vq, gap, eur: gap * Number(cmp.priceEur) };
 }
 
+/**
+ * The Buyer tab's "what if" control: figures for a hypothetical verified intensity, at the card's
+ * certificate price and shipment quantity. Gross and illustrative, like the card.
+ */
+export function whatIfFigures(cmp: DemoData["comparison"], intensity: number) {
+  const price = Number(cmp.priceEur);
+  const gapPerT = Math.max(0, Number(cmp.defaultValue) - intensity);
+  return {
+    gapPerT,
+    eurPerT: gapPerT * price,
+    eurShipment: gapPerT * price * Number(cmp.quantityTonnes),
+    eurPerTenth: 0.1 * price,
+  };
+}
+
 export const EVIDENCE_WHY =
   "The vLEI credential chain is checked against evidence exported from a local KERI run. KERI agents need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.";

@@ -11,11 +11,10 @@ import { newSalt } from "./encoding.ts";
 import type { CredentialClaims, Hex } from "./credential.ts";
 import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "./issue.ts";
-import { exportPact } from "./pact.ts";
+import { exportPactFromProof } from "./pact.ts";
 import { verifyPresentation } from "./verify.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { dirname, resolve } from "node:path";
-import { reportKeyOf } from "./commitment.ts";
 
 const USAGE = `carbonlei <command> [options]
 
@@ -134,40 +133,11 @@ async function main(argv: string[]) {
       const proof = readJson(values.proof as string) as Presentation;
       const rd = reader(values);
       const r = await verifyPresentation(proof, rd);
-      if ([1, 2, 3].some((i) => r.checks.find((c) => c.index === i)?.status === "fail")) {
-        throw new Error(`the proof does not pass checks 1–3 (${r.primaryCode}); nothing exported`);
-      }
-      const core = JSON.parse(proof.core);
-      const reportKey = reportKeyOf(core.d);
-      const rep = await rd.report(reportKey);
-      let supersedesSameLayer: boolean | undefined;
-      if (rep.registeredAt !== 0n && rep.supersedes !== `0x${"0".repeat(64)}`) {
-        supersedesSameLayer = (await rd.report(rep.supersedes)).credScopeKey === rep.credScopeKey;
-      }
-      const pf = exportPact({
-        disclosed: r.disclosed,
-        credSAID: core.d,
-        auditorAID: core.issuer.auditorAID,
-        verifierLEI: core.issuer.verifierLEI,
-        reportKey,
-        kelSeq: rep.kelSeq,
-        registry: rd.registry,
-        chainId: await rd.client.getChainId(),
-        onchain:
-          rep.registeredAt === 0n
-            ? undefined
-            : {
-                revoked: rep.revokedAt !== 0n,
-                replaced: r.checks[4]?.code === "REPORT_INVALID/SUPERSEDED",
-                supersedes: supersedesSameLayer === undefined ? undefined : rep.supersedes,
-                supersedesSameLayer,
-              },
+      const pf = await exportPactFromProof(proof, r, rd, {
         companyName: values["company-name"] as string,
         productNameCompany: values["product-name"] as string,
         productDescription: values["product-description"] as string,
         productId: values["product-id"] as string,
-        extensionSchemaUrl: "https://zuemen.github.io/carbon-lei/schemas/carbonlei-extension-0.1.0.json",
-        documentationUrl: "https://github.com/zuemen/carbon-lei/blob/main/docs/PACT_MAPPING.md",
       });
       write(values.out, pf);
       return 0;
