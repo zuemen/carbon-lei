@@ -5,8 +5,9 @@
     "chainId": 11155111,
     "name": "Sepolia",
     "rpcs": [
-      "https://ethereum-sepolia-rpc.publicnode.com",
-      "https://rpc.sepolia.ethpandaops.io"
+      "https://rpc.sepolia.ethpandaops.io",
+      "https://sepolia.gateway.tenderly.co",
+      "https://gateway.tenderly.co/public/sepolia"
     ],
     "explorer": "https://sepolia.etherscan.io"
   },

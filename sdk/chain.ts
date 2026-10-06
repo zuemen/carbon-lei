@@ -5,10 +5,12 @@ import {
   BaseError,
   ContractFunctionRevertedError,
   createPublicClient,
-  fallback,
+  createTransport,
   http,
+  shouldThrow,
   type Chain,
   type PublicClient,
+  type Transport,
 } from "viem";
 import { sepolia } from "viem/chains";
 import { emissionsClaimRegistryAbi, verifierAllowlistAbi } from "./abi.ts";
@@ -16,8 +18,19 @@ import type { Hex } from "./credential.ts";
 
 export { sepolia as SEPOLIA_CHAIN };
 
-/** Public Sepolia RPCs with CORS: primary, then backup (tested 2026-09-24). */
-export const SEPOLIA_RPCS = ["https://ethereum-sepolia-rpc.publicnode.com", "https://rpc.sepolia.ethpandaops.io"];
+/**
+ * Public Sepolia RPCs with CORS, tried in this order. Each kept the full history on 2026-10-07:
+ * the receipt of the deployment transaction (block 11,846,766), `eth_getLogs` over 10,000 blocks
+ * from the deployment block and `eth_call` at a block just after it all answered.
+ * Only full-history nodes are listed. A node that prunes old history (publicnode drops history
+ * older than about 36 hours) can answer an event search over a pruned range with an empty list
+ * instead of an error, which would hide a revocation; so such a node is never used by default.
+ */
+export const SEPOLIA_RPCS = [
+  "https://rpc.sepolia.ethpandaops.io",
+  "https://sepolia.gateway.tenderly.co",
+  "https://gateway.tenderly.co/public/sepolia",
+];
 /** Largest getLogs range used against public RPCs. */
 export const LOG_CHUNK = 10_000n;
 /** At most this many getLogs requests in flight at once (public RPCs rate-limit bursts). */
@@ -154,7 +167,7 @@ export class ChainReader {
   }
 
   static forRpc(deployment: Deployment, rpcUrls: string[], chain?: Chain, options?: ChainReaderOptions): ChainReader {
-    const transport = rpcUrls.length === 1 ? http(rpcUrls[0]) : fallback(rpcUrls.map((u) => http(u)));
+    const transport = rpcUrls.length === 1 ? http(rpcUrls[0]) : historyFallback(rpcUrls);
     return new ChainReader(createPublicClient({ chain, transport }) as PublicClient, deployment, undefined, options);
   }
 
@@ -405,6 +418,104 @@ export class ChainReader {
       return { reverted: true as const, ...decodeRevert(err) };
     }
   }
+}
+
+/**
+ * Methods whose `null` result means "not found". A node that has pruned old history answers them
+ * with `null` rather than an error, so `historyFallback` asks the next node.
+ */
+const NULL_IS_MISSING = new Set([
+  "eth_getTransactionReceipt",
+  "eth_getTransactionByHash",
+  "eth_getBlockByNumber",
+  "eth_getBlockByHash",
+]);
+
+const PRUNED = /prun|missing trie node|historical state|header not found|history (is )?(not available|unavailable)/i;
+
+/** An RPC error that says the node no longer has the requested block, state or logs (for example code 4444). */
+export function isPrunedHistoryError(err: unknown): boolean {
+  let e = err as { code?: unknown; message?: unknown; details?: unknown; cause?: unknown } | undefined;
+  for (let depth = 0; e && typeof e === "object" && depth < 8; depth++, e = e.cause as typeof e) {
+    if (e.code === 4444) return true;
+    if (typeof e.details === "string" && PRUNED.test(e.details)) return true;
+    if (typeof e.message === "string" && PRUNED.test(e.message)) return true;
+  }
+  return false;
+}
+
+/** What one node answered to one request, when it did not give a usable answer. */
+export interface NodeOutcome {
+  url: string;
+  /** "null": `null` for a method in which it means "not found"; "pruned": a pruned-history error. */
+  kind: "null" | "pruned" | "error";
+  detail: string;
+}
+
+/** Every node failed one request; `outcomes` lists each node's answer in the order the nodes were tried. */
+export class RpcNodesError extends BaseError {
+  readonly outcomes: NodeOutcome[];
+  constructor(method: string, outcomes: NodeOutcome[]) {
+    super(`${method}: none of the ${outcomes.length} RPC nodes answered`, {
+      name: "RpcNodesError",
+      metaMessages: outcomes.map((o) => `${o.url}: ${o.detail}`),
+    });
+    this.outcomes = outcomes;
+  }
+}
+
+/** First line of an RPC error's most specific message. */
+export function errorDetail(err: unknown): string {
+  const e = err as { details?: unknown; shortMessage?: unknown; message?: unknown };
+  const text = [e?.details, e?.shortMessage, e?.message].find((x) => typeof x === "string" && x) as string | undefined;
+  return (text ?? String(err)).split("\n")[0];
+}
+
+/**
+ * A transport over several RPC nodes, tried in order for each request. The next node is asked when
+ * one fails with any error other than a contract revert or a rejection (viem's `shouldThrow`: those
+ * would be the same on every node), which includes pruned-history errors such as 4444 or
+ * "missing trie node", and when one answers `null` to a request for a receipt, a transaction or a
+ * block, which is how a pruned node reports history it has dropped. If every node answers `null`,
+ * the result is `null` (not found, which callers treat as a failure); if every node fails,
+ * `RpcNodesError` lists each node's answer. A missing answer is never turned into a pass.
+ */
+export function historyFallback(urls: string[], opts: { retryCount?: number } = {}): Transport {
+  if (!urls.length) throw new Error("historyFallback needs at least one RPC URL");
+  return (({ chain, timeout, ...rest }) => {
+    const nodes = urls.map((u) => http(u)({ ...rest, chain, timeout, retryCount: opts.retryCount ?? 1 }));
+    return createTransport({
+      key: "historyFallback",
+      name: "History fallback",
+      type: "fallback",
+      retryCount: 0,
+      async request({ method, params }: { method: string; params?: unknown }): Promise<any> {
+        const outcomes: NodeOutcome[] = [];
+        for (let i = 0; i < nodes.length; i++) {
+          let result: unknown;
+          try {
+            result = await nodes[i].request({ method, params } as never);
+          } catch (err) {
+            if (shouldThrow(err as Error)) throw err;
+            const pruned = isPrunedHistoryError(err);
+            outcomes.push({
+              url: urls[i],
+              kind: pruned ? "pruned" : "error",
+              detail: `${pruned ? "history pruned: " : ""}${errorDetail(err)}`,
+            });
+            continue;
+          }
+          if (result === null && NULL_IS_MISSING.has(method)) {
+            outcomes.push({ url: urls[i], kind: "null", detail: "null (history pruned, or not known to this node)" });
+            continue;
+          }
+          return result;
+        }
+        if (outcomes.every((o) => o.kind === "null")) return null;
+        throw new RpcNodesError(method, outcomes);
+      },
+    });
+  }) as Transport;
 }
 
 interface Probe {

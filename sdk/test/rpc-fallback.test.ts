@@ -1,0 +1,210 @@
+// Offline tests for reading old history through several public RPC nodes: a node that has pruned old
+// history answers a receipt request with `null` and a log or historical-state request with an
+// error such as 4444. The reader and `npm run audit:onchain` then ask the next node; when no node
+// answers they fail with each node's answer, and never read a missing answer as a pass.
+import { readFileSync } from "node:fs";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { BaseError, createPublicClient, encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
+import { sepolia } from "viem/chains";
+import { audit, parseOnchainTable, recordedTxs, type Node, type ReceiptSource } from "../../scripts/audit-onchain.ts";
+import { verifierAllowlistAbi } from "../abi.ts";
+import { ChainReader, historyFallback, isPrunedHistoryError, RpcNodesError, SEPOLIA_RPCS } from "../chain.ts";
+
+const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
+const deployment = JSON.parse(read("contracts/deployments/11155111.json"));
+
+const A = "https://a.example/rpc";
+const B = "https://b.example/rpc";
+const C = "https://c.example/rpc";
+const TX = `0x${"11".repeat(32)}` as Hex;
+const LEI = `0x${"22".repeat(32)}` as Hex;
+
+type Handler = (method: string, params: unknown[]) => { result?: unknown; error?: { code: number; message: string; data?: Hex } };
+
+/** Serves JSON-RPC from one handler per URL in place of `fetch`, and records which URL got which method. */
+function serve(nodes: Record<string, Handler>) {
+  const calls: { url: string; method: string }[] = [];
+  vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const body = JSON.parse(String(init?.body));
+    const handle = nodes[url];
+    if (!handle) throw new TypeError(`fetch failed: ${url}`);
+    calls.push({ url, method: body.method });
+    const answer = handle(body.method, body.params ?? []);
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, ...answer }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  });
+  return calls;
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
+const receipt = {
+  blockHash: `0x${"33".repeat(32)}`,
+  blockNumber: "0xb4c46e",
+  contractAddress: null,
+  cumulativeGasUsed: "0x5208",
+  effectiveGasPrice: "0x1",
+  from: `0x${"44".repeat(20)}`,
+  gasUsed: "0x5208",
+  logs: [],
+  logsBloom: `0x${"00".repeat(256)}`,
+  status: "0x1",
+  to: `0x${"55".repeat(20)}`,
+  transactionHash: TX,
+  transactionIndex: "0x0",
+  type: "0x2",
+};
+
+const suspensionLog = {
+  address: deployment.contracts.VerifierAllowlist.address,
+  topics: encodeEventTopics({ abi: verifierAllowlistAbi, eventName: "VerifierSuspended", args: { leiHash: LEI } } as never),
+  data: encodeAbiParameters([{ type: "uint64" }], [1_760_000_000n]),
+  blockNumber: "0xb4c470",
+  blockHash: `0x${"66".repeat(32)}`,
+  transactionHash: `0x${"77".repeat(32)}`,
+  transactionIndex: "0x0",
+  logIndex: "0x0",
+  removed: false,
+};
+
+const pruned4444 = { error: { code: 4444, message: "pruned history unavailable" } };
+const client = (urls: string[]) => createPublicClient({ chain: sepolia, transport: historyFallback(urls) });
+
+describe("historyFallback (SDK reader)", () => {
+  it("the first node answers null for an old receipt → asks the next node and returns its receipt", async () => {
+    const calls = serve({ [A]: () => ({ result: null }), [B]: () => ({ result: receipt }) });
+    const r = await client([A, B]).getTransactionReceipt({ hash: TX });
+    expect(r.blockNumber).toBe(0xb4c46en);
+    expect(calls.map((c) => c.url)).toEqual([A, B]);
+  });
+
+  it("the first node fails getLogs with 4444 → the event search reads the next node's logs", async () => {
+    const calls = serve({ [A]: () => pruned4444, [B]: (m) => (m === "eth_getLogs" ? { result: [suspensionLog] } : { result: null }) });
+    const reader = ChainReader.forRpc(deployment, [A, B], sepolia);
+    const from = BigInt(deployment.contracts.VerifierAllowlist.block);
+    const events = await reader.suspensions(LEI, from + 100n, from);
+    expect(events).toEqual([{ time: 1_760_000_000n, blockNumber: 0xb4c470n, txHash: suspensionLog.transactionHash }]);
+    expect(calls.map((c) => c.url)).toEqual([A, B]);
+  });
+
+  it("an eth_call at an old block that fails with 'missing trie node' → the next node answers", async () => {
+    serve({
+      [A]: () => ({ error: { code: -32000, message: "missing trie node 381efd (path ) state is not available" } }),
+      [B]: () => ({ result: encodeAbiParameters([{ type: "bool" }], [true]) }),
+    });
+    const reader = ChainReader.forRpc(deployment, [A, B], sepolia).at(11_846_770n);
+    expect(await reader.isInstitutionActiveAt(LEI, 1n)).toBe(true);
+  });
+
+  it("every node fails → a clear error naming each node's answer, not an empty result", async () => {
+    serve({ [A]: () => pruned4444, [B]: () => ({ error: { code: -32005, message: "rate limited" } }) });
+    const reader = ChainReader.forRpc(deployment, [A, B, C], sepolia);
+    const from = BigInt(deployment.contracts.VerifierAllowlist.block);
+    const err = await reader.suspensions(LEI, from + 100n, from).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(BaseError);
+    const nodesErr = (err as BaseError).walk((e) => e instanceof RpcNodesError) as RpcNodesError;
+    expect(nodesErr).toBeInstanceOf(RpcNodesError);
+    expect(nodesErr.outcomes.map((o) => [o.url, o.kind])).toEqual([
+      [A, "pruned"],
+      [B, "error"],
+      [C, "error"],
+    ]);
+    const message = (err as BaseError).message;
+    expect(message).toContain("eth_getLogs: none of the 3 RPC nodes answered");
+    expect(message).toContain(`${A}: history pruned: pruned history unavailable`);
+    expect(message).toContain(`${B}: rate limited`);
+  });
+
+  it("every node answers null → the receipt is not found (an error), never a receipt", async () => {
+    serve({ [A]: () => ({ result: null }), [B]: () => ({ result: null }) });
+    await expect(client([A, B]).getTransactionReceipt({ hash: TX })).rejects.toThrow(/could not be found/);
+  });
+
+  it("a contract revert is the same on every node: thrown at once, the next node is not asked", async () => {
+    const calls = serve({
+      [A]: () => ({ error: { code: 3, message: "execution reverted", data: "0x" } }),
+      [B]: () => ({ result: encodeAbiParameters([{ type: "bool" }], [true]) }),
+    });
+    const reader = ChainReader.forRpc(deployment, [A, B], sepolia);
+    await expect(reader.isInstitutionActiveAt(LEI, 1n)).rejects.toThrow();
+    expect(calls.map((c) => c.url)).toEqual([A]);
+  });
+
+  it("recognises pruned-history errors", () => {
+    expect(isPrunedHistoryError({ code: 4444, message: "x" })).toBe(true);
+    expect(isPrunedHistoryError(new Error("missing trie node abc"))).toBe(true);
+    expect(isPrunedHistoryError({ details: "historical state 381e is not available" })).toBe(true);
+    expect(isPrunedHistoryError(new Error("outer", { cause: { code: 4444 } }))).toBe(true);
+    expect(isPrunedHistoryError(new Error("execution reverted"))).toBe(false);
+  });
+});
+
+describe("default RPC list", () => {
+  it("lists only full-history nodes (no node known to prune history); the demo page uses the same list", () => {
+    expect(SEPOLIA_RPCS).toEqual([
+      "https://rpc.sepolia.ethpandaops.io",
+      "https://sepolia.gateway.tenderly.co",
+      "https://gateway.tenderly.co/public/sepolia",
+    ]);
+    // Nodes measured on 2026-10-07 to prune old receipts, logs or state, or to cap the log range below 10,000 blocks.
+    const pruning = ["publicnode.com", "0xrpc.io", "1rpc.io", "thirdweb.com"];
+    for (const url of SEPOLIA_RPCS) expect(pruning.some((p) => url.includes(p)), url).toBe(false);
+    expect(JSON.parse(read("demo/public/demo-data.json")).network.rpcs).toEqual(SEPOLIA_RPCS);
+  });
+});
+
+describe("audit:onchain over several nodes", () => {
+  const readme = read("README.md");
+  const recorded = recordedTxs(JSON.parse(read("fixtures/sepolia-tx.json")), deployment);
+  const rows = parseOnchainTable(readme);
+
+  /** A node with every recorded receipt and code; `pruned` drops the receipts (null) and `codeless` the code. */
+  function node(url: string, mode: { pruned?: boolean; codeless?: boolean; down?: boolean; gasOff?: boolean } = {}): Node {
+    const src: ReceiptSource = {
+      async getTransactionReceipt({ hash }) {
+        if (mode.down) throw new Error("fetch failed");
+        if (mode.pruned) return null;
+        const r = recorded.get(hash.toLowerCase())!;
+        const row = rows.find((x) => x.txs.includes(hash))!;
+        return {
+          status: row.expectedStatus ? "success" : "reverted",
+          blockNumber: BigInt(r.block),
+          gasUsed: BigInt(r.gasUsed) + (mode.gasOff ? 1n : 0n),
+          contractAddress: r.contractAddress ?? null,
+        };
+      },
+      async getCode() {
+        if (mode.down) throw Object.assign(new Error("pruned history unavailable"), { code: 4444 });
+        return mode.codeless ? "0x" : "0x6080";
+      },
+    };
+    return { url, src };
+  }
+  const fails = async (nodes: Node[]) => (await audit(rows, recorded, nodes)).filter((l) => !l.ok).map((l) => l.text);
+
+  it("the first node has pruned the receipts and has no code → every row passes on the second node", async () => {
+    const lines = await audit(rows, recorded, [node(A, { pruned: true, codeless: true }), node(B)]);
+    expect(lines.filter((l) => !l.ok)).toEqual([]);
+    expect(lines.filter((l) => l.kind === "tx")).toHaveLength(12);
+    expect(lines.every((l) => l.text.includes("b.example"))).toBe(true);
+  });
+
+  it("every node pruned, empty or down → each row fails and names every node's answer", async () => {
+    const f = await fails([node(A, { pruned: true, codeless: true }), node(B, { down: true })]);
+    expect(f).toHaveLength(14);
+    expect(f[0]).toMatch(/no node returned the receipt \(a\.example: no receipt \(null.*b\.example: error: fetch failed\)/);
+    expect(f.find((t) => t.includes("has no code"))).toMatch(/a\.example: no code; b\.example: history pruned: pruned history unavailable/);
+  });
+
+  it("a receipt that differs from the record fails, even if a later node would match", async () => {
+    const f = await fails([node(A, { gasOff: true }), node(B)]);
+    expect(f).toHaveLength(12);
+    expect(f[0]).toMatch(/gasUsed .* \(from a\.example\)/);
+  });
+});
