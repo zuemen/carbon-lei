@@ -11,12 +11,17 @@
 //   accreditation of the body, from exported CESR streams: every ACDC SAID recomputes, schemas,
 //   issuers, issuees, edges and LEIs line up, the QVI was issued by the configured root, the
 //   accreditation scope covers the CN code, each issuance has a TEL `iss` event and no `rev`,
-//   and the on-chain allowlist hashes equal the credential SAID hashes.
+//   each issuer signed the KEL event anchoring its issuance (sdk/kel.ts: Ed25519 over the event bytes,
+//   key state walked from the issuer's self-addressing inception, so the QVI's anchor must be signed
+//   with the pinned root's key), and the on-chain allowlist hashes equal the credential SAID hashes.
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { hashString } from "./commitment.ts";
 import type { Hex } from "./credential.ts";
-import { fromBase64url, utf8 } from "./encoding.ts";
+import { utf8 } from "./encoding.ts";
+import { decodeIndexedSig, decodeVerKey, verifyIssuance } from "./kel.ts";
 import { computeSaid } from "./said.ts";
+
+export { decodeIndexedSig, decodeVerKey } from "./kel.ts";
 
 export const SCHEMA = {
   QVI: "EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao",
@@ -31,12 +36,15 @@ export const DEMO_TRUST_ANCHOR = "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB";
 export interface Message {
   raw: string;
   ked: Record<string, any>;
+  /** Attachment text after the message (signatures, seal references), as transmitted. */
+  atc?: string;
 }
 
-/** Splits a CESR text stream into its JSON messages (KERI events and ACDCs), skipping attachments. */
+/** Splits a CESR text stream into its JSON messages (KERI events and ACDCs), each with the attachments that follow it. */
 export function parseCesr(stream: string): Message[] {
   const out: Message[] = [];
   let i = 0;
+  let end = 0;
   while (true) {
     const j = stream.indexOf('{"v":"', i);
     if (j < 0) break;
@@ -46,24 +54,14 @@ export function parseCesr(stream: string): Message[] {
       i = j + 1;
       continue;
     }
+    if (out.length) out[out.length - 1].atc = stream.slice(end, j);
     const size = parseInt(m[2], 16);
     const raw = stream.slice(j, j + size);
     out.push({ raw, ked: JSON.parse(raw) });
-    i = j + size;
+    i = end = j + size;
   }
+  if (out.length) out[out.length - 1].atc = stream.slice(end);
   return out;
-}
-
-/** CESR qb64 with a one-character code over 32 bytes (Ed25519 verification keys 'D' / 'B'). */
-export function decodeVerKey(qb64: string): Uint8Array {
-  if (!/^[DB][A-Za-z0-9_-]{43}$/.test(qb64)) throw new Error("not an Ed25519 key");
-  return fromBase64url("A" + qb64.slice(1)).slice(1);
-}
-
-/** CESR indexed Ed25519 signature: two-character code ('A' + index) over 64 bytes. */
-export function decodeIndexedSig(qb64: string): Uint8Array {
-  if (!/^A[A-Za-z0-9_-]{87}$/.test(qb64)) throw new Error("not an indexed Ed25519 signature");
-  return fromBase64url("AA" + qb64.slice(2)).slice(2);
 }
 
 const saidOk = (m: Message) => computeSaid(m.ked) === m.ked.d;
@@ -225,6 +223,12 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
       const until = BigInt(Math.floor(Date.parse(A.a.validUntil) / 1000));
       if (x.registeredAt > until) return fail(code, "accreditation had expired at registration");
     }
+    // Each issuance signed by its issuer (sdk/kel.ts), root first: a chain that claims the pinned root
+    // without the root's key fails on the QVI credential.
+    for (const [name, c] of [["QVI", qvi], ["NAB LE", leNab], ["body LE", leBody], ["accreditation", acc], ["ECR", ecr]] as const) {
+      const r = verifyIssuance(c.all, c.acdc.ked);
+      if (r) return fail(code, `${name} credential: ${r}`);
+    }
     if (x.onchain) {
       if (hashString(L.d) !== x.onchain.leCredSaidHash) return fail(code, "allowlist LE hash differs from the body's LE vLEI");
       if (hashString(A.d) !== x.onchain.accreditationSaidHash) return fail(code, "allowlist accreditation hash differs");
@@ -233,7 +237,7 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     return {
       ok: true,
       code: "",
-      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}${x.onchain ? "; hashes match the on-chain allowlist" : ""}`,
+      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}; each issuance signed in its issuer's KEL${x.onchain ? "; hashes match the on-chain allowlist" : ""}`,
     };
   } catch (e) {
     return fail(code, `evidence could not be read: ${(e as Error).message}`);
