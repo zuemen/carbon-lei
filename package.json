@@ -20,6 +20,7 @@
     "verify:tampered": "node sdk/cli.ts verify --proof fixtures/sepolia-demo-proof.tampered.json --eori NLDEMO000000001 --expect-invalid DISCLOSURE_TAMPERED",
     "import:example": "node sdk/cli.ts import-template fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx",
     "audit:onchain": "node scripts/audit-onchain.ts",
+    "bench:verify": "node scripts/bench-verify.ts",
     "vlei:up": "npm run vlei:up -w verifier",
     "vlei:setup": "npm run vlei:setup -w verifier",
     "demo:local": "node scripts/demo-local.ts",
