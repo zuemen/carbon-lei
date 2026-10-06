@@ -48,7 +48,7 @@ The CBAM Registry is the official channel, and CarbonLEI does not change it. Thi
 
 **What we did not find**
 
-- We found no public mechanism that caps the total tonnage claimed against one verified report across declarants. The one-report rule above concerns issuing a second report for the same installation and period, not how many declarations rely on one report. We searched Regulations (EU) 2023/956 and 2025/2083, Implementing Regulations (EU) 2024/3210, 2025/2546, 2025/2547 and 2025/2550, Delegated Regulation (EU) 2025/2551, the verification guidance, the Registry manuals for operators, verifiers and declarants, CBAM guidance document No. 2 and the Commission's Q&A.
+- We found no public mechanism that caps the total tonnage claimed against one verified report across declarants. The Commission receives every declaration and can review it after submission (Art 19 [22]); what we did not find is a cap that a buyer outside the Registry can check for itself before relying on the value. The one-report rule above concerns issuing a second report for the same installation and period, not how many declarations rely on one report. We searched Regulations (EU) 2023/956 and 2025/2083, Implementing Regulations (EU) 2024/3210, 2025/2546, 2025/2547 and 2025/2550, Delegated Regulation (EU) 2025/2551, the verification guidance, the Registry manuals for operators, verifiers and declarants, CBAM guidance document No. 2 and the Commission's Q&A.
 - The documents we reviewed do not describe a channel for passing verified values to downstream customers, banks, PACT data exchange or product passports.
 
 **Where CarbonLEI sits**
@@ -75,7 +75,7 @@ Downstream customers and banks work outside the CBAM Registry, which is not open
 ### Why these users first
 
 - Taiwan is the EU's second-largest external source of CN 7318 goods: 20.3% of extra-EU imports by weight in 2025 [5].
-- Verification capacity looks like the bottleneck (our reading of the accreditation figures): on 1 September 2026, only 5 of the 24 EU/EEA national accreditation bodies offering CBAM accreditation were accepting non-EU verifier applications [1].
+- Verification capacity looks like the bottleneck (our reading of the accreditation figures): in the Commission's state of play of 29 September 2026, only 5 of the 24 EU/EEA national accreditation bodies offering CBAM accreditation were accepting non-EU verifier applications, and on 7 October 2026 the Commission had not yet published its list of accredited verifiers [1].
 - Taiwan's Ministry of Environment counts about 2,600 affected small and medium-sized enterprises, mainly makers of steel products and metal fasteners [14].
 - In a press release of 9 March 2026, Europe's fastener distributors called CBAM "a drastic punitive tariff on imported screws, nuts and other fasteners"; missing verification capacity was one of the reasons given [6].
 
@@ -158,18 +158,18 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 
 - **Same model, other goods.** The credential carries a CN code, a production route and a reporting period. Nothing is specific to fasteners.
 - **Cement from Türkiye.** Türkiye has its own operator identifier, the tax number (VKN), listed in the Commission's guidance [4]. There the Operator ID stays the VKN, and the LEI travels as an additional attribute.
-- **Downstream goods.** The Commission has proposed extending CBAM to downstream goods with anti-circumvention measures, COM(2025) 989 [10]. It is a proposal, not law. A tonnage ledger fits its focus on evidence of origin.
+- **Downstream goods.** The Commission has proposed extending CBAM to downstream goods with anti-circumvention measures, from 1 January 2028, COM(2025) 989 [10]. The Council adopted its position on 12 June 2026 and the Parliament adopted its position on 15 September 2026 (as reported by cbamguide.com) [23]; the file is in negotiations between them and is not yet law. CN 7318 is already in scope; the extension concerns other goods. A tonnage ledger fits its focus on evidence of origin.
 - **Carbon price paid in the country of origin.** CBAM allows a deduction for a carbon price effectively paid. The same credential pattern could carry evidence of such payments; this is not built.
 
 ### 6.3 Digital Product Passport (ESPR)
 
 - The Ecodesign for Sustainable Products Regulation (EU) 2024/1781 sets up digital product passports; iron and steel is a priority product group [11].
-- ESPR requires unique operator and facility identifiers under specified standards. It does not name the LEI. CarbonLEI's report credential can be referenced from a passport by `credSAID`; whether an LEI is accepted as operator identifier there is open.
+- ESPR requires unique operator and facility identifiers under specified standards. It does not name the LEI. Implementing Decision (EU) 2026/1736 of 14 July 2026 cites six harmonised standards for digital product passports: EN 18216, EN 18219 (unique identifiers), EN 18220, EN 18221, EN 18222 and EN 18223 [24]. The standard on data authentication, reliability and integrity, prEN 18246, is still a draft, as is prEN 18239 on access rights and business confidentiality [24]. We have not read the text of EN 18219, so whether an LEI is accepted as operator identifier there is open. CarbonLEI's report credential can be referenced from a passport by `credSAID`. We claim no DPP conformance.
 - The demo's Supplier tab shows a 'Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport'. Its QR code opens the hosted verification page with the `credSAID` and the batch ID; the card lists the CN code, the verified emissions intensity, the verification body's LEI and the current validity status. We do not claim conformance with ESPR or with any DPP specification.
 
 ### 6.4 EU Business Wallet
 
-- The Commission's proposal for European Business Wallets, COM(2025) 838, lists the LEI and the EORI among attributes a wallet can carry (recital 25) [12]. It is a proposal. It does not mention vLEI or CBAM.
+- The Commission's proposal for European Business Wallets, COM(2025) 838, lists the LEI and the EORI among attributes a wallet can carry (recital 25) [12]. It does not mention vLEI or CBAM. The Council adopted its negotiating position on 9 June 2026 [25]; it is not yet law.
 - CarbonLEI already carries the supplier's LEI in the credential and the importer's EORI hash in the on-chain claim, so a wallet-issued attestation could become an alternative entry point for onboarding.
 
 ### 6.5 UN Transparency Protocol (UNTP)
@@ -217,7 +217,7 @@ Status of each area at submission. The README keeps a shorter version of this ta
 
 Accessed 23–24 September 2026 unless stated.
 
-1. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 1 September 2026. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
+1. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 29 September 2026, accessed 2026-10-07. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
 2. European Commission, CBAM Registry. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-registry_en
 3. Regulation (EU) 2025/2083, Art. 18(2). https://eur-lex.europa.eu/eli/reg/2025/2083/oj/eng ; Commission Delegated Regulation (EU) 2025/2551, Annex II, point 2.17.3. https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32025R2551
 4. European Commission, "Guidance on access request procedure – for CBAM operators, non-EU companies", v3.00, 26 January 2026, pp. 10 and 19. https://taxation-customs.ec.europa.eu/document/download/9361fade-6f19-4799-b2ef-f6a4ff681af2_en
@@ -239,3 +239,6 @@ Accessed 23–24 September 2026 unless stated.
 20. European Commission, "Guidance Document 2: Quick Guide for Non-EU Operators on CBAM Implementation", 14 August 2026, pp.5, 6 and 14. https://taxation-customs.ec.europa.eu/document/download/91e1056c-4524-4705-aaa7-e25c1439a87a_en?filename=Guidance%20No.%202%20-%20Quick%20guide%20for%20non-EU%20operators%20on%20CBAM%20implementation.pdf
 21. European Commission, "Carbon Border Adjustment Mechanism (CBAM) Questions and Answers", last updated 27 May 2026, p.44. https://taxation-customs.ec.europa.eu/document/download/013fa763-5dce-4726-a204-69fec04d5ce2_en?filename=CBAM_Questions%20and%20Answers.pdf
 22. Regulation (EU) 2023/956, as amended by Regulation (EU) 2025/2083, Art 19 and Art 25(3). http://data.europa.eu/eli/reg/2023/956/oj ; https://eur-lex.europa.eu/eli/reg/2025/2083/oj/eng
+23. Council of the EU, press release, 12 June 2026. https://www.consilium.europa.eu/en/press/press-releases/2026/06/12/council-moves-to-strengthen-the-eu-s-carbon-border-adjustment-mechanism/ ; EPRS, "Extension of CBAM scope to downstream goods and anti-circumvention measures", 7 September 2026. https://eprs.europarl.europa.eu/contents/publications/EPRS/2026/09/EPRS_ATA(2026)791461.html ; Parliament plenary vote of 15 September 2026, secondary source: https://cbamguide.com/news/2026-09-15-ep-plenary-adopts-cbam-downstream-mandate-464-50/ ; accessed 2026-10-07.
+24. Commission Implementing Decision (EU) 2026/1736 of 14 July 2026, OJ 15 July 2026. https://eur-lex.europa.eu/eli/dec_impl/2026/1736/oj ; CEN-CENELEC, news, 15 July 2026 (the eight standards of the series; six cited in the OJ). https://www.cencenelec.eu/news-events/news/2026/en-in-the-spotlight/2026-07-15-dpp/ ; accessed 2026-10-07.
+25. Council of the EU, press release on the European Business Wallets negotiating position, 9 June 2026, accessed 2026-10-07. https://www.consilium.europa.eu/en/press/press-releases/2026/06/09/european-business-wallets-council-adopts-negotiating-position/

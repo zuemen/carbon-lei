@@ -13,12 +13,14 @@ All companies are fictional. All emissions values for the demo producer are illu
 
 **Headline (one 500 t report, illustrative).** Declaring the verified 1.8 tCO2e/t instead of the 2026 default of 2.978 puts 589 tCO2e less on the CBAM declaration: 453.5 tCO2e of difference to the unmarked default plus 135.5 tCO2e of mark-up. At the Q3 2026 certificate price of €82.32 that is about €48,486, gross. This is a declared-emissions gap, not a physical reduction, and it comes from the verified value itself; what CarbonLEI adds is set out in Section 4.4. The tonnage ledger caps total claims against the report at its verified 500 t of goods.
 
-CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no double counting, and a value attached to a lower verified intensity. Only the third one could lead to a physical reduction, and we do not quantify it.
+CarbonLEI bears on emissions accounting in three ways: more accurate declarations, no over-claiming of verified tonnage, and a value attached to a lower verified intensity. Only the third one could lead to a physical reduction, and we do not quantify it.
+
+Over-claiming of verified tonnage means declaring more tonnes of goods against one verified report than it verified. It is not double counting in the GHG Protocol or PACT sense, where two companies count the same emissions in their own inventories: under CBAM, several importers may rely on the same verified intensity, as long as their tonnes together stay within what the report verified.
 
 | Effect | What changes | Physical reduction? |
 |---|---|---|
 | 1. Trusted actual values replace default values | Declared embedded emissions reflect the verified plant, not a marked-up default | It changes what is declared; no physical reduction by itself |
-| 2. Double counting is blocked | A verified low value cannot cover more tonnes than the report verified | The cap holds within this deployment, per credential; no physical reduction by itself |
+| 2. Over-claiming of verified tonnage is blocked | A verified low value cannot cover more tonnes than the report verified | The cap holds within this deployment, per credential; no physical reduction by itself |
 | 3. A lower verified intensity has a value | Effects 1 and 2 give a lower verified intensity a value in CBAM terms: each 0.1 tCO2e/t accounts for about €8.23 per tonne of goods at €82.32 (gross, illustrative). Who captures it is a commercial matter between buyer and producer; where it reaches the producer, it is an incentive to invest | Incentive only. Largely offset by free allocation until about 2030; full from 2034. Not quantified |
 
 Unit: the declared-emissions gap in tCO2e per tonne of goods, and its value in € per tonne at the certificate price. Baseline: the CBAM default value with mark-up.
@@ -33,7 +35,7 @@ In the demo, the ledger rejects a 400 t claim for a second importer against the 
 
 **Why there is a mark-up.** Default values include a mark-up "to account for the deviations of an individual installation with emission levels higher than the relevant average emission intensity of the producer country". Because of "the difficulties to verify that installation-specific data from third countries is of a sufficiently high quality", the Commission estimates that deviation from Union installations [1, recital 4].
 
-**Verification capacity is scarce.** Actual values need an accredited verifier. On 1 September 2026, 24 EU/EEA national accreditation bodies had agreed to offer CBAM accreditation, but only 5 were accepting applications from verifiers outside the EU. The first verification reports are expected in January 2027 [2]. The Commission phased the mark-up in because "the number of verifiers may increase in the first years", so that declarants can "use default values in those first years, and rely on actual emissions subsequently" [1, recital 5]. In a press release of 9 March 2026, the European Fastener Distributor Association (EFDA) called CBAM "a drastic punitive tariff on imported screws, nuts and other fasteners". The missing verification capacity was one of the reasons it gave [3].
+**Verification capacity is scarce.** Actual values need an accredited verifier. In the Commission's state of play of 29 September 2026, 24 EU/EEA national accreditation bodies had agreed to offer CBAM accreditation, but only 5 were accepting applications from verifiers outside the EU; on 7 October 2026 the Commission had not yet published its list of accredited verifiers. The first verification reports are expected in January 2027 [2]. The Commission phased the mark-up in because "the number of verifiers may increase in the first years", so that declarants can "use default values in those first years, and rely on actual emissions subsequently" [1, recital 5]. In a press release of 9 March 2026, the European Fastener Distributor Association (EFDA) called CBAM "a drastic punitive tariff on imported screws, nuts and other fasteners". The missing verification capacity was one of the reasons it gave [3].
 
 **Verification itself can be gamed.** In 2024 the German Environment Agency refused to approve certificates for around 215,000 tonnes of CO2; they concerned upstream emission reduction projects under Germany's fuel greenhouse-gas quota scheme, not CBAM or the EU ETS [4]. CarbonLEI does not prevent a wrong number; it makes the signer and their authority checkable.
 
@@ -103,7 +105,7 @@ The adjustment matters more for the incentive to buy lower-carbon steel. Wire ro
 
 ---
 
-## 3. Double counting: what the ledger prevents
+## 3. Over-claiming of verified tonnage: what the ledger prevents
 
 | Step | Action | Ledger | Contract result | In the demo |
 |---|---|---|---|---|
@@ -180,7 +182,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 | What CarbonLEI adds | A machine-checkable record of who signed and with what authority; no new emissions data | The verification body's authority stays machine-checkable wherever the report travels, and buyers can apply a voluntary tonnage cap across importers |
 | Effect on declared emissions | The contribution there is the checkable record in the row above; CarbonLEI's added effect on declared emissions is about zero at the margin, because the verified value already replaces the default value there | Not quantified: we cannot estimate how many verified values will travel outside the Registry |
 
-**The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, within this deployment, per credential; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover; CarbonLEI lets buyers add that cap voluntarily. We do not quantify the ledger's effect, because we found no empirical rate of double claims (A4 in Section 4.1).
+**The tonnage ledger** has an accounting-integrity effect: it stops one verified value from covering more tonnes than were verified, within this deployment, per credential; it does not change what any plant emits. We found no public mechanism that caps, across declarants, how many tonnes one verified value may cover. The Commission receives every declaration and can review it after submission under the CBAM rules; CarbonLEI lets buyers outside the Registry add a cap they can check for themselves, before relying on the value. We do not quantify the ledger's effect, because we found no empirical rate of double claims (A4 in Section 4.1).
 
 ---
 
@@ -192,7 +194,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 | Taiwan's share of extra-EU imports of CN 7318, 2025 | 18.6% by value, 20.3% by weight; second after China | [6] |
 | Default value, CN 7318 from Taiwan | 2.707 tCO2e/t direct; 2.978 in 2026; about 3.25 in 2027; 3.519 from 2028 | [1] |
 | Company identifier | The Commission's guidance lists LEI as an accepted operator identifier for operators from countries such as Taiwan | [10] |
-| Verification capacity | 5 of 24 EU/EEA national accreditation bodies accepting non-EU verifier applications on 1 September 2026 | [2] |
+| Verification capacity | 5 of 24 EU/EEA national accreditation bodies accepting non-EU verifier applications on 29 September 2026 | [2] |
 | Firms affected in Taiwan | About 2,600 small and medium-sized enterprises, mainly makers of steel products and metal fasteners (Taiwan Ministry of Environment) | [8] |
 | Taiwan's rank among CBAM source countries | 13th during the CBAM transitional period (2023–2025), as cited by Taiwan's Ministry of Environment from Commission data | [9] |
 | Taiwan carbon fee | NT$300 per tCO2e (preferential rates NT$50 and NT$100), in force since 1 January 2025; applies to installations above 25,000 tCO2e per year, so most fastener SMEs pay none and have no carbon price to deduct under CBAM Article 9. The Commission's Article 9 implementing rules were still a draft in May 2026 | [13], [14] |
@@ -237,7 +239,7 @@ Per-transaction figures are an allocation, not a causal effect: "the energy requ
 Accessed 2026-09-23 unless stated.
 
 1. Commission Implementing Regulation (EU) 2025/2621, Annex I (Taiwan) and recitals, OJ 31 December 2025; Annex I replaced in full by Implementing Regulation (EU) 2026/1740, OJ 31 July 2026 (CN 7318 values unchanged; mark-up rule in the opening paragraph of 1740 Annex I; marked-up values computed by the CBAM Registry). https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32025R2621 ; https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202601740
-2. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 1 September 2026. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
+2. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 29 September 2026, accessed 2026-10-07. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
 3. European Fastener Distributor Association (EFDA), press release, 9 March 2026. http://www.efda-fastenerdistributors.org/content/files/EFDA%20PRESS%20RELEASE_260309%281%29.pdf
 4. German Environment Agency (UBA), press release No. 36/2024, 6 September 2024. https://www.umweltbundesamt.de/en/press/pressinformation/uba-refuses-to-approve-certificates-for-eight-uer
 5. Commission Implementing Regulation (EU) 2025/2546, Annex (template of the verification report), point 2.6(h). https://eur-lex.europa.eu/eli/reg_impl/2025/2546/oj

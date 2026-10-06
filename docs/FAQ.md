@@ -43,7 +43,7 @@ CarbonLEI's effect lies outside the Registry (downstream buyers, banks, product 
 We do not count a lower CBAM bill as a climate benefit. The mark-up exists to push operators to provide verified data, and CarbonLEI works in the same direction: it makes verified values checkable and single-use. A low verified value can replace the default only for the tonnes it actually covers, so real emissions do not drop out of declarations. Accurate declarations then let lower-carbon production earn a price advantage.
 
 **Q18. How many verification reports will exist in Taiwan in 2027 for importers to use?**
-We do not know. On 1 September 2026, 24 EU/EEA national accreditation bodies had agreed to offer CBAM accreditation, but only 5 were accepting applications from verifiers outside the EU, and the first verification reports are expected in January 2027 [2]. Early volume will be small. That is why we built one corridor end to end (Taiwan fasteners into the EU) instead of claiming wide coverage.
+We do not know. In the Commission's state of play of 29 September 2026, 24 EU/EEA national accreditation bodies had agreed to offer CBAM accreditation, but only 5 were accepting applications from verifiers outside the EU, and the first verification reports are expected in January 2027 [2]. Early volume will be small. That is why we built one corridor end to end (Taiwan fasteners into the EU) instead of claiming wide coverage.
 
 **Q19. If you remove the AI (or rule) layer, what does the system lose?**
 The seven verification checks do not depend on it and keep working.
@@ -58,4 +58,4 @@ A second part needs it too: for reports used outside the CBAM Registry, the rule
 All pages accessed 2026-09-23 unless stated.
 
 1. European Commission, DG TAXUD, "Guidance on access request procedure – for CBAM operators, non-EU companies", v3.00, 26 January 2026, pp. 10 and 19. https://taxation-customs.ec.europa.eu/document/download/9361fade-6f19-4799-b2ef-f6a4ff681af2_en
-2. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 1 September 2026. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
+2. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 29 September 2026, accessed 2026-10-07. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
