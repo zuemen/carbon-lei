@@ -10,7 +10,7 @@ Two sets of criteria apply: the five on the [Devpost page](https://ieee-climatec
 | Innovation & Creativity | vLEI role authority plus a tonnage ledger shared across importers: [README — Related work](../README.md#related-work-and-what-is-new); comparison with six existing channels: [PROBLEM_STATEMENT — How existing channels compare](PROBLEM_STATEMENT.md#how-existing-channels-compare) |
 | Technical Execution | Source-verified contracts and Sepolia transactions: [README — On-chain proof](../README.md#on-chain-proof); tests, coverage, gas: [README — Measurements](../README.md#measurements); verification pipeline: [ARCHITECTURE §5.3](ARCHITECTURE.md#53-verification-pipeline-sdkverifyts) |
 | Practical Usefulness | Users and the decision each makes: [README — Who uses CarbonLEI](../README.md#who-uses-carbonlei); relation to the CBAM Registry: [ADOPTION §1.1](ADOPTION.md#11-relationship-to-the-cbam-registry); pilot plan (no partner contacted): [PILOT](PILOT.md) |
-| Presentation & Communication | Live page, no wallet: [README — Hosted](../README.md#hosted-for-reviewers-no-installation); [Problem statement](PROBLEM_STATEMENT.md); [FAQ](FAQ.md); video: to be submitted on Devpost by 25 October 2026 |
+| Presentation & Communication | Live page, no wallet: [README — Hosted](../README.md#hosted-for-reviewers-no-installation); [Problem statement](PROBLEM_STATEMENT.md); [FAQ](FAQ.md); video: embedded on the Devpost submission page |
 
 ## Organiser's weighted criteria
 
@@ -32,7 +32,7 @@ The organiser's page gives these weights. It also gives a second split (70% tech
 | Working prototype on a test network | [Live demo](https://zuemen.github.io/carbon-lei/); [README — On-chain proof](../README.md#on-chain-proof) |
 | Source code with documentation | This repository; [README — Quick start](../README.md#quick-start) |
 | Architecture diagram and technical specification | [README — Architecture](../README.md#architecture); [ARCHITECTURE](ARCHITECTURE.md) |
-| Video (Devpost: 3–5 minutes; organiser's page: 3 minutes) | To be submitted on Devpost by 25 October 2026 |
+| Video (Devpost: 3–5 minutes; organiser's page: 3 minutes) | Embedded on the Devpost submission page (deadline 25 October 2026); the YouTube link is added here once it is public |
 | Security and data integrity assessment | [SECURITY](SECURITY.md) |
 | Problem statement and solution overview (max 2 pages) | [PROBLEM_STATEMENT](PROBLEM_STATEMENT.md) |
 | Climate impact assessment and carbon reduction projections | We do not project reductions; we report a declared-emissions gap: [CLIMATE_IMPACT](CLIMATE_IMPACT.md) |
@@ -42,6 +42,6 @@ The organiser's page gives these weights. It also gives a second split (70% tech
 
 ## Scripted task timing (not user testing)
 
-**Open the page → Load → Verify → "8 of 8 checks passed": 2 clicks; three sessions of n = 5 on the same day gave medians of 10.6 s (6.0–11.6 s), 3.0 s (2.5–4.2 s) and 3.1 s (3.0–4.0 s), in that order.** Every run's time: [`data/task-timing-2026-10-07.json`](data/task-timing-2026-10-07.json). We did not isolate the cause of the spread; checks 4 and 5 read live from public Sepolia endpoints.
+**Open the page → Load → Verify → "8 of 8 checks passed": 2 clicks; median 3.0 s (2.5–4.2 s) and 3.1 s (3.0–4.0 s) in two sessions of n = 5 with `scripts/time-task.mjs`.** An earlier session the same day, the first of the three and run with a draft of the script, gave a median of 10.6 s (6.0–11.6 s). Every run's time: [`data/task-timing-2026-10-07.json`](data/task-timing-2026-10-07.json). We did not isolate the cause of the spread (a cold browser, CDN or RPC cache is possible but was not tested); checks 4 and 5 read live from public Sepolia endpoints.
 
 Method: `node scripts/time-task.mjs` ([script](../scripts/time-task.mjs)) for sessions 2 and 3, and an earlier draft of it with the same steps and stop condition for session 1; Playwright 1.63 with headless Chromium, a fresh browser context per run, against https://zuemen.github.io/carbon-lei/ on 2026-10-06 between 16:48 and 16:55 UTC, from one macOS laptop. The timer starts before page navigation and stops when "8 of 8" is visible. The script clicks as soon as each button is ready and reads nothing, so the time is a lower bound for a person; it says nothing about whether a person understands the result.

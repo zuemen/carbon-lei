@@ -1,6 +1,6 @@
 # CarbonLEI
 
-**Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? vLEI credentials plus an Ethereum Sepolia ledger.**
+**Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? GLEIF-rooted vLEI credentials plus an Ethereum Sepolia ledger.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 284 contract, 191 SDK, 28 verifier, 22 browser](https://img.shields.io/badge/tests-284%20contract%20%2B%20191%20SDK%20%2B%2028%20verifier%20%2B%2022%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
@@ -234,7 +234,7 @@ For the example's first product it drafts 7 fields (CN code 73181542, installati
 
 ### Local (full flow)
 
-Requirements: Node.js 22 (`.nvmrc`: 22.20.0), Foundry 1.7.1 (`forge`, `anvil`), and Docker with Compose for the vLEI part. Sepolia test ETH only if you rerun the demo on Sepolia.
+Requirements: Node.js 22.18 or later (`.nvmrc`: 22.20.0), Foundry 1.7.1 (`forge`, `anvil`), and Docker with Compose for the vLEI part. Sepolia test ETH only if you rerun the demo on Sepolia.
 
 ```bash
 git clone --recursive https://github.com/zuemen/carbon-lei
@@ -318,7 +318,7 @@ CI (`ci.yml`) runs three jobs on every push to `main` and every pull request: `c
 
 ## Measurements
 
-Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of the deployment built from commit `aedcb4c`; coverage and the gas report come from the test suite at commit `a6e0a3e` (the contracts have not changed since); test counts from commit `eac9cb3` (2026-10-06), plus the 4 reviewer-command tests added in `3797d6c`, the 33 valid-variant and contested tests added on 2026-10-07 and the 14 Communication Template tests and 1 browser test added on 2026-10-07. Every row states its baseline. Computed values, such as the declared-emissions gap of 1.18 tCO2e per tonne of goods, are in [Climate impact](docs/CLIMATE_IMPACT.md) and are illustrative.
+Measured from 2026-10-05 to 2026-10-07. Gas comes from the Sepolia receipts of the deployment built from commit `aedcb4c`; coverage and the gas report come from the test suite at commit `a6e0a3e` (the contracts have not changed since); contract, SDK and verifier test counts from a rerun of the suites at commit `62b66a3` (2026-10-07). Every row states its baseline. Computed values, such as the declared-emissions gap of 1.18 tCO2e per tonne of goods, are in [Climate impact](docs/CLIMATE_IMPACT.md) and are illustrative.
 
 | What | Value | Baseline | How measured |
 |---|---|---|---|

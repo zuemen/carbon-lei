@@ -13,7 +13,7 @@ Every command below is defined in `package.json` (root) or `verifier/package.jso
 | Requirement | Why |
 |---|---|
 | Docker with the Compose v2 plugin (`docker compose`) | Runs the KERI stack in `verifier/docker-compose.yaml` |
-| Node.js 22 (the repository pins 22.20.0 in `.nvmrc`; `package.json` accepts `>=22 <23`) | The scripts run `.ts` files directly with `node` |
+| Node.js 22.18 or later (the repository pins 22.20.0 in `.nvmrc`; `package.json` accepts `>=22.18`) | The scripts run `.ts` files directly with `node` |
 | Ports 3901, 3902 and 3903 free on 127.0.0.1 | The only ports the stack publishes |
 | Foundry (`forge`, `anvil`) | Only for the local chain demo in §8 |
 
