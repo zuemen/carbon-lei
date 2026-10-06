@@ -4,6 +4,32 @@ What a first pilot of CarbonLEI would need, who would provide it, and what it wo
 
 The pilot is phase 1 of the [adoption path](ADOPTION.md#5-adoption-path): around the first verified CBAM reports, from January 2027, alongside the official CBAM Registry flow. CarbonLEI does not submit anything to the Registry and does not replace it.
 
+## The ask (dated 2026-10-07)
+
+No organisation has been contacted; this is the request we would send.
+
+**Who we are looking for.** One corridor, CN 7318 (screws, bolts and nuts) from Taiwan into the EU, and on it:
+
+- **one verification body** accredited for CBAM by an EU national accreditation body, with one or two lead auditors;
+- **one to three Taiwanese operators** whose CBAM reports that body verifies;
+- **one or two EU importers** that buy from the same operator (a third can join later, see §1).
+
+The pilot also needs a qualified vLEI issuer and the body's accreditation body to issue credentials (§2); we would approach them once a verification body has agreed.
+
+**What each partner would do.**
+
+| Partner | Does | Weeks active (of the 12-week plan in §5) |
+|---|---|---|
+| Verification body | Obtains a Legal Entity vLEI and ECRs for its lead auditors; issues one or two real reports as credentials and registers them; takes part in one revocation drill; comments on check 8's warnings | 1–9 and the review in week 12 |
+| Operator | Gives its LEI and an EVM wallet; chooses which fields to disclose; claims its shipments against the verified tonnage | 1–2, then 5–9 and week 12 |
+| Importer | Verifies each pilot shipment in the browser or the CLI (no wallet, nothing to install); times the check; tries the PACT export in its CBAM declaration software; says what it would need to rely on the result | 1–2, then 7–12 |
+
+**What we provide.** The contracts deployed on a test network with a multisig owner; onboarding of the body and its auditors (`onboard-check`, `addVerifier`, `addAuditor`); the CLI, the SDK and the hosted verifier page; one or more watchers; written instructions for each step; and the results of §4, shared with every partner before anything is published.
+
+**How long.** Twelve weeks from a signed scope (§5). Most weeks need only one partner; each partner's active weeks are in the table. The pilot runs alongside the official CBAM Registry flow and changes nothing in it.
+
+We are not asking for money and not offering any. No partner has expressed interest so far.
+
 ## 1. Scope
 
 | Item | Pilot scope |

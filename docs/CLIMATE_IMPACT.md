@@ -1,5 +1,7 @@
 # Climate impact assessment
 
+An EU importer that cannot check who signed a verified value, or whether its tonnes were already claimed, falls back on the CBAM default: 2.978 tCO2e per tonne for screws from Taiwan in 2026, against the 1.8 verified in the demo (illustrative). CarbonLEI makes the signer's authority and the remaining verified tonnage checkable, so for one 500 t report the verified value can be relied on instead, putting 589 tCO2e less on the declaration (about €48,486 gross at €82.32 per tCO2e). That is a declared-emissions gap, not a physical reduction: CarbonLEI claims no emission reduction, and the incentive to switch to lower-carbon steel is largely offset by free allocation until about 2030, so we do not quantify one.
+
 > **Deliverable.** This document answers the requested "Climate impact assessment and carbon reduction projections": it reports the declared-emissions gap in tCO2e and € per tonne against the CBAM default value, for one report (Section 2) and for 10 / 100 / 1,000 installations (Section 4).\
 > **Why no reduction projection.** A physical reduction would come mainly from producers switching to lower-carbon steel; free allocation largely offsets the CBAM incentive to do so until about 2030 (Section 2a), and we found no public case of a fastener producer switching because of CBAM (Section 6), so a projected tonnage would be invented.
 

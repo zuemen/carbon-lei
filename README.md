@@ -4,15 +4,29 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 284 contract, 206 SDK, 28 verifier, 22 browser](https://img.shields.io/badge/tests-284%20contract%20%2B%20206%20SDK%20%2B%2028%20verifier%20%2B%2022%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
+[![The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment](docs/img/buyer-verified.png)](https://zuemen.github.io/carbon-lei/)
+<sub>Screenshot of the live page on Sepolia, taken 2026-10-06 (not a mock-up).</sub>
+
+**Live demo (read-only, no wallet):** [zuemen.github.io/carbon-lei](https://zuemen.github.io/carbon-lei/)
+
+- **Who signed:** the lead auditor's vLEI role credential (ECR), issued by the verification body, is checked against a GLEIF-rooted chain (simulated root in the demo).
+- **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
+- **Already claimed?** An on-chain ledger deducts each shipment from the report's verified tonnage (500 t in the demo) and rejects a batch claimed twice or a claim beyond what remains.
+
+**Climate link:** without a checkable signer and tonnage, an importer cannot rely on a verified value (1.8 tCO2e/t verified vs the 2026 default of 2.978 in the demo, illustrative); CarbonLEI makes who signed it and which tonnes it covers checkable. It claims no emission reduction.
+
+**The contract said yes; the credential said no.** In attack 4 the contract accepted an impostor's report ([tx 0x295abe6c…013](https://sepolia.etherscan.io/tx/0x295abe6cb63e3df44e942b07397ba926dcff815a6e1e2e05870f21d0dc3d0013)) after a simulated theft of the allowlist owner key; browser check 7 rejected it with `AUTHORITY_INVALID`.
+
+**Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4.
+
+<details><summary>More: links, the 60-second walk-through, scope and the fictional-data notice</summary>
+
 | | |
 |---|---|
 | **Live demo (read-only, no wallet)** | [zuemen.github.io/carbon-lei](https://zuemen.github.io/carbon-lei/) · opens on the Buyer tab; three steps: Supplier → Buyer → Try to break it |
 | Contracts on Sepolia | [On-chain proof](#on-chain-proof) |
 | Documentation | [Problem statement](docs/PROBLEM_STATEMENT.md) · [Judging criteria](docs/JUDGING_CRITERIA.md) · [Architecture](docs/ARCHITECTURE.md) · [Security](docs/SECURITY.md) ([properties P1–P6](docs/SECURITY.md#9-security-properties)) · [Climate impact](docs/CLIMATE_IMPACT.md) · [Adoption](docs/ADOPTION.md) · [PACT mapping](docs/PACT_MAPPING.md) · [FAQ](docs/FAQ.md) · [vLEI setup](docs/VLEI_SETUP.md) |
 | For reviewers | [Measurements](#measurements) · [Six questions reviewers ask](#six-questions-reviewers-ask) · [Footprint of CarbonLEI](docs/CLIMATE_IMPACT.md#footprint-of-carbonlei) · [Sources: 25 references (EUR-Lex, TAXUD, Eurostat, ISO, PACT and others)](#sources) |
-
-[![The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment](docs/img/buyer-verified.png)](https://zuemen.github.io/carbon-lei/)
-<sub>Screenshot of the live page on Sepolia, taken 2026-10-06 (not a mock-up).</sub>
 
 **In 60 seconds:** open the [live demo](https://zuemen.github.io/carbon-lei/) (it opens on the Buyer tab) → press **Load the demo proof**, then **Verify**: eight checks (seven verification checks and one advisory reconciliation check), two of them read live from the Sepolia contract → open **Try to break it** and watch the counterexamples get rejected.
 
@@ -27,6 +41,8 @@ CarbonLEI is a prototype for the IEEE ClimateChain Global Hackathon, track **Sus
 What the supplier gives each buyer is **the supplier's proof**: a selective-disclosure presentation of its signed emissions credential, showing only the fields the supplier chooses to disclose. How this relates to the official CBAM Registry: [Where CarbonLEI sits](#where-carbonlei-sits-and-why-a-ledger).
 
 All companies, people and LEIs in this repository are fictional. All emissions values are illustrative — not official CBAM methodology. Each fictional LEI returns 404 from the GLEIF API, and no GLEIF record carries the legal name of any fictional company (checked 2026-10-05).
+
+</details>
 
 <details><summary>Glossary</summary>
 
