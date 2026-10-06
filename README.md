@@ -2,7 +2,7 @@
 
 **Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? vLEI credentials plus an Ethereum Sepolia ledger.**
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 278 contract, 118 SDK, 28 verifier, 21 browser](https://img.shields.io/badge/tests-278%20contract%20%2B%20118%20SDK%20%2B%2028%20verifier%20%2B%2021%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 278 contract, 120 SDK, 28 verifier, 21 browser](https://img.shields.io/badge/tests-278%20contract%20%2B%20120%20SDK%20%2B%2028%20verifier%20%2B%2021%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
 | | |
 |---|---|
@@ -214,10 +214,11 @@ git clone https://github.com/zuemen/carbon-lei
 cd carbon-lei
 npm ci
 npm run verify:demo
+npm run verify:tampered
 npm run audit:onchain
 ```
 
-`verify:demo` runs checks 0-8 on the demo proof (`fixtures/sepolia-demo-proof.json`) against public Sepolia RPCs and exits 0 when VALID. `audit:onchain` compares every transaction and contract in the [On-chain proof](#on-chain-proof) table with its Sepolia receipt. If a public RPC is unreachable, add `-- --rpc <Sepolia RPC URL>` to either command.
+`verify:demo` runs checks 0-8 on the demo proof (`fixtures/sepolia-demo-proof.json`) against public Sepolia RPCs and exits 0 when VALID. The proof's `reportExtract` is an unsigned extract of the verification report; only check 8, which is advisory, compares it with the signed credential, so editing it still gives VALID (the summary line then names the check 8 warning). To see tampering rejected, run `verify:tampered`: its proof (`fixtures/sepolia-demo-proof.tampered.json`) changes one signed disclosure, the verified intensity, from 1.8 to 1.2, so check 2 fails with `DISCLOSURE_TAMPERED`. The script passes `--expect-invalid DISCLOSURE_TAMPERED`: it exits 0 and prints "INVALID as expected" only on that failure (without the flag, INVALID exits 1). Or edit a value in `disclosures` yourself (base64url of `[salt, name, value]`). `audit:onchain` compares every transaction and contract in the [On-chain proof](#on-chain-proof) table with its Sepolia receipt. If a public RPC is unreachable, add `-- --rpc <Sepolia RPC URL>` to either command.
 
 ### Local (full flow)
 
@@ -280,7 +281,7 @@ carbon-lei/
 ```bash
 forge test                  # 278 contract tests: unit, scenario and invariant fuzz
 npm ci && forge build
-npm test -w sdk             # 118 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
+npm test -w sdk             # 120 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
 npx playwright install chromium
 npm test -w verifier        # 28 tests: revocation seal detection, the watcher and the impostor chain (no KERI stack needed)
 npm run e2e -w demo         # 21 browser tests against a local dev server; set DEMO_URL to test the hosted page
@@ -314,7 +315,7 @@ Measured on 2026-10-05 and 2026-10-06. Gas comes from the Sepolia receipts of th
 | Gas, `revokeReport` | 62,345 (median in the test suite) | 21,000 gas, as above | `forge test --gas-report` |
 | Gas for one report's on-chain life (register and one claim) | 524,065 gas; 0.00052 ETH at an assumed 1 gwei | The declared-emissions gap of the same 500 t report: about €48,486 in 2026, illustrative, gross, before free-allocation adjustment | Sum of the two Sepolia receipts. Sepolia ETH has no market value, and mainnet gas prices vary |
 | Threat-model matrix (tampered inputs) | 19 of 19 tampered inputs detected: 7 in the browser, 8 by comparison with the chain, 4 by a contract revert (3 dry runs and 1 real transaction on a local anvil chain) | An unsigned PDF copy: 0 of the same inputs, because it carries no signature, ledger or anchor that software can check | `sdk/test/tamper-matrix.test.ts` generates each input: changed disclosed value, changed signed field, wrong signer, wrong shipment, replayed batch, over-claim, unlisted verifier, revoked auditor, revoked or expired report, wrong registrant, issuer or scope, malformed proof. Checks 6–8 have their own tests |
-| Contract tests / SDK tests / verifier tests | 278 / 118 / 28, all passing | Each of the 25 distinct custom errors in the contracts is referenced in at least one test | Contracts: Allowlist 101, Registry 66, Supersede 63, Events 15, FixReview 10, Hardening 7, Vectors 7, Invariants 9. SDK: core 21, tamper matrix 21, verification against anvil 15, PACT 11, reconciliation 6, vLEI 25, KEL 14, CLI 1, reviewer commands 4. Verifier: revocation seal detection 14, watcher 7, impostor chain 7. [CI runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) |
+| Contract tests / SDK tests / verifier tests | 278 / 120 / 28, all passing | Each of the 25 distinct custom errors in the contracts is referenced in at least one test | Contracts: Allowlist 101, Registry 66, Supersede 63, Events 15, FixReview 10, Hardening 7, Vectors 7, Invariants 9. SDK: core 21, tamper matrix 21, verification against anvil 15, PACT 11, reconciliation 6, vLEI 25, KEL 14, CLI 1, reviewer commands 6. Verifier: revocation seal detection 14, watcher 7, impostor chain 7. [CI runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) |
 | Coverage, both contracts | lines 100%, statements 99.3%, branches 97.3%, functions 100% | Target set before measuring: every revert path covered; the branch figure shows it is not fully met | `forge coverage --ir-minimum` |
 | Invariant fuzz | 256 runs × 128 calls = 32,768 calls per invariant, 8 invariant functions, 0 violations | Foundry's default is 256 runs × depth 500; we keep the default run count with depth 128 | Invariant tests over random sequences of register (including revisions and take-overs), claim, revoke, suspend, lift, auditor revocation, address rotation and time jumps |
 | Cross-language test vectors | Solidity and TypeScript compute the same keys, commitments and EIP-712 digest, and recover the same signer; the credential SAID equals keripy 1.2.13's | An independent implementation (keripy) for the SAID | [`fixtures/vectors.json`](fixtures/vectors.json), `sdk/scripts/check-said-keripy.sh` |

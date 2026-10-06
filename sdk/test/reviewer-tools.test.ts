@@ -1,9 +1,13 @@
 // Offline tests for the reviewer commands: `npm run verify:demo` reads the demo page's proof, and
+// `npm run verify:tampered` reads the same proof with one signed disclosure changed, and
 // `npm run audit:onchain` (scripts/audit-onchain.ts) flags any row of the On-chain proof table that differs.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { audit, parseOnchainTable, recordedTxs, type ReceiptSource } from "../../scripts/audit-onchain.ts";
+import type { ChainReader } from "../chain.ts";
 import type { Hex } from "../credential.ts";
+import { decodeDisclosure, type Presentation } from "../disclosure.ts";
+import { verifyPresentation } from "../verify.ts";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const readme = read("README.md");
@@ -81,5 +85,50 @@ describe("verify:demo", () => {
   it("fixtures/sepolia-demo-proof.json is the demo page's proof", () => {
     const demo = JSON.parse(read("demo/public/demo-data.json"));
     expect(JSON.parse(read("fixtures/sepolia-demo-proof.json"))).toEqual(demo.proof);
+  });
+});
+
+/** A chain with nothing registered: checks 0-3 run fully offline, checks 4-5 fail as not registered. */
+function emptyChain(): ChainReader {
+  const zero = `0x${"0".repeat(64)}`;
+  const r = {
+    client: { getChainId: async () => 11155111 },
+    registry: deployment.contracts.EmissionsClaimRegistry.address,
+    deployedBlock: 0n,
+    latestBlock: async () => ({ number: 1n, timestamp: 1n }),
+    at: () => r,
+    report: async () => ({ registeredAt: 0n }),
+    shipmentStatus: async () => ({ reportKey: zero, claimedAt: 0n }),
+    remainingKg: async () => 0n,
+    reportScope: async () => ({ reportIdHash: zero, latestReportKey: zero, boundAt: 0n }),
+  };
+  return r as unknown as ChainReader;
+}
+
+describe("verify:tampered", () => {
+  const proof = JSON.parse(read("fixtures/sepolia-demo-proof.json")) as Presentation;
+  const tampered = JSON.parse(read("fixtures/sepolia-demo-proof.tampered.json")) as Presentation;
+
+  it("differs from the demo proof in one signed disclosure only: the verified intensity, 1.8 -> 1.2", () => {
+    const changed = proof.disclosures.flatMap((d, i) => (d === tampered.disclosures[i] ? [] : [i]));
+    expect(changed).toHaveLength(1);
+    const [before, after] = [proof, tampered].map((p) => decodeDisclosure(p.disclosures[changed[0]]));
+    expect(before).toEqual({ ...after, value: "1.8" });
+    expect(after).toMatchObject({ name: "specificEmbeddedEmissions_tCO2e_per_t", value: "1.2" });
+    expect({ ...tampered, disclosures: proof.disclosures }).toEqual(proof);
+  });
+
+  it("fails check 2 with DISCLOSURE_TAMPERED offline, while checks 0, 1 and 3 still pass", async () => {
+    const byIndex = async (p: Presentation) => (await verifyPresentation(p, emptyChain())).checks.slice(0, 4);
+    expect((await byIndex(proof)).map((c) => c.status)).toEqual(["pass", "pass", "pass", "pass"]);
+    const r = await verifyPresentation(tampered, emptyChain());
+    expect(r.overall).toBe("INVALID");
+    expect(r.primaryCode).toBe("DISCLOSURE_TAMPERED");
+    expect(r.checks.slice(0, 4).map((c) => [c.status, c.code])).toEqual([
+      ["pass", ""],
+      ["pass", ""],
+      ["fail", "DISCLOSURE_TAMPERED"],
+      ["pass", ""],
+    ]);
   });
 });

@@ -14,6 +14,7 @@ import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCr
 import { exportPactFromProof } from "./pact.ts";
 import { verifyPresentation } from "./verify.ts";
 import { vleiCheckers } from "./checkers.ts";
+import { pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
 
 const USAGE = `carbonlei <command> [options]
@@ -23,6 +24,7 @@ const USAGE = `carbonlei <command> [options]
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
                --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>]
   verify       --proof <proof.json> [--eori <EORI>] [--rpc <url>] [--deployment <file>]
+               [--expect-invalid <CODE>]            exit 0 only if the proof is INVALID with a check failing on CODE
   export-pact  --proof <proof.json> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--out <pact.json>]
 `;
@@ -37,6 +39,16 @@ function reader(values: Record<string, unknown>): ChainReader {
     (values.deployment as string) ?? fileURLToPath(new URL("../contracts/deployments/11155111.json", import.meta.url)),
   ) as Deployment;
   return values.rpc ? ChainReader.forRpc(deployment, [values.rpc as string], sepolia) : ChainReader.forSepolia(deployment);
+}
+
+/** Summary note for a check 8 warning, with the number of reconciliation rules the received extract fails. */
+function advisoryNote(proof: Presentation, disclosed: Record<string, string>, code: string): string {
+  const claims = pickReconciledClaims(disclosed);
+  const n = claims && proof.reportExtract ? runRules(proof.reportExtract as unknown as ReportExtract, claims).filter((f) => !f.ok).length : 0;
+  const rules = `${n} rule${n === 1 ? "" : "s"}`;
+  return code === "CONSISTENCY_WARNING/PROOF_MISMATCH"
+    ? `the unsigned report extract differs from the signed credential (${rules})`
+    : `the auditor-signed reconciliation is flagged by ${rules}; needs human review`;
 }
 
 async function main(argv: string[]) {
@@ -64,6 +76,7 @@ async function main(argv: string[]) {
       "product-id": { type: "string" },
       "product-description": { type: "string" },
       out: { type: "string" },
+      "expect-invalid": { type: "string" },
     },
   });
 
@@ -126,7 +139,21 @@ async function main(argv: string[]) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
       }
-      console.log(`\n${r.overall}${r.primaryCode ? ` (${r.primaryCode})` : ""}; ${r.hidden} field(s) hidden by supplier`);
+      const summary = [`${r.overall}${r.primaryCode ? ` (${r.primaryCode})` : ""}`, `${r.hidden} field(s) hidden by supplier`];
+      const advisory = r.checks.find((c) => c.index === 8 && c.status === "warn");
+      if (advisory) summary.push(`check 8 advisory: ${advisoryNote(proof, r.disclosed, advisory.code)}`);
+      console.log(`\n${summary.join("; ")}`);
+      const expected = values["expect-invalid"] as string | undefined;
+      if (expected) {
+        const hit = r.overall === "INVALID" ? r.checks.find((c) => c.status === "fail" && c.code === expected) : undefined;
+        console.log(
+          hit
+            ? `INVALID as expected: check ${hit.index} failed with ${expected} (exit 0 because of --expect-invalid)`
+            : `UNEXPECTED: wanted INVALID with a check failing on ${expected}, got ${r.overall}`,
+        );
+        return hit ? 0 : 1;
+      }
+      // Check 8 is advisory: a warning shows in the summary but does not change the exit code.
       return r.overall === "VALID" ? 0 : r.overall === "CONTESTED" ? 2 : 1;
     }
     case "export-pact": {
