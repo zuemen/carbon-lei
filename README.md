@@ -271,7 +271,7 @@ npm ci && forge build
 npm test -w sdk             # 88 SDK tests (vitest), including end-to-end runs on a local anvil chain and PACT schema validation
 npx playwright install chromium
 npm test -w verifier        # 28 tests: revocation seal detection, the watcher and the impostor chain (no KERI stack needed)
-npm run e2e -w demo         # 11 browser tests against a local dev server; set DEMO_URL to test the hosted page
+npm run e2e -w demo         # 13 browser tests against a local dev server; set DEMO_URL to test the hosted page
 ```
 
 Test counts, coverage and fuzz runs: see [Measurements](#measurements) · CI: [ci.yml runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml)
