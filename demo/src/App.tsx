@@ -240,6 +240,7 @@ export function App() {
                 id={`tab-${t.id}`}
                 aria-selected={tab === t.id}
                 aria-controls="panel"
+                tabIndex={tab === t.id ? 0 : -1}
                 className="tab"
                 onClick={() => go(t.id)}
               >

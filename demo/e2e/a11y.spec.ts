@@ -1,5 +1,5 @@
 // Accessibility checks of the demo page: an axe-core scan of each tab in the state a visitor reaches
-// (serious and critical violations must be zero), the main actions done with the keyboard only, and the
+// (violations of any impact must be zero), the main actions done with the keyboard only, and the
 // page without JavaScript (noscript summary and share metadata).
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
@@ -16,8 +16,7 @@ async function scan(page: Page, label: string) {
   const { violations } = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
     .analyze();
-  const bad = violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  const report = bad.map((v) => `${v.impact} ${v.id}: ${v.help} — ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
+  const report = violations.map((v) => `${v.impact} ${v.id}: ${v.help} — ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
   expect(report, `axe on ${label}`).toEqual([]);
 }
 
@@ -30,7 +29,7 @@ async function tabTo(page: Page, target: Locator, { max = 80, back = false } = {
   throw new Error("element not reached with the keyboard");
 }
 
-test("A1 axe (WCAG 2.2 AA and best practice): no serious or critical violations on the six tabs", async ({ page }) => {
+test("A1 axe (WCAG 2.2 AA and best practice): no violations of any impact on the six tabs", async ({ page }) => {
   await page.goto("./#verification-body");
   await connected(page);
   await expect(page.getByRole("heading", { name: "Issue a verified emissions report" })).toBeVisible();
@@ -76,7 +75,7 @@ test("A2 keyboard only: Load, Verify, Accept and download on the Buyer tab", asy
   await page.keyboard.press("Space");
   await expect(page.locator(".overall .stamp")).toBeVisible();
   const accept = page.getByRole("button", { name: "Accept verified value" });
-  if (!(await accept.isEnabled())) return; // not VALID on the current chain state: nothing to accept or download
+  test.skip(!(await accept.isEnabled()), "not VALID on the current chain state: nothing to accept or download");
   await tabTo(page, accept, { max: 120 });
   await page.keyboard.press("Enter");
   await expect(page.getByText(/Accepted \(demo\)/)).toBeVisible();
@@ -98,11 +97,16 @@ test("A3 keyboard only: the evidence note, the tabs, the comparison panel and th
   await expect(page.locator("#evidence-why")).toBeVisible();
   await page.keyboard.press("Space");
   await expect(page.locator("#evidence-why")).toBeHidden();
-  // A tab opens with Enter; the Trust chain comparison panel opens with Space.
+  // Only the selected tab is in the Tab order (roving tabindex); the arrow keys move to and open the others.
+  // The Trust chain comparison panel opens with Space.
   const trust = page.getByRole("tab", { name: "Trust chain" });
-  await tabTo(page, trust);
-  await page.keyboard.press("Enter");
+  await expect(trust).toHaveAttribute("tabindex", "-1");
+  await tabTo(page, page.getByRole("tab", { name: "Buyer" }));
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(trust).toBeFocused();
   await expect(trust).toHaveAttribute("aria-selected", "true");
+  await expect(trust).toHaveAttribute("tabindex", "0");
   const panel = page.locator("details#name-vs-chain");
   await tabTo(page, panel.locator("summary"));
   await page.keyboard.press("Space");
@@ -130,11 +134,10 @@ test("A3 keyboard only: the evidence note, the tabs, the comparison panel and th
   await tabTo(page, page.getByRole("button", { name: /Claim \d+ t more/ }));
   await page.keyboard.press("Enter");
   await expect(page.getByText(/Reverted: ExceedsVerifiedTonnage/)).toBeVisible();
-  if (data.attacks.attack4) {
-    await tabTo(page, page.getByRole("button", { name: "Verify the impostor's proof" }), { max: 120 });
-    await page.keyboard.press("Enter");
-    await expect(page.locator("ol.a4-checks > li")).toHaveCount(8);
-  }
+  expect(data.attacks.attack4, "demo data has attack 4").toBeTruthy();
+  await tabTo(page, page.getByRole("button", { name: "Verify the impostor's proof" }), { max: 120 });
+  await page.keyboard.press("Enter");
+  await expect(page.locator("ol.a4-checks > li")).toHaveCount(8);
 });
 
 test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse click", async ({ page }) => {
