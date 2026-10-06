@@ -295,7 +295,7 @@ test("Trust chain: name field vs signature chain panel, collapsed by default, op
   const data = await (await page.request.get("demo-data.json")).json();
   await page.goto("./#trust-chain");
   const panel = page.locator("details#name-vs-chain");
-  await expect(panel).not.toHaveAttribute("open", "");
+  await expect(panel).not.toHaveAttribute("open");
   await expect(page.locator("li.node")).toHaveCount(data.trustChain.length);
   const summary = panel.locator("summary");
   await summary.focus();
@@ -330,4 +330,21 @@ test("E8 the product passport QR link opens the Buyer tab with the matching proo
   await page.goto(`./#buyer?said=${encodeURIComponent(said)}&batch=${encodeURIComponent(data.shipment.batchId)}`);
   await expect(page.getByText(/Proof loaded from the product passport QR code/)).toBeVisible();
   await expect(page.locator("#proof-in")).toHaveValue(/"core"/);
+});
+
+test("Supplier: the Communication Template panel reads the Commission's example in the browser", async ({ page }) => {
+  await page.goto("./#supplier");
+  const panel = page.locator("details#template-import");
+  await expect(panel).not.toHaveAttribute("open");
+  await panel.locator("summary").click();
+  await page.getByRole("button", { name: "Load the Commission's example" }).click();
+  const table = panel.getByRole("table", { name: "Template value to credential field" });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole("row", { name: /CN code 73181542 F26/ })).toBeVisible();
+  await expect(table.getByRole("row", { name: /Emissions intensity \(tCO2e\/t\) 2\.00694 I26/ })).toBeVisible();
+  await expect(panel.getByText("Still to be supplied by the verification body (15)")).toBeVisible();
+  await expect(panel.getByText(/^Supplier LEI — no cell in the Communication Template$/)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });

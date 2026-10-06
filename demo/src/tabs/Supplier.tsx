@@ -8,6 +8,8 @@ import { useApp } from "../App.tsx";
 import { fmt, TabHead, TxLink } from "../components.tsx";
 import { kgToT } from "../messages.ts";
 import { short } from "../data.ts";
+// The template panel renders when opened; the importer and the spreadsheet reader load only when a file is read.
+import { TemplateImport } from "./TemplateImport.tsx";
 
 const LABELS: Record<string, string> = {
   supplierLEI: "Supplier LEI",
@@ -46,6 +48,7 @@ export function Supplier() {
   const [qr, setQr] = useState("");
   const [remaining, setRemaining] = useState<bigint | null>(null);
   const [state, setState] = useState<"valid" | "revoked" | "replaced" | "unknown">("unknown");
+  const [templateOpen, setTemplateOpen] = useState(false);
 
   const verifiedKg = BigInt(Math.round(Number(data.report.verifiedTonnes) * 1000));
   const claimTx = data.txs.find((t) => t.step === "claim1");
@@ -227,6 +230,15 @@ export function Supplier() {
           conformance with ESPR or with any digital product passport specification.
         </p>
       </section>
+
+      <details
+        id="template-import"
+        className="sheet pvv"
+        onToggle={(e) => setTemplateOpen((e.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary>Start from the Commission's Communication Template (official example)</summary>
+        {templateOpen && <TemplateImport labels={LABELS} />}
+      </details>
     </>
   );
 }

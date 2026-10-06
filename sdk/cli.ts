@@ -1,4 +1,4 @@
-// carbonlei CLI: issue, present, verify, export-pact.
+// carbonlei CLI: issue, present, verify, export-pact, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
 import { readFileSync, writeFileSync } from "node:fs";
@@ -16,6 +16,7 @@ import { verifyPresentation } from "./verify.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
+import { draftCredentialFields, parseTemplate, type CredentialDraft, type ParsedTemplate } from "./template.ts";
 
 const USAGE = `carbonlei <command> [options]
 
@@ -27,7 +28,32 @@ const USAGE = `carbonlei <command> [options]
                [--expect-invalid <CODE>]            exit 0 only if the proof is INVALID with a check failing on CODE
   export-pact  --proof <proof.json> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--out <pact.json>]
+  import-template <file.xlsx> [--product N] [--out <draft.json>]
+               reads a filled CBAM Communication Template (V2.1 or V2.1.1) and prints a draft of the
+               credential fields it can fill; the rest is left to the verification body
 `;
+
+function printTemplate(t: ParsedTemplate, d: CredentialDraft, n: number): string {
+  const L: string[] = [];
+  L.push(`CBAM Communication Template v${t.templateVersion} (${t.templateVersionDate ?? "date not listed"})  sha256 ${t.sha256}`);
+  L.push(`Installation   ${t.installation.name} · ${[t.installation.city, t.installation.country].filter(Boolean).join(", ")} · UN/LOCODE ${t.installation.unLocode ?? "—"}`);
+  L.push(`Period         ${t.reportingPeriod.start} to ${t.reportingPeriod.end}`);
+  L.push(`Verifier       ${t.verifier.name ?? "blank (optional in the transitional period)"}`);
+  L.push(`Products       ${t.products.length}`);
+  t.products.forEach((p, i) =>
+    L.push(
+      `  ${i + 1}${i + 1 === n ? "*" : " "} row ${p.row}  CN ${p.cnCode}  ${p.productName ?? ""}  SEE direct ${p.seeDirect} · indirect ${p.seeIndirect} · total ${p.seeTotal} tCO2e/t`,
+    ),
+  );
+  L.push("", `Credential field draft for product ${n} (CN ${d.product.cnCode}):`);
+  const w = Math.max(...d.rows.map((r) => r.field.length));
+  for (const r of d.rows) L.push(`  ${r.field.padEnd(w)}  ${r.value}   ← ${r.source}  (${r.rule})`);
+  L.push("", `Still to be supplied by the verification body (${d.toBeSupplied.length}):`);
+  for (const s of d.toBeSupplied) L.push(`  ${s.field} — ${s.reason}`);
+  L.push("", `Set by the SDK at issuance: ${d.setAtIssuance.join(", ")}`);
+  L.push("This is a draft from the operator's template, not verified data.");
+  return L.join("\n");
+}
 
 const json = (x: unknown) => JSON.stringify(x, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2);
 const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8"));
@@ -53,9 +79,11 @@ function advisoryNote(proof: Presentation, disclosed: Record<string, string>, co
 
 async function main(argv: string[]) {
   const [command, ...rest] = argv;
-  const { values } = parseArgs({
+  const { values, positionals } = parseArgs({
     args: rest,
+    allowPositionals: true,
     options: {
+      product: { type: "string", default: "1" },
       claims: { type: "string" },
       "auditor-aid": { type: "string" },
       supplier: { type: "string" },
@@ -167,6 +195,20 @@ async function main(argv: string[]) {
         productId: values["product-id"] as string,
       });
       write(values.out, pf);
+      return 0;
+    }
+    case "import-template": {
+      const file = positionals[0];
+      if (!file) throw new Error("usage: carbonlei import-template <file.xlsx> [--product N]");
+      const t = await parseTemplate(readFileSync(file));
+      const n = Number(values.product);
+      if (!Number.isInteger(n) || n < 1) throw new Error(`--product must be a positive integer, got ${values.product}`);
+      const draft = draftCredentialFields(t, n - 1);
+      if (values.out) {
+        write(values.out, { template: t, draft });
+        return 0;
+      }
+      console.log(printTemplate(t, draft, n));
       return 0;
     }
     default:
