@@ -45,7 +45,9 @@ test("A1 axe (WCAG 2.2 AA and best practice): no violations of any impact on the
   await page.getByRole("button", { name: "Load the demo proof" }).click();
   await page.getByRole("button", { name: "Verify", exact: true }).click();
   await expect(page.locator(".overall .stamp")).toBeVisible();
-  await scan(page, "Buyer after Load and Verify");
+  await page.locator("#check-sources > summary").click();
+  await expect(page.locator("#check-sources tbody > tr")).toHaveCount(8);
+  await scan(page, "Buyer after Load and Verify, data-source table open");
 
   await page.getByRole("tab", { name: "Try to break it" }).click();
   await page.getByRole("button", { name: "Change one disclosed number" }).click();

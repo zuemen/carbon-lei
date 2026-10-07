@@ -332,6 +332,39 @@ test("Trust chain: name field vs signature chain panel, collapsed by default, op
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
+test("Buyer: where each check gets its data, collapsed by default; eight rows with the check list's own source labels", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.goto("./#buyer");
+  const panel = page.locator("details#check-sources");
+  await expect(panel).not.toHaveAttribute("open");
+  await expect(panel.locator("table")).toBeHidden();
+  const checks = page.locator("ol.checks > li");
+  await expect(checks).toHaveCount(8);
+  await panel.locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(panel).toHaveAttribute("open", "");
+  const rows = panel.locator("tbody > tr");
+  await expect(rows).toHaveCount(8);
+  for (let i = 0; i < 8; i++) {
+    const check = checks.nth(i);
+    const row = rows.nth(i);
+    // Same number and wording as the check list, and the same source label text.
+    const text = ((await check.locator(".check-text").textContent()) ?? "").replace(/^Check \d+:\s*/, "").trim();
+    const name = (await row.locator("td").nth(0).innerText()).trim();
+    expect(name.startsWith(`${i + 1}. `), name).toBe(true);
+    expect(text.startsWith(name.slice(`${i + 1}. `.length)), `${name} vs ${text}`).toBe(true);
+    await expect(row.locator("td").nth(1).locator(".source")).toHaveText(await check.locator(".source").innerText());
+  }
+  await expect(rows.nth(6).locator("td").nth(1)).toContainText(`exported evidence · ${data.exportDate}`);
+  await expect(rows.nth(6).locator("td").nth(2)).toContainText("Witnesses are not queried");
+  await expect(rows.nth(6).locator("td").nth(2)).toContainText("on-chain sync that check 4 reads");
+  await expect(rows.nth(7).locator("td").nth(1)).toContainText("advisory");
+  await expect(panel.locator('tr[data-source="sepolia"]')).toHaveCount(2);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
 test("E7 On-chain proof lists the contracts and the demo transactions", async ({ page }) => {
   await page.goto("./#on-chain-proof");
   await expect(page.getByRole("heading", { name: "On-chain proof" })).toBeVisible();

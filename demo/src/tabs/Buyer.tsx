@@ -9,6 +9,7 @@ import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source }
 import { comparisonFigures, whatIfFigures, type DemoData } from "../data.ts";
 import { CODE_TEXT } from "../messages.ts";
 import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
+import { CheckSources } from "./CheckSources.tsx";
 
 const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 1, text: "The credential has not been altered since it was issued (its content hash matches its ID)", source: "browser" },
@@ -631,6 +632,8 @@ export function Buyer() {
         )}
         {!rejectedProof && <WhatIf cmp={cmp} />}
       </section>
+
+      <CheckSources checks={CHECKS} />
     </>
   );
 }

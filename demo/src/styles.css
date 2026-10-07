@@ -280,6 +280,13 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
 @keyframes reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 /* Trust chain: collapsed comparison panel, a name field vs a signature chain (PactVsVlei.tsx). */
 .pvv { margin-top: 28px; }
+.check-sources { margin-top: 28px; }
+.check-sources > summary { font: 600 16px/1.35 var(--serif); color: var(--ink); padding: 2px 0; }
+.check-sources > summary:hover { color: var(--green); }
+.check-sources-lede { margin: 12px 0 14px; color: var(--ink-soft); max-width: 80ch; font-size: 14.5px; }
+.check-sources-table td { font-family: var(--sans); font-size: 14px; }
+.check-sources-table td:first-child { width: 30%; }
+.check-sources-table td:nth-child(2) { white-space: nowrap; }
 .pvv > summary { font: 600 16px/1.35 var(--serif); color: var(--ink); padding: 2px 0; }
 .pvv > summary:hover { color: var(--green); }
 .pvv-lede { margin: 12px 0 16px; color: var(--ink-soft); max-width: 80ch; font-size: 14.5px; }
@@ -302,6 +309,13 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
 .template-import select { max-width: 100%; }
 .template-warnings { margin: 6px 0; padding-left: 18px; color: var(--red); }
 @media (max-width: 860px) { .pvv-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  table.check-sources-table, .check-sources-table tbody, .check-sources-table tr, .check-sources-table td { display: block; width: auto; }
+  .check-sources-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .check-sources-table tr { padding: 10px 0; border-bottom: 1px dashed #cfc5b2; }
+  table.check-sources-table td { border: 0; padding: 2px 0; white-space: normal; }
+  table.check-sources-table td:first-child { width: auto; font-weight: 600; }
+}
 
 @media (prefers-reduced-motion: reduce) { .reveal, .stamp { animation: none; } .btn { transition: none; } }
 
