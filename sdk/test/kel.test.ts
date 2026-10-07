@@ -5,7 +5,16 @@
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { describe, expect, it } from "vitest";
 import { base64url, utf8 } from "../encoding.ts";
-import { controllerSigs, nextKeyDigest, parseAttachments, verifyIssuance, verifyKel, type KelMessage } from "../kel.ts";
+import {
+  controllerSigs,
+  decodeIndexedSig,
+  decodeVerKey,
+  nextKeyDigest,
+  parseAttachments,
+  verifyIssuance,
+  verifyKel,
+  type KelMessage,
+} from "../kel.ts";
 import { SAID_DUMMY, computeSaid } from "../said.ts";
 
 type Json = Record<string, any>;
@@ -213,5 +222,170 @@ describe("verifyKel: witness receipts", () => {
     expect(verifyKel([witnessed(over, 1, all)], over.i, 0)).toEqual({ ok: false, reason: `event #0 of the issuer's KEL: the witness threshold "4" does not fit 3 witnesses` });
     const zero = icp(1, 2, { bt: "0", b: W.map(witOf) });
     expect(verifyKel([witnessed(zero, 1, all)], zero.i, 0)).toEqual({ ok: false, reason: `event #0 of the issuer's KEL: the witness threshold "0" does not fit 3 witnesses` });
+  });
+
+  it("fails closed on a witness list that is not a list, names a witness twice, or names a transferable key", () => {
+    const notList = icp(1, 2, { bt: "1", b: witOf(21) });
+    expect(verifyKel([witnessed(notList, 1, [[21, 0]])], notList.i, 0)).toEqual({ ok: false, reason: "event #0 of the issuer's KEL: the witness list is not readable" });
+    const twice = icp(1, 2, { bt: "1", b: [witOf(21), witOf(21)] });
+    expect(verifyKel([witnessed(twice, 1, [[21, 0]])], twice.i, 0)).toEqual({ ok: false, reason: "event #0 of the issuer's KEL: the witness list names a witness twice" });
+    // a witness must be a non-transferable AID ('B'); a 'D' key with a valid signature is not counted
+    const transferable = icp(1, 2, { bt: "1", b: [keyOf(21)] });
+    expect(verifyKel([witnessed(transferable, 1, [[21, 0]])], transferable.i, 0)).toEqual({
+      ok: false,
+      reason: "event #0 of the issuer's KEL: 0 of 1 witness signatures verify, the threshold is 1",
+    });
+  });
+});
+
+describe("verifyKel: the event chain itself fails closed", () => {
+  const e0 = icp(1, 2);
+  const e1 = ixn(e0, [{ d: "EAnchoredSaidForTheChainTest0000000000000000" }]);
+  const fail = (reason: string) => ({ ok: false, reason });
+  const at = (sn: number, reason: string) => fail(`event #${sn} of the issuer's KEL${reason}`);
+
+  it("the genuine two-event KEL passes (control)", () => {
+    expect(verifyKel([signed(e0, 1), signed(e1, 1)], e0.i, 1)).toEqual({ ok: true, keys: [keyOf(1)] });
+  });
+
+  it("no event of the AID, an invalid sequence number, or no inception", () => {
+    expect(verifyKel([signed(e0, 1)], "EAnotherAidThatHasNoEventsInThisStream000000", 0)).toEqual(fail("the issuer's KEL is not in the evidence"));
+    const leadingZero = versioned("KERI", { t: "ixn", d: "", i: e0.i, s: "01", p: e0.d, a: [] });
+    expect(verifyKel([signed(e0, 1), signed(leadingZero, 1)], e0.i, 1)).toEqual(fail("the issuer's KEL has an event with an invalid sequence number"));
+    expect(verifyKel([signed(e0, 1)], e0.i, -1)).toEqual(fail("the issuer's KEL has an event with an invalid sequence number"));
+    expect(verifyKel([signed(e0, 1)], e0.i, 0.5)).toEqual(fail("the issuer's KEL has an event with an invalid sequence number"));
+    expect(verifyKel([signed(e1, 1)], e0.i, 1)).toEqual(fail("the issuer's inception event is not in the evidence"));
+  });
+
+  it("a size that differs from the version string, an inception that is not self-addressing, a KEL starting with a rotation", () => {
+    const resized = { ...e0, v: "KERI10JSON000001_" };
+    expect(verifyKel([signed(resized, 1)], e0.i, 0)).toEqual(at(0, ": size differs from its version string"));
+    // same size, `d` = `i`, one field changed: the SAID no longer recomputes to the AID
+    const changed = { ...e0, nt: "2" };
+    expect(verifyKel([signed(changed, 1)], e0.i, 0)).toEqual(
+      fail("the issuer's inception event is not self-addressing (its SAID is not the issuer's AID)"),
+    );
+    // an inception whose prefix is not its SAID (only `d` is self-addressing)
+    const fixedPrefix = versioned("KERI", { t: "icp", d: "", i: "EFixedPrefixNotDerivedFromTheInception000000", s: "0", kt: "1", k: [keyOf(1)], nt: "1", n: [nextKeyDigest(keyOf(2))], bt: "0", b: [], c: [], a: [] });
+    expect(verifyKel([signed(fixedPrefix, 1)], fixedPrefix.i, 0)).toEqual(
+      fail("the issuer's inception event is not self-addressing (its SAID is not the issuer's AID)"),
+    );
+    const rot0 = versioned("KERI", { t: "rot", d: "", i: e0.i, s: "0", p: "", kt: "1", k: [keyOf(1)], nt: "1", n: [nextKeyDigest(keyOf(2))], bt: "0", br: [], ba: [], a: [] });
+    expect(verifyKel([signed(rot0, 1)], e0.i, 0)).toEqual(fail("the issuer's KEL does not start with an inception event"));
+  });
+
+  it("a later event whose SAID does not recompute, that does not link to the prior event, a second inception, an unsupported type", () => {
+    // same size, signed over its changed bytes: only the SAID gives it away
+    const edited = { ...e1, a: [{ d: "EAnchoredSaidForTheChainTest0000000000000001" }] };
+    expect(verifyKel([signed(e0, 1), signed(edited, 1)], e0.i, 1)).toEqual(at(1, ": SAID does not match its content"));
+    const unlinked = versioned("KERI", { t: "ixn", d: "", i: e0.i, s: "1", p: "EPriorEventThatIsNotInThisKel000000000000000", a: [] });
+    expect(verifyKel([signed(e0, 1), signed(unlinked, 1)], e0.i, 1)).toEqual(at(1, " does not link to the prior event"));
+    const icp1 = versioned("KERI", { t: "icp", d: "", i: e0.i, s: "1", p: e0.d, kt: "1", k: [keyOf(1)], nt: "1", n: [nextKeyDigest(keyOf(2))], bt: "0", b: [], c: [], a: [] });
+    expect(verifyKel([signed(e0, 1), signed(icp1, 1)], e0.i, 1)).toEqual(at(1, " is a second inception event"));
+    const drt = versioned("KERI", { t: "drt", d: "", i: e0.i, s: "1", p: e0.d, kt: "1", k: [keyOf(2)], nt: "1", n: [nextKeyDigest(keyOf(3))], bt: "0", br: [], ba: [], a: [] });
+    expect(verifyKel([signed(e0, 1), signed(drt, 2)], e0.i, 1)).toEqual(at(1, ": event type drt is not supported"));
+  });
+
+  it("an inception without a next-key list cannot be rotated (no pre-rotation commitment)", () => {
+    const noNext = icp(1, 2, { n: "ENotAList000000000000000000000000000000000000" });
+    expect(verifyKel([signed(noNext, 1)], noNext.i, 0).ok).toBe(true);
+    expect(verifyKel([signed(noNext, 1), signed(rot(noNext, 2, 3), 2)], noNext.i, 1)).toEqual(
+      at(1, ": the rotation's key is not the one committed to by the prior next-key digest"),
+    );
+  });
+});
+
+describe("verifyIssuance fails closed on the TEL and registry events", () => {
+  const e0 = icp(1, 2);
+  const OTHER_AID = "EAnotherIssuerAidForTheRegistryTest000000000";
+  const vcpOf = (ii: string) =>
+    versioned("KERI", { t: "vcp", d: "", i: "", ii, s: "0", c: ["NB"], bt: "0", b: [], n: "A" + base64url(new Uint8Array([0, ...secret(8).slice(0, 16)])).slice(1) }, ["d", "i"]);
+  /** e0, an event anchoring the registry (or nothing), then the issuance anchor; with the TEL events and the credential. */
+  function build(o: { vcp?: Json; anchorVcp?: boolean; iss?: (acdc: Json, ri: string) => Json } = {}) {
+    const vcp = o.vcp ?? vcpOf(e0.i);
+    const e1 = ixn(e0, o.anchorVcp === false ? [] : [{ i: vcp.i, s: "0", d: vcp.d }]);
+    const acdc = versioned("ACDC", { d: "", i: e0.i, ri: vcp.i, s: "ESchemaSaidForTheTest00000000000000000000000", a: { i: "EIssueeAidForTheTest000000000000000000000000" } });
+    const iss = (o.iss ?? ((a, ri) => versioned("KERI", { t: "iss", d: "", i: a.d, s: "0", ri, dt: "2026-10-06T00:00:00.000000+00:00" })))(acdc, vcp.i);
+    const e2 = ixn(e1, [{ i: acdc.d, s: "0", d: iss.d }]);
+    return { acdc, kel: [signed(e0, 1), signed(e1, 1), signed(e2, 1)], tel: [unsigned(vcp), unsigned(iss)], all: [signed(e0, 1), signed(e1, 1), signed(e2, 1), unsigned(vcp), unsigned(iss), unsigned(acdc)] };
+  }
+
+  it("the genuine stream passes (control)", () => {
+    const b = build();
+    expect(verifyIssuance(b.all, b.acdc)).toBe("");
+  });
+
+  it("no issuance event, an issuance whose SAID does not recompute, an issuance in another registry", () => {
+    const b = build();
+    expect(verifyIssuance(b.all.filter((m) => m.ked.t !== "iss"), b.acdc)).toBe("no TEL issuance event to check against the issuer's KEL");
+    const editedIss = build({ iss: (a, ri) => ({ ...versioned("KERI", { t: "iss", d: "", i: a.d, s: "0", ri, dt: "2026-10-06T00:00:00.000000+00:00" }), dt: "2026-10-07T00:00:00.000000+00:00" }) });
+    expect(verifyIssuance(editedIss.all, editedIss.acdc)).toBe("TEL issuance event: SAID does not match its content");
+    const otherRegistry = build({ iss: (a) => versioned("KERI", { t: "iss", d: "", i: a.d, s: "0", ri: "EAnotherRegistryForTheTest00000000000000000", dt: "2026-10-06T00:00:00.000000+00:00" }) });
+    expect(verifyIssuance(otherRegistry.all, otherRegistry.acdc)).toBe("TEL issuance event is in another registry than the credential");
+  });
+
+  it("the issuer's KEL missing from the stream", () => {
+    const b = build();
+    expect(verifyIssuance([...b.tel, unsigned(b.acdc)], b.acdc)).toBe("the issuer's KEL is not in the evidence");
+  });
+
+  it("a registry missing, incepted by another AID, or not anchored in the issuer's KEL", () => {
+    const b = build();
+    expect(verifyIssuance(b.all.filter((m) => m.ked.t !== "vcp"), b.acdc)).toBe("the credential's registry was not incepted by the issuer");
+    const other = build({ vcp: vcpOf(OTHER_AID) });
+    expect(verifyIssuance(other.all, other.acdc)).toBe("the credential's registry was not incepted by the issuer");
+    const unanchored = build({ anchorVcp: false });
+    expect(verifyIssuance(unanchored.all, unanchored.acdc)).toBe("the registry inception is not anchored in the issuer's KEL");
+  });
+});
+
+describe("parseAttachments: groups that carry no witness signature are skipped, never counted", () => {
+  const W1 = icp(1, 2, { bt: "1", b: [witOf(21)] });
+  const raw = JSON.stringify(W1);
+  const seqner = "0A" + "A".repeat(22);
+  const sigGroup = (n: number) => "-AAB" + idxSig(raw, n, 0);
+  /** -0V##### wrapper (five-character count) around the groups. */
+  const big = (inner: string) => "-0V" + "AAA" + cnt(inner.length / 4) + inner;
+
+  it("transferable receipts (-D), signer groups (-F, -H), seal sources (-G, -I) and pathed material (-L) are read and skipped", () => {
+    const body =
+      sigGroup(1) +
+      "-DAB" + witOf(21) + seqner + W1.d + idxSig(raw, 21, 0) +
+      "-FAB" + witOf(21) + seqner + W1.d + sigGroup(21) +
+      "-GAB" + seqner + W1.d +
+      "-HAB" + witOf(21) + sigGroup(21) +
+      "-IAB" + witOf(21) + seqner + W1.d +
+      "-LAB" + "AAAA";
+    const a = parseAttachments(big(body));
+    expect(a.controller).toHaveLength(1);
+    expect(a.witness).toHaveLength(0);
+    expect(a.receipts).toHaveLength(0);
+    // a CESR version code (-_AAA) ahead of the groups is read and skipped as well
+    expect(parseAttachments(big("-_AAABAA" + body)).controller).toHaveLength(1);
+    // the witness's key signed in each of those groups, yet the event has no witness receipt
+    const m: KelMessage = { raw, ked: W1, atc: big(body) };
+    expect(verifyKel([m], W1.i, 0)).toEqual({ ok: false, reason: "event #0 of the issuer's KEL: no witness receipts in the evidence" });
+    expect(controllerSigs(big(body))).toHaveLength(1);
+  });
+
+  it("reads a witness signature in the two-character-index form (2A)", () => {
+    const bigSig = "2A" + "AA" + "AA" + sigBody(raw, 21);
+    expect(bigSig).toHaveLength(92);
+    const a = parseAttachments(sigGroup(1) + "-BAB" + bigSig);
+    expect(a.witness.map((s) => s.index)).toEqual([0]);
+    expect(verifyKel([{ raw, ked: W1, atc: sigGroup(1) + "-BAB" + bigSig }], W1.i, 0)).toEqual({ ok: true, keys: [keyOf(1)] });
+  });
+
+  it("throws on malformed primitives, signatures and counters", () => {
+    expect(() => parseAttachments("-AAB" + idxSig(raw, 1, 0).slice(0, 80))).toThrow("malformed indexed signature");
+    expect(() => parseAttachments("-BAB" + "2AAAAA" + "!".repeat(86))).toThrow("malformed indexed signature");
+    expect(() => parseAttachments("-BAB" + "0Bxx")).toThrow("unsupported indexed signature 0B");
+    expect(() => parseAttachments("-DAB" + witOf(21) + "1A" + "A".repeat(22))).toThrow("malformed sequence number in attachment");
+    expect(() => parseAttachments("-CAB" + witOf(21) + "0A" + "A".repeat(86))).toThrow("malformed receipt couple signature");
+    expect(() => parseAttachments("-HAB" + witOf(21) + "-BAB" + idxSig(raw, 21, 0))).toThrow("malformed signature group");
+    expect(() => parseAttachments("-A!B")).toThrow("bad base64 char !");
+    expect(() => controllerSigs("-AAB" + "0B" + "A".repeat(86))).toThrow("unsupported indexed signature 0B");
+    expect(() => decodeVerKey("E" + "A".repeat(43))).toThrow("not an Ed25519 key");
+    expect(() => decodeIndexedSig("B" + "A".repeat(87))).toThrow("not an indexed Ed25519 signature");
   });
 });

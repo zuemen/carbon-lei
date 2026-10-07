@@ -123,6 +123,27 @@ describe("blockRangeForTimes on simulated chains", () => {
     await checkRanges(ts, 10, 3, 40);
   });
 
+  it("intervals before the deployment or after the head, a reversed interval, and a head older than the deployment", async () => {
+    const ts = chain(100_000, 1_790_000_000n, () => 12);
+    const head = { number: BigInt(ts.length - 1), timestamp: ts[ts.length - 1] };
+    const reader = () => new ChainReader(fakeClient(ts).client, deployment(5)).at(head.number);
+    // nothing can be emitted before the deployment: the range is the deployment block
+    expect(await reader().blockRangeForTimes(ts[0] - DAY, ts[0], head)).toEqual({ fromBlock: 5n, toBlock: 5n, narrowed: true });
+    // an interval after the head: the range is the head block
+    expect(await reader().blockRangeForTimes(head.timestamp + 1n, head.timestamp + DAY, head)).toEqual({ fromBlock: head.number, toBlock: head.number, narrowed: true });
+    // toTime before fromTime: treated as the single instant fromTime, which the range still contains
+    const t = ts[50_000];
+    const r = await reader().blockRangeForTimes(t, t - DAY, head);
+    expect(r.fromBlock).toBeLessThanOrEqual(50_000n);
+    expect(r.toBlock).toBeGreaterThanOrEqual(50_000n);
+    // a node whose head is older than the deployment block: no search, the whole range
+    expect(await reader().blockRangeForTimes(t, t + DAY, { number: head.number, timestamp: ts[0] - 1n })).toEqual({
+      fromBlock: 5n,
+      toBlock: head.number,
+      narrowed: false,
+    });
+  });
+
   it("read errors and a short chain give the whole range from the deployment block", async () => {
     const ts = chain(100_000, 1_790_000_000n, () => 12);
     const head = BigInt(ts.length - 1);

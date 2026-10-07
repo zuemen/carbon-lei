@@ -23,10 +23,10 @@ import {
   tonnesToKg,
   type Hex,
 } from "../credential.ts";
-import { decodeDisclosure, disclosureDigest, encodeDisclosure, sortDigests } from "../disclosure.ts";
+import { buildCredential, decodeDisclosure, disclosureDigest, encodeDisclosure, selectDisclosures, sortDigests } from "../disclosure.ts";
 import { recoverIssuer, typedDataOf } from "../eip712.ts";
 import { base64url, fromBase64url, newSalt } from "../encoding.ts";
-import { computeSaid, verifySaid } from "../said.ts";
+import { SAID_DUMMY, computeSaid, saidify, verifySaid } from "../said.ts";
 
 const v = JSON.parse(readFileSync(new URL("../../fixtures/vectors.json", import.meta.url), "utf8"));
 const inp = v.inputs;
@@ -83,6 +83,19 @@ describe("SAID (S1)", () => {
     core.issuedAt = "2026-10-01T00:00:01Z";
     expect(verifySaid(JSON.stringify(core))).toBe(false);
   });
+  it("a `d` that is missing, not a string or not 44 characters never verifies; saidify fills a `d` that does", () => {
+    const { d, ...noD } = JSON.parse(v.V7.coreJson);
+    expect(verifySaid(JSON.stringify(noD))).toBe(false);
+    expect(verifySaid(JSON.stringify({ d: 1, ...noD }))).toBe(false);
+    expect(verifySaid(JSON.stringify({ d: d.slice(0, 43), ...noD }))).toBe(false);
+    // the dummy itself is 44 characters but is not the digest
+    expect(verifySaid(JSON.stringify({ d: SAID_DUMMY, ...noD }))).toBe(false);
+    expect(() => computeSaid(noD)).toThrow("object has no 'd' field");
+    expect(() => saidify(noD)).toThrow("object has no 'd' field");
+    const filled = saidify({ d: "", ...noD });
+    expect(filled.d).toBe(d);
+    expect(verifySaid(JSON.stringify(filled))).toBe(true);
+  });
 });
 
 describe("selective disclosure (S2)", () => {
@@ -111,6 +124,16 @@ describe("selective disclosure (S2)", () => {
     const d = { salt: newSalt(), name: "cnCode", value: "7318" };
     expect(decodeDisclosure(encodeDisclosure(d))).toEqual(d);
     expect(() => decodeDisclosure(base64url(new TextEncoder().encode('["0x12","a","b"]')))).toThrow();
+  });
+  it("issuance refuses a missing claim, and a supplier cannot select a disclosure that was never issued", () => {
+    const claims: Record<string, string> = Object.fromEntries(
+      Object.values(v.disclosures as Record<string, string>).map((enc) => [decodeDisclosure(enc).name, decodeDisclosure(enc).value]),
+    );
+    const input = { verifierAddress: JSON.parse(v.V7.coreJson).issuer.verifierAddress, auditorAID: inp.auditorAID };
+    expect(buildCredential({ claims: claims as never, ...input }).core.digests).toHaveLength(Object.keys(claims).length);
+    delete claims.cnCode;
+    expect(() => buildCredential({ claims: claims as never, ...input })).toThrow("claim cnCode missing");
+    expect(() => selectDisclosures(v.disclosures, ["cnCode", "noSuchField"])).toThrow("no disclosure for noSuchField");
   });
 });
 

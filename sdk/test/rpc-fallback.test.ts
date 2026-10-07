@@ -136,6 +136,23 @@ describe("historyFallback (SDK reader)", () => {
     expect(calls.map((c) => c.url)).toEqual([A]);
   });
 
+  it("one node answers null and the other fails → an error naming both, not 'not found' (the failed node may have it)", async () => {
+    serve({ [A]: () => ({ result: null }), [B]: () => ({ error: { code: -32005, message: "rate limited" } }) });
+    const err = await client([A, B]).getTransactionReceipt({ hash: TX }).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    const nodesErr = (err as BaseError).walk((e) => e instanceof RpcNodesError) as RpcNodesError;
+    expect(nodesErr.outcomes.map((o) => [o.url, o.kind])).toEqual([
+      [A, "null"],
+      [B, "error"],
+    ]);
+  });
+
+  it("refuses an empty node list", () => {
+    expect(() => historyFallback([])).toThrow("historyFallback needs at least one RPC URL");
+  });
+
   it("recognises pruned-history errors", () => {
     expect(isPrunedHistoryError({ code: 4444, message: "x" })).toBe(true);
     expect(isPrunedHistoryError(new Error("missing trie node abc"))).toBe(true);

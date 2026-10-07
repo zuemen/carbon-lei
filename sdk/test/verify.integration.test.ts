@@ -223,6 +223,64 @@ describe("verifyPresentation on a local chain", () => {
     expect(r.checks).toHaveLength(1);
   });
 
+  it("step 0: a core that is not JSON or lacks fields, an undecodable disclosure, a field out of normal form, a short salt, an incomplete shipment", async () => {
+    const withValue = (name: string, value: string) =>
+      proof.disclosures.map((d) => (decodeDisclosure(d).name === name ? encodeDisclosure({ ...decodeDisclosure(d), value }) : d));
+    const { issuer: _issuer, ...coreWithoutIssuer } = JSON.parse(proof.core);
+    const { importerSalt: _salt, ...shipmentWithoutSalt } = proof.shipment!;
+    const cases: [Presentation, string][] = [
+      [{ ...proof, core: proof.core.slice(0, -1) }, "the credential core is not valid JSON"],
+      [{ ...proof, core: JSON.stringify(coreWithoutIssuer) }, "missing core, signature or disclosure fields"],
+      [{ ...proof, signature: undefined as never }, "missing core, signature or disclosure fields"],
+      [{ ...proof, disclosures: [...proof.disclosures, "bm90IGFuIGFycmF5"] }, "a disclosure is not a [salt, name, value] array"],
+      [{ ...proof, disclosures: withValue("cnCode", "7318 15") }, "not in normal form: cnCode"],
+      [{ ...proof, disclosures: withValue("batchSalt", "0x1234") }, "salts must be 32-byte hex"],
+      [{ ...proof, shipment: shipmentWithoutSalt as never }, "shipment part incomplete"],
+    ];
+    for (const [bad, detail] of cases) {
+      const r = await verifyPresentation(bad, c.reader, { importerEORI: EORI_1 });
+      expect(r, detail).toMatchObject({ overall: "INVALID", primaryCode: "PRESENTATION_MALFORMED", checks: [{ index: 0, detail }] });
+      expect(r.checks).toHaveLength(1);
+    }
+  });
+
+  it("checks 6-8: each evidence checker sees the registered report, its result is the check, and a failing one makes the proof INVALID", async () => {
+    const seen: unknown[] = [];
+    const pass = (index: number) => (ev: unknown, ctx: { report?: { kelSeq: bigint } }) => {
+      seen.push([index, ev, ctx.report?.kelSeq]);
+      return { index, name: "", status: "pass" as const, code: "", detail: `checker ${index}` };
+    };
+    const withEvidence = { ...proof, anchorEvidence: { a: 1 }, authorityEvidence: { b: 2 }, reportExtract: { c: 3 } };
+    const ok = await verifyPresentation(withEvidence, c.reader, {
+      importerEORI: EORI_1,
+      checkers: { anchor: pass(6), authority: pass(7), reconciliation: pass(8) },
+    });
+    expect(ok.overall).toBe("VALID");
+    expect(ok.checks.slice(6).map((x) => [x.index, x.name, x.status, x.detail])).toEqual([
+      [6, "Auditor anchor (KEL)", "pass", "checker 6"],
+      [7, "Authority chain (vLEI)", "pass", "checker 7"],
+      [8, "Report reconciliation", "pass", "checker 8"],
+    ]);
+    // the registered report (kelSeq 1) is in the context of every checker
+    expect(seen).toEqual(expect.arrayContaining([[6, { a: 1 }, 1n], [7, { b: 2 }, 1n], [8, { c: 3 }, 1n]]));
+
+    const failAnchor = () => ({ index: 6, name: "", status: "fail" as const, code: "ANCHOR_INVALID", detail: "stub" });
+    const bad = await verifyPresentation(withEvidence, c.reader, {
+      importerEORI: EORI_1,
+      checkers: { anchor: failAnchor, authority: pass(7), reconciliation: pass(8) },
+    });
+    expect(bad).toMatchObject({ overall: "INVALID", primaryCode: "ANCHOR_INVALID" });
+
+    // evidence with no checker for it is skipped, never passed
+    const none = await verifyPresentation(withEvidence, c.reader, { importerEORI: EORI_1 });
+    expect(none.checks.slice(6).map((x) => x.status)).toEqual(["skipped", "skipped", "skipped"]);
+
+    // a checker that throws (an RPC failure inside check 7) aborts the verification: no result at all
+    await expect(
+      verifyPresentation(withEvidence, c.reader, { checkers: { authority: () => Promise.reject(new Error("rpc down")) } }),
+    ).rejects.toThrow("rpc down");
+  });
+
   it("unregistered credential → REPORT_INVALID/NOT_REGISTERED", async () => {
     const fresh = await issue({ verificationReportId: "VR-DEMO-0009", cnCode: "7208" });
     const r = await verifyPresentation(present(fresh, DEMO_DISCLOSURE), c.reader);

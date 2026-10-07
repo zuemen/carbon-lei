@@ -9,10 +9,12 @@
   "license": "MIT",
   "scripts": {
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage.enabled --coverage.provider=v8 --coverage.include=\"*.ts\" --coverage.reporter=text --coverage.reporter=json-summary",
     "typecheck": "tsc -p ."
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "^5.0.3",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "typescript": "^5.9.0",

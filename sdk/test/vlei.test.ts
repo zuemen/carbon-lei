@@ -4,6 +4,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { describe, expect, it, vi } from "vitest";
 import { isSafeBundlePath, sha256Hex, vleiCheckers } from "../checkers.ts";
 import { hashString } from "../commitment.ts";
+import { decodeDisclosure } from "../disclosure.ts";
 import { base64url, utf8 } from "../encoding.ts";
 import { controllerSigs, parseAttachments, verifyIssuance } from "../kel.ts";
 import { SAID_DUMMY, computeSaid } from "../said.ts";
@@ -71,6 +72,36 @@ describe("check 6: KEL anchor", () => {
     expect(verifyAnchor(full, { ...exp, kelSeq: exp.kelSeq + 1n }).ok).toBe(false);
     const otherIcp = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i !== anchor.auditor)?.raw;
     expect(verifyAnchor({ ...anchor, establishmentRaw: otherIcp }, exp).ok).toBe(false);
+  });
+  it("each fail-closed step reports its own reason", () => {
+    const full = { ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc };
+    const reason = (ev: AnchorEvidence, x = exp) => {
+      const r = verifyAnchor(ev, x);
+      expect(r.ok).toBe(false);
+      expect(r.code).toBe("ANCHOR_NOT_FOUND");
+      return r.detail;
+    };
+    const raw = anchor.event.raw;
+    expect(reason({ ...full, event: { raw: raw.slice(0, -1) } })).toBe("anchor event is not valid JSON");
+    expect(reason({ ...full, event: { raw: raw.replace('"t":"ixn"', '"t":"rot"') } })).toBe("anchor event is not an interaction event");
+    expect(reason(full, { ...exp, auditorAID: "EAnotherAuditorAid00000000000000000000000000" })).toBe("anchor event is not from the credential's auditor");
+    expect(reason(full, { ...exp, auditorAidHash: hashString("EAnotherAuditorAid00000000000000000000000000") })).toBe("auditor on-chain differs from the event's AID");
+    expect(reason(full, { ...exp, kelSeq: exp.kelSeq + 1n })).toBe(`anchor is event #${exp.kelSeq}, the registry says #${exp.kelSeq + 1n}`);
+    expect(reason(full, { ...exp, credSAID: "EOtherCredentialSaid000000000000000000000000" })).toBe("the event does not anchor this credential");
+    const otherCred = anchor.credSAID.slice(0, -1) + (anchor.credSAID.endsWith("A") ? "B" : "A");
+    expect(reason({ ...full, event: { raw: raw.replace(anchor.credSAID, otherCred) } }, { ...exp, credSAID: otherCred })).toBe(
+      "the event's SAID does not match its content",
+    );
+    expect(reason({ ...full, event: { raw: raw + " " } })).toBe("event size differs from its version string");
+    expect(reason({ ...full, signingKeys: [] })).toBe("signature or key missing");
+    const sig0 = full.signatures.find((s) => s.index === 0)!.qb64;
+    const badSig = sig0.slice(0, 40) + (sig0[40] === "A" ? "B" : "A") + sig0.slice(41);
+    expect(reason({ ...full, signatures: [{ ...full.signatures[0], index: 0, qb64: badSig }] })).toBe("the event's signature does not verify");
+    const otherIcp = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i !== anchor.auditor)!.raw;
+    expect(reason({ ...full, establishmentRaw: otherIcp })).toBe("inception event does not belong to the auditor");
+    const editedIcp = auditorIcp!.replace(/"bt":"(\d)"/, (_m, d) => `"bt":"${d === "1" ? "2" : "1"}"`);
+    expect(editedIcp).not.toBe(auditorIcp);
+    expect(reason({ ...full, establishmentRaw: editedIcp })).toBe("the inception event's SAID does not match its content");
   });
 });
 
@@ -433,5 +464,93 @@ describe("check 7: the bundle path in the proof", () => {
       expect(loadBundle).toHaveBeenCalledWith(path);
       expect(r.detail).toContain("does not match its hash");
     }
+  });
+});
+
+// vleiCheckers is what the CLI and the hosted page plug into verifyPresentation for checks 6-8;
+// here it runs in process on the Sepolia demo proof, with the registered report and the allowlist
+// reads stubbed.
+describe("checks 6-8: vleiCheckers on the Sepolia demo proof", () => {
+  const fixtures = new URL("../../fixtures/", import.meta.url);
+  const proof = JSON.parse(readFileSync(new URL("sepolia-demo-proof.json", fixtures), "utf8"));
+  const core = JSON.parse(proof.core);
+  const disclosed = Object.fromEntries(proof.disclosures.map((d: string) => [decodeDisclosure(d).name, decodeDisclosure(d).value]));
+  const ref = proof.authorityEvidence as { bundle: string; sha256: string };
+  const bundleText = readFileSync(new URL(ref.bundle, fixtures), "utf8");
+  const loadBundle = async (path: string) => readFileSync(new URL(path, fixtures), "utf8");
+  const report = {
+    kelSeq: BigInt(proof.anchorEvidence.kelSeq),
+    auditorAidHash: hashString(core.issuer.auditorAID),
+    issuerLeiHash: hashString("issuer LEI hash (stub)"),
+    registeredAt: BigInt(Date.parse("2026-10-06T00:00:00Z") / 1000),
+  };
+  const allowlist = (over: Partial<typeof expectAuth.onchain> = {}) => {
+    const o = { ...expectAuth.onchain, ...over };
+    return {
+      institution: vi.fn(async () => ({ leCredSaidHash: o.leCredSaidHash, accreditationSaidHash: o.accreditationSaidHash })),
+      auditor: vi.fn(async () => ({ ecrSaidHash: o.ecrSaidHash })),
+    };
+  };
+  const ctxOf = (over: Record<string, unknown> = {}) => ({ core, disclosed, rejected: [], report, reader: allowlist(), ...over }) as never;
+
+  it("check 6: the proof's anchor passes against the registered kelSeq and auditor; another kelSeq, another auditor or no report fails", () => {
+    const anchor6 = vleiCheckers().anchor!;
+    expect(anchor6(proof.anchorEvidence, ctxOf())).toMatchObject({ index: 6, status: "pass", code: "" });
+    expect(anchor6(proof.anchorEvidence, ctxOf({ report: { ...report, kelSeq: report.kelSeq + 1n } }))).toMatchObject({ status: "fail", code: "ANCHOR_NOT_FOUND" });
+    expect(anchor6(proof.anchorEvidence, ctxOf({ report: { ...report, auditorAidHash: hashString("EAnotherAuditor") } }))).toMatchObject({ status: "fail" });
+    expect(anchor6(proof.anchorEvidence, ctxOf({ report: undefined }))).toMatchObject({ status: "fail", code: "ANCHOR_NOT_FOUND" });
+  });
+
+  it("check 7: the referenced bundle (hash-checked) and the same bundle inline pass, with the on-chain allowlist hashes compared", async () => {
+    expect(sha256Hex(bundleText)).toBe(ref.sha256);
+    const reader = allowlist();
+    const r = await vleiCheckers({ loadBundle }).authority!(ref, ctxOf({ reader }));
+    expect(r).toMatchObject({ index: 7, status: "pass", detail: expect.stringContaining("hashes match the on-chain allowlist") });
+    expect(reader.institution).toHaveBeenCalledWith(report.issuerLeiHash);
+    expect(reader.auditor).toHaveBeenCalledWith(report.auditorAidHash, report.issuerLeiHash);
+    // an uppercase hash in the proof is the same hash
+    expect(await vleiCheckers({ loadBundle }).authority!({ ...ref, sha256: ref.sha256.toUpperCase() }, ctxOf())).toMatchObject({ status: "pass" });
+    // inline evidence needs no loader
+    expect(await vleiCheckers().authority!(JSON.parse(bundleText), ctxOf())).toMatchObject({ status: "pass" });
+  });
+
+  it("check 7: fails on an allowlist hash that differs, an accreditation expired at registration, a changed file, or a reference with no loader", async () => {
+    const auth = vleiCheckers({ loadBundle }).authority!;
+    for (const [over, reason] of [
+      [{ ecrSaidHash: hashString("another ECR") }, "allowlist ECR hash differs"],
+      [{ leCredSaidHash: hashString("another LE") }, "allowlist LE hash differs"],
+      [{ accreditationSaidHash: hashString("another accreditation") }, "allowlist accreditation hash differs"],
+    ] as const) {
+      expect(await auth(ref, ctxOf({ reader: allowlist(over) }))).toMatchObject({ status: "fail", code: "AUTHORITY_INVALID", detail: expect.stringContaining(reason) });
+    }
+    const late = { ...report, registeredAt: BigInt(Date.parse("2100-01-01T00:00:00Z") / 1000) };
+    expect(await auth(ref, ctxOf({ report: late }))).toMatchObject({ status: "fail", detail: "accreditation had expired at registration" });
+    expect(await vleiCheckers({ loadBundle: async () => bundleText + " " }).authority!(ref, ctxOf())).toMatchObject({
+      status: "fail",
+      detail: "the authority evidence file does not match its hash in the proof",
+    });
+    expect(await vleiCheckers().authority!(ref, ctxOf())).toMatchObject({ status: "fail", detail: expect.stringContaining("cannot be loaded here") });
+  });
+
+  it("check 7: a failed allowlist read is an error, never a pass, and is not left unhandled when the bundle check fails first", async () => {
+    const down = { institution: () => Promise.reject(new Error("rpc down")), auditor: () => Promise.reject(new Error("rpc down")) };
+    await expect(vleiCheckers({ loadBundle }).authority!(ref, ctxOf({ reader: down }))).rejects.toThrow("rpc down");
+    const r = await vleiCheckers({ loadBundle }).authority!({ ...ref, sha256: "00" }, ctxOf({ reader: down }));
+    expect(r).toMatchObject({ status: "fail", detail: expect.stringContaining("does not match its hash") });
+  });
+
+  it("check 7 without a registered report: the chain is checked, without the allowlist comparison", async () => {
+    const reader = allowlist();
+    const r = await vleiCheckers({ loadBundle }).authority!(ref, ctxOf({ report: undefined, reader }));
+    expect(r.status).toBe("pass");
+    expect(r.detail).not.toContain("on-chain allowlist");
+    expect(reader.institution).not.toHaveBeenCalled();
+  });
+
+  it("check 8: the proof's report extract reconciles; a changed extract is flagged for review", () => {
+    const rec = vleiCheckers().reconciliation!;
+    expect(rec(proof.reportExtract, ctxOf())).toMatchObject({ index: 8, status: "pass", code: "" });
+    const changed = { ...proof.reportExtract, specificEmbeddedEmissionsPerCn: [{ cnCode: "7318", value: "1.2" }] };
+    expect(rec(changed, ctxOf())).toMatchObject({ index: 8, status: "warn", code: expect.stringMatching(/^CONSISTENCY_WARNING/) });
   });
 });

@@ -180,4 +180,20 @@ describe("hand-built KEL signed with a test key", () => {
     expect(c.signatureValid).toBe(false);
     expect(c.sizeMatchesVersion).toBe(false);
   });
+
+  it("a valid signature at an index past the key list, an unreadable attachment, or raw that is not JSON is not a valid seal event", () => {
+    const hit = findRevocationSeal(events, ECR)!;
+    // the inception's key signed, but the signature claims index 1 of a one-key list
+    const atIndex1 = "-AAB" + "AB" + sign(ixn).slice(6);
+    const c1 = checkSealEvent({ ...hit, atc: atIndex1 }, events);
+    expect(c1.signatures).toEqual([{ qb64: atIndex1.slice(4), index: 1, valid: false }]);
+    expect(c1.signatureValid).toBe(false);
+    const c2 = checkSealEvent({ ...hit, atc: "-ZAB" + "A".repeat(88) }, events);
+    expect(c2).toMatchObject({ signatures: [], signatureValid: false });
+    expect(checkSealEvent({ ...hit, raw: hit.raw.slice(0, -1) }, events)).toMatchObject({ saidRecomputed: false, sizeMatchesVersion: false });
+    // a key that is not an Ed25519 key in the establishment event: the signature cannot verify
+    const badKeyIcp = { ...icp, k: ["Dnot-a-key"] };
+    const c3 = checkSealEvent(hit, [{ ked: badKeyIcp, atc: sign(icp) }, events[1]]);
+    expect(c3).toMatchObject({ signatureValid: false, signatures: [{ index: 0, valid: false }] });
+  });
 });
