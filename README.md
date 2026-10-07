@@ -1,5 +1,7 @@
 # CarbonLEI
 
+A carbon number is only as trustworthy as the person who signed it.
+
 **Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? GLEIF-rooted vLEI credentials plus an Ethereum Sepolia ledger.**
 
 **Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) (read-only, no wallet) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4: press "Verify the impostor's proof".
