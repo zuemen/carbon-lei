@@ -9,7 +9,7 @@
 <a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment"></a>
 <sub>Screenshot of the live page on Sepolia, taken 2026-10-06 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
 
-- **Who signed:** the lead auditor's vLEI role credential (ECR), issued by the verification body, is checked against a GLEIF-rooted chain (simulated root in the demo).
+- **Who signed:** the lead auditor's vLEI role credential (a signed statement that this person holds this role at this verification body; vLEIs are specified in ISO 17442-3:2024), is checked against a GLEIF-rooted chain (simulated root in the demo).
 - **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
 - **Already claimed?** An on-chain ledger deducts each shipment from the report's verified tonnage (500 t in the demo) and rejects a batch claimed twice or a claim beyond what remains.
 
