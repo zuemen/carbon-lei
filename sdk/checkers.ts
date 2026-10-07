@@ -71,7 +71,12 @@ export function vleiCheckers(
         if (sha256Hex(text) !== ev.sha256.toLowerCase()) {
           return result(7, false, "AUTHORITY_INVALID", "the authority evidence file does not match its hash in the proof");
         }
-        bundle = JSON.parse(text) as AuthorityEvidence;
+        try {
+          bundle = JSON.parse(text) as AuthorityEvidence;
+        } catch {
+          // A file that matches its hash but is not JSON is a bad proof (INVALID), not a failed run.
+          return result(7, false, "AUTHORITY_INVALID", "the authority evidence file is not valid JSON");
+        }
       } else {
         bundle = ev as AuthorityEvidence;
       }

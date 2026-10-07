@@ -368,7 +368,7 @@ test("Buyer: where each check gets its data, collapsed by default; eight rows wi
   }
   await expect(rows.nth(6).locator("td").nth(1)).toContainText(`exported evidence · ${data.exportDate}`);
   await expect(rows.nth(6).locator("td").nth(2)).toContainText("Witnesses are not queried");
-  await expect(rows.nth(6).locator("td").nth(2)).toContainText("on-chain sync that check 4 reads");
+  await expect(rows.nth(6).locator("td").nth(2)).toContainText("judges authority at the report's registration time, as check 4 does");
   await expect(rows.nth(7).locator("td").nth(1)).toContainText("advisory");
   await expect(panel.locator('tr[data-source="sepolia"]')).toHaveCount(2);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -515,6 +515,8 @@ test("Buyer: editing the proof clears the result; the figures and the record com
   await expect(page.locator(".verify-summary")).toHaveText(
     `✓ 8 of 8 checks passed · declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (≈ €${f(gap * Number(c.priceEur), 0)} gross, illustrative) See comparison ↓`,
   );
+  // Check 7 judges the auditor's authority at registration from the allowlist, like check 4.
+  await expect(page.getByText(/Checks 4 and 7 both judge authority at registration time/)).toBeVisible();
   await accept.click();
   await expect(page.getByText(`for batch ${data.proof.shipment.batchId}`)).toBeVisible();
 

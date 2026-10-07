@@ -60,6 +60,15 @@ function answerOf(answers: Record<string, Answer>, c: Call): Answer & { jsonrpc:
   return { jsonrpc: "2.0", id: c.id, ...a };
 }
 
+/**
+ * A clock at the time a recording was made (its `recordedAt`), for the verifier's head-age limit: replayed answers
+ * are as of the recording, so the recorded head block is checked against that time, not against today.
+ */
+export function recordedClock(file: string): () => number {
+  const at = Date.parse(JSON.parse(readFileSync(file, "utf8")).recordedAt);
+  return () => at;
+}
+
 /** A `fetch` that answers from `file` (a recording made with RPC_RECORD), for in-process tests. */
 export function replayFetch(file: string): typeof fetch {
   const answers: Record<string, Answer> = JSON.parse(readFileSync(file, "utf8")).answers;

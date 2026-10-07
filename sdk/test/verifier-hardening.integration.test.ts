@@ -8,6 +8,7 @@ import { keccak256, stringToBytes } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auditorAidHashOf, hashString, leiHashOf, reportKeyOf } from "../commitment.ts";
 import { ChainReader } from "../chain.ts";
+import { sha256Hex, vleiCheckers } from "../checkers.ts";
 import { METHODOLOGY_NOTE, type CredentialClaims, type Hex } from "../credential.ts";
 import type { Presentation } from "../disclosure.ts";
 import { claimArgsOf, DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "../issue.ts";
@@ -311,5 +312,19 @@ describe("checks 0-3 without a chain (the demo's offline view)", () => {
     expect(check(await verifyOffline(p, { ...dep, chainId: 1 }), 3).code).toBe("BAD_SIGNATURE");
     const junk = await verifyOffline({ core: "{}", note: "not a proof" } as unknown as Presentation, dep);
     expect([junk.overall, junk.primaryCode]).toEqual(["INVALID", "PRESENTATION_MALFORMED"]);
+  });
+});
+
+describe("authority evidence that is not JSON", () => {
+  it("a bundle file that matches its hash but is not JSON fails check 7 (INVALID), not an exception", async () => {
+    const cr = await issue({ verificationReportId: "VR-HARD-0007", installationId: demo.entities.supplier.installations[1].id, reportingPeriod: "2034-01-01/2034-12-31", issuedAt: "2034-01-02T00:00:00Z", validUntil: "2039-12-31T00:00:00Z" });
+    await register(cr);
+    const text = "not json {";
+    const p = { ...present(cr, DEMO_DISCLOSURE), anchorEvidence: { stub: true }, authorityEvidence: { bundle: "evidence/broken.json", sha256: sha256Hex(text) } };
+    const r = await verifyPresentation(p, c.reader, { checkers: { ...vleiCheckers({ loadBundle: async () => text }), anchor: stub(6) } });
+    expect(check(r, 7)).toMatchObject({ status: "fail", code: "AUTHORITY_INVALID", detail: "the authority evidence file is not valid JSON" });
+    expect([r.overall, r.primaryCode]).toEqual(["INVALID", "AUTHORITY_INVALID"]);
+    const v = await verdictFor(p, c.reader, { loadBundle: () => text });
+    expect([v.overall, exitCodeOf(v)]).toEqual(["INVALID", 1]);
   });
 });

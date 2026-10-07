@@ -23,7 +23,7 @@ export function CheckSources({ checks }: { checks: CheckRow[] }) {
     4: "Contract state read from Sepolia when you press Verify, all at one block. The auditor's authority was checked by the contract when the report was registered; it is not recomputed now.",
     5: "The shared tonnage ledger on Sepolia, read when you press Verify: the claim for this batch, its quantity and the importer it was declared to.",
     6: `The signature on the auditor's key event is re-checked on this page from the exported event (${data.exportDate}). Witnesses are not queried.`,
-    7: `The vLEI credential chain is read from evidence exported on ${data.exportDate} and checked up to this page's pinned root. Witnesses are not queried; a revocation after the export is caught only through the on-chain sync that check 4 reads.`,
+    7: `The vLEI credential chain is read from evidence exported on ${data.exportDate} and checked up to this page's pinned root. Witnesses are not queried. Check 7 also reads the allowlist on Sepolia (when the auditor was added and revoked, and when the body's accreditation ends) and judges authority at the report's registration time, as check 4 does.`,
     8: "A rule-based comparison of the report with the signed credential, on this page. A mismatch flags the proof for human review; it never fails the check list.",
   };
   return (

@@ -583,9 +583,9 @@ export function Buyer() {
           {result && !running && revokeTx && isDemoProof && (
             <p className="fine">
               This report's auditor was revoked later ({revokeTx.time.slice(0, 10)}, synced on-chain in block {revokeTx.block}).
-              Check 4 judges authority at registration time, so the report stays valid on-chain. Check 7 reads the vLEI
-              evidence exported on {data.exportDate}, before the revocation; evidence exported after it would show the
-              revocation and fail check 7 (Try to break it, card 3).
+              Checks 4 and 7 both judge authority at registration time: check 4 through the contract, check 7 from the
+              allowlist on Sepolia, where the auditor's revocation is dated after this report's registration. So the
+              report stays valid (Try to break it, card 3).
             </p>
           )}
           {result && !running && (

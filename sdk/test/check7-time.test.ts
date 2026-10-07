@@ -14,7 +14,7 @@ import { verifyPresentation, type EvidenceCheckers } from "../verify.ts";
 import { DEMO_TRUST_ANCHOR, SCHEMA, isoSeconds, parseCesr, verifyAuthority, type AuthorityEvidence, type AuthorityExpect } from "../vlei.ts";
 import { computeSaid } from "../said.ts";
 import { syntheticImpostorChain, type ImpCredKey } from "../../verifier/src/impostor-chain.ts";
-import { replayFetch } from "./helpers/rpc-replay.ts";
+import { recordedClock, replayFetch } from "./helpers/rpc-replay.ts";
 
 const readJson = (path: string) => JSON.parse(readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"));
 const proof = readJson("fixtures/sepolia-demo-proof.json") as Presentation;
@@ -74,7 +74,11 @@ describe("check 7 on the demo proof: authority at registration, from the allowli
       seen.accreditedUntil = r.accreditedUntil;
       return { ...r, ...(allowlist.institution?.(r, t) ?? {}) };
     });
-    const r = await verifyPresentation(p, ChainReader.forSepolia(deployment), { importerEORI: "NLDEMO000000001", checkers });
+    const r = await verifyPresentation(p, ChainReader.forSepolia(deployment), {
+      importerEORI: "NLDEMO000000001",
+      checkers,
+      now: recordedClock(recording),
+    });
     return { r, t, seen };
   }
 
