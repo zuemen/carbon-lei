@@ -10,6 +10,10 @@ import { checkNormalForms, METHODOLOGY_NOTE, type CredentialClaims, type Hex } f
 import { decodeDisclosure } from "../disclosure.ts";
 import { issueCredential } from "../issue.ts";
 import {
+  ANNEX_II_EXCEPT,
+  annexIIStatus,
+  CN7318_DIRECT_ONLY,
+  DIRECT_ONLY_CN_PREFIXES,
   draftCredentialFields,
   extractTemplateParts,
   listZipEntries,
@@ -212,6 +216,86 @@ describe("Communication Template: the Commission's screws and nuts example (V2.1
       chainId: 31337,
     });
     for (const [k, v] of Object.entries(d.fields)) expect(decodeDisclosure(cred.disclosures[k]).value).toBe(v);
+  });
+});
+
+// Annex II of Regulation (EU) 2023/956 as amended by Regulation (EU) 2025/2083, Art. 1(29); the entries below were copied by
+// hand from the Official Journal text (L 130/52, 16.5.2023, and L 2025/2083, 17.10.2025), not from sdk/template.ts.
+describe("Communication Template: Annex II CN codes (direct emissions only)", () => {
+  const ANNEX_II = [
+    "72", "7301", "7302", "730300", "7304", "7305", "7306", "7307", "7308", "730900", "7310", "731100", "7318", "7326",
+    "7601", "7603", "7604", "7605", "7606", "7607", "7608", "76090000", "7610", "76110000", "7612", "76130000", "7614", "7616",
+    "28041000", "27160000",
+  ];
+  const EXCEPT = ["72022", "720230", "720250", "720270", "720280", "720291", "720292", "720293", "720299", "7204"];
+  const draftFor = async (cn: string) => draftCredentialFields(await parseTemplate(await synthetic({ version: "2.1.1", cn })));
+  const reason = (d: Awaited<ReturnType<typeof draftFor>>) =>
+    d.toBeSupplied.find((s) => s.field === "specificEmbeddedEmissions_tCO2e_per_t")?.reason;
+
+  it("lists exactly the entries of Annex II and the exceptions of its chapter 72 row", () => {
+    expect([...DIRECT_ONLY_CN_PREFIXES]).toEqual(ANNEX_II);
+    expect([...ANNEX_II_EXCEPT]).toEqual(EXCEPT);
+  });
+
+  it("covers an 8-digit code under every Annex II entry, including the Commission's steel, aluminium and hydrogen examples", () => {
+    for (const entry of ANNEX_II) {
+      const cn = entry.padEnd(8, entry === "72" ? "081000" : "1");
+      expect(annexIIStatus(cn), cn).toEqual({ status: "listed", entry });
+    }
+    for (const cn of ["72081000", "72122000", "72139120", "73021028", "72189911", "73041100", "72191310", "72210010", "76011010", "76051900", "28041000"])
+      expect(annexIIStatus(cn).status, cn).toBe("listed");
+    // Chapter 72 goods outside the exceptions: ferro-manganese, ferro-chromium, ferro-nickel.
+    for (const cn of ["72021100", "72024110", "72026000"]) expect(annexIIStatus(cn).status, cn).toBe("listed");
+  });
+
+  it("does not cover the chapter 72 exceptions, Annex I goods outside Annex II, or codes Annex II does not list", () => {
+    for (const e of EXCEPT) expect(annexIIStatus(e.padEnd(8, "1")), e).toEqual({ status: "not listed" });
+    // 2601 12 00 agglomerated iron ores (Annex I, iron and steel), cement, fertiliser; aluminium waste and household articles.
+    for (const cn of ["26011200", "25232900", "31052010", "28141000", "76020000", "76151010", "73170020", "28042100"])
+      expect(annexIIStatus(cn), cn).toEqual({ status: "not listed" });
+    // A shorter code that contains both covered and excluded codes is not decided.
+    expect(annexIIStatus("7202")).toEqual({ status: "undetermined", entries: ["72", "72022", "720230", "720250", "720270", "720280", "720291", "720292", "720293", "720299"] });
+    expect(annexIIStatus("2804")).toEqual({ status: "undetermined", entries: ["28041000"] });
+    expect(annexIIStatus("720299")).toEqual({ status: "not listed" });
+  });
+
+  it("drafts SEE (direct) for a covered steel, aluminium or hydrogen code, with the Annex II reason", async () => {
+    for (const [cn, note] of [
+      ["72081000", "CN chapter 72 (except the ferro-alloys and scrap Annex II excludes) counts direct emissions only"],
+      ["76011010", "CN 7601 counts direct emissions only"],
+      ["73090030", "CN 7309 00 counts direct emissions only"],
+      ["28041000", "CN 2804 10 00 counts direct emissions only"],
+    ]) {
+      const d = await draftFor(cn);
+      expect(d.fields.specificEmbeddedEmissions_tCO2e_per_t, cn).toBe("1.23457");
+      expect(d.rows.find((r) => r.field === "specificEmbeddedEmissions_tCO2e_per_t")?.rule).toBe(
+        `SEE (direct), rounded half away from zero to 5 decimals; ${note} for CBAM certificates in the definitive period (transitional reports also listed indirect emissions)`,
+      );
+    }
+  });
+
+  it("leaves the intensity to the verification body for codes outside Annex II, electricity and undecided codes", async () => {
+    for (const cn of ["72022100", "72042100", "26011200", "25232900"]) {
+      const d = await draftFor(cn);
+      expect(d.fields.specificEmbeddedEmissions_tCO2e_per_t, cn).toBeUndefined();
+      expect(reason(d)).toBe(
+        `this importer maps SEE (direct) only for the CN codes in Annex II of Regulation (EU) 2023/956 (direct emissions only); CN ${cn} is not listed there, so whether it counts indirect emissions is left to the verification body`,
+      );
+    }
+    expect(reason(await draftFor("27160000"))).toBe(
+      "CN 27160000 (electrical energy) is in Annex II of Regulation (EU) 2023/956, but its embedded emissions are per MWh and the credential intensity is per tonne",
+    );
+    expect(reason(await draftFor("7202"))).toMatch(/^CN 7202 has 4 digits and Annex II of Regulation \(EU\) 2023\/956 lists only part of it \(72, 72022, /);
+  });
+
+  it("keeps the CN 7318 rule text unchanged", async () => {
+    expect(CN7318_DIRECT_ONLY).toBe(
+      "CN 7318 counts direct emissions only for CBAM certificates in the definitive period (transitional reports also listed indirect emissions)",
+    );
+    const d = await draftFor("73181569");
+    expect(d.rows.find((r) => r.field === "specificEmbeddedEmissions_tCO2e_per_t")?.rule).toBe(
+      `SEE (direct), rounded half away from zero to 5 decimals; ${CN7318_DIRECT_ONLY}`,
+    );
   });
 });
 

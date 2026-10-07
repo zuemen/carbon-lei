@@ -150,7 +150,14 @@ export function TemplateImport({ labels }: { labels: Record<string, string> }) {
                 </tbody>
               </table>
             </div>
-            {draft.fields.specificEmbeddedEmissions_tCO2e_per_t && (
+            {draft.fields.specificEmbeddedEmissions_tCO2e_per_t && !draft.product.cnCode.startsWith("7318") && (
+              <p className="fine">
+                The template also gives SEE (indirect) {state.t.products[index].seeIndirect} and SEE (total){" "}
+                {state.t.products[index].seeTotal} tCO2e/t; the credential carries SEE (direct), for the reason in the
+                intensity row above.
+              </p>
+            )}
+            {draft.fields.specificEmbeddedEmissions_tCO2e_per_t && draft.product.cnCode.startsWith("7318") && (
               <p className="fine">
                 The template also gives SEE (indirect) {state.t.products[index].seeIndirect} and SEE (total){" "}
                 {state.t.products[index].seeTotal} tCO2e/t; the credential carries SEE (direct) because CN 7318 counts

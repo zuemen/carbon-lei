@@ -797,13 +797,74 @@ export interface CredentialDraft {
 }
 
 /**
- * CN codes for which this draft maps SEE (direct) to the credential intensity.
- * CN 7318 is listed in Annex II of Regulation (EU) 2023/956 (goods for which only direct emissions are taken into account).
- * Other CN codes are left to the verification body rather than guessed.
+ * CN codes of Annex II of Regulation (EU) 2023/956, "List of goods for which only direct emissions are to be taken into
+ * account, pursuant to Article 7(1)", as amended by Regulation (EU) 2025/2083, Article 1(29) (adds 2716 00 00, electrical
+ * energy). Each entry is the CN code as printed in the Annex, digits only: the iron and steel rows (chapter 72 with the
+ * exceptions below, and headings 7301 to 7326 as listed), the aluminium rows (7601 to 7616 as listed), 2804 10 00 hydrogen
+ * and 2716 00 00 electrical energy. Chapters 72 and 73 are not taken whole: 2601 12 00 (agglomerated iron ores) is in
+ * Annex I but not in Annex II, and 73 has only the headings listed.
+ * A product's CN code is covered when it starts with an entry and does not start with an entry of ANNEX_II_EXCEPT.
+ * Text checked against the Official Journal (L 130/52, 16.5.2023; L 2025/2083, 17.10.2025) on 2026-10-07.
  */
-export const DIRECT_ONLY_CN_PREFIXES = ["7318"] as const;
+export const DIRECT_ONLY_CN_PREFIXES = [
+  "72",
+  "7301",
+  "7302",
+  "730300",
+  "7304",
+  "7305",
+  "7306",
+  "7307",
+  "7308",
+  "730900",
+  "7310",
+  "731100",
+  "7318",
+  "7326",
+  "7601",
+  "7603",
+  "7604",
+  "7605",
+  "7606",
+  "7607",
+  "7608",
+  "76090000",
+  "7610",
+  "76110000",
+  "7612",
+  "76130000",
+  "7614",
+  "7616",
+  "28041000",
+  "27160000",
+] as const;
+/** The "Except:" list of the chapter 72 row of Annex II: ferro-silicon (7202 2), the other listed ferro-alloys, and 7204 ferrous waste and scrap. */
+export const ANNEX_II_EXCEPT = ["72022", "720230", "720250", "720270", "720280", "720291", "720292", "720293", "720299", "7204"] as const;
 export const CN7318_DIRECT_ONLY =
   "CN 7318 counts direct emissions only for CBAM certificates in the definitive period (transitional reports also listed indirect emissions)";
+/** Electricity is in Annex II, but its embedded emissions are per MWh; the credential intensity is per tonne. */
+const ELECTRICITY = "27160000";
+
+export type AnnexIIStatus =
+  | { status: "listed"; entry: string }
+  | { status: "not listed" }
+  /** The code is shorter than an Annex II entry or exception it contains, so the Annex does not decide it. */
+  | { status: "undetermined"; entries: string[] };
+
+/** Whether a CN code (4, 6 or 8 digits) is in Annex II of Regulation (EU) 2023/956 (only direct emissions are taken into account). */
+export function annexIIStatus(cnCode: string): AnnexIIStatus {
+  if (ANNEX_II_EXCEPT.some((x) => cnCode.startsWith(x))) return { status: "not listed" };
+  const finer = [...DIRECT_ONLY_CN_PREFIXES, ...ANNEX_II_EXCEPT].filter((x) => x.length > cnCode.length && x.startsWith(cnCode));
+  const entry = DIRECT_ONLY_CN_PREFIXES.find((x) => cnCode.startsWith(x));
+  if (finer.length > 0) return { status: "undetermined", entries: entry ? [entry, ...finer] : finer };
+  return entry ? { status: "listed", entry } : { status: "not listed" };
+}
+
+/** The rule note for a covered entry; for 7318 it is exactly CN7318_DIRECT_ONLY. */
+function directOnlyNote(entry: string): string {
+  const cn = entry === "72" ? "chapter 72 (except the ferro-alloys and scrap Annex II excludes)" : entry.replace(/^(\d{4})(\d{2})?(\d{2})?$/, (_, a, b, c) => [a, b, c].filter(Boolean).join(" "));
+  return `CN ${cn} counts direct emissions only for CBAM certificates in the definitive period (transitional reports also listed indirect emissions)`;
+}
 
 /** Credential field draft for one product row (index into `t.products`). Only fields with a template source are filled. */
 export function draftCredentialFields(t: ParsedTemplate, productIndex = 0): CredentialDraft {
@@ -829,18 +890,23 @@ export function draftCredentialFields(t: ParsedTemplate, productIndex = 0): Cred
   if (!isReportingPeriod(period)) throw new TemplateError(`reporting period ${period} not in normal form`);
   add("reportingPeriod", period, `${t.sources["reportingPeriod.start"]}, ${t.sources["reportingPeriod.end"]}`, "dates read in UTC, start/end");
 
-  if (DIRECT_ONLY_CN_PREFIXES.some((x) => p.cnCode.startsWith(x))) {
+  const annexII = annexIIStatus(p.cnCode);
+  if (annexII.status === "listed" && annexII.entry !== ELECTRICITY) {
     add(
       "specificEmbeddedEmissions_tCO2e_per_t",
       p.seeDirect,
       p.sources.seeDirect,
-      `SEE (direct), rounded half away from zero to ${DECIMALS} decimals; ${CN7318_DIRECT_ONLY}`,
+      `SEE (direct), rounded half away from zero to ${DECIMALS} decimals; ${annexII.entry === "7318" ? CN7318_DIRECT_ONLY : directOnlyNote(annexII.entry)}`,
     );
   } else {
     later(
       "specificEmbeddedEmissions_tCO2e_per_t",
       "verification body",
-      `this importer maps SEE (direct) only for CN ${DIRECT_ONLY_CN_PREFIXES.join(", ")}; whether CN ${p.cnCode} counts indirect emissions is left to the verification body`,
+      annexII.status === "listed"
+        ? `CN ${p.cnCode} (electrical energy) is in Annex II of Regulation (EU) 2023/956, but its embedded emissions are per MWh and the credential intensity is per tonne`
+        : annexII.status === "undetermined"
+          ? `CN ${p.cnCode} has ${p.cnCode.length} digits and Annex II of Regulation (EU) 2023/956 lists only part of it (${annexII.entries.join(", ")}); whether it counts indirect emissions is left to the verification body`
+          : `this importer maps SEE (direct) only for the CN codes in Annex II of Regulation (EU) 2023/956 (direct emissions only); CN ${p.cnCode} is not listed there, so whether it counts indirect emissions is left to the verification body`,
     );
   }
 
