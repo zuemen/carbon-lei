@@ -38,6 +38,12 @@ The CBAM Registry is the official channel, and CarbonLEI does not change it. Thi
 - "The CBAM Registry is not available to the general public, nor to operators that have not yet registered" (Guidance on CBAM verification and accreditation for verifiers and National Accreditation Bodies, 24 August 2026, p.124, §10.2 [16]). The sentence appears in the section on the database of accredited verifiers.
 - An operator that has not registered receives a copy of the verification report "in a standardised electronic format … for information purposes only" (Delegated Regulation (EU) 2025/2551, Annex II, point 2.17.3 [3]). The Commission's guidance describes this copy as an electronically signed PDF (p.68, §4.15 [16]).
 - In 2027, operators are not required to register and may send the information to declarants outside the CBAM Registry (CBAM Q&A, p.44 [21]; legal basis: Implementing Regulation (EU) 2025/2547, Art 10(3) [17]). The declarant then uploads the e-signed PDF (verification guidance, p.68 [16]).
+
+**What the Commission's own documents flag** (read 7 October 2026)
+
+- Outside the Registry, the non-registered operator gives the e-signed PDF "together with the emission report as an Excel file … to the declarant outside of the Registry via other communication channels", and shares the full reports "without any safeguard of sensitive data elements" (verification guidance, p.68, §4.15 [16]).
+- A verifier that relies on another verifier's report "must also be able to confirm whether those other verifiers were duly accredited at the time they issued the verification report" (verification guidance, p.123 [16]). The requirement is placed on verifiers; CarbonLEI runs the same time-of-signing question (the signer's vLEI credential chain and its authorisation at the registering block) for any party holding a shared report.
+- On who may offer a verification report: "If anyone else contacts importers to offer you a verification report, it is likely a scam" (CBAM Q&A, p.44 [21]).
 - The operator manual marks the Registry's verification report function as reserved for future functionality, so the signature format is not yet public (O3CI manual, p.126 [18]).
 
 **Data fields**
@@ -246,7 +252,7 @@ Accessed 23–24 September 2026 unless stated.
 13. UNECE, UN Transparency Protocol, Digital Identity Anchor. https://untp.unece.org/docs/specification/DigitalIdentityAnchor/
 14. Taiwan Ministry of Environment, press meeting, 2 April 2026. https://www.moenv.gov.tw/policies-and-laws/meetings/35593.html
 15. GLEIF, "Get a vLEI" page listing Qualified vLEI Issuers, read 23 September 2026. https://www.gleif.org/en/organizational-identity/get-an-lei-vlei/get-a-vlei
-16. European Commission, DG TAXUD, Guidance on CBAM verification and accreditation for verifiers and National Accreditation Bodies, 24 August 2026, p.68 (§4.15) and p.124 (§10.2). https://taxation-customs.ec.europa.eu/document/download/030fe146-38e5-46b8-82b5-5f72da089a7b_en
+16. European Commission, DG TAXUD, Guidance on CBAM verification and accreditation for verifiers and National Accreditation Bodies, 24 August 2026, p.68 (§4.15), p.123 and p.124 (§10.2). https://taxation-customs.ec.europa.eu/document/download/030fe146-38e5-46b8-82b5-5f72da089a7b_en
 17. Commission Implementing Regulation (EU) 2025/2547, Art 10(1) and 10(3), recital 17, Annex IV point 1.2. http://data.europa.eu/eli/reg_impl/2025/2547/oj
 18. European Commission, DG TAXUD, User Interface Manual – CBAM Accredited Verifiers and Operators of 3rd Country Installations Portal (O3CI), version 4.00 EN, 16 July 2026, §4.5, pp.96–101, and p.126. https://taxation-customs.ec.europa.eu/document/download/fdefe841-6058-47fe-962b-0e6e8d904f69_en
 19. European Commission, "CBAM Registry Access Request Procedure for the Accredited Verifiers", version 1.00, 25 August 2026, p.14 ("Permissions are the same"); and the CBAM Registry page, section "Accredited verifiers", step 2 (proof of representation), accessed 24 September 2026. https://taxation-customs.ec.europa.eu/document/download/bf7a956b-3cf5-4508-83bd-507395ce44a2_en?filename=CBAM-Accredited_Verifiers_Guidance-on-access-request-procedure-v1.00_EN.pdf ; https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-registry_en
