@@ -147,7 +147,12 @@ describe("Excel template to machine-readable verdict", () => {
     expect(v.disclosed.cnCode).toBe("73181542");
     expect(v.disclosed.specificEmbeddedEmissions_tCO2e_per_t).toBe("2.00694");
     expect(v.credSAID).toBe(cred.core.d);
-    expect(v.chain).toEqual({ chainId: 31337, block: Number(await c.pub.getBlockNumber()) });
+    // The verdict pins the head block at verify time; read the head uncached (viem caches it for ~4 s),
+    // and allow for blocks mined by other suites sharing the node since then.
+    const head = Number(await c.pub.getBlockNumber({ cacheTime: 0 }));
+    expect(v.chain.chainId).toBe(31337);
+    expect(v.chain.block).toBeGreaterThan(0);
+    expect(v.chain.block).toBeLessThanOrEqual(head);
     expect(v.trustAnchor).toBe(root);
     expect(v.hidden + Object.keys(v.disclosed).length).toBe(JSON.parse(cred.coreJson).digests.length);
 
