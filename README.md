@@ -463,8 +463,9 @@ More: [docs/FAQ.md](docs/FAQ.md) (15 further questions, Q3–Q4 and Q8–Q20).
 
 ## AI usage disclosure
 
-- Claude (Anthropic), used through Claude Code, was a coding and writing assistant. The team reviewed, tested and is responsible for all code and text.
-- The video narration is a synthetic voice (Microsoft Edge TTS) reading a script written and reviewed by the team.
+- During development we used Claude (Anthropic), through Claude Code, as a coding and writing assistant under the team's direction: it drafted contract and SDK code, tests, documentation and the submission text, and ran our adversarial review of the verifier.
+- Each change was run through the test suite and our pre-push checks before it was pushed, and CI reruns the contract and SDK tests on GitHub. The team set the scope and the rules the text must follow.
+- The video narration is a synthetic voice (Microsoft Edge TTS).
 - The product runs no AI model. None of the checks uses AI: all eight checks, seven verification checks and one advisory reconciliation check (check 8, rule-based), are deterministic rules that give the same result every time, and check 8 only warns; it never approves or rejects a report.
 
 ## License

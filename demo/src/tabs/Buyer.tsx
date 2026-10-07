@@ -215,8 +215,7 @@ function VerifySummary({
       <strong>{counts}</strong> ·{" "}
       {f ? (
         <>
-          declared-emissions gap for this {fmt(f.q)} t shipment: {fmt(f.gap)} tCO2e (≈ €
-          {fmt(f.eur, 0)} gross, illustrative)
+          declared-emissions gap for this {fmt(f.q)} t shipment: {fmt(f.gap)} tCO2e (gross, illustrative)
         </>
       ) : (
         <>verified intensity {result.disclosed.specificEmbeddedEmissions_tCO2e_per_t ?? "not disclosed"} tCO2e/t</>

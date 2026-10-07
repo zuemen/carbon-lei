@@ -59,7 +59,7 @@ test("Buyer summary under Verify: checks passed and the card's gap; a failed che
   await expect(summary).toContainText(`${passed} of 8 checks passed`);
   if (await page.locator(".stamp", { hasText: "Verified" }).count()) {
     await expect(summary).toContainText(
-      `declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (≈ €${f(gap * Number(c.priceEur), 0)} gross, illustrative)`,
+      `declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (gross, illustrative)`,
     );
     await expect(page.locator(".gap-line")).toHaveText(`Declared-emissions gap: ${f(gap)} tCO2e`);
     await summary.getByRole("button", { name: "See comparison ↓" }).click();
@@ -586,7 +586,7 @@ test("Buyer: editing the proof clears the result; the figures and the record com
   const gap = Number(c.defaultValue) * q - Number(c.verifiedValue) * q;
   const f = (n: number, d = 1) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: d });
   await expect(page.locator(".verify-summary")).toHaveText(
-    `✓ 8 of 8 checks passed · declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (≈ €${f(gap * Number(c.priceEur), 0)} gross, illustrative) See comparison ↓`,
+    `✓ 8 of 8 checks passed · declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (gross, illustrative) See comparison ↓`,
   );
   // Check 7 judges the auditor's authority at registration from the allowlist, like check 4.
   await expect(page.getByText(/Checks 4 and 7 both judge authority at registration time/)).toBeVisible();
