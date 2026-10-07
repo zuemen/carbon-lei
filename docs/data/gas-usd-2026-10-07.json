@@ -1,0 +1,27 @@
+{
+  "measuredAt": "2026-10-07",
+  "gas": 524065,
+  "gasSource": "registerReport 368,616 + first claim 155,449 (Sepolia receipts, README Measurements)",
+  "ethUsd": 2697.38,
+  "ethUsdSource": "CoinGecko, 2026-10-07 00:02 UTC",
+  "singleBlock": {
+    "block": 26136795,
+    "timestampUtc": "2026-10-07T00:02:35Z",
+    "baseFeeWei": 229688068,
+    "baseFeeGwei": 0.2297,
+    "usd": 0.32,
+    "source": "eth_getBlockByNumber on https://ethereum-rpc.publicnode.com"
+  },
+  "median": {
+    "fromBlock": 26135771,
+    "toBlock": 26136794,
+    "blocks": 1024,
+    "medianBaseFeeWei": 305628496,
+    "medianBaseFeeGwei": 0.3056,
+    "minBaseFeeGwei": 0.1474,
+    "maxBaseFeeGwei": 0.9108,
+    "usd": 0.43,
+    "source": "eth_feeHistory(1024 blocks, newest 26136794) on https://eth.drpc.org (publicnode refuses this range without a token); base fees of blocks 26135771, 26136575 and 26136794 cross-checked with eth_getBlockByNumber on publicnode"
+  },
+  "note": "Base fee only, no priority tip. The contracts are deployed on Sepolia, whose ETH has no market value; this is what the same gas would cost on mainnet."
+}
