@@ -4,6 +4,7 @@
 //
 //   RPC_REPLAY=<file>   answer from <file>
 //   RPC_RECORD=<file>   send to the real node and write every answer to <file> on exit (to refresh it)
+// In-process tests use `replayFetch` instead.
 import { readFileSync, writeFileSync } from "node:fs";
 
 type Call = { jsonrpc: "2.0"; id: number | string; method: string; params?: unknown[] };
@@ -40,11 +41,23 @@ if (replay || record) {
       }
       return res;
     }
-    out = calls.map((c) => {
-      const a = answers[keyOf(c)];
-      if (!a) throw new Error(`rpc-replay: no recorded answer for ${keyOf(c)}`);
-      return { jsonrpc: "2.0", id: c.id, ...a };
-    });
+    out = calls.map((c) => answerOf(answers, c));
+    return new Response(JSON.stringify(Array.isArray(body) ? out : out[0]), { headers: { "content-type": "application/json" } });
+  };
+}
+
+function answerOf(answers: Record<string, Answer>, c: Call): Answer & { jsonrpc: "2.0"; id: Call["id"] } {
+  const a = answers[keyOf(c)];
+  if (!a) throw new Error(`rpc-replay: no recorded answer for ${keyOf(c)}`);
+  return { jsonrpc: "2.0", id: c.id, ...a };
+}
+
+/** A `fetch` that answers from `file` (a recording made with RPC_RECORD), for in-process tests. */
+export function replayFetch(file: string): typeof fetch {
+  const answers: Record<string, Answer> = JSON.parse(readFileSync(file, "utf8")).answers;
+  return async (input: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? (input instanceof Request ? await input.text() : "")));
+    const out = (Array.isArray(body) ? body : [body]).map((c: Call) => answerOf(answers, c));
     return new Response(JSON.stringify(Array.isArray(body) ? out : out[0]), { headers: { "content-type": "application/json" } });
   };
 }

@@ -418,6 +418,10 @@ function rawZip(entries: { name: string; data: Uint8Array; method: 0 | 8; size: 
 
 describe("Communication Template: untrusted zip containers", () => {
   const MB = 1024 * 1024;
+  // Re-zipping the 1.3 MB example workbook and generating the 60 MB bomb take a few seconds under V8 coverage
+  // (`npm run test:coverage`), more than vitest's 5 s default on a loaded machine. The parse itself
+  // is still held to 2 s below.
+  const ZIP_TEST_TIMEOUT = 30_000;
   // A real minimal template, re-zipped with every part deflated; the bomb replaces or joins its parts.
   const baseParts = async () => {
     const parts = unzipSync(await synthetic({ version: "2.1.1" }));
@@ -443,7 +447,7 @@ describe("Communication Template: untrusted zip containers", () => {
       "xl/worksheets/sheet14.xml", // Summary_Communication
       "xl/worksheets/sheet5.xml", // A_InstData
     ]);
-  });
+  }, ZIP_TEST_TIMEOUT);
 
   it("refuses a high-ratio zip bomb (honest sizes) within 2 seconds, before inflating it", async () => {
     const data = bombData();
@@ -453,7 +457,7 @@ describe("Communication Template: untrusted zip containers", () => {
     const t0 = performance.now();
     await expect(parseTemplate(file)).rejects.toThrow(/zip entry "xl\/worksheets\/sheet2.xml" declares 62914560 bytes uncompressed \(limit 52428800 per entry\)/);
     expect(performance.now() - t0).toBeLessThan(2000);
-  });
+  }, ZIP_TEST_TIMEOUT);
 
   it("refuses a zip bomb that understates its size, counting the bytes actually inflated, within 2 seconds", async () => {
     const parts = await baseParts();
