@@ -127,6 +127,13 @@ function readerWithHead(head: bigint, timestamp?: bigint) {
           return target.getContractEvents(args as never);
         };
       }
+      if (prop === "request") {
+        // The CONTESTED event search (ChainReader.bodyEvents) sends eth_getLogs itself.
+        return (args: { method: string; params?: [{ toBlock?: string }] }, opts?: unknown) => {
+          if (args.method === "eth_getLogs") logTo.push(BigInt(args.params![0].toBlock!));
+          return (target.request as (a: unknown, o?: unknown) => Promise<unknown>)(args, opts);
+        };
+      }
       return Reflect.get(target, prop, recv);
     },
   }) as PublicClient;

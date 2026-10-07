@@ -1,16 +1,17 @@
 // The CONTESTED event search on a long chain: after more than 100,000 blocks since the deployment,
 // a verification still sends a constant number of eth_getLogs requests (the search covers only the
-// blocks of [registeredAt, registeredAt + window], found by interpolation search), and its result is
-// identical to the full scan from the deployment block. Also: the window edges, a chain with
+// blocks of [registeredAt, registeredAt + window], and of the windows around a bound shipment's claim and a
+// revocation, found by interpolation search; one request per interval for all three allowlist events), and its
+// result is identical to the full scan from the deployment block. Also: the window edges, a chain with
 // irregular block times, and the fail-safe fallback when block reads fail.
 import { readFileSync } from "node:fs";
 import { createPublicClient, http, keccak256, stringToBytes, type PublicClient, type Transport } from "viem";
 import { foundry } from "viem/chains";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ChainReader, LOG_CHUNK, SEARCH_ROUNDS, type ChainReaderOptions } from "../chain.ts";
-import { auditorAidHashOf, hashString, leiHashOf } from "../commitment.ts";
+import { auditorAidHashOf, hashString, leiHashOf, reportKeyOf } from "../commitment.ts";
 import { METHODOLOGY_NOTE, type CredentialClaims, type Hex } from "../credential.ts";
-import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "../issue.ts";
+import { claimArgsOf, DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "../issue.ts";
 import { verifyPresentation, type VerificationResult } from "../verify.ts";
 import { send, startLocalChain, type LocalChain } from "./helpers/local-chain.ts";
 
@@ -18,8 +19,12 @@ const demo = JSON.parse(readFileSync(new URL("../../fixtures/demo.json", import.
 const salt = (s: string): Hex => keccak256(stringToBytes(`ew:${s}`));
 const BODY_LEI = demo.entities.verifier.lei as string;
 const SECOND_BODY_LEI = "ZZZZ00EUSECONDBODY42"; // fictional (ZZZZ prefix is never assigned by an LEI issuer)
+const THIRD_BODY_LEI = "ZZZZ00EUTHIRDBODY043"; // fictional
 const DAY = 24n * 3600n;
 const BLOCK_TIME = 12;
+const EORI = demo.entities.importers[0].eori as string;
+/** An address the second body is rotated to in the CR1 case (anvil's account #9; it never sends a transaction). */
+const newAddress = "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720" as Hex;
 
 let c: LocalChain;
 let n = 0;
@@ -122,9 +127,11 @@ async function both(cr: SignedCredential, opts: { contestedWindowHours?: number 
 
 const check4 = (r: VerificationResult) => `${r.checks[4].status}:${r.checks[4].code}`;
 const span = async () => (await c.pub.getBlockNumber({ cacheTime: 0 })) - BigInt(c.deployment.contracts.VerifierAllowlist.block) + 1n;
-const fullScanLogs = (blocks: bigint) => 2 * Math.ceil(Number(blocks) / Number(LOG_CHUNK));
+const fullScanLogs = (blocks: bigint) => Math.ceil(Number(blocks) / Number(LOG_CHUNK));
 /** Upper bound on getBlock reads: block B and the deployment block, then per bound two reads per round. */
 const MAX_GET_BLOCK = 2 + 2 * 2 * SEARCH_ROUNDS;
+/** The same with `n` disjoint time intervals (registration, claim, revocation), each searched on its own. */
+const maxGetBlock = (n: number) => 2 + n * 2 * 2 * SEARCH_ROUNDS;
 
 beforeAll(async () => {
   // Cancun (the contracts' EVM version) and no historical states: anvil then mines 100,000 empty blocks in
@@ -151,7 +158,7 @@ beforeAll(async () => {
 afterAll(() => c?.stop());
 
 describe("CONTESTED event search on a chain more than 100,000 blocks past the deployment", { timeout: 120_000 }, () => {
-  it("revocation 1 h after registration → CONTESTED with 2 eth_getLogs; the full scan gives the same result", async () => {
+  it("revocation 1 h after registration → CONTESTED with 1 eth_getLogs; the full scan gives the same result", async () => {
     const aid = "EDemoAuditorAidEventWindowOneHour00000000000";
     await addAuditor(aid);
     const { cr, at } = await issueAndRegister(aid);
@@ -162,10 +169,10 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     const r = await both(cr);
     expect(check4(r.windowed)).toBe("pass:CONTESTED");
     expect(r.windowed).toEqual(r.full);
-    expect(r.w.eth_getLogs).toBe(2);
+    expect(r.w.eth_getLogs).toBe(1);
     expect(r.w.eth_getBlockByNumber).toBeLessThanOrEqual(MAX_GET_BLOCK);
     expect(r.f.eth_getLogs).toBe(fullScanLogs(await span()));
-    expect(r.f.eth_getLogs).toBeGreaterThan(20);
+    expect(r.f.eth_getLogs).toBeGreaterThan(10);
     // A second verification on the same reader reuses the deployment block and the searched blocks:
     // the only block read is block B (the blocks searched are more than 128 blocks below it).
     await mine(1_000);
@@ -175,10 +182,10 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     again.counts.eth_getLogs = 0;
     expect(check4(await verifyPresentation(present(cr, DEMO_DISCLOSURE), again.reader))).toBe("pass:CONTESTED");
     expect(again.counts.eth_getBlockByNumber).toBe(1);
-    expect(again.counts.eth_getLogs).toBe(2);
+    expect(again.counts.eth_getLogs).toBe(1);
   });
 
-  it("another 100,000 blocks later: still 2 eth_getLogs, for a new report and for the earlier one", async () => {
+  it("another 100,000 blocks later: still 1 eth_getLogs, for a new report and for the earlier one", async () => {
     await mine(100_000);
     const aid = "EDemoAuditorAidEventWindowLaterReport0000000";
     await addAuditor(aid);
@@ -188,7 +195,7 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     const r = await both(cr);
     expect(check4(r.windowed)).toBe("pass:CONTESTED");
     expect(r.windowed).toEqual(r.full);
-    expect(r.w.eth_getLogs).toBe(2);
+    expect(r.w.eth_getLogs).toBe(1);
     expect(r.w.eth_getBlockByNumber).toBeLessThanOrEqual(MAX_GET_BLOCK);
     expect(r.f.eth_getLogs).toBe(fullScanLogs(await span()));
   });
@@ -208,17 +215,17 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     const ra = await both(a.cr);
     expect(check4(ra.windowed)).toBe("pass:CONTESTED");
     expect(ra.windowed).toEqual(ra.full);
-    expect(ra.w.eth_getLogs).toBe(2);
+    expect(ra.w.eth_getLogs).toBe(1);
     const rb = await both(b.cr);
     expect(check4(rb.windowed)).toBe("pass:");
     expect(rb.windowed.overall).toBe(rb.full.overall);
     expect(rb.windowed).toEqual(rb.full);
-    expect(rb.w.eth_getLogs).toBe(2);
+    expect(rb.w.eth_getLogs).toBe(1);
     // A wider window takes the later revocation in, through the same constant search.
     const rb2 = await both(b.cr, { contestedWindowHours: 25 });
     expect(check4(rb2.windowed)).toBe("pass:CONTESTED");
     expect(rb2.windowed).toEqual(rb2.full);
-    expect(rb2.w.eth_getLogs).toBe(2);
+    expect(rb2.w.eth_getLogs).toBe(1);
   });
 
   it("suspension of the body 3 h after registration, with irregular block times → CONTESTED, same as the full scan", async () => {
@@ -234,13 +241,13 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     const r = await both(cr);
     expect(check4(r.windowed)).toBe("pass:CONTESTED");
     expect(r.windowed).toEqual(r.full);
-    expect(r.w.eth_getLogs).toBeLessThanOrEqual(4);
+    expect(r.w.eth_getLogs).toBeLessThanOrEqual(2);
     // Searched as tightly as it can be, it still agrees.
     const tight = await verifyPresentation(present(cr, DEMO_DISCLOSURE), countingReader({ searchTolerance: 0n }).reader);
     expect(tight).toEqual(r.full);
   });
 
-  it("a revocation far outside the window (an old report) → VALID with 2 eth_getLogs", async () => {
+  it("a revocation far outside the window (an old report) → VALID with 1 eth_getLogs", async () => {
     const aid = "EDemoAuditorAidEventWindowOldReport000000000";
     await addAuditor(aid);
     const { cr, at } = await issueAndRegister(aid);
@@ -253,7 +260,63 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     const r = await both(cr);
     expect(check4(r.windowed)).toBe("pass:");
     expect(r.windowed).toEqual(r.full);
-    expect(r.w.eth_getLogs).toBe(2);
+    expect(r.w.eth_getLogs).toBe(1);
+  });
+
+  it("a shipment claimed 10 days after registration: two intervals, 3 eth_getLogs (1 + 2 for the 48 h around the claim); check 4 passes, same as the full scan", async () => {
+    const aid = "EDemoAuditorAidEventWindowLateClaim000000000";
+    await addAuditor(aid);
+    const { cr } = await issueAndRegister(aid);
+    await mine(72_000); // 10 days of 12-second blocks
+    const s = { batchId: "EW-LATE-1", quantityTonnes: "100", shipmentDate: "2026-10-10", importerSalt: salt("late:1") };
+    await send(c, c.supplier, "registry", "claimShipment", claimArgsOf(cr, { ...s, importerEORI: EORI }));
+    await mine(20_000);
+    const w = countingReader();
+    const f = countingReader({ fullEventScan: true });
+    const p = present(cr, DEMO_DISCLOSURE, s);
+    const windowed = await verifyPresentation(p, w.reader, { importerEORI: EORI });
+    expect(windowed).toEqual(await verifyPresentation(p, f.reader, { importerEORI: EORI }));
+    // (checks 6 and 7 have no evidence here; checks 4 and 5 are what this case is about)
+    expect([check4(windowed), windowed.checks[5].status]).toEqual(["pass:", "pass"]);
+    expect(w.counts.eth_getLogs).toBe(3);
+    expect(w.counts.eth_getBlockByNumber).toBeLessThanOrEqual(maxGetBlock(2));
+  });
+
+  it("CR1 on a long chain: revoked 5 days after the claim, the body rotated 1 h later → checks 4 and 5 CONTESTED; three intervals, 5 eth_getLogs (1 + 2 + 2)", async () => {
+    // A third body (the second one was suspended by an earlier case).
+    await send(c, c.owner, "allowlist", "addVerifier", [
+      {
+        leiHash: leiHashOf(THIRD_BODY_LEI),
+        verifier: c.impostor.address,
+        leCredSaidHash: hashString("LE-SAID-3"),
+        accreditationSaidHash: hashString("ACC-SAID-3"),
+        accreditedUntil: 1924905600n,
+      },
+    ]);
+    const aid = "EDemoAuditorAidEventWindowRevokedRotate00000";
+    await addAuditor(aid, THIRD_BODY_LEI);
+    const { cr } = await issueAndRegister(aid, { verifierLEI: THIRD_BODY_LEI }, c.impostor);
+    await mine(72_000);
+    const s = { batchId: "EW-CR1-1", quantityTonnes: "100", shipmentDate: "2026-10-10", importerSalt: salt("m1:1") };
+    await send(c, c.supplier, "registry", "claimShipment", claimArgsOf(cr, { ...s, importerEORI: EORI }));
+    await mine(36_000);
+    const rcpt = await send(c, c.impostor, "registry", "revokeReport", [reportKeyOf(cr.core.d)]);
+    const revokedAt = (await c.pub.getBlock({ blockNumber: rcpt.blockNumber })).timestamp;
+    await mine(200);
+    await c.test.setNextBlockTimestamp({ timestamp: revokedAt + 3600n });
+    await send(c, c.owner, "allowlist", "rotateVerifierAddress", [leiHashOf(THIRD_BODY_LEI), newAddress]);
+    await mine(20_000);
+    const w = countingReader();
+    const f = countingReader({ fullEventScan: true });
+    const p = present(cr, DEMO_DISCLOSURE, s);
+    const windowed = await verifyPresentation(p, w.reader, { importerEORI: EORI });
+    expect(windowed).toEqual(await verifyPresentation(p, f.reader, { importerEORI: EORI }));
+    expect([check4(windowed), `${windowed.checks[5].status}:${windowed.checks[5].code}`]).toEqual([
+      "warn:CONTESTED",
+      "warn:CONTESTED",
+    ]);
+    expect(w.counts.eth_getLogs).toBe(5);
+    expect(w.counts.eth_getBlockByNumber).toBeLessThanOrEqual(maxGetBlock(3));
   });
 
   it("fail-safe: when block reads fail, the search falls back to the full scan and the result is unchanged", async () => {

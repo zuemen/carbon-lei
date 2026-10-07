@@ -7,7 +7,10 @@ import {
   createPublicClient,
   createTransport,
   http,
+  numberToHex,
+  parseEventLogs,
   shouldThrow,
+  toEventSelector,
   type Chain,
   type PublicClient,
   type Transport,
@@ -108,6 +111,22 @@ export interface TimedEvent {
   blockNumber: bigint;
   txHash: Hex;
 }
+
+/**
+ * An allowlist event about one body that the verifier's CONTESTED rules read (`bodyEvents`): an auditor revocation,
+ * a suspension of the body, or a rotation of the body's address (`oldAddr` is the address rotated away).
+ */
+export interface BodyEvent extends TimedEvent {
+  kind: "auditorRevoked" | "suspended" | "rotated";
+  oldAddr?: Hex;
+  newAddr?: Hex;
+  logIndex: number;
+}
+
+const BODY_EVENT_NAMES = ["AuditorRevoked", "VerifierSuspended", "VerifierAddressRotated"] as const;
+const BODY_EVENT_TOPICS = BODY_EVENT_NAMES.map((name) =>
+  toEventSelector(verifierAllowlistAbi.find((x) => x.type === "event" && x.name === name) as never),
+);
 
 export class ChainReader {
   readonly client: PublicClient;
@@ -314,6 +333,94 @@ export class ChainReader {
   }
 
   /**
+   * The allowlist events the CONTESTED rules read, for one body and one auditor, in one `eth_getLogs` request per
+   * chunk: `AuditorRevoked(auditorAidHash, leiHash)`, `VerifierSuspended(leiHash)` and
+   * `VerifierAddressRotated(leiHash, oldAddr, newAddr)`. The request filters topic 0 on the three events and
+   * topic 1 on the auditor or the body (their first indexed field); the result is then filtered on the full key
+   * (an `AuditorRevoked` of the same auditor under another body is dropped). Only the allowlist owner and the
+   * watcher can emit these events, so an outsider cannot add entries. `toBlock` and `fromBlock` as for
+   * `auditorRevocations`; any request error is thrown (fail closed).
+   */
+  async bodyEvents(leiHash: Hex, auditorAidHash: Hex, toBlock?: bigint, fromBlock?: bigint): Promise<BodyEvent[]> {
+    type RawLog = { topics: Hex[]; data: Hex; blockNumber: Hex | bigint; transactionHash: Hex; logIndex: Hex | number };
+    const raw = await this.chunked<RawLog>(
+      (from, to) =>
+        this.client.request({
+          method: "eth_getLogs",
+          params: [
+            {
+              address: this.allowlist,
+              topics: [BODY_EVENT_TOPICS, [auditorAidHash, leiHash]],
+              fromBlock: numberToHex(from),
+              toBlock: numberToHex(to),
+            },
+          ],
+        } as never) as Promise<RawLog[]>,
+      toBlock,
+      fromBlock,
+    );
+    const out: BodyEvent[] = [];
+    for (const l of parseEventLogs({ abi: verifierAllowlistAbi, logs: raw as never, strict: true })) {
+      const a = l.args as Record<string, unknown>;
+      const base = {
+        blockNumber: BigInt(l.blockNumber as unknown as Hex),
+        txHash: l.transactionHash as Hex,
+        logIndex: Number(l.logIndex as unknown as Hex),
+      };
+      const eq = (x: unknown, y: Hex) => typeof x === "string" && x.toLowerCase() === y.toLowerCase();
+      if (l.eventName === "AuditorRevoked") {
+        if (eq(a.auditorAidHash, auditorAidHash) && eq(a.leiHash, leiHash)) {
+          out.push({ kind: "auditorRevoked", time: a.revokedAt as bigint, ...base });
+        }
+      } else if (l.eventName === "VerifierSuspended") {
+        if (eq(a.leiHash, leiHash)) out.push({ kind: "suspended", time: a.suspendedAt as bigint, ...base });
+      } else if (l.eventName === "VerifierAddressRotated") {
+        if (eq(a.leiHash, leiHash)) {
+          out.push({ kind: "rotated", time: a.rotatedAt as bigint, oldAddr: a.oldAddr as Hex, newAddr: a.newAddr as Hex, ...base });
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * `bodyEvents` over every block whose timestamp lies in one of the time `intervals` ([from, to], in seconds), up
+   * to `head`. Overlapping intervals are merged first, each remaining interval gets its own block range
+   * (`blockRangeForTimes`), and overlapping or adjacent block ranges are merged again, so no block is searched twice.
+   * If any range could not be narrowed (a failed block read, `fullEventScan`, a young chain), the whole range from
+   * the deployment block to `head` is searched once instead (fail-safe, never narrower than needed).
+   */
+  async bodyEventsInTimes(
+    leiHash: Hex,
+    auditorAidHash: Hex,
+    intervals: readonly (readonly [bigint, bigint])[],
+    head: { number: bigint; timestamp: bigint },
+  ): Promise<BodyEvent[]> {
+    const times = intervals.map(([a, b]) => (a <= b ? [a, b] : [b, a]) as [bigint, bigint]).sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
+    const merged: [bigint, bigint][] = [];
+    for (const [a, b] of times) {
+      const last = merged[merged.length - 1];
+      if (last && a <= last[1]) {
+        if (b > last[1]) last[1] = b;
+      } else merged.push([a, b]);
+    }
+    const found = await Promise.all(merged.map(([a, b]) => this.blockRangeForTimes(a, b, head)));
+    let blocks: [bigint, bigint][] = found.some((r) => !r.narrowed)
+      ? [[this.fromBlock, head.number]]
+      : found.map((r) => [r.fromBlock, r.toBlock] as [bigint, bigint]).sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
+    const joined: [bigint, bigint][] = [];
+    for (const [a, b] of blocks) {
+      const last = joined[joined.length - 1];
+      if (last && a <= last[1] + 1n) {
+        if (b > last[1]) last[1] = b;
+      } else joined.push([a, b]);
+    }
+    blocks = joined;
+    const parts = await Promise.all(blocks.map(([a, b]) => this.bodyEvents(leiHash, auditorAidHash, b, a)));
+    return parts.flat();
+  }
+
+  /**
    * A block range that contains every block, up to `head` (default: the pinned block, else the latest
    * block), whose timestamp lies in [fromTime, toTime]. Both contracts stamp their events with
    * `block.timestamp`, so an event whose time lies in that interval was emitted inside the range.
@@ -379,7 +486,7 @@ export class ChainReader {
    * All matching logs in [fromBlock, toBlock] (defaults: the deployment block, and the pinned block or
    * else the latest block), in block order; chunks are read a few at a time in parallel.
    */
-  private async chunkedLogs(
+  private chunkedLogs(
     address: Hex,
     abi: readonly unknown[],
     eventName: string,
@@ -388,26 +495,39 @@ export class ChainReader {
     fromBlock?: bigint,
   ) {
     type Log = { args: unknown; blockNumber: bigint; transactionHash: Hex };
-    const latest = toBlock ?? this.blockNumber ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
-    const start = fromBlock !== undefined && fromBlock > this.fromBlock ? fromBlock : this.fromBlock;
-    const ranges: [bigint, bigint][] = [];
-    for (let from = start; from <= latest; from += LOG_CHUNK) {
-      ranges.push([from, from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest]);
-    }
-    const chunks: Log[][] = new Array(ranges.length);
-    let next = 0;
-    const worker = async () => {
-      while (next < ranges.length) {
-        const i = next++;
-        const [from, to] = ranges[i];
-        chunks[i] = (await this.client.getContractEvents({
+    return this.chunked<Log>(
+      (from, to) =>
+        this.client.getContractEvents({
           address,
           abi,
           eventName,
           args,
           fromBlock: from,
           toBlock: to,
-        } as never)) as unknown as Log[];
+        } as never) as unknown as Promise<Log[]>,
+      toBlock,
+      fromBlock,
+    );
+  }
+
+  /**
+   * `read` over [fromBlock, toBlock] (defaults as for `chunkedLogs`) in chunks of at most `LOG_CHUNK` blocks, at most
+   * `LOG_PARALLEL` at once; the results in block order. Any failed chunk rejects the whole search.
+   */
+  private async chunked<L>(read: (from: bigint, to: bigint) => Promise<L[]>, toBlock?: bigint, fromBlock?: bigint): Promise<L[]> {
+    const latest = toBlock ?? this.blockNumber ?? (await this.client.getBlockNumber({ cacheTime: 0 }));
+    const start = fromBlock !== undefined && fromBlock > this.fromBlock ? fromBlock : this.fromBlock;
+    const ranges: [bigint, bigint][] = [];
+    for (let from = start; from <= latest; from += LOG_CHUNK) {
+      ranges.push([from, from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest]);
+    }
+    const chunks: L[][] = new Array(ranges.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < ranges.length) {
+        const i = next++;
+        const [from, to] = ranges[i];
+        chunks[i] = await read(from, to);
       }
     };
     await Promise.all(Array.from({ length: Math.min(LOG_PARALLEL, ranges.length) }, worker));

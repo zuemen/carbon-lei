@@ -30,6 +30,17 @@ const CHECKS: { n: number; text: string; source: Source }[] = [
   },
 ];
 
+/**
+ * The text shown for a check: the plain-language text of its code, else its detail. CONTESTED has several
+ * reasons (SECURITY §4.2); the code's text describes the revocation-sync one, so any other reason shows its detail.
+ */
+function checkText(r: CheckResult): string {
+  if (r.code === "CONTESTED" && !/; revoked or suspended within [\d.]+ h after$/.test(r.detail)) {
+    return `Needs human review: ${r.detail}`;
+  }
+  return r.code && CODE_TEXT[r.code] ? CODE_TEXT[r.code] : r.detail;
+}
+
 export function kindOf(c?: CheckResult): BadgeKind {
   if (!c) return "idle";
   if (c.status === "fail") return "fail";
@@ -581,7 +592,7 @@ export function Buyer() {
                     <SourceLabel source={c.source} />{" "}
                     {r && r.code ? <code>{r.code}</code> : null}
                     {r && r.code ? " — " : " "}
-                    {r ? (r.code && CODE_TEXT[r.code] ? CODE_TEXT[r.code] : r.detail) : ""}
+                    {r ? checkText(r) : ""}
                   </span>
                 </li>
               );

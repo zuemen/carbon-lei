@@ -174,7 +174,7 @@ No real organisation takes part today, and none has been contacted ([PILOT.md](P
 | Watchers | Several independent watchers; alerts on sync delay |
 | Allowlist governance | Multisig → timelocked governance; watcher role limited to suspend, lift and revoke |
 | Signature verification on-chain | P-256 precompile path (see [SECURITY.md](SECURITY.md#12-future-on-chain-verification-of-keri-signatures)) |
-| Interoperability | `credentialRecord(address)` returns `(credType, expiresAt, credHash)`, in the pattern of Chainlink CCID credential records [9]. Not integrated; Chainlink ACE is in beta |
+| Interoperability | `credentialRecord(address)` returns `(credType, expiresAt, credHash)`, in the pattern of Chainlink CCID credential records [9]. It does not reflect a suspension: during one it still returns the body's record, so an integrator must also call `isVerifierActiveAt` ([SECURITY §4.2](SECURITY.md#42-findings-of-the-contract-red-team-review-7-october-2026) CR7). Not integrated; Chainlink ACE is in beta |
 
 ### 6.2 Other CBAM goods and countries
 

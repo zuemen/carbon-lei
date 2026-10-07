@@ -293,7 +293,7 @@ async function demoStorage(url: string, deployment: Deployment, proof: Presentat
  * Scalability projection (computed, not measured) from the gas in the Sepolia receipts
  * (fixtures/sepolia-tx.json) and the storage words counted by `demoStorage`.
  */
-export function projection(gasRegister: number, gasClaim: number, logBlockSpan: number, windowedGetLogs = 2) {
+export function projection(gasRegister: number, gasClaim: number, logBlockSpan: number, windowedGetLogs = 1) {
   const gwei = [1, 5, 20];
   const eth = (gas: number) => Object.fromEntries(gwei.map((g) => [`${g} gwei`, formatUnits(BigInt(gas) * BigInt(g), 9)]));
   const cases: [number, number][] = [
@@ -303,9 +303,12 @@ export function projection(gasRegister: number, gasClaim: number, logBlockSpan: 
     [1_000, 10_000],
   ];
   const blocksPerDay = 7_200;
-  const getLogs = (span: number) => 2 * Math.ceil(span / Number(LOG_CHUNK));
+  // One request per chunk for the three allowlist events the CONTESTED rules read (sdk/chain.ts bodyEvents).
+  const getLogs = (span: number) => Math.ceil(span / Number(LOG_CHUNK));
   // 24 h of blocks plus the largest margin left on each side once the search has converged.
   const windowLogs = getLogs(blocksPerDay + 2 * Number(SEARCH_TOLERANCE) + 1);
+  // The 48 h around a bound shipment's claim, or around a revocation, with the same margins.
+  const twoDayLogs = getLogs(2 * blocksPerDay + 2 * Number(SEARCH_TOLERANCE) + 1);
   return {
     label: "PROJECTED, NOT MEASURED: computed from the measured gas and storage figures; no ETH-to-currency conversion",
     gasFormula: `gas(N, M) = ${gasRegister} * N + ${gasClaim} * M (N reports, M shipment claims)`,
@@ -330,9 +333,9 @@ export function projection(gasRegister: number, gasClaim: number, logBlockSpan: 
     verifier: {
       viewCalls:
         "7 eth_call per verification, each a fixed number of mapping lookups (sdk/verify.ts round 0 and 1, sdk/checkers.ts; contracts/src/EmissionsClaimRegistry.sol reports, shipmentStatus, remainingKg, reportScopes, isValidAt; VerifierAllowlist institutions, auditors): independent of N and M",
-      eventSearches: `eth_getLogs per verification = 2 * ceil(S / ${LOG_CHUNK}), S = the blocks from a block before registeredAt to a block after registeredAt + 24 h, found by interpolation search (sdk/chain.ts blockRangeForTimes; AuditorRevoked and VerifierSuspended, filtered by indexed topics): S <= 24 h of blocks (${blocksPerDay} at 12 s) + a margin of at most ${SEARCH_TOLERANCE} blocks on each side once the search has converged, so 2 requests, independent of the age of the deployment and of N and M`,
-      blockSearch: `eth_getBlockByNumber per verification = 1 (block B) + 1 (the deployment block, read once per reader) + at most ${2 * 2 * SEARCH_ROUNDS} for the search (2 bounds, at most ${SEARCH_ROUNDS} rounds of 2 parallel reads each); also independent of the age of the deployment`,
-      fallback: `if a block read fails, the whole range from the deployment block is searched, as before: 2 * ceil(blockSpan / ${LOG_CHUNK}) eth_getLogs, blockSpan = latest block - deployment block + 1 (fail-safe, never a narrower range)`,
+      eventSearches: `eth_getLogs per verification = sum over the disjoint time intervals of ceil(S_i / ${LOG_CHUNK}), one request per chunk for AuditorRevoked, VerifierSuspended and VerifierAddressRotated together (sdk/chain.ts bodyEventsInTimes; filtered by indexed topics). Intervals: [registeredAt, registeredAt + 24 h]; [claimedAt - 24 h, claimedAt + 24 h] when the shipment is bound to the verifier's EORI; [revokedAt - 24 h, revokedAt + 24 h] when the report is revoked; overlapping ones are merged. S_i = the blocks of an interval plus a margin of at most ${SEARCH_TOLERANCE} blocks on each side once the search has converged: ${windowLogs} request for the registration window (${blocksPerDay} blocks at 12 s), ${twoDayLogs} for a 48 h window, so 1 (registration and claim within the same day, as in the demo) to ${windowLogs + 2 * twoDayLogs} (registration, claim and revocation all days apart), independent of the age of the deployment and of N and M`,
+      blockSearch: `eth_getBlockByNumber per verification = 1 (block B) + 1 (the deployment block, read once per reader) + at most ${2 * 2 * SEARCH_ROUNDS} per disjoint interval for the search (2 bounds, at most ${SEARCH_ROUNDS} rounds of 2 parallel reads each; at most 3 intervals); also independent of the age of the deployment`,
+      fallback: `if a block read fails, the whole range from the deployment block is searched once, as before: ceil(blockSpan / ${LOG_CHUNK}) eth_getLogs, blockSpan = latest block - deployment block + 1 (fail-safe, never a narrower range)`,
       measuredBlockSpan: logBlockSpan,
       measuredGetLogs: windowedGetLogs,
       fullScanGetLogs: getLogs(logBlockSpan),

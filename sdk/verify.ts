@@ -59,8 +59,10 @@ export interface OnchainView {
 }
 
 /**
- * VALID: every check that applies passed. INVALID: a check failed. CONTESTED: valid, but the auditor was revoked or
- * the body suspended soon after registration (check 4). INCOMPLETE: no check failed, but checks that decide validity
+ * VALID: every check that applies passed. INVALID: a check failed. CONTESTED: needs a person's review (check 4 or 5):
+ * the auditor was revoked, the body suspended or its address rotated soon after registration; the body was suspended
+ * or its address rotated close to the shipment's claim; another body revised the credential with more tonnes or
+ * another supplier; or the report was revoked close to such a key incident. INCOMPLETE: no check failed, but checks that decide validity
  * were not run (no evidence checkers for checks 6 and 7, a checker that answered only `warn` for one of them, or the
  * offline view without a chain); not a pass.
  */
@@ -144,6 +146,48 @@ export function onlySuperseded(c: CheckResult | undefined): boolean {
   if (!c || c.status !== "fail" || c.code !== "REPORT_INVALID/SUPERSEDED") return false;
   const { inLayer, scopeMoved, bodyChanged } = SUPERSEDED_DETAIL;
   return [inLayer, scopeMoved, inLayer + bodyChanged, scopeMoved + bodyChanged].includes(c.detail as never);
+}
+
+/** Check 4 and 5 detail: a revocation within the CONTESTED window of a key incident at the issuing body. */
+export const REVOKED_UNDER_INCIDENT = (hours: number) =>
+  `within ${hours} h of a suspension of the issuing body or a rotation of its address, so the revocation may have been sent with a stolen key`;
+/** Check 4 detail: a key incident at the issuing body within the CONTESTED window of the shipment's claim. */
+export const CLAIM_UNDER_INCIDENT = (hours: number) =>
+  `the issuing body was suspended or its address rotated within ${hours} h of this shipment's claim`;
+/** Check 4 note: the shipment was claimed shortly before the credential was revised. */
+export const CLAIMED_BEFORE_REVISION = (hours: number) =>
+  `claimed within ${hours} h before this credential was revised: a pending downward correction may have been front-run`;
+/** Check 4 detail when a revision by another body raised the verified tonnage (from, to in tonnes). */
+export const CROSS_BODY_DETAIL = {
+  raised: (from: string, to: string) => `revised by another body with more verified tonnes than the earlier body's credential (${from} t → ${to} t)`,
+  supplier: "revised by another body with another supplier address than the earlier body's credential",
+  tooLong: (n: number) => `revision chain longer than ${n} credentials of this body; a change of body before them was not checked`,
+} as const;
+/** How many credentials of the same body `crossBodyRevision` follows back, at most, to find a change of body. */
+export const MAX_SAME_BODY_REVISIONS = 8;
+
+/**
+ * CR3: reasons to contest a credential whose revision chain changes issuing body. A body can revise another body's
+ * credential once that body is suspended or past its accreditation (and an accreditation cannot be renewed, so the
+ * second case is permanent); the contract lets it name another supplier and raise the verified tonnage. Follows
+ * the chain back through this body's own earlier credentials (at most `MAX_SAME_BODY_REVISIONS` reads, one per
+ * credential) to the last credential of the earlier body, so a takeover at the same tonnage followed by a raise
+ * by the same body is caught too, and compares the supplier address and, within one credential layer, the
+ * verified tonnage. A supplier LEI behind a fresh salt cannot be compared (the commitment is salted per credential).
+ */
+async function crossBodyRevision(rd: ChainReader, rep: ReportRecord, prev: ReportRecord): Promise<string[]> {
+  let earlier = prev;
+  for (let i = 0; earlier.issuerLeiHash === rep.issuerLeiHash; i++) {
+    if (earlier.supersedes === ZERO32) return [];
+    if (i >= MAX_SAME_BODY_REVISIONS) return [CROSS_BODY_DETAIL.tooLong(MAX_SAME_BODY_REVISIONS)];
+    earlier = await rd.report(earlier.supersedes);
+  }
+  const reasons: string[] = [];
+  if (rep.credScopeKey === earlier.credScopeKey && rep.verifiedKg > earlier.verifiedKg) {
+    reasons.push(CROSS_BODY_DETAIL.raised(kgToTonnes(earlier.verifiedKg), kgToTonnes(rep.verifiedKg)));
+  }
+  if (lower(rep.supplier) !== lower(earlier.supplier)) reasons.push(CROSS_BODY_DETAIL.supplier);
+  return reasons;
 }
 
 /** Default head-age limit per chain ID, in seconds (Sepolia makes a block every 12 s). */
@@ -427,22 +471,7 @@ export async function verifyPresentation(
       `RPC node is behind: its block ${head.number} (time ${head.timestamp}) is older than the report's registration (time ${rep.registeredAt}); try again or use another RPC`,
     );
   }
-  // 4l events, searched up to block B (the snapshot); they depend only on the report, so the search
-  // starts now. Only an event whose time lies in [registeredAt, registeredAt + window] can flag the
-  // report, and each event's time is the timestamp of its block, so the search covers the blocks of
-  // that interval (with a margin of blocks outside it on each side), found by interpolation search;
-  // on any error, every block from the deployment block to B.
   const windowSecOf = () => BigInt(Math.round((opts.contestedWindowHours ?? 24) * 3600));
-  let searchUntil = head.timestamp; // an option that is not a number: search up to B (4l then throws, as before)
-  try {
-    searchUntil = rep.registeredAt + windowSecOf();
-  } catch {}
-  const rangeP =
-    rep.registeredAt === 0n ? undefined : early(rd.blockRangeForTimes(rep.registeredAt, searchUntil, head));
-  const revocationsP =
-    rangeP &&
-    early(rangeP.then((r) => rd.auditorRevocations(rep.auditorAidHash, rep.issuerLeiHash, r.toBlock, r.fromBlock)));
-  const suspensionsP = rangeP && early(rangeP.then((r) => rd.suspensions(rep.issuerLeiHash, r.toBlock, r.fromBlock)));
   let status: ShipmentStatus | undefined;
   if (statusP) {
     status = await statusP;
@@ -462,6 +491,41 @@ export async function verifyPresentation(
     status.importerCommit === importerCommitOf(opts.importerEORI, p.shipment.importerSalt);
   const t = boundToVerifier && status ? status.claimedAt : head.timestamp;
   let contested = false;
+
+  // CONTESTED events (4l, and the key-incident rules of checks 4 and 5), searched up to block B (the snapshot) in
+  // one search: auditor revocations, suspensions of the body and rotations of its address. Each event's time is the
+  // timestamp of its block, and only an event inside one of these intervals can flag the proof, so the search
+  // covers the blocks of those intervals (each with a margin of blocks outside it), found by interpolation search;
+  // on any error, every block from the deployment block to B:
+  //   - [registeredAt, registeredAt + window]: 4l (auditor revoked, body suspended, issuing address rotated);
+  //   - [claimedAt - window, claimedAt + window], for a shipment bound to the verifier: a key incident around the claim;
+  //   - [revokedAt - window, revokedAt + window], for a revoked report: a key incident around the revocation.
+  let windowSec: bigint | undefined;
+  try {
+    windowSec = windowSecOf();
+  } catch {}
+  const intervals: [bigint, bigint][] = [];
+  if (rep.registeredAt !== 0n) {
+    // An option that is not a number: search up to B (check 4 then throws, as before).
+    if (windowSec === undefined) intervals.push([rep.registeredAt, head.timestamp]);
+    else {
+      intervals.push([rep.registeredAt, rep.registeredAt + windowSec]);
+      if (boundToVerifier && status) intervals.push([status.claimedAt - windowSec, status.claimedAt + windowSec]);
+      if (rep.revokedAt !== 0n) intervals.push([rep.revokedAt - windowSec, rep.revokedAt + windowSec]);
+    }
+  }
+  const eventsP = intervals.length
+    ? early(rd.bodyEventsInTimes(rep.issuerLeiHash, rep.auditorAidHash, intervals, head))
+    : undefined;
+  /** Key incidents at the issuing body (suspension or address rotation) within the window of time `at`. */
+  const keyIncidentNear = async (at: bigint) => {
+    const w = windowSecOf();
+    return ((await eventsP) ?? []).some(
+      (e) => (e.kind === "suspended" || e.kind === "rotated") && (e.time >= at ? e.time - at : at - e.time) <= w,
+    );
+  };
+  const hours = opts.contestedWindowHours ?? 24;
+  const revokedUnderIncident = async () => rep.revokedAt !== 0n && (await keyIncidentNear(rep.revokedAt));
 
   // Checks 6-8 only need the report and the disclosed fields: start them now, alongside check 4's reads.
   const ctx: EvidenceContext = { core, disclosed, rejected: decoded.map((d) => d.name).filter((n) => !Object.hasOwn(disclosed, n)), report: rep.registeredAt === 0n ? undefined : rep, reader: rd };
@@ -532,8 +596,9 @@ export async function verifyPresentation(
     } else if (sameBlockException) {
       notes.push("valid when shipped; replaced later in the same block");
     }
+    let prev: ReportRecord | undefined;
     if (prevP) {
-      const prev = await prevP;
+      prev = await prevP;
       notes.push(
         prev.credScopeKey === rep.credScopeKey
           ? "this credential revises an earlier one in the same layer"
@@ -581,18 +646,50 @@ export async function verifyPresentation(
       fails.push(["REPORT_INVALID", "contract and local checks disagree (SDK or ABI version?)"]);
     }
 
-    if (fails.length) {
+    if (fails.length === 1 && fails[0][0] === "REPORT_INVALID/REVOKED" && (await revokedUnderIncident())) {
+      // CR1: a stolen body key (or an owner key used to rotate the body's address) can revoke every report of the
+      // body, and nothing can undo it. A revocation within the window of a suspension of the body or a rotation of
+      // its address may be the attacker's: a person reviews it rather than the verifier rejecting the shipment.
+      contested = true;
+      checks.push(result(4, "warn", "CONTESTED", `${fails[0][1]}; ${REVOKED_UNDER_INCIDENT(hours)}`));
+    } else if (fails.length) {
       checks.push(result(4, "fail", fails[0][0], fails.map((f) => f[1]).join("; ")));
     } else {
       // 4l revocation window: registered shortly before the auditor was revoked or the body suspended
-      // (the report is registered here, so both searches were started above)
+      // (the report is registered here, so the search was started above)
       const windowSec = windowSecOf();
-      const events = [...((await revocationsP) ?? []), ...((await suspensionsP) ?? [])];
-      contested = events.some((e) => rep.registeredAt <= e.time && e.time - rep.registeredAt <= windowSec);
+      const events = (await eventsP) ?? [];
+      const after = (e: { time: bigint }) => rep.registeredAt <= e.time && e.time - rep.registeredAt <= windowSec;
+      const reasons: string[] = [];
+      if (events.some((e) => (e.kind === "auditorRevoked" || e.kind === "suspended") && after(e))) {
+        reasons.push(`revoked or suspended within ${hours} h after`);
+      }
+      // CR9: the address that registered the report was rotated away soon after (the incident response to a
+      // stolen key may be a rotation rather than a suspension).
+      if (events.some((e) => e.kind === "rotated" && lower(e.oldAddr ?? "") === lower(rep.verifier) && after(e))) {
+        reasons.push(`the registering address was rotated within ${hours} h after`);
+      }
+      // CR1/CR9 at the claim: a suspension of the body or a rotation of its address within the window of the claim
+      // of the shipment declared to the verifier (a credential registered by a stolen key and claimed at once).
+      if (boundToVerifier && status && (await keyIncidentNear(status.claimedAt))) {
+        reasons.push(CLAIM_UNDER_INCIDENT(hours));
+      }
+      // CR3: a revision by another body (possible once the earlier body is suspended or past its accreditation,
+      // permanently in the second case) that raises the verified tonnage or changes the supplier address.
+      if (prev) reasons.push(...(await crossBodyRevision(rd, rep, prev)));
+      contested = reasons.length > 0;
+      // CR2: a claim shortly before the credential was revised; a downward correction may have been front-run.
+      if (boundToVerifier && status && !contested) {
+        const nexts = [
+          ...(rep.supersededBy !== ZERO32 ? [supersededAt] : []),
+          ...(rep.reportIdHash !== scope.reportIdHash && unboundAt !== 0n ? [unboundAt] : []),
+        ].filter((x) => x >= status!.claimedAt);
+        if (nexts.some((x) => x - status!.claimedAt <= windowSec)) notes.push(CLAIMED_BEFORE_REVISION(hours));
+      }
       const base = "registered by an authorized auditor (checked by the contract at registration)";
       checks.push(
         contested
-          ? result(4, "pass", "CONTESTED", `${base}; revoked or suspended within ${opts.contestedWindowHours ?? 24} h after`)
+          ? result(4, "pass", "CONTESTED", [base, ...reasons].join("; "))
           : result(4, "pass", "", [base, ...notes].join("; ")),
       );
     }
@@ -623,10 +720,13 @@ export async function verifyPresentation(
             : !status.reportValid
               ? "the report was revoked after the claim"
               : "";
+    const declared = `${kgToTonnes(status.quantityKg)} t declared to you on the shared ledger`;
     checks.push(
-      problem
-        ? result(5, "fail", "SHIPMENT_MISMATCH", problem)
-        : result(5, "pass", "", `${kgToTonnes(status.quantityKg)} t declared to you on the shared ledger`),
+      problem === "the report was revoked after the claim" && (await revokedUnderIncident())
+        ? ((contested = true), result(5, "warn", "CONTESTED", `${declared}; ${problem}, ${REVOKED_UNDER_INCIDENT(hours)}`))
+        : problem
+          ? result(5, "fail", "SHIPMENT_MISMATCH", problem)
+          : result(5, "pass", "", declared),
     );
   }
 
