@@ -198,6 +198,11 @@ export interface SyntheticOptions {
   seed?: string;
   /** Issuance time written into the credentials and TEL events. */
   dt?: string;
+  /**
+   * Tests only: credentials to revoke, each with the time of its TEL revocation. The issuer anchors the
+   * `rev` event in its KEL right after the issuance, as KERIA does; the stream carries it after `iss`.
+   */
+  revoke?: Partial<Record<ImpCredKey, string>>;
 }
 
 export interface SyntheticChain {
@@ -253,7 +258,11 @@ export function syntheticImpostorChain(opts: SyntheticOptions): SyntheticChain {
     });
     const iss = versioned("KERI", { t: "iss", d: "", i: acdc.d, s: "0", ri: reg.i, dt });
     ixn(issuer, [{ i: acdc.d, s: "0", d: iss.d }]);
-    return { acdc, iss };
+    const revDt = opts.revoke?.[label as ImpCredKey];
+    if (revDt === undefined) return { acdc, iss, tel: [iss] };
+    const rev = versioned("KERI", { t: "rev", d: "", i: acdc.d, s: "1", ri: reg.i, p: iss.d, dt: revDt });
+    ixn(issuer, [{ i: acdc.d, s: "1", d: rev.d }]);
+    return { acdc, iss, tel: [iss, rev] };
   };
 
   const root = controller("impRoot");
@@ -279,8 +288,8 @@ export function syntheticImpostorChain(opts: SyntheticOptions): SyntheticChain {
   // issuer's KEL, the issuee's inception, the registry, the TEL issuance and the credential.
   const kel = (c: Controller) => c.events.map((e) => JSON.stringify(e.ked) + e.atc).join("");
   const icpOf = (c: Controller) => JSON.stringify(c.events[0].ked) + c.events[0].atc;
-  const tail = (issuer: Controller, issuee: Controller, reg: Json, cred: { acdc: Json; iss: Json }) =>
-    kel(issuer) + icpOf(issuee) + JSON.stringify(reg) + JSON.stringify(cred.iss) + JSON.stringify(cred.acdc);
+  const tail = (issuer: Controller, issuee: Controller, reg: Json, cred: { acdc: Json; tel: Json[] }) =>
+    kel(issuer) + icpOf(issuee) + JSON.stringify(reg) + cred.tel.map((e) => JSON.stringify(e)).join("") + JSON.stringify(cred.acdc);
   const sQvi = tail(root, qvi, rootReg, cQvi);
   const sLeNab = sQvi + tail(qvi, nab, qviReg, cLeNab);
   const sLeBody = sQvi + tail(qvi, body, qviReg, cLeBody);

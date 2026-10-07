@@ -508,3 +508,25 @@ export function verifyIssuance(msgs: readonly KelMessage[], acdc: Record<string,
   if (!vcpAnchor) return "the registry inception is not anchored in the issuer's KEL";
   return "";
 }
+
+/**
+ * The credential's TEL revocation, when its issuer anchored it; else undefined. The revocation (`rev`, or
+ * `brv` for a registry with backers) must recompute its SAID and size, be in the credential's registry,
+ * follow the issuance (`p` = the `iss` event's SAID) at sequence number 1, and be anchored by an event of
+ * the issuer's KEL with the seal { i: credSAID, s: "1", d: <revocation SAID> }, that KEL verified from its
+ * inception through that event as for an issuance (keys, pre-rotation, witness receipts). A revocation
+ * without such an anchor is not the issuer's statement and is not returned, so it can neither fail nor
+ * pass check 7. Call it after verifyIssuance passed for the same credential.
+ */
+export function anchoredRevocation(msgs: readonly KelMessage[], acdc: Record<string, any>): KelMessage | undefined {
+  const iss = msgs.find((m) => m.ked.t === "iss" && m.ked.i === acdc.d && m.ked.s === "0");
+  if (!iss) return undefined;
+  for (const m of msgs) {
+    const k = m.ked;
+    if ((k.t !== "rev" && k.t !== "brv") || k.i !== acdc.d || k.s !== "1") continue;
+    if (!sizeOk(m) || computeSaid(k) !== k.d || k.ri !== acdc.ri || k.p !== iss.ked.d) continue;
+    const anchor = anchorOf(msgs, acdc.i, { i: acdc.d, s: "1", d: k.d });
+    if (anchor && verifyKel(msgs, acdc.i, snOf(anchor.ked)).ok) return m;
+  }
+  return undefined;
+}

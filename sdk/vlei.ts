@@ -24,16 +24,37 @@
 // Check 7 (authority): the credential chain QVI → LE (body) → ECR (auditor), plus the NAB's
 //   accreditation of the body, from exported CESR streams: every ACDC SAID recomputes, schemas,
 //   issuers, issuees, edges and LEIs line up, the QVI was issued by the configured root, the
-//   accreditation scope covers the CN code, each issuance has a TEL `iss` event and no `rev`,
-//   each issuer signed the KEL event anchoring its issuance (sdk/kel.ts: Ed25519 over the event bytes,
-//   key state walked from the issuer's self-addressing inception, so the QVI's anchor must be signed
-//   with the pinned root's key; every event walked also carries the witness threshold of receipts),
-//   and the on-chain allowlist hashes equal the credential SAID hashes.
+//   accreditation has the CBAM accreditation schema (SCHEMA.ACCREDITATION, not the schema the evidence
+//   names), its scope covers the CN code and its `validUntil` (required) covers the registration time,
+//   each issuance has a TEL `iss` event, each issuer signed the KEL event anchoring its issuance
+//   (sdk/kel.ts: Ed25519 over the event bytes, key state walked from the issuer's self-addressing
+//   inception, so the QVI's anchor must be signed with the pinned root's key; every event walked also
+//   carries the witness threshold of receipts), and the on-chain allowlist hashes equal the credential
+//   SAID hashes.
+//   Authority is judged at registration, as in check 4. From the allowlist (read at the verified block,
+//   whose auditor and accreditation fields never change except `revokedAt`, which is set once): the
+//   auditor was added at or before the registration time and not revoked before it, and the
+//   accreditation (`accreditedUntil`) had not expired. A TEL revocation in the evidence counts only when
+//   its issuer anchored it (sdk/kel.ts anchoredRevocation); it fails check 7 when its time (`dt`, written
+//   by the issuer) is before the registration time, or when there is no registration time. An unsigned or
+//   unanchored revocation is ignored. The evidence is chosen by the supplier, who can leave a revocation
+//   out; the allowlist is not. Every time is read as ISO 8601 with a time zone (`Z` or an offset); a time
+//   without one fails, never read in the machine's time zone.
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { hashString } from "./commitment.ts";
 import type { Hex } from "./credential.ts";
 import { utf8 } from "./encoding.ts";
-import { controllerSigs, decodeIndexedSig, decodeVerKey, keyStateAt, snOf, verifyIssuance, witnessState, witnessThreshold } from "./kel.ts";
+import {
+  anchoredRevocation,
+  controllerSigs,
+  decodeIndexedSig,
+  decodeVerKey,
+  keyStateAt,
+  snOf,
+  verifyIssuance,
+  witnessState,
+  witnessThreshold,
+} from "./kel.ts";
 import { computeSaid } from "./said.ts";
 
 export { decodeIndexedSig, decodeVerKey } from "./kel.ts";
@@ -42,6 +63,8 @@ export const SCHEMA = {
   QVI: "EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao",
   LE: "ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY",
   ECR: "EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw",
+  /** CBAM verifier accreditation (verifier/schemas/cbam-verifier-accreditation.json). */
+  ACCREDITATION: "EIyPVSpzpiV8PXfxjAhPdESlnvpUGZtBLeZ1jaoVRt8G",
 } as const;
 export const AUDITOR_ROLE = "CBAM Lead Auditor";
 /** Root of trust of the demo: the simulated GLEIF root (GEDA) of the local KERI stack (fixtures/vlei.json).
@@ -338,7 +361,8 @@ function verifyAnchorEvidence(
 export interface AuthorityEvidence {
   /** Root of trust (simulated GLEIF root in the demo). */
   trustAnchor: string;
-  accreditationSchema: string;
+  /** Informational: check 7 compares the accreditation's schema with SCHEMA.ACCREDITATION, not with this. */
+  accreditationSchema?: string;
   /** CESR streams of the credentials, as exported (`credentials().get(said, true)`). */
   cesr: { qvi: string; leBody: string; leNab: string; accreditation: string; ecr: string };
 }
@@ -349,9 +373,49 @@ export interface AuthorityExpect {
   auditorAID: string;
   verifierLEI: string;
   cnCode: string;
-  /** Registration time (seconds); the accreditation must cover it. */
+  /** Registration time (seconds); the accreditation must cover it, and authority is judged at it. */
   registeredAt?: bigint;
-  onchain?: { leCredSaidHash: Hex; accreditationSaidHash: Hex; ecrSaidHash: Hex };
+  /**
+   * The allowlist records of the body and the auditor, read at the verified block. With them,
+   * `registeredAt` is required.
+   */
+  onchain?: {
+    leCredSaidHash: Hex;
+    accreditationSaidHash: Hex;
+    ecrSaidHash: Hex;
+    /** The body's `accreditedUntil` (seconds). */
+    accreditedUntil: bigint;
+    /** The auditor's `addedAt` and `revokedAt` (seconds; `revokedAt` 0 = not revoked). */
+    auditorAddedAt: bigint;
+    auditorRevokedAt: bigint;
+  };
+}
+
+const ISO_TZ = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|([+-])(\d{2}):(\d{2}))$/;
+
+/**
+ * Seconds since the epoch of an ISO 8601 date-time with a time zone (`Z` or `±hh:mm`), fractions dropped;
+ * undefined for anything else, including a time without a time zone (never read in the machine's time
+ * zone) and a date that does not exist.
+ */
+export function isoSeconds(s: unknown): bigint | undefined {
+  if (typeof s !== "string") return undefined;
+  const m = ISO_TZ.exec(s);
+  if (!m) return undefined;
+  const [y, mo, d, h, mi, se] = m.slice(1, 7).map(Number);
+  if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return undefined;
+  const t = new Date(0);
+  t.setUTCFullYear(y, mo - 1, d);
+  if (t.getUTCFullYear() !== y || t.getUTCMonth() !== mo - 1 || t.getUTCDate() !== d) return undefined;
+  t.setUTCHours(h, mi, se, 0);
+  let offset = 0;
+  if (m[7]) {
+    const oh = Number(m[8]);
+    const om = Number(m[9]);
+    if (oh > 23 || om > 59) return undefined;
+    offset = (m[7] === "+" ? 1 : -1) * (oh * 3600 + om * 60);
+  }
+  return BigInt(t.getTime() / 1000 - offset);
 }
 
 function acdcOf(stream: string, said?: string): { acdc: Message; all: Message[] } {
@@ -362,10 +426,9 @@ function acdcOf(stream: string, said?: string): { acdc: Message; all: Message[] 
   return { acdc, all };
 }
 
-function issuedNotRevoked(all: Message[], said: string): string {
-  const tel = all.filter((m) => m.ked.i === said && (m.ked.t === "iss" || m.ked.t === "rev" || m.ked.t === "bis" || m.ked.t === "brv"));
-  if (!tel.some((m) => m.ked.t === "iss" || m.ked.t === "bis")) return "no issuance event";
-  if (tel.some((m) => m.ked.t === "rev" || m.ked.t === "brv")) return "revoked";
+/** The issuance's TEL event and an anchoring seal are present (verified later by verifyIssuance). Revocations: see anchoredRevocation. */
+function issued(all: Message[], said: string): string {
+  if (!all.some((m) => m.ked.i === said && (m.ked.t === "iss" || m.ked.t === "bis"))) return "no issuance event";
   const anchored = all.some(
     (m) => m.ked.t === "ixn" && Array.isArray(m.ked.a) && m.ked.a.some((s: any) => s && s.i === said && s.s === "0"),
   );
@@ -382,7 +445,7 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     const leNab = acdcOf(ev.cesr.leNab);
     for (const [name, c] of [["ECR", ecr], ["body LE", leBody], ["QVI", qvi], ["accreditation", acc], ["NAB LE", leNab]] as const) {
       if (!saidOk(c.acdc)) return fail(code, `${name} credential: SAID does not match its content`);
-      const st = issuedNotRevoked(c.all, c.acdc.ked.d);
+      const st = issued(c.all, c.acdc.ked.d);
       if (st) return fail(code, `${name} credential: ${st}`);
     }
     const E = ecr.acdc.ked, L = leBody.acdc.ked, Q = qvi.acdc.ked, A = acc.acdc.ked, N = leNab.acdc.ked;
@@ -401,30 +464,55 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     if (Q.s !== SCHEMA.QVI || Q.i !== x.trustAnchor) return fail(code, "QVI credential not issued by the configured root of trust");
     if (ev.trustAnchor && ev.trustAnchor !== x.trustAnchor) return fail(code, "the evidence names another root of trust");
     // Accreditation by the NAB, covering the CN code
-    if (A.s !== ev.accreditationSchema) return fail(code, "accreditation credential has another schema");
+    if (A.s !== SCHEMA.ACCREDITATION) return fail(code, "accreditation credential has another schema");
     if (A.a?.i !== L.a?.i || A.a?.LEI !== x.verifierLEI) return fail(code, "accreditation issued to another body");
     if (!Array.isArray(A.a?.cnScope) || !A.a.cnScope.includes(x.cnCode)) return fail(code, `accreditation scope does not include CN ${x.cnCode}`);
     if (A.e?.nab?.n !== N.d || A.i !== N.a?.i) return fail(code, "accreditation not issued by the accreditation body");
     if (N.s !== SCHEMA.LE || N.e?.qvi?.n !== Q.d) return fail(code, "accreditation body has no LE vLEI from the QVI");
-    if (x.registeredAt !== undefined && A.a?.validUntil) {
-      const until = BigInt(Math.floor(Date.parse(A.a.validUntil) / 1000));
-      if (x.registeredAt > until) return fail(code, "accreditation had expired at registration");
-    }
+    if (A.a?.validUntil === undefined) return fail(code, "accreditation credential has no validUntil");
+    const until = isoSeconds(A.a.validUntil);
+    if (until === undefined) return fail(code, "accreditation validUntil is not an ISO 8601 time with a time zone");
+    if (x.registeredAt !== undefined && x.registeredAt > until) return fail(code, "accreditation had expired at registration");
     // Each issuance signed by its issuer (sdk/kel.ts), root first: a chain that claims the pinned root
     // without the root's key fails on the QVI credential.
     for (const [name, c] of [["QVI", qvi], ["NAB LE", leNab], ["body LE", leBody], ["accreditation", acc], ["ECR", ecr]] as const) {
       const r = verifyIssuance(c.all, c.acdc.ked);
       if (r) return fail(code, `${name} credential: ${r}`);
     }
-    if (x.onchain) {
-      if (hashString(L.d) !== x.onchain.leCredSaidHash) return fail(code, "allowlist LE hash differs from the body's LE vLEI");
-      if (hashString(A.d) !== x.onchain.accreditationSaidHash) return fail(code, "allowlist accreditation hash differs");
-      if (hashString(E.d) !== x.onchain.ecrSaidHash) return fail(code, "allowlist ECR hash differs from the auditor's role credential");
+    // Revocations in the evidence, only those the issuer anchored (verified like the issuance).
+    const revokedAfter: string[] = [];
+    for (const [name, c] of [["QVI", qvi], ["NAB LE", leNab], ["body LE", leBody], ["accreditation", acc], ["ECR", ecr]] as const) {
+      const rev = anchoredRevocation(c.all, c.acdc.ked);
+      if (!rev) continue;
+      if (x.registeredAt === undefined) return fail(code, `${name} credential: revoked`);
+      const at = isoSeconds(rev.ked.dt);
+      if (at === undefined) return fail(code, `${name} credential: revoked, at a time that is not ISO 8601 with a time zone`);
+      if (at < x.registeredAt) return fail(code, `${name} credential: revoked before registration`);
+      revokedAfter.push(name);
     }
+    if (x.onchain) {
+      const o = x.onchain;
+      if (hashString(L.d) !== o.leCredSaidHash) return fail(code, "allowlist LE hash differs from the body's LE vLEI");
+      if (hashString(A.d) !== o.accreditationSaidHash) return fail(code, "allowlist accreditation hash differs");
+      if (hashString(E.d) !== o.ecrSaidHash) return fail(code, "allowlist ECR hash differs from the auditor's role credential");
+      // Authority at registration, from the allowlist. The contract checked the same at registration
+      // (isAuthorizedAt: added at or before t, t < revokedAt; t <= accreditedUntil). A revocation in the
+      // registration's own block (revokedAt = registeredAt) came after it, or the registration would
+      // have reverted: check 4 shows it as CONTESTED, as any revocation after registration.
+      const t = x.registeredAt;
+      if (t === undefined) return fail(code, "no registration time to check the allowlist records against");
+      if (typeof o.accreditedUntil !== "bigint" || typeof o.auditorAddedAt !== "bigint" || typeof o.auditorRevokedAt !== "bigint") {
+        return fail(code, "the allowlist records of the body and the auditor were not read");
+      }
+      if (o.auditorAddedAt === 0n || o.auditorAddedAt > t) return fail(code, "the auditor was not on the allowlist at registration");
+      if (o.auditorRevokedAt !== 0n && o.auditorRevokedAt < t) return fail(code, "the auditor's ECR was revoked on the allowlist before registration");
+      if (t > o.accreditedUntil) return fail(code, "accreditation (on-chain accreditedUntil) had expired at registration");
+    }
+    const after = revokedAfter.length ? `; revoked after registration in the evidence: ${revokedAfter.join(", ")}` : "";
     return {
       ok: true,
       code: "",
-      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts${x.onchain ? "; hashes match the on-chain allowlist" : ""}`,
+      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts${x.onchain ? "; hashes match the on-chain allowlist" : ""}${after}`,
     };
   } catch (e) {
     return fail(code, `evidence could not be read: ${(e as Error).message}`);

@@ -83,6 +83,9 @@ export function vleiCheckers(
           leCredSaidHash: inst.leCredSaidHash,
           accreditationSaidHash: inst.accreditationSaidHash,
           ecrSaidHash: aud.ecrSaidHash,
+          accreditedUntil: inst.accreditedUntil,
+          auditorAddedAt: aud.addedAt,
+          auditorRevokedAt: aud.revokedAt,
         };
       }
       const r = verifyAuthority(bundle, {

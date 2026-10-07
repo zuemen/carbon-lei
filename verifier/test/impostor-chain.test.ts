@@ -30,7 +30,11 @@ const expectFor = (trustAnchor: string) => ({
     leCredSaidHash: hashString(chain.saids.leBody),
     accreditationSaidHash: hashString(chain.saids.accreditation),
     ecrSaidHash: hashString(chain.saids.ecr),
+    accreditedUntil: BigInt(Date.parse(demo.entities.impostorChain.body.accreditedUntil) / 1000),
+    auditorAddedAt: 1n,
+    auditorRevokedAt: 0n,
   },
+  registeredAt: 2n,
 });
 
 describe("attack 4: synthetic impostor chain", () => {

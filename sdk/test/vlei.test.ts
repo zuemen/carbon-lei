@@ -79,10 +79,14 @@ const expectAuth = {
   auditorAID: anchor.auditor,
   verifierLEI: "ZZZZ00EUVERIFDEMO152",
   cnCode: "7318",
+  registeredAt: BigInt(Date.parse("2026-10-06T00:00:00Z") / 1000),
   onchain: {
     leCredSaidHash: hashString(vlei.credentials.leVerifier.said),
     accreditationSaidHash: hashString(vlei.credentials.accreditation.said),
     ecrSaidHash: hashString(vlei.credentials.ecr.said),
+    accreditedUntil: BigInt(Date.parse("2030-12-31T00:00:00Z") / 1000),
+    auditorAddedAt: BigInt(Date.parse("2026-10-05T00:00:00Z") / 1000),
+    auditorRevokedAt: 0n,
   },
 };
 
@@ -396,7 +400,11 @@ describe.skipIf(!hasImpostor)("attack 4: the impostor's exported chain (fixtures
         leCredSaidHash: hashString(iv.credentials.leBody.said),
         accreditationSaidHash: hashString(iv.credentials.accreditation.said),
         ecrSaidHash: hashString(iv.credentials.ecr.said),
+        accreditedUntil: BigInt(Date.parse("2030-12-31T00:00:00Z") / 1000),
+        auditorAddedAt: 1n,
+        auditorRevokedAt: 0n,
       },
+      registeredAt: 2n,
     };
     return { iv, bundle, x };
   };
@@ -558,8 +566,8 @@ describe("checks 6-8: vleiCheckers on the Sepolia demo proof", () => {
   const allowlist = (over: Partial<typeof expectAuth.onchain> = {}) => {
     const o = { ...expectAuth.onchain, ...over };
     return {
-      institution: vi.fn(async () => ({ leCredSaidHash: o.leCredSaidHash, accreditationSaidHash: o.accreditationSaidHash })),
-      auditor: vi.fn(async () => ({ ecrSaidHash: o.ecrSaidHash })),
+      institution: vi.fn(async () => ({ leCredSaidHash: o.leCredSaidHash, accreditationSaidHash: o.accreditationSaidHash, accreditedUntil: o.accreditedUntil })),
+      auditor: vi.fn(async () => ({ ecrSaidHash: o.ecrSaidHash, addedAt: o.auditorAddedAt, revokedAt: o.auditorRevokedAt })),
     };
   };
   const ctxOf = (over: Record<string, unknown> = {}) => ({ core, disclosed, rejected: [], report, reader: allowlist(), ...over }) as never;
