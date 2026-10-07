@@ -49,8 +49,10 @@ export const CODE_TEXT: Record<string, string> = {
   BAD_SIGNATURE: "The signature does not come from the verification body named in the credential.",
   "REPORT_INVALID/NOT_REGISTERED": "No report with this credential ID is registered on Sepolia.",
   "REPORT_INVALID/REVOKED": "The verification body revoked this report.",
-  "REPORT_INVALID/EXPIRED": "The report was no longer valid when this batch was claimed.",
-  "REPORT_INVALID/SUPERSEDED": "This batch was claimed after the report was replaced by a revised report.",
+  "REPORT_INVALID/EXPIRED":
+    "The report was no longer valid at the time checked: when this batch was claimed for your EORI, otherwise now.",
+  "REPORT_INVALID/SUPERSEDED":
+    "The report was replaced by a revised report before the time checked: when this batch was claimed for your EORI, otherwise now.",
   "REPORT_INVALID/REGISTRANT_MISMATCH": "The report on-chain was registered by a different verification body.",
   "REPORT_INVALID/SUPPLIER_MISMATCH": "The supplier in the proof does not match the report on-chain.",
   "REPORT_INVALID/ISSUER_MISMATCH": "The auditor or quantity on-chain does not match the signed credential.",

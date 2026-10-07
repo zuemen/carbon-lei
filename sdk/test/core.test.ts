@@ -26,7 +26,7 @@ import {
 import { buildCredential, decodeDisclosure, disclosureDigest, encodeDisclosure, selectDisclosures, sortDigests } from "../disclosure.ts";
 import { recoverIssuer, typedDataOf } from "../eip712.ts";
 import { base64url, fromBase64url, newSalt } from "../encoding.ts";
-import { SAID_DUMMY, computeSaid, saidify, verifySaid } from "../said.ts";
+import { SAID_DUMMY, computeSaid, duplicateKey, saidify, verifySaid } from "../said.ts";
 
 const v = JSON.parse(readFileSync(new URL("../../fixtures/vectors.json", import.meta.url), "utf8"));
 const inp = v.inputs;
@@ -95,6 +95,18 @@ describe("SAID (S1)", () => {
     const filled = saidify({ d: "", ...noD });
     expect(filled.d).toBe(d);
     expect(verifySaid(JSON.stringify(filled))).toBe(true);
+  });
+  it("a repeated key (at any depth, also written with an escape) or a top-level __proto__ key never verifies", () => {
+    const core = v.V7.coreJson as string;
+    const real = JSON.parse(core).validUntil;
+    expect(duplicateKey(core)).toBeNull();
+    expect(verifySaid(core.replace(`"validUntil":"${real}"`, `"validUntil":"2099-12-31T00:00:00Z","validUntil":"${real}"`))).toBe(false);
+    expect(verifySaid(core.replace(/^\{/, '{"__proto__":{"x":1},'))).toBe(false);
+    expect(duplicateKey('{"a":1,"\\u0061":2}')).toBe("a");
+    expect(duplicateKey('{"a":{"b":1,"b":2}}')).toBe("b");
+    expect(duplicateKey('[{"a":1},{"a":2}]')).toBeNull();
+    expect(duplicateKey('{"a":"\\":\\"","b":["a","a"],"c":{"a":1}}')).toBeNull();
+    expect(duplicateKey('{"a" : 1, "a"\n:2}')).toBe("a");
   });
 });
 

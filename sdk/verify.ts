@@ -19,15 +19,19 @@ import type { ChainReader, ReportRecord, ShipmentStatus } from "./chain.ts";
 import {
   METHODOLOGY_NOTE,
   REQUIRED_DISCLOSURES,
+  SEPOLIA_CHAIN_ID,
   checkNormalForms,
+  checkShipmentForms,
   isoToSeconds,
+  kgToTonnes,
   tonnesToKg,
   type Hex,
 } from "./credential.ts";
+import { extractShapeProblem } from "./consistency.ts";
 import { decodeDisclosure, disclosureDigest, type CredentialCore, type Presentation } from "./disclosure.ts";
 import { recoverIssuer } from "./eip712.ts";
 import { isSalt } from "./encoding.ts";
-import { verifySaid } from "./said.ts";
+import { duplicateKey, verifySaid } from "./said.ts";
 
 export type CheckStatus = "pass" | "fail" | "warn" | "skipped";
 
@@ -53,15 +57,33 @@ export interface OnchainView {
   supersededBy?: Hex;
 }
 
+/**
+ * VALID: every check that applies passed. INVALID: a check failed. CONTESTED: valid, but the auditor was revoked or
+ * the body suspended soon after registration (check 4). INCOMPLETE: no check failed, but checks that decide validity
+ * were not run (no evidence checkers for checks 6 and 7, or the offline view without a chain); not a pass.
+ */
+export type Overall = "VALID" | "INVALID" | "CONTESTED" | "INCOMPLETE";
+
+/** Something the caller should know about how the checks were run; it does not change any check. */
+export interface VerificationWarning {
+  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED";
+  detail: string;
+}
+
 export interface VerificationResult {
-  overall: "VALID" | "INVALID" | "CONTESTED";
+  overall: Overall;
   checks: CheckResult[];
   disclosed: Record<string, string>;
   hidden: number;
   onchain?: OnchainView;
   primaryCode: string;
-  /** Time used for checks 4 and 5: the shipment's claimedAt, or now. */
+  /**
+   * Time used for checks 4 and 5: the shipment's claimedAt when check 5 binds the batch to the verifier's EORI,
+   * otherwise the time of the pinned head block.
+   */
   checkedAt?: bigint;
+  /** Absent in results recorded before warnings existed (the demo's cached view). */
+  warnings?: VerificationWarning[];
 }
 
 /** Plug-ins for checks 6–8 (vLEI evidence and report reconciliation live in their own modules). */
@@ -81,12 +103,27 @@ export interface EvidenceContext {
 }
 
 export interface VerifyOptions {
-  /** The verifier's own EORI, to confirm the shipment was declared to them (check 5d). */
+  /**
+   * The verifier's own EORI, to confirm the shipment was declared to them (check 5d). Only then is the report
+   * judged at the shipment's claim time; without it, at the head block's time.
+   */
   importerEORI?: string;
   /** CONTESTED window before a revocation or suspension, in hours (default 24). */
   contestedWindowHours?: number;
   checkers?: EvidenceCheckers;
+  /**
+   * Largest accepted age, in seconds, of the RPC's latest block against this computer's clock; an older head
+   * means a node that is behind, and the verification throws rather than read an old state. Default:
+   * `DEFAULT_MAX_HEAD_AGE_SEC` for the deployment's chain (300 s on Sepolia; no limit on other chains, such as a
+   * local anvil chain). `Infinity` turns the limit off.
+   */
+  maxHeadAgeSec?: number;
+  /** Clock for the head-age limit, in milliseconds (default `Date.now`). */
+  now?: () => number;
 }
+
+/** Default head-age limit per chain ID, in seconds (Sepolia makes a block every 12 s). */
+export const DEFAULT_MAX_HEAD_AGE_SEC: Readonly<Record<number, number>> = { [SEPOLIA_CHAIN_ID]: 300 };
 
 const NAMES = [
   "Structure",
@@ -112,16 +149,22 @@ function early<T>(p: Promise<T>): Promise<T> {
   return p;
 }
 
-export async function verifyPresentation(
-  p: Presentation,
-  reader: ChainReader,
-  opts: VerifyOptions = {},
-): Promise<VerificationResult> {
-  const checks: CheckResult[] = [];
-  const disclosed: Record<string, string> = {};
+/** What checks 0-2 found, for the checks that follow. */
+interface LocalPart {
+  core: CredentialCore;
+  decoded: { name: string; value: string; salt: string; encoded: string }[];
+  get: (name: string) => string;
+  checks: CheckResult[];
+  disclosed: Record<string, string>;
+  hidden: number;
+}
 
+/** Checks 0-2: they read only the proof. A malformed proof (check 0) gives its final result. */
+function localChecks(p: Presentation): LocalPart | VerificationResult {
   // ---------------------------------------------------------------- 0 structure
   let core: CredentialCore;
+  const checks: CheckResult[] = [];
+  const disclosed: Record<string, string> = {};
   const decoded: { name: string; value: string; salt: string; encoded: string }[] = [];
   const malformed = (detail: string): VerificationResult => ({
     overall: "INVALID",
@@ -172,14 +215,27 @@ export async function verifyPresentation(
   ) {
     return malformed("shipment part incomplete");
   }
+  const badShipment = p.shipment ? checkShipmentForms(p.shipment) : [];
+  if (badShipment.length) return malformed(`shipment fields not in normal form: ${badShipment.join(", ")}`);
+  if (p.reportExtract !== undefined) {
+    const shape = extractShapeProblem(p.reportExtract);
+    if (shape) return malformed(shape);
+  }
   checks.push(result(0, "pass"));
   const get = (n: string) => byName.get(n) as string;
 
   // --------------------------------------------------------------------- 1 SAID
+  // The SAID covers the parsed object, so a text whose parse loses information (a repeated key keeps only its
+  // last value; a top-level "__proto__" key is not copied into the digest) is refused from the raw text.
+  const repeated = duplicateKey(p.core);
   checks.push(
-    verifySaid(p.core)
-      ? result(1, "pass", "", "credential ID matches its content")
-      : result(1, "fail", "SAID_MISMATCH", "content changed after the credential ID was computed"),
+    repeated !== null
+      ? result(1, "fail", "SAID_MISMATCH", `the credential core repeats the key ${JSON.stringify(repeated)}`)
+      : Object.hasOwn(core, "__proto__")
+        ? result(1, "fail", "SAID_MISMATCH", 'the credential core has a top-level "__proto__" key')
+        : verifySaid(p.core)
+          ? result(1, "pass", "", "credential ID matches its content")
+          : result(1, "fail", "SAID_MISMATCH", "content changed after the credential ID was computed"),
   );
 
   // ---------------------------------------------------------------- 2 disclosure
@@ -198,6 +254,85 @@ export async function verifyPresentation(
       ? result(2, "fail", "DISCLOSURE_TAMPERED", tampered)
       : result(2, "pass", "", `${Object.keys(disclosed).length} fields disclosed, ${hidden} hidden by supplier`),
   );
+
+  return { core, decoded, get, checks, disclosed, hidden };
+}
+
+/** Check 3: the EIP-712 signer under the registry's signing domain on `chainId`. */
+async function signatureCheck(
+  p: Presentation,
+  { core, get }: LocalPart,
+  registry: Hex,
+  chainId: number,
+): Promise<{ check: CheckResult; verifiedKg?: bigint; validUntilSec?: bigint }> {
+  let verifiedKg: bigint | undefined;
+  let validUntilSec: bigint | undefined;
+  try {
+    verifiedKg = tonnesToKg(get("verifiedTonnes"));
+    validUntilSec = isoToSeconds(core.validUntil);
+    const signer = await recoverIssuer(
+      registry,
+      {
+        credSAID: core.d,
+        supplierCommit: supplierCommitOf(get("supplierLEI"), get("idSalt") as Hex),
+        verifiedKg,
+        validUntil: validUntilSec,
+      },
+      p.signature,
+      chainId,
+    );
+    return {
+      check:
+        lower(signer) === lower(core.issuer.verifierAddress)
+          ? result(3, "pass", "", `signed by ${core.issuer.verifierAddress}`)
+          : result(3, "fail", "BAD_SIGNATURE", "signature does not match the issuer in the credential"),
+      verifiedKg,
+      validUntilSec,
+    };
+  } catch (e) {
+    return {
+      check: result(3, "fail", "BAD_SIGNATURE", `signature could not be checked: ${(e as Error).message}`),
+      verifiedKg,
+      validUntilSec,
+    };
+  }
+}
+
+const isFinal = (x: LocalPart | VerificationResult): x is VerificationResult => "overall" in x;
+
+/**
+ * Checks 0-3 without a chain (the demo's offline view): the signature is checked under the signing domain of
+ * `registry` on `chainId`, taken from the deployment, not from a node. Checks 4-8 need the chain and are reported
+ * as not run, so the result is INCOMPLETE at best, never VALID.
+ */
+export async function verifyOffline(
+  p: Presentation,
+  deployment: { registry: Hex; chainId: number },
+): Promise<VerificationResult> {
+  const local = localChecks(p);
+  if (isFinal(local)) return local;
+  const { checks, disclosed, hidden } = local;
+  checks.push((await signatureCheck(p, local, deployment.registry, deployment.chainId)).check);
+  for (let i = 4; i <= 8; i++) checks.push(result(i, "skipped", "", "not run: needs a live connection to the chain"));
+  const failed = checks.filter((x) => x.status === "fail");
+  return {
+    overall: failed.length ? "INVALID" : "INCOMPLETE",
+    checks,
+    disclosed,
+    hidden,
+    primaryCode: failed[0]?.code ?? "",
+    warnings: [],
+  };
+}
+
+export async function verifyPresentation(
+  p: Presentation,
+  reader: ChainReader,
+  opts: VerifyOptions = {},
+): Promise<VerificationResult> {
+  const local = localChecks(p);
+  if (isFinal(local)) return local;
+  const { core, decoded, get, checks, disclosed, hidden } = local;
 
   // All chain reads are pinned to one block: round 0 reads the latest block B (number and
   // timestamp); every view call after that reads block B and every event search ends at B, so the
@@ -219,6 +354,18 @@ export async function verifyPresentation(
       `RPC node is behind: its latest block ${head.number} is before the contracts were deployed (block ${reader.deployedBlock}); try again or use another RPC`,
     );
   }
+  // ... or from a node that stopped following the chain: its head is older than the clock allows.
+  const maxAge = opts.maxHeadAgeSec ?? DEFAULT_MAX_HEAD_AGE_SEC[reader.chainId];
+  if (maxAge !== undefined) {
+    if (Number.isNaN(maxAge) || maxAge < 0) throw new Error(`maxHeadAgeSec must be a number of seconds ≥ 0, got ${maxAge}`);
+    const nowSec = BigInt(Math.floor((opts.now ?? Date.now)() / 1000));
+    const age = nowSec - head.timestamp;
+    if (maxAge !== Infinity && age > BigInt(Math.floor(maxAge))) {
+      throw new Error(
+        `RPC node is behind: its latest block ${head.number} is ${age} s old, more than the ${maxAge} s allowed, so it may not show a recent revocation; try again or use another RPC (or check this computer's clock)`,
+      );
+    }
+  }
   const rd = reader.at(head.number);
   const repP = early(rd.report(reportKey));
   const statusP = batchKey ? early(rd.shipmentStatus(batchKey)) : undefined;
@@ -227,30 +374,15 @@ export async function verifyPresentation(
 
   // ----------------------------------------------------------------- 3 signature
   const chainId = await chainIdP;
-  let verifiedKg: bigint | undefined;
-  let validUntilSec: bigint | undefined;
-  try {
-    verifiedKg = tonnesToKg(get("verifiedTonnes"));
-    validUntilSec = isoToSeconds(core.validUntil);
-    const signer = await recoverIssuer(
-      rd.registry,
-      {
-        credSAID: core.d,
-        supplierCommit: supplierCommitOf(get("supplierLEI"), get("idSalt") as Hex),
-        verifiedKg,
-        validUntil: validUntilSec,
-      },
-      p.signature,
-      chainId,
+  // The deployment file names the chain its contracts are on; an RPC on another chain reads other contracts.
+  if (chainId !== reader.chainId) {
+    throw new Error(
+      `RPC is on chain ${chainId}, but the deployment is for chain ${reader.chainId}; use an RPC for chain ${reader.chainId}`,
     );
-    checks.push(
-      lower(signer) === lower(core.issuer.verifierAddress)
-        ? result(3, "pass", "", `signed by ${core.issuer.verifierAddress}`)
-        : result(3, "fail", "BAD_SIGNATURE", "signature does not match the issuer in the credential"),
-    );
-  } catch (e) {
-    checks.push(result(3, "fail", "BAD_SIGNATURE", `signature could not be checked: ${(e as Error).message}`));
   }
+  const sig = await signatureCheck(p, local, rd.registry, chainId);
+  const { verifiedKg, validUntilSec } = sig;
+  checks.push(sig.check);
 
   // ------------------------------------------------------------- 4 on-chain report
   const onchain: OnchainView = { reportKey };
@@ -282,7 +414,18 @@ export async function verifyPresentation(
     onchain.batchKey = batchKey;
   }
   const atClaim = status !== undefined && status.claimedAt !== 0n && lower(status.reportKey) === lower(reportKey);
-  const t = atClaim && status ? status.claimedAt : head.timestamp;
+  // The report is judged at the claim time only for the importer the batch was declared to: the EORI given by
+  // the verifier, with the proof's salt, must give the claim's importerCommit. Anyone else (no EORI, or another
+  // one) judges it at the head block's time, so an old claim for someone else cannot bring back a credential
+  // that has since been superseded or has expired.
+  const boundToVerifier =
+    atClaim &&
+    status !== undefined &&
+    opts.importerEORI !== undefined &&
+    opts.importerEORI !== "" &&
+    p.shipment !== undefined &&
+    status.importerCommit === importerCommitOf(opts.importerEORI, p.shipment.importerSalt);
+  const t = boundToVerifier && status ? status.claimedAt : head.timestamp;
   let contested = false;
 
   // Checks 6-8 only need the report and the disclosed fields: start them now, alongside check 4's reads.
@@ -340,7 +483,7 @@ export async function verifyPresentation(
     const replacedInLayer = rep.supersededBy !== ZERO32 && t >= supersededAt;
     const scopeMoved = rep.reportIdHash !== scope.reportIdHash && (unboundAt === 0n || t >= unboundAt);
     const sameBlockException =
-      atClaim &&
+      boundToVerifier &&
       status?.reportValid === true &&
       (replacedInLayer || scopeMoved) &&
       (!replacedInLayer || supersededAt === t) &&
@@ -450,7 +593,7 @@ export async function verifyPresentation(
     checks.push(
       problem
         ? result(5, "fail", "SHIPMENT_MISMATCH", problem)
-        : result(5, "pass", "", `${p.shipment.quantityTonnes} t declared to you on the shared ledger`),
+        : result(5, "pass", "", `${kgToTonnes(status.quantityKg)} t declared to you on the shared ledger`),
     );
   }
 
@@ -478,14 +621,32 @@ export async function verifyPresentation(
     checks.push({ ...(await reconciliationP), index: 8, name: NAMES[8] });
   }
 
+  const warnings: VerificationWarning[] = [];
+  if (p.shipment && !opts.importerEORI) {
+    warnings.push({
+      code: "SHIPMENT_NOT_BOUND",
+      detail:
+        "no EORI given: check 5 did not bind the shipment to you, so check 4 judged the report at the latest block's time, not at the shipment's claim time",
+    });
+  }
+  // Checks 6 and 7 decide whether the auditor and the body were authorised: a result without them is not a pass.
+  const notChecked = [6, 7].filter((i) => checks.find((x) => x.index === i)?.status === "skipped");
+  if (notChecked.length) {
+    warnings.push({
+      code: "EVIDENCE_NOT_CHECKED",
+      detail: `check${notChecked.length > 1 ? "s" : ""} ${notChecked.join(" and ")} not run: no evidence checker was supplied`,
+    });
+  }
+
   const failed = checks.filter((x) => x.status === "fail");
   return {
-    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : "VALID",
+    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length ? "INCOMPLETE" : "VALID",
     checks,
     disclosed,
     hidden,
     onchain,
     primaryCode: failed[0]?.code ?? "",
     checkedAt: t,
+    warnings,
   };
 }

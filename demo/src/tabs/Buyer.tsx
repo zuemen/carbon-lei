@@ -2,11 +2,11 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { exportPactFromProof, type PactProduct } from "../../../sdk/pact.ts";
 import { disclosureCounts } from "../../../sdk/summary.ts";
-import { verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
+import { verifyOffline, verifyPresentation, type CheckResult, type VerificationResult } from "../../../sdk/verify.ts";
 import fixture from "../../../fixtures/demo.json";
 import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source } from "../components.tsx";
-import { comparisonFigures, whatIfFigures, type DemoData } from "../data.ts";
+import { comparisonFigures, proofComparison, whatIfFigures, type DemoData } from "../data.ts";
 import { CODE_TEXT } from "../messages.ts";
 import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 import { CheckSources } from "./CheckSources.tsx";
@@ -145,10 +145,19 @@ function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
   );
 }
 
-/** One line under the Verify button: how many checks passed and, only for a valid proof, the declared-emissions gap. */
-function VerifySummary({ result, onSeeComparison }: { result: VerificationResult; onSeeComparison: () => void }) {
-  const { data } = useApp();
-  const f = comparisonFigures(data.comparison);
+/**
+ * One line under the Verify button: how many checks passed and, only for a valid proof, the declared-emissions gap
+ * computed from that proof (`cmp`, null when it has nothing to compare).
+ */
+function VerifySummary({
+  result,
+  cmp,
+  onSeeComparison,
+}: {
+  result: VerificationResult;
+  cmp: DemoData["comparison"] | null;
+  onSeeComparison: () => void;
+}) {
   const kinds = CHECKS.map((c) => kindOf(result.checks.find((r) => r.index === c.n)));
   const passed = kinds.filter((k) => k === "pass").length;
   const review = kinds.filter((k) => k === "review").length;
@@ -170,6 +179,15 @@ function VerifySummary({ result, onSeeComparison }: { result: VerificationResult
       </p>
     );
   }
+  if (result.overall === "INCOMPLETE") {
+    return (
+      <p className="verify-summary review">
+        <span aria-hidden="true">! </span>
+        <strong>Not verified — checks 4–8 were not run</strong> — {counts}. They need a live connection to Sepolia. Do
+        not rely on this proof's value: no declared-emissions gap is shown.
+      </p>
+    );
+  }
   if (result.overall === "CONTESTED") {
     return (
       <p className="verify-summary review">
@@ -179,11 +197,19 @@ function VerifySummary({ result, onSeeComparison }: { result: VerificationResult
       </p>
     );
   }
+  const f = cmp ? comparisonFigures(cmp) : null;
   return (
     <p className="verify-summary ok">
       <span aria-hidden="true">✓ </span>
-      <strong>{counts}</strong> · declared-emissions gap for this {fmt(f.q)} t shipment: {fmt(f.gap)} tCO2e (≈ €
-      {fmt(f.eur, 0)} gross, illustrative){" "}
+      <strong>{counts}</strong> ·{" "}
+      {f ? (
+        <>
+          declared-emissions gap for this {fmt(f.q)} t shipment: {fmt(f.gap)} tCO2e (≈ €
+          {fmt(f.eur, 0)} gross, illustrative)
+        </>
+      ) : (
+        <>verified intensity {result.disclosed.specificEmbeddedEmissions_tCO2e_per_t ?? "not disclosed"} tCO2e/t</>
+      )}{" "}
       <button type="button" className="link-btn" onClick={onSeeComparison}>
         See comparison ↓
       </button>
@@ -251,14 +277,18 @@ function ProofSummary({ text }: { text: string }) {
 
 export function Buyer() {
   const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer } = useApp();
-  const [result, setResult] = useState<VerificationResult | null>(null);
+  // The last verification: the text it read, that text's proof and the result. It is shown only while the text box
+  // still holds that same text, so editing, loading or tampering never leaves an earlier result on screen.
+  const [verified, setVerified] = useState<{ text: string; proof: Presentation; result: VerificationResult; cached: boolean } | null>(null);
+  const current = verified && verified.text === proofText ? verified : null;
+  const result = current?.result ?? null;
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [tampered, setTampered] = useState(false);
   const [fromQr, setFromQr] = useState(false);
-  // The proof behind `result` (the text box may be edited after Verify); used by the PACT export.
-  const [checked, setChecked] = useState<Presentation | null>(null);
+  // The proof behind `result`; used by the PACT export and the verification record.
+  const checked = current?.proof ?? null;
   const [pactBusy, setPactBusy] = useState(false);
   const [pactError, setPactError] = useState("");
   // Bumped when a verification finishes; on narrow screens the summary line under Verify is then scrolled into view.
@@ -311,11 +341,24 @@ export function Buyer() {
       return;
     }
     if (offline) {
-      if (data.cached?.verification) {
-        setResult(data.cached.verification as VerificationResult);
-        setChecked(proof);
-        setFinished((n) => n + 1);
+      // The cached result belongs to the demo proof only: it is shown for that exact text (as "Load the demo proof"
+      // puts it in the box). Any other text gets checks 0-3 in this browser, under the deployment's signing domain;
+      // checks 4-8 need the chain, so the result is never VALID.
+      if (data.cached?.verification && text === JSON.stringify(data.proof, null, 2)) {
+        setVerified({ text, proof, result: data.cached.verification as VerificationResult, cached: true });
+      } else {
+        try {
+          const r = await verifyOffline(proof, {
+            registry: data.deployment.contracts.EmissionsClaimRegistry.address,
+            chainId: data.network.chainId,
+          });
+          setVerified({ text, proof, result: r, cached: false });
+        } catch (e) {
+          setError(`Verification could not finish: ${(e as Error).message}`);
+          return;
+        }
       }
+      setFinished((n) => n + 1);
       return;
     }
     if (!reader) {
@@ -324,8 +367,8 @@ export function Buyer() {
     }
     setRunning(true);
     try {
-      setResult(await verifyPresentation(proof, reader, { importerEORI: data.importer.eori, checkers: evidenceCheckers(data) }));
-      setChecked(proof);
+      const r = await verifyPresentation(proof, reader, { importerEORI: data.importer.eori, checkers: evidenceCheckers(data) });
+      setVerified({ text, proof, result: r, cached: false });
       setFinished((n) => n + 1);
     } catch (e) {
       setError(`Verification could not finish: ${(e as Error).message}`);
@@ -339,29 +382,34 @@ export function Buyer() {
   const hiddenN = counts ? counts.hidden : (result?.hidden ?? 0);
   const hiddenText = `${hiddenN} field${hiddenN === 1 ? "" : "s"} hidden by supplier${counts?.rejected ? ` · ${counts.rejected} disclosure${counts.rejected === 1 ? "" : "s"} rejected` : ""}.`;
   const rejectedProof = !!result && !running && result.overall === "INVALID";
+  const incomplete = !!result && !running && result.overall === "INCOMPLETE";
   const rejectedCheck = rejectedProof ? result?.checks.find((c) => c.status === "fail") : undefined;
   const malformed = result?.checks.find((c) => c.index === 0 && c.status === "fail");
-  const cmp = data.comparison;
-  const { q, dq, vq, gap, eur } = comparisonFigures(cmp);
+  // Before any verification the card shows the demo report's figures (illustrative); after one, the verified
+  // proof's own figures, or none.
+  const fromProof = result && !rejectedProof && !incomplete ? proofComparison(data.comparison, data.report.cnCode, result, checked?.shipment) : null;
+  const cmp = fromProof ? fromProof.cmp : data.comparison;
+  const noComparison = fromProof && !fromProof.cmp ? fromProof.why : "";
+  const { q, dq, vq, gap, eur } = comparisonFigures(cmp ?? data.comparison);
+  const verifiedValue = result?.disclosed.specificEmbeddedEmissions_tCO2e_per_t;
   const claimTx = data.txs.find((t) => t.step === "claim1");
   const revokeTx = data.txs.find((t) => t.step === "revokeAuditor" && t.result === "success");
   const isDemoProof = (() => {
     try {
-      return JSON.parse((JSON.parse(proofText) as Presentation).core).d === JSON.parse(data.proof.core).d;
+      return !!checked && JSON.parse(checked.core).d === JSON.parse(data.proof.core).d;
     } catch {
       return false;
     }
   })();
+  const batchId = checked?.shipment?.batchId ?? "";
+  const acceptedNow = accepted && result?.overall === "VALID";
 
   // A file the importer can keep with its own records. Built in the browser from this page's checks; not signed.
   function downloadRecord() {
-    if (!result) return;
+    if (!result || !checked) return;
     let credSAID = "";
-    let batchId = "";
     try {
-      const p = JSON.parse(proofText) as Presentation;
-      credSAID = JSON.parse(p.core).d;
-      batchId = p.shipment?.batchId ?? "";
+      credSAID = JSON.parse(checked.core).d;
     } catch {
       // the checks above already reported a malformed proof
     }
@@ -381,7 +429,9 @@ export function Buyer() {
       importerEORI: data.importer.eori,
       overall: result.overall,
       checks: result.checks.map(({ index, name, status, code, detail }) => ({ index, name, status, code, detail })),
-      accepted: { quantityTonnes: q, verifiedIntensity_tCO2e_per_t: cmp.verifiedValue, declared_tCO2e: vq },
+      accepted: cmp
+        ? { quantityTonnes: q, verifiedIntensity_tCO2e_per_t: cmp.verifiedValue, declared_tCO2e: vq }
+        : { quantityTonnes: null, verifiedIntensity_tCO2e_per_t: verifiedValue ?? null, declared_tCO2e: null },
       onChainClaim: claim ? { tx: claim.hash, block: claim.block, time: claim.time, url: explorer("tx", claim.hash) } : null,
     };
     saveJson(record, `carbonlei-verification-${batchId || "record"}.json`);
@@ -422,7 +472,7 @@ export function Buyer() {
               className="btn btn-ghost"
               onClick={() => {
                 setProofText(JSON.stringify(data.proof, null, 2));
-                setResult(null);
+                setAccepted(false);
                 setTampered(false);
               }}
             >
@@ -433,7 +483,7 @@ export function Buyer() {
             </button>
           </div>
           <div className="verify-summary-slot" role="status" ref={summaryRef}>
-            {result && !running && <VerifySummary result={result} onSeeComparison={seeComparison} />}
+            {result && !running && <VerifySummary result={result} cmp={fromProof ? fromProof.cmp : null} onSeeComparison={seeComparison} />}
           </div>
           {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}
           {fromQr && <p className="fine">Proof loaded from the product passport QR code ({data.shipment.batchId}). Press Verify.</p>}
@@ -447,7 +497,10 @@ export function Buyer() {
             spellCheck={false}
             placeholder={'Paste the supplier\'s proof here, or click "Load the demo proof" above.'}
             value={proofText}
-            onChange={(e) => setProofText(e.target.value)}
+            onChange={(e) => {
+              setProofText(e.target.value);
+              setAccepted(false);
+            }}
           />
           <p className="fine">Checking as importer EORI {data.importer.eori} (fictional).</p>
           {proofText && (
@@ -487,6 +540,13 @@ export function Buyer() {
           {error && (
             <p className="check-detail bad" role="alert">
               {error}
+            </p>
+          )}
+          {offline && result && !running && (
+            <p className="fine" role="note">
+              {current?.cached
+                ? `Offline view: the result recorded for the demo proof on ${data.cached?.time.slice(0, 10)}; no check was re-run.`
+                : "Offline view: checks 0–3 were recomputed in your browser; checks 4–8 need a live connection and were not run."}
             </p>
           )}
           {malformed && (
@@ -536,6 +596,10 @@ export function Buyer() {
                 <span className="stamp" style={{ color: "var(--amber)" }}>
                   Needs review
                 </span>
+              ) : result.overall === "INCOMPLETE" ? (
+                <span className="stamp" style={{ color: "var(--amber)" }}>
+                  Not verified
+                </span>
               ) : (
                 <span className="stamp red">Rejected</span>
               )}
@@ -562,19 +626,19 @@ export function Buyer() {
         tabIndex={-1}
       >
         <p className="sheet-kicker" id="cmp-h">
-          {rejectedProof ? "CBAM default" : "Verified value vs CBAM default"}
+          {rejectedProof || incomplete ? "CBAM default" : "Verified value vs CBAM default"}
         </p>
         <div className="compare">
           <div>
             <div className="k">CBAM default (with 2026 mark-up)</div>
-            <div className="v">{cmp.defaultValue} tCO2e/t</div>
-            <div className="fine">For {fmt(q)} t: {fmt(dq)} tCO2e</div>
+            <div className="v">{data.comparison.defaultValue} tCO2e/t</div>
+            {cmp && <div className="fine">For {fmt(q)} t: {fmt(dq)} tCO2e</div>}
           </div>
-          {!rejectedProof && (
+          {!rejectedProof && !incomplete && (
             <div>
               <div className="k">Verified value (illustrative)</div>
-              <div className="v">{cmp.verifiedValue} tCO2e/t</div>
-              <div className="fine">For {fmt(q)} t: {fmt(vq)} tCO2e</div>
+              <div className="v">{cmp ? cmp.verifiedValue : (verifiedValue ?? "—")} tCO2e/t</div>
+              {cmp && <div className="fine">For {fmt(q)} t: {fmt(vq)} tCO2e</div>}
             </div>
           )}
         </div>
@@ -583,11 +647,20 @@ export function Buyer() {
             No verified value: the proof failed {rejectedCheck && rejectedCheck.index > 0 ? `check ${rejectedCheck.index}` : "the structure check"}. The
             figures from the demo report are not shown as a result.
           </p>
+        ) : incomplete ? (
+          <p className="fine no-verified-value" role="status">
+            No verified value: checks 4–8 were not run (offline view). The figures from the demo report are not shown as
+            a result.
+          </p>
+        ) : noComparison ? (
+          <p className="fine no-verified-value" role="status">
+            No declared-emissions gap for this proof: {noComparison}.
+          </p>
         ) : (
           <>
             <p className="gap-line">Declared-emissions gap: {fmt(gap)} tCO2e</p>
             <p className="fine">
-              ≈ €{fmt(eur, 0)} gross at the {cmp.quarter} CBAM certificate price of €{cmp.priceEur} — illustrative, before
+              ≈ €{fmt(eur, 0)} gross at the {data.comparison.quarter} CBAM certificate price of €{data.comparison.priceEur} — illustrative, before
               free-allocation adjustment.
             </p>
             <p className="fine">A gap in what is declared, not a physical reduction.</p>
@@ -599,14 +672,16 @@ export function Buyer() {
           </button>
           {!result && <span className="fine">Verify the proof first. Accepting stays in this browser: nothing is sent to the CBAM Registry or on-chain.</span>}
         </div>
-        {accepted && (
+        {acceptedNow && (
           <p className="fine" role="status">
-            Accepted (demo). Declared {fmt(vq)} tCO2e for batch {data.shipment.batchId}. This choice stays in your browser
-            — no transaction is sent. On-chain record for this batch: the supplier's claim{" "}
-            {claimTx ? <TxLink hash={claimTx.hash} /> : "(not recorded)"}
+            Accepted (demo).{" "}
+            {cmp ? `Declared ${fmt(vq)} tCO2e for batch ${batchId}.` : `Verified value ${verifiedValue ?? "—"} tCO2e/t${batchId ? ` for batch ${batchId}` : ""}.`}{" "}
+            This choice stays in your browser — no transaction is sent. On-chain record for this batch: the supplier's
+            claim{" "}
+            {claimTx && batchId === data.shipment.batchId ? <TxLink hash={claimTx.hash} /> : "(not recorded)"}
           </p>
         )}
-        {accepted && (
+        {acceptedNow && (
           <div className="btn-row">
             <button className="btn btn-ghost" onClick={downloadRecord}>
               Download verification record (JSON)
@@ -614,7 +689,7 @@ export function Buyer() {
             <span className="fine">For your own records: the checks, the credential ID and the on-chain claim. Not a CBAM document.</span>
           </div>
         )}
-        {accepted && canExportPact && (
+        {acceptedNow && canExportPact && (
           <div className="btn-row">
             <button className="btn btn-ghost" onClick={() => void downloadPact()} disabled={pactBusy}>
               {pactBusy ? "Reading the on-chain record…" : "Download PACT product footprint (JSON)"}
@@ -630,7 +705,7 @@ export function Buyer() {
             ✕ {pactError}
           </p>
         )}
-        {!rejectedProof && <WhatIf cmp={cmp} />}
+        {!rejectedProof && !incomplete && cmp && <WhatIf key={`${cmp.verifiedValue}/${cmp.quantityTonnes}`} cmp={cmp} />}
       </section>
 
       <CheckSources checks={CHECKS} />

@@ -143,6 +143,28 @@ export function comparisonFigures(cmp: DemoData["comparison"]) {
 }
 
 /**
+ * The comparison card's figures for a verified proof, taken from that proof and its result, not from the demo
+ * data: the disclosed intensity that check 2 matched, and the shipment quantity that check 5 confirmed on the
+ * ledger. The CBAM default and the certificate price stay the demo's, so they apply only to the demo's CN code.
+ * `null` when there is nothing to compare, with the reason.
+ */
+export function proofComparison(
+  cmp: DemoData["comparison"],
+  demoCnCode: string,
+  r: { disclosed: Record<string, string>; checks: { index: number; status: string }[] },
+  shipment: { quantityTonnes: string } | undefined,
+): { cmp: DemoData["comparison"] } | { cmp: null; why: string } {
+  const verifiedValue = r.disclosed.specificEmbeddedEmissions_tCO2e_per_t;
+  if (verifiedValue === undefined) return { cmp: null, why: "the supplier did not disclose the intensity" };
+  if (r.disclosed.cnCode !== demoCnCode) {
+    return { cmp: null, why: `this demo lists the CBAM default for CN ${demoCnCode} only` };
+  }
+  const shipped = r.checks.find((c) => c.index === 5)?.status === "pass" ? shipment?.quantityTonnes : undefined;
+  if (shipped === undefined) return { cmp: null, why: "no shipment quantity was confirmed on the ledger (check 5)" };
+  return { cmp: { ...cmp, verifiedValue, quantityTonnes: shipped } };
+}
+
+/**
  * The Buyer tab's "what if" control: figures for a hypothetical verified intensity, at the card's
  * certificate price and shipment quantity. Gross and illustrative, like the card.
  */

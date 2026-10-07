@@ -39,8 +39,18 @@ describe("verdict", () => {
     expect(TOOL.version).toBe(pkg.version);
   });
 
-  it("exit codes: VALID 0, INVALID 1, CONTESTED 2, error 3", () => {
-    expect([exitCodeOf({ overall: "VALID" }), exitCodeOf({ overall: "INVALID" }), exitCodeOf({ overall: "CONTESTED" }), EXIT.ERROR]).toEqual([0, 1, 2, 3]);
+  it("exit codes: VALID 0, INVALID 1, CONTESTED 2, error 3, INCOMPLETE 4", () => {
+    expect([exitCodeOf({ overall: "VALID" }), exitCodeOf({ overall: "INVALID" }), exitCodeOf({ overall: "CONTESTED" }), EXIT.ERROR, exitCodeOf({ overall: "INCOMPLETE" })]).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("format 2: INCOMPLETE and the warnings conform to the schema; an unknown warning code does not", () => {
+    const w = { code: "EVIDENCE_NOT_CHECKED" as const, detail: "checks 6 and 7 not run: no evidence checker was supplied" };
+    const v = toVerdict(proof, result({ overall: "INCOMPLETE", warnings: [w] }), { chainId: 11155111, block: 1n });
+    expect([v.format, v.overall, v.warnings]).toEqual([2, "INCOMPLETE", [w]]);
+    expect(verdictSchemaErrors(v)).toEqual([]);
+    expect(verdictSchemaErrors({ ...v, warnings: [{ code: "OTHER", detail: "x" }] })).not.toEqual([]);
+    const { warnings: _, ...noWarnings } = v;
+    expect(verdictSchemaErrors(noWarnings)).not.toEqual([]);
   });
 
   it("a malformed proof: chain fields null, schema-valid", () => {
@@ -85,13 +95,15 @@ function emptyChain(over: { getChainId?: () => Promise<number> } = {}) {
         return over.getChainId ? over.getChainId() : 11155111;
       },
     },
+    chainId: 11155111,
     registry: deployment.contracts.EmissionsClaimRegistry.address,
     deployedBlock: 0n,
     options: {},
     deploymentTimestamp: async () => 0n,
     latestBlock: async () => {
       calls.latestBlock++;
-      return { number: 4242n, timestamp: 1791177348n };
+      // A fresh head: Sepolia's default head-age limit (300 s) applies.
+      return { number: 4242n, timestamp: BigInt(Math.floor(Date.now() / 1000)) };
     },
     at(this: unknown) {
       calls.at++;
@@ -168,7 +180,7 @@ describe("verdictError", () => {
     const outs = [verdictError(new Error("boom")), verdictError("plain text"), verdictError(undefined), verdictError(null), verdictError({ message: "rpc down" })];
     expect(outs.map((o) => o.error)).toEqual(["boom", "plain text", "undefined", "null", "rpc down"]);
     for (const o of outs) {
-      expect(o).toEqual({ format: 1, error: o.error, tool: TOOL });
+      expect(o).toEqual({ format: 2, error: o.error, tool: TOOL });
       expect(verdictSchemaErrors(o)).toEqual([]);
     }
   });
@@ -182,21 +194,47 @@ describe("verdictFor", () => {
   it("the demo proof against the recorded Sepolia answers: VALID, the recorded block, the demo root, the same checks as verifyPresentation", async () => {
     vi.stubGlobal("fetch", replayFetch(recording));
     const importerEORI = "NLDEMO000000001";
-    const v = await verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle });
     const head = readJson("sdk/test/fixtures/sepolia-demo-rpc.json").answers['eth_getBlockByNumber ["latest",false]'].result;
+    // The recorded head is checked against the clock of the recording (the head-age limit is 300 s on Sepolia).
+    const now = () => Number(BigInt(head.timestamp)) * 1000 + 5_000;
+    const v = await verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle, now });
     expect([v.overall, v.primaryCode, exitCodeOf(v)]).toEqual(["VALID", "", EXIT.VALID]);
     expect(v.chain).toEqual({ chainId: 11155111, block: Number(head.number) });
     expect(v.trustAnchor).toBe(DEMO_TRUST_ANCHOR);
     expect(v.checks.map((c) => c.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     expect([v.rejected, v.credSAID]).toEqual([0, JSON.parse(proof.core).d]);
     expect(typeof v.checkedAt).toBe("number");
+    expect(v.warnings).toEqual([]);
     expect(verdictSchemaErrors(v)).toEqual([]);
     const r = await verifyPresentation(proof, ChainReader.forSepolia(deployment), {
       importerEORI,
+      now,
       checkers: vleiCheckers({ loadBundle: async (p: string) => loadBundle(p) }),
     });
     expect(v.checks).toEqual(r.checks.map(asCheck));
     expect(v.disclosed).toEqual(r.disclosed);
+  }, 30_000);
+
+  it("a head older than 300 s on Sepolia (a node that is behind) is refused before any check result", async () => {
+    vi.stubGlobal("fetch", replayFetch(recording));
+    const head = readJson("sdk/test/fixtures/sepolia-demo-rpc.json").answers['eth_getBlockByNumber ["latest",false]'].result;
+    const ts = Number(BigInt(head.timestamp));
+    const importerEORI = "NLDEMO000000001";
+    const at = (sec: number) => () => sec * 1000;
+    await expect(verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle, now: at(ts + 301) })).rejects.toThrow(
+      /RPC node is behind: its latest block \d+ is 301 s old, more than the 300 s allowed/,
+    );
+    // 300 s is still accepted; a caller can set another limit, or none.
+    await expect(verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle, now: at(ts + 300) })).resolves.toMatchObject({ overall: "VALID" });
+    await expect(
+      verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle, now: at(ts + 301), maxHeadAgeSec: 600 }),
+    ).resolves.toMatchObject({ overall: "VALID" });
+    await expect(
+      verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle, now: at(ts + 86_400), maxHeadAgeSec: 60 }),
+    ).rejects.toThrow(/more than the 60 s allowed/);
+    await expect(verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI, loadBundle, maxHeadAgeSec: Number.NaN })).rejects.toThrow(
+      /maxHeadAgeSec must be a number/,
+    );
   }, 30_000);
 
   it("the tampered proof: INVALID with DISCLOSURE_TAMPERED, one disclosure rejected, block and chain ID from the reads verifyPresentation made", async () => {

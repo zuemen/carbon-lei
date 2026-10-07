@@ -96,6 +96,26 @@ export function cnInScope(cnCode: string, scope: string[]): boolean {
   return scope.map((s) => s.replace(/^CN\s*/i, "").replace(/\s/g, "")).some((p) => p.length >= 2 && cnCode.startsWith(p));
 }
 
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const isRows = (v: unknown, valueKey: string) =>
+  Array.isArray(v) && v.every((r) => isObj(r) && typeof r.cnCode === "string" && typeof r[valueKey] === "string");
+
+/**
+ * Why a report extract cannot be read by the rules (the fields they index or parse have the wrong type), or
+ * null when it can. The extract is supplier-supplied JSON: the rules run only on an extract that passes this.
+ */
+export function extractShapeProblem(x: unknown): string | null {
+  if (!isObj(x)) return "the report extract is not a JSON object";
+  const bad: string[] = [];
+  if (!isRows(x.quantityPerCn, "quantity")) bad.push("quantityPerCn");
+  if (!isRows(x.specificEmbeddedEmissionsPerCn, "value")) bad.push("specificEmbeddedEmissionsPerCn");
+  if (!(Array.isArray(x.accreditationScope) && x.accreditationScope.every((v) => typeof v === "string"))) {
+    bad.push("accreditationScope");
+  }
+  if (typeof x.signedAt !== "string") bad.push("signedAt");
+  return bad.length ? `report extract fields of the wrong type: ${bad.join(", ")}` : null;
+}
+
 export function runRules(x: ReportExtract, c: ReconciledClaims): Finding[] {
   const qty = x.quantityPerCn.find((q) => q.cnCode === c.cnCode);
   const inten = x.specificEmbeddedEmissionsPerCn.find((q) => q.cnCode === c.cnCode);
@@ -163,6 +183,8 @@ export function checkReconciliation(
         : "fields needed for the reconciliation were not disclosed",
     };
   }
+  const shape = extractShapeProblem(x);
+  if (shape) return { status: "warn", code: "CONSISTENCY_WARNING/EXTRACT_MALFORMED", detail: shape };
   const { findings, reconciliation } = reconcile(x, c);
   if (!signed) return { status: "skipped", code: "", detail: "this credential carries no reconciliation proof" };
   if (

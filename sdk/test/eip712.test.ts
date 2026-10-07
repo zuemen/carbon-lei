@@ -63,16 +63,20 @@ describe("EIP-712 domain binding", () => {
   });
 });
 
-/** A chain with nothing registered, answering with the given chain ID and registry address. */
-function emptyChain(chainId: number, registryAddress: Hex): ChainReader {
+/**
+ * A chain with nothing registered, answering with the given chain ID and registry address; its deployment file
+ * names `deploymentChainId` (default: the same chain). Its head block is fresh.
+ */
+function emptyChain(chainId: number, registryAddress: Hex, deploymentChainId = chainId): ChainReader {
   const zero = `0x${"0".repeat(64)}`;
   const r = {
     client: { getChainId: async () => chainId },
+    chainId: deploymentChainId,
     registry: registryAddress,
     deployedBlock: 0n,
     options: {},
     deploymentTimestamp: async () => 0n,
-    latestBlock: async () => ({ number: 1n, timestamp: 1n }),
+    latestBlock: async () => ({ number: 1n, timestamp: BigInt(Math.floor(Date.now() / 1000)) }),
     at: () => r,
     report: async () => ({ registeredAt: 0n }),
     shipmentStatus: async () => ({ reportKey: zero, claimedAt: 0n }),
@@ -90,9 +94,15 @@ describe("check 3 on the demo proof", () => {
     expect((await check3(SEPOLIA_CHAIN_ID, registry)).status).toBe("pass");
   });
 
-  it("fails with BAD_SIGNATURE when the RPC is another chain", async () => {
+  it("fails with BAD_SIGNATURE when the deployment and its RPC are another chain", async () => {
     const c = await check3(1, registry);
     expect([c.status, c.code]).toEqual(["fail", "BAD_SIGNATURE"]);
+  });
+
+  it("refuses an RPC on another chain than the deployment file names (no result, an error)", async () => {
+    await expect(verifyPresentation(proof, emptyChain(31337, registry, SEPOLIA_CHAIN_ID))).rejects.toThrow(
+      "RPC is on chain 31337, but the deployment is for chain 11155111",
+    );
   });
 
   it("fails with BAD_SIGNATURE against another registry contract", async () => {

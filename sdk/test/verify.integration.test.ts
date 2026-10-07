@@ -250,7 +250,8 @@ describe("verifyPresentation on a local chain", () => {
       seen.push([index, ev, ctx.report?.kelSeq]);
       return { index, name: "", status: "pass" as const, code: "", detail: `checker ${index}` };
     };
-    const withEvidence = { ...proof, anchorEvidence: { a: 1 }, authorityEvidence: { b: 2 }, reportExtract: { c: 3 } };
+    const extract = { c: 3, quantityPerCn: [], specificEmbeddedEmissionsPerCn: [], accreditationScope: [], signedAt: "" };
+    const withEvidence = { ...proof, anchorEvidence: { a: 1 }, authorityEvidence: { b: 2 }, reportExtract: extract };
     const ok = await verifyPresentation(withEvidence, c.reader, {
       importerEORI: EORI_1,
       checkers: { anchor: pass(6), authority: pass(7), reconciliation: pass(8) },
@@ -262,7 +263,7 @@ describe("verifyPresentation on a local chain", () => {
       [8, "Report reconciliation", "pass", "checker 8"],
     ]);
     // the registered report (kelSeq 1) is in the context of every checker
-    expect(seen).toEqual(expect.arrayContaining([[6, { a: 1 }, 1n], [7, { b: 2 }, 1n], [8, { c: 3 }, 1n]]));
+    expect(seen).toEqual(expect.arrayContaining([[6, { a: 1 }, 1n], [7, { b: 2 }, 1n], [8, extract, 1n]]));
 
     const failAnchor = () => ({ index: 6, name: "", status: "fail" as const, code: "ANCHOR_INVALID", detail: "stub" });
     const bad = await verifyPresentation(withEvidence, c.reader, {
@@ -274,6 +275,11 @@ describe("verifyPresentation on a local chain", () => {
     // evidence with no checker for it is skipped, never passed
     const none = await verifyPresentation(withEvidence, c.reader, { importerEORI: EORI_1 });
     expect(none.checks.slice(6).map((x) => x.status)).toEqual(["skipped", "skipped", "skipped"]);
+    // ... and a result without checks 6 and 7 is INCOMPLETE, not VALID (L1)
+    expect([none.overall, none.primaryCode, none.warnings?.map((w) => w.code)]).toEqual(["INCOMPLETE", "", ["EVIDENCE_NOT_CHECKED"]]);
+    const onlyAnchor = await verifyPresentation(withEvidence, c.reader, { importerEORI: EORI_1, checkers: { anchor: pass(6) } });
+    expect(onlyAnchor.overall).toBe("INCOMPLETE");
+    expect(onlyAnchor.warnings?.[0].detail).toBe("check 7 not run: no evidence checker was supplied");
 
     // a checker that throws (an RPC failure inside check 7) aborts the verification: no result at all
     await expect(

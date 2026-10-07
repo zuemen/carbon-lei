@@ -2,7 +2,7 @@
 // so a script that reads Sepolia can run offline in tests. Each request is matched on its method and
 // params; a request that is not in the file fails (it is never sent to the network).
 //
-//   RPC_REPLAY=<file>   answer from <file>
+//   RPC_REPLAY=<file>   answer from <file>, with Date.now() moved back to the file's recordedAt
 //   RPC_RECORD=<file>   send to the real node and write every answer to <file> on exit (to refresh it)
 // In-process tests use `replayFetch` instead.
 import { readFileSync, writeFileSync } from "node:fs";
@@ -16,7 +16,15 @@ const record = process.env.RPC_RECORD;
 const realFetch = globalThis.fetch;
 
 if (replay || record) {
-  const answers: Record<string, Answer> = replay ? JSON.parse(readFileSync(replay, "utf8")).answers : {};
+  const file = replay ? JSON.parse(readFileSync(replay, "utf8")) : undefined;
+  const answers: Record<string, Answer> = file ? file.answers : {};
+  // Replayed answers are as of the recording, so the clock is moved back to it: the verifier's head-age limit
+  // (300 s on Sepolia) compares the recorded head block with this clock.
+  if (file?.recordedAt) {
+    const realNow = Date.now.bind(Date);
+    const offset = Date.parse(file.recordedAt) - realNow();
+    Date.now = () => realNow() + offset;
+  }
   if (record) {
     process.on("exit", () =>
       writeFileSync(

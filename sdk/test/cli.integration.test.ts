@@ -1,6 +1,6 @@
 // The four CLI commands end to end on a local anvil chain (M2-8).
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -79,13 +79,17 @@ describe("carbonlei CLI", () => {
     expect(unbound.stdout).toMatch(/SKIP {2}5 Shipment claim/);
     expect(unbound.stdout).toContain("WARNING: check 5 skipped: pass --eori to bind the proof to an importer");
 
-    await carbonlei("export-pact", "--proof", `${dir}proof.json`, "--company-name", "Demo Fasteners Co. (fictional)",
+    // export-pact runs the full verification for the importer: it needs --eori, and exports nothing when a
+    // check that decides authority (6, 7) fails, here because the proof carries no vLEI evidence yet.
+    const pactArgs = ["export-pact", "--proof", `${dir}proof.json`, "--company-name", "Demo Fasteners Co. (fictional)",
       "--product-name", "Hex bolt (illustrative)", "--product-id", "hex-bolt-m10",
       "--product-description", "Hex bolts, carbon steel — CBAM direct embedded emissions only, not a full PCF (illustrative)",
-      "--out", `${dir}pact.json`);
-    const pf = JSON.parse(readFileSync(`${dir}pact.json`, "utf8"));
-    expect(pf.status).toBe("Active");
-    expect(pf.extensions[0].data.carbonlei.kelSeq).toBe("1");
-    expect(JSON.stringify(pf)).not.toContain("energyMix");
+      "--out", `${dir}pact.json`];
+    rmSync(`${dir}pact.json`, { force: true });
+    const noEori = await carbonlei(...pactArgs).catch((e) => e);
+    expect([noEori.code, noEori.stderr]).toEqual([1, expect.stringContaining("export-pact needs --eori")]);
+    const noEvidence = await carbonlei(...pactArgs, "--eori", EORI).catch((e) => e);
+    expect([noEvidence.code, noEvidence.stderr]).toEqual([1, expect.stringContaining("the proof fails check 6 (ANCHOR_NOT_FOUND); nothing exported")]);
+    expect(existsSync(`${dir}pact.json`)).toBe(false);
   }, 60_000);
 });

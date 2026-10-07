@@ -442,3 +442,88 @@ test("Supplier: the Communication Template panel reads the Commission's example 
   });
   await expect(panel.getByRole("alert")).toHaveText(/Could not read too-large\.xlsx: file larger than 20971520 bytes .*it was not read/);
 });
+
+/** The offline (cached) view: every RPC blocked, then "Show cached results". */
+async function offlineView(page: Page) {
+  const data = await (await page.request.get("demo-data.json")).json();
+  test.skip(!data.cached, "no cached snapshot in this demo data");
+  for (const r of data.network.rpcs as string[]) await page.route(`${r}**`, (x) => x.abort());
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: /Show cached results/ }).click();
+  await expect(page.getByText(/Offline view — cached on/)).toBeVisible();
+  return data;
+}
+
+test("Offline view: the cached result only for the demo proof itself; Tamper is rejected by check 2 in the browser", async ({ page }) => {
+  await offlineView(page);
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".stamp.green")).toHaveText("Verified");
+  await expect(page.getByText(/Offline view: the result recorded for the demo proof on/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Tamper with one number" }).click();
+  await expect(page.getByText("Disclosed intensity changed from 1.8 to 1.2.")).toBeVisible();
+  await expect(page.locator(".stamp")).toHaveText("Rejected");
+  await expect(page.locator(".stamp.green")).toHaveCount(0);
+  await expect(page.locator("ol.checks > li").nth(1).locator(".badge")).toHaveText("✕ Failed");
+  await expect(page.locator(".verify-summary")).toContainText("Rejected — check 2 failed");
+  await expect(page.getByRole("button", { name: "Accept verified value" })).toBeDisabled();
+  await expect(page.getByText("Offline view: checks 0–3 were recomputed in your browser; checks 4–8 need a live connection and were not run.")).toBeVisible();
+});
+
+test("Offline view: pasted JSON that is not the demo proof is never Verified; a valid proof in another layout is Not verified", async ({ page }) => {
+  const data = await offlineView(page);
+  const box = page.locator("#proof-in");
+  const accept = page.getByRole("button", { name: "Accept verified value" });
+
+  await box.fill('{"core":"{}","note":"not a proof at all"}');
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".stamp")).toHaveText("Rejected");
+  await expect(page.locator(".stamp.green")).toHaveCount(0);
+  await expect(accept).toBeDisabled();
+  await expect(page.getByRole("button", { name: /Download verification record/ })).toHaveCount(0);
+
+  // The demo proof, compact instead of indented: not the cached text, so checks 0-3 run here and 4-8 are not run.
+  await box.fill(JSON.stringify(data.proof));
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".stamp")).toHaveText("Not verified");
+  await expect(page.locator(".stamp.green")).toHaveCount(0);
+  const checks = page.locator("ol.checks > li");
+  for (const i of [0, 1, 2]) await expect(checks.nth(i).locator(".badge")).toHaveText("✓ Passed");
+  for (const i of [3, 4, 5, 6, 7]) await expect(checks.nth(i)).toContainText("not run: needs a live connection to the chain");
+  await expect(page.locator(".verify-summary")).toContainText("Not verified — checks 4–8 were not run");
+  await expect(page.locator("#comparison")).toContainText("No verified value: checks 4–8 were not run (offline view).");
+  await expect(accept).toBeDisabled();
+});
+
+test("Buyer: editing the proof clears the result; the figures and the record come from the proof that was verified", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  const accept = page.getByRole("button", { name: "Accept verified value" });
+  await expect(page.locator(".stamp")).toBeVisible({ timeout: 60_000 });
+  test.skip((await page.locator(".stamp").textContent()) !== "Verified", "the live demo proof is not VALID right now");
+  // The demo proof's own values: the disclosed intensity 1.8 and the shipment's 200 t confirmed by check 5.
+  const card = page.locator("#comparison");
+  await expect(card.locator(".compare .v").nth(1)).toHaveText(`${data.comparison.verifiedValue} tCO2e/t`);
+  // The same line as before the figures came from the proof (the video shows it).
+  const c = data.comparison;
+  const q = Number(c.quantityTonnes);
+  const gap = Number(c.defaultValue) * q - Number(c.verifiedValue) * q;
+  const f = (n: number, d = 1) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: d });
+  await expect(page.locator(".verify-summary")).toHaveText(
+    `✓ 8 of 8 checks passed · declared-emissions gap for this ${f(q)} t shipment: ${f(gap)} tCO2e (≈ €${f(gap * Number(c.priceEur), 0)} gross, illustrative) See comparison ↓`,
+  );
+  await accept.click();
+  await expect(page.getByText(`for batch ${data.proof.shipment.batchId}`)).toBeVisible();
+
+  // One character more in the box: the result, the stamp and the accepted value are gone until Verify is pressed again.
+  await page.locator("#proof-in").press("End");
+  await page.locator("#proof-in").pressSequentially(" ");
+  await expect(page.locator(".stamp")).toHaveCount(0);
+  await expect(page.locator(".verify-summary")).toHaveCount(0);
+  await expect(accept).toBeDisabled();
+  await expect(page.getByText(/Accepted \(demo\)/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Download verification record/ })).toHaveCount(0);
+});

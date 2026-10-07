@@ -162,7 +162,9 @@ export type PactProduct = Pick<PactContext, "companyName" | "productNameCompany"
   Partial<Pick<PactContext, "verifierName" | "extensionSchemaUrl" | "documentationUrl" | "created">>;
 
 /**
- * Export of a verified proof. Exports nothing unless checks 1–3 passed; reads the report's on-chain
+ * Export of a verified proof. Exports nothing unless checks 1–3, 6 and 7 passed and the result is not INCOMPLETE; `r` should
+ * come from a verification with the importer's EORI (check 5), so that check 4 judged the claim time only for the
+ * importer the batch was declared to. Reads the report's on-chain
  * record for `status`, `precedingPfIds` and the KEL sequence number.
  */
 export async function exportPactFromProof(
@@ -173,6 +175,15 @@ export async function exportPactFromProof(
 ): Promise<Record<string, unknown>> {
   if ([1, 2, 3].some((i) => r.checks.find((c) => c.index === i)?.status === "fail")) {
     throw new Error(`the proof does not pass checks 1–3 (${r.primaryCode}); nothing exported`);
+  }
+  // Checks 6 and 7 decide whether the auditor was authorised; a result without them, or with one failed, says
+  // nothing a footprint's `status` could carry (status only follows the on-chain record of check 4).
+  if (r.overall === "INCOMPLETE") {
+    throw new Error("the verification did not run every check (INCOMPLETE: checks 6 and 7 need the evidence checkers); nothing exported");
+  }
+  const failedEvidence = r.checks.find((c) => (c.index === 6 || c.index === 7) && c.status === "fail");
+  if (failedEvidence) {
+    throw new Error(`the proof fails check ${failedEvidence.index} (${failedEvidence.code}); nothing exported`);
   }
   const core = JSON.parse(proof.core);
   const reportKey = reportKeyOf(core.d);

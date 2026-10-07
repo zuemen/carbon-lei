@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/zuemen/carbon-lei/blob/main/docs/schemas/verdict.schema.json",
   "title": "CarbonLEI verification verdict",
-  "description": "Output of `carbonlei verify --json` and of `verdictFor` in sdk/verdict.ts (format 1). Exit codes: 0 VALID, 1 INVALID, 2 CONTESTED, 3 error (the error object below). Check 8 is advisory: a warning does not change `overall`.",
+  "description": "Output of `carbonlei verify --json` and of `verdictFor` in sdk/verdict.ts (format 2). Exit codes: 0 VALID, 1 INVALID, 2 CONTESTED, 3 error (the error object below), 4 INCOMPLETE. Check 8 is advisory: a warning does not change `overall`.",
   "oneOf": [{ "$ref": "#/$defs/verdict" }, { "$ref": "#/$defs/error" }],
   "$defs": {
     "tool": {
@@ -34,10 +34,13 @@
     "verdict": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["format", "overall", "primaryCode", "checks", "hidden", "rejected", "disclosed", "credSAID", "chain", "checkedAt", "trustAnchor", "tool"],
+      "required": ["format", "overall", "primaryCode", "checks", "hidden", "rejected", "disclosed", "credSAID", "chain", "checkedAt", "warnings", "trustAnchor", "tool"],
       "properties": {
-        "format": { "const": 1 },
-        "overall": { "enum": ["VALID", "INVALID", "CONTESTED"] },
+        "format": { "const": 2 },
+        "overall": {
+          "enum": ["VALID", "INVALID", "CONTESTED", "INCOMPLETE"],
+          "description": "INCOMPLETE: no check failed, but checks 6 and 7 were not run (no evidence checkers); not a pass."
+        },
         "primaryCode": { "type": "string", "description": "Code of the first failing check; empty when no check failed." },
         "checks": { "type": "array", "minItems": 1, "maxItems": 9, "items": { "$ref": "#/$defs/check" } },
         "hidden": { "type": "integer", "minimum": 0, "description": "Signed fields the supplier withheld." },
@@ -61,7 +64,20 @@
         "checkedAt": {
           "type": ["integer", "null"],
           "minimum": 0,
-          "description": "UNIX seconds used for checks 4 and 5: the shipment's claim time, or the block time."
+          "description": "UNIX seconds used for checks 4 and 5: the shipment's claim time when check 5 bound the shipment to the given EORI, otherwise the block time."
+        },
+        "warnings": {
+          "type": "array",
+          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: checks 6 or 7 were not run (overall INCOMPLETE).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "detail"],
+            "properties": {
+              "code": { "enum": ["SHIPMENT_NOT_BOUND", "EVIDENCE_NOT_CHECKED"] },
+              "detail": { "type": "string", "minLength": 1 }
+            }
+          }
         },
         "trustAnchor": {
           "type": ["string", "null"],
@@ -78,7 +94,7 @@
       "additionalProperties": false,
       "required": ["format", "error", "tool"],
       "properties": {
-        "format": { "const": 1 },
+        "format": { "const": 2 },
         "error": {
           "type": "string",
           "minLength": 1,

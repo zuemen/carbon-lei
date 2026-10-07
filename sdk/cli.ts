@@ -16,7 +16,7 @@ import { verifyPresentation } from "./verify.ts";
 import { EXIT, exitCodeOf, verdictError, verdictFor } from "./verdict.ts";
 import { disclosureSummary } from "./summary.ts";
 import { vleiCheckers } from "./checkers.ts";
-import { pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
+import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
 import {
   draftCredentialFields,
@@ -33,13 +33,17 @@ const USAGE = `carbonlei <command> [options]
                [--out <credential.json>]            signs with VERIFIER_PRIVATE_KEY (EIP-712)
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
                --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>]
-  verify       --proof <proof.json> [--eori <EORI>] [--rpc <url>] [--deployment <file>]
+  verify       --proof <proof.json> [--rpc <url>] [--deployment <file>]
+               [--eori <EORI>]                      your EORI: binds the shipment to you (check 5); only then is
+                                                    the report judged at the shipment's claim time
                [--trust-anchor <AID>]               root of trust for check 7 (default: the demo root)
+               [--max-head-age <s>]                 refuse an RPC whose latest block is older (default 300 on Sepolia)
                [--json]                             print the verdict as JSON (docs/schemas/verdict.schema.json);
-                                                    exit 0 VALID, 1 INVALID, 2 CONTESTED, 3 error
+                                                    exit 0 VALID, 1 INVALID, 2 CONTESTED, 3 error, 4 INCOMPLETE
                [--expect-invalid <CODE>]            exit 0 only if the proof is INVALID with a check failing on CODE
-  export-pact  --proof <proof.json> --company-name <name> --product-name <name> --product-id <id>
-               --product-description <text> [--rpc <url>] [--deployment <file>] [--out <pact.json>]
+  export-pact  --proof <proof.json> --eori <EORI> --company-name <name> --product-name <name> --product-id <id>
+               --product-description <text> [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
+               [--max-head-age <s>] [--out <pact.json>]   runs checks 0-8 (with check 5 for your EORI) first
   import-template <file.xlsx> [--product N] [--out <draft.json>]
                reads a filled CBAM Communication Template (V2.1 or V2.1.1) and prints a draft of the
                credential fields it can fill; the rest is left to the supplier and the verification body
@@ -86,10 +90,31 @@ function reader(values: Record<string, unknown>): ChainReader {
   return values.rpc ? ChainReader.forRpc(deployment, [values.rpc as string], sepolia) : ChainReader.forSepolia(deployment);
 }
 
+/** Reads an evidence bundle a proof refers to: relative to the proof file, then to the demo's public folder. */
+function bundleLoader(proofPath: string) {
+  return async (p: string) => {
+    for (const base of [dirname(proofPath), fileURLToPath(new URL("../demo/public/", import.meta.url))]) {
+      try {
+        return readFileSync(resolve(base, p), "utf8");
+      } catch {}
+    }
+    throw new Error(`evidence file ${p} not found`);
+  };
+}
+
+/** `--max-head-age` in seconds, or undefined for the chain's default. */
+function maxHeadAge(values: Record<string, unknown>): number | undefined {
+  const v = values["max-head-age"] as string | undefined;
+  if (v === undefined) return undefined;
+  const n = Number(v);
+  if (v.trim() === "" || Number.isNaN(n) || n < 0) throw new Error(`--max-head-age must be a number of seconds ≥ 0, got ${v}`);
+  return n;
+}
+
 /** Summary note for a check 8 warning, with the number of reconciliation rules the received extract fails. */
 function advisoryNote(proof: Presentation, disclosed: Record<string, string>, code: string): string {
   const claims = pickReconciledClaims(disclosed);
-  const n = claims && proof.reportExtract ? runRules(proof.reportExtract as unknown as ReportExtract, claims).filter((f) => !f.ok).length : 0;
+  const n = claims && proof.reportExtract && !extractShapeProblem(proof.reportExtract) ? runRules(proof.reportExtract as unknown as ReportExtract, claims).filter((f) => !f.ok).length : 0;
   const rules = `${n} rule${n === 1 ? "" : "s"}`;
   return code === "CONSISTENCY_WARNING/PROOF_MISMATCH"
     ? `the unsigned report extract differs from the signed credential (${rules})`
@@ -125,6 +150,7 @@ async function main(argv: string[]) {
       out: { type: "string" },
       "expect-invalid": { type: "string" },
       "trust-anchor": { type: "string" },
+      "max-head-age": { type: "string" },
       json: { type: "boolean", default: false },
     },
   });
@@ -172,19 +198,18 @@ async function main(argv: string[]) {
     case "verify": {
       const proof = readJson(values.proof as string) as Presentation;
       // Evidence bundles referenced by the proof are read relative to the proof file, then to the demo's public folder.
-      const loadBundle = async (p: string) => {
-        for (const base of [dirname(values.proof as string), fileURLToPath(new URL("../demo/public/", import.meta.url))]) {
-          try {
-            return readFileSync(resolve(base, p), "utf8");
-          } catch {}
-        }
-        throw new Error(`evidence file ${p} not found`);
-      };
+      const loadBundle = bundleLoader(values.proof as string);
       const trustAnchor = values["trust-anchor"] as string | undefined;
       const expected = values["expect-invalid"] as string | undefined;
+      const maxHeadAgeSec = maxHeadAge(values);
       if (values.json) {
         // Machine-readable verdict on stdout only; a run that throws exits 3 (see the handler at the end).
-        const v = await verdictFor(proof, reader(values), { importerEORI: values.eori as string | undefined, loadBundle, trustAnchor });
+        const v = await verdictFor(proof, reader(values), {
+          importerEORI: values.eori as string | undefined,
+          loadBundle,
+          trustAnchor,
+          maxHeadAgeSec,
+        });
         process.stdout.write(json(v) + "\n");
         if (expected) return v.overall === "INVALID" && v.checks.some((c) => c.status === "fail" && c.code === expected) ? 0 : 1;
         return exitCodeOf(v);
@@ -192,14 +217,19 @@ async function main(argv: string[]) {
       const r = await verifyPresentation(proof, reader(values), {
         importerEORI: values.eori as string | undefined,
         checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}) }),
+        maxHeadAgeSec,
       });
       for (const c of r.checks) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
       }
       // The EIP-712 signature does not name the importer; only check 5 binds the proof to one (SECURITY.md T4).
-      if (!values.eori && proof.shipment && r.checks.some((c) => c.index === 5 && c.status === "skipped")) {
-        console.log("\nWARNING: check 5 skipped: pass --eori to bind the proof to an importer");
+      for (const w of r.warnings ?? []) {
+        console.log(
+          w.code === "SHIPMENT_NOT_BOUND"
+            ? "\nWARNING: check 5 skipped: pass --eori to bind the proof to an importer; without it, check 4 judged the report at the latest block's time, not at the shipment's claim time"
+            : `\nWARNING: ${w.detail}`,
+        );
       }
       const summary = [`${r.overall}${r.primaryCode ? ` (${r.primaryCode})` : ""}`, disclosureSummary(proof, r)];
       const advisory = r.checks.find((c) => c.index === 8 && c.status === "warn");
@@ -215,12 +245,20 @@ async function main(argv: string[]) {
         return hit ? 0 : 1;
       }
       // Check 8 is advisory: a warning shows in the summary but does not change the exit code.
-      return r.overall === "VALID" ? 0 : r.overall === "CONTESTED" ? 2 : 1;
+      return EXIT[r.overall];
     }
     case "export-pact": {
       const proof = readJson(values.proof as string) as Presentation;
+      // The export states the credential's status for this importer: it runs the full verification, with
+      // check 5 bound to the importer's EORI (the claim time applies only then) and the vLEI checkers for 6 and 7.
+      if (!values.eori) throw new Error("export-pact needs --eori <EORI>: the importer the shipment was declared to");
       const rd = reader(values);
-      const r = await verifyPresentation(proof, rd);
+      const trustAnchor = values["trust-anchor"] as string | undefined;
+      const r = await verifyPresentation(proof, rd, {
+        importerEORI: values.eori as string,
+        checkers: vleiCheckers({ loadBundle: bundleLoader(values.proof as string), ...(trustAnchor ? { trustAnchor } : {}) }),
+        maxHeadAgeSec: maxHeadAge(values),
+      });
       const pf = await exportPactFromProof(proof, r, rd, {
         companyName: values["company-name"] as string,
         productNameCompany: values["product-name"] as string,

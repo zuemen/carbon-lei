@@ -6,15 +6,26 @@ import { vleiCheckers } from "./checkers.ts";
 import type { Presentation } from "./disclosure.ts";
 import { disclosureCounts } from "./summary.ts";
 import { DEMO_TRUST_ANCHOR } from "./vlei.ts";
-import { verifyPresentation, type EvidenceCheckers, type VerificationResult, type VerifyOptions } from "./verify.ts";
+import {
+  verifyPresentation,
+  type EvidenceCheckers,
+  type Overall,
+  type VerificationResult,
+  type VerificationWarning,
+  type VerifyOptions,
+} from "./verify.ts";
 
-/** Version of the verdict format; a change that breaks a consumer increases it. */
-export const VERDICT_FORMAT = 1;
+/**
+ * Version of the verdict format; a change that breaks a consumer increases it.
+ * 2: `overall` can be INCOMPLETE (exit 4); `warnings` added; `checkedAt` is the claim time only when check 5
+ * binds the shipment to the given EORI.
+ */
+export const VERDICT_FORMAT = 2;
 /** Kept equal to sdk/package.json `version` (tested). */
 export const TOOL = { name: "carbonlei", version: "0.1.0" } as const;
 
 /** Exit codes of `carbonlei verify --json`. Without --json, a run that throws exits 1 (unchanged). */
-export const EXIT = { VALID: 0, INVALID: 1, CONTESTED: 2, ERROR: 3 } as const;
+export const EXIT = { VALID: 0, INVALID: 1, CONTESTED: 2, ERROR: 3, INCOMPLETE: 4 } as const;
 
 export interface VerdictCheck {
   /** Check number, 0 to 8 (sdk/verify.ts). */
@@ -27,7 +38,7 @@ export interface VerdictCheck {
 
 export interface Verdict {
   format: typeof VERDICT_FORMAT;
-  overall: "VALID" | "INVALID" | "CONTESTED";
+  overall: Overall;
   /** Code of the first failing check; "" when no check failed. */
   primaryCode: string;
   checks: VerdictCheck[];
@@ -40,8 +51,13 @@ export interface Verdict {
   credSAID: string | null;
   /** The block every chain read was pinned to; null when the run stopped before reading the chain. */
   chain: { chainId: number | null; block: number | null };
-  /** Time used for checks 4 and 5 (UNIX seconds): the shipment's claim time, or the block time. */
+  /**
+   * Time used for checks 4 and 5 (UNIX seconds): the shipment's claim time when check 5 bound the shipment to the
+   * given EORI, otherwise the block time.
+   */
   checkedAt: number | null;
+  /** How the checks were run, when the caller should know (for example SHIPMENT_NOT_BOUND without an EORI). */
+  warnings: VerificationWarning[];
   /** Root of trust check 7 was run with; null when the caller supplied its own checkers. */
   trustAnchor: string | null;
   tool: { name: string; version: string };
@@ -86,12 +102,13 @@ export function toVerdict(
     credSAID,
     chain: { chainId: ctx.chainId ?? null, block: num(ctx.block) },
     checkedAt: num(r.checkedAt),
+    warnings: (r.warnings ?? []).map((w) => ({ ...w })),
     trustAnchor: ctx.trustAnchor ?? null,
     tool: { ...TOOL },
   };
 }
 
-/** Exit code of a verdict: VALID 0, INVALID 1, CONTESTED 2. */
+/** Exit code of a verdict: VALID 0, INVALID 1, CONTESTED 2, INCOMPLETE 4. */
 export const exitCodeOf = (v: Pick<Verdict, "overall">) => EXIT[v.overall];
 
 export function verdictError(err: unknown): VerdictError {

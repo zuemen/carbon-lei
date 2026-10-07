@@ -94,11 +94,12 @@ function emptyChain(): ChainReader {
   const zero = `0x${"0".repeat(64)}`;
   const r = {
     client: { getChainId: async () => 11155111 },
+    chainId: 11155111,
     registry: deployment.contracts.EmissionsClaimRegistry.address,
     deployedBlock: 0n,
     options: {},
     deploymentTimestamp: async () => 0n,
-    latestBlock: async () => ({ number: 1n, timestamp: 1n }),
+    latestBlock: async () => ({ number: 1n, timestamp: BigInt(Math.floor(Date.now() / 1000)) }),
     at: () => r,
     report: async () => ({ registeredAt: 0n }),
     shipmentStatus: async () => ({ reportKey: zero, claimedAt: 0n }),

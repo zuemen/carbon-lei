@@ -118,6 +118,8 @@ export class ChainReader {
   /** When set (see `at`), every view call and event search reads this block, not the latest one. */
   readonly blockNumber?: bigint;
   readonly options: ChainReaderOptions;
+  /** Chain ID the deployment file names; verification refuses an RPC that reports another one. */
+  readonly chainId: number;
   private readonly deployment: Deployment;
   /**
    * Shared with the readers made by `at`: the deployment block's timestamp, read once, and the
@@ -130,6 +132,7 @@ export class ChainReader {
     this.deployment = deployment;
     this.blockNumber = blockNumber;
     this.options = options;
+    this.chainId = deployment.chainId;
     this.allowlist = deployment.contracts.VerifierAllowlist.address;
     this.registry = deployment.contracts.EmissionsClaimRegistry.address;
     this.fromBlock = BigInt(

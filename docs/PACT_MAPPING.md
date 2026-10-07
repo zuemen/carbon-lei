@@ -7,7 +7,7 @@
 
 CarbonLEI exports each report credential as one WBCSD PACT `ProductFootprint` (Technical Specifications v3.0.3) [1]. The export is **field-compatible**: it is a JSON document that follows the PACT data model. CarbonLEI does not run a PACT API endpoint and is not connected to any PACT network.
 
-**Where it is built.** The export function is `exportPact` in `sdk/pact.ts`. On the command line, `carbonlei export-pact` (`npm run carbonlei -- export-pact --proof <proof.json> …`) first runs verification checks 1–3 on the supplier's proof and exports nothing if one of them fails; it then reads the report's on-chain record to set `status` and `precedingPfIds`. Only fields the supplier disclosed in the proof can enter the export.
+**Where it is built.** The export function is `exportPact` in `sdk/pact.ts`. On the command line, `carbonlei export-pact` (`npm run carbonlei -- export-pact --proof <proof.json> --eori <EORI> …`) first runs the full verification, checks 0–8, with check 5 for the importer's own EORI (required) and the vLEI checkers, and exports nothing if check 1, 2, 3, 6 or 7 fails or checks 6 and 7 were not run; with the EORI, check 4 judges the report at the shipment's claim time only when the batch was declared to that importer, otherwise at the latest block, so a credential superseded or expired since an old claim for someone else exports as `Deprecated`. It then reads the report's on-chain record to set `status` and `precedingPfIds`. Only fields the supplier disclosed in the proof can enter the export.
 
 **How it is validated.** The SDK test `sdk/test/pact.test.ts` downloads the OpenAPI definition `spec/v3/openapi.yaml` from the PACT repository at tag `v3.0.3` [1], takes the `ProductFootprint` schema and every schema it references, and validates the export with a JSON Schema 2020-12 validator (Ajv) with the standard formats (UUID, date-time, URI) checked. The specification file is cached locally for the test and is not included in this repository. The test passes. The same tests check that hidden fields never appear in an export, that `id` is deterministic, that `referencePeriodEnd` is exclusive, and the `status` rules in §2. The example in §4 is real output of `carbonlei export-pact` for the demo credential on Sepolia, and it validates against the same schema. The same test file validates the extension's `data` object, for the demo page's export and for the largest and smallest disclosure choices, against the published CarbonLEI extension schema (§4 notes), and checks that the schema rejects fields the exporter never writes.
 
@@ -123,7 +123,7 @@ A consumer that ignores the extension still gets the PACT fields and the boundar
 
 ## 4. Example export (illustrative)
 
-Real output of `carbonlei export-pact` for the demo proof, read against the Sepolia deployment on 5 October 2026 (`--company-name "Demo Fasteners Co. (fictional)" --product-name "Hex bolt (illustrative)" --product-id hex-bolt-m10`, and the product description shown). Only `created` changes between runs, as long as the on-chain state is unchanged.
+Real output of `carbonlei export-pact` for the demo proof, read against the Sepolia deployment on 5 October 2026 (`--eori NLDEMO000000001 --company-name "Demo Fasteners Co. (fictional)" --product-name "Hex bolt (illustrative)" --product-id hex-bolt-m10`, and the product description shown; `--eori` is required since 7 October 2026 and does not change this output). Only `created` changes between runs, as long as the on-chain state is unchanged.
 
 ```json
 {

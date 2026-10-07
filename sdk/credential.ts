@@ -101,9 +101,35 @@ const CBAM_ROUTE = /^[A-Z]$/;
 const CN_CODE = /^\d{4}(\d{2}){0,2}$/;
 const LEI = /^[A-Z0-9]{18}\d{2}$/;
 
-function isIsoDate(s: string): boolean {
+/** A calendar date written YYYY-MM-DD (ISO 8601, no time, no other form accepted). */
+export function isIsoDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const d = new Date(`${s}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
+/** A tonnage in plain decimal form: no sign, no spaces, no leading zeros, at most three decimals (whole kilograms). */
+const TONNES = /^(0|[1-9]\d*)(\.\d{1,3})?$/;
+/** A batch ID: 1 to 128 characters, any script, no control characters and no leading or trailing space. */
+const BATCH_ID = /^(?!\s)(?!.*\s$)[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]{1,128}$/u;
+
+/**
+ * Names of the shipment fields of a presentation that are not in normal form. The shipment part is not signed:
+ * `batchId` and the quantity are bound by the on-chain claim (check 5), `shipmentDate` is not checked anywhere else.
+ */
+export function checkShipmentForms(s: { batchId: string; quantityTonnes: string; shipmentDate: string }): string[] {
+  const bad: string[] = [];
+  if (!BATCH_ID.test(s.batchId)) bad.push("batchId");
+  if (!TONNES.test(s.quantityTonnes)) bad.push("quantityTonnes");
+  if (!isIsoDate(s.shipmentDate)) bad.push("shipmentDate");
+  return bad;
+}
+
+/** Kilograms as tonnes in the form `checkShipmentForms` accepts: 200000 → "200", 1500 → "1.5". */
+export function kgToTonnes(kg: bigint): string {
+  const whole = kg / 1000n;
+  const frac = (kg % 1000n).toString().padStart(3, "0").replace(/0+$/, "");
+  return frac ? `${whole}.${frac}` : `${whole}`;
 }
 
 export function isInstallationId(s: string): boolean {
