@@ -245,7 +245,11 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     await addAuditor(aid);
     const { cr, at } = await issueAndRegister(aid);
     await mine(20_000);
-    await revokeAt(aid, at + 20_001n * BigInt(BLOCK_TIME));
+    // One block time after the last mined block (anvil can add wall-clock seconds between mining batches
+    // on a loaded machine, so the time is read from the chain rather than computed from `at`).
+    const last = (await c.pub.getBlock()).timestamp;
+    expect(last - at).toBeGreaterThanOrEqual(20_000n * BigInt(BLOCK_TIME));
+    await revokeAt(aid, last + BigInt(BLOCK_TIME));
     const r = await both(cr);
     expect(check4(r.windowed)).toBe("pass:");
     expect(r.windowed).toEqual(r.full);

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zuemen/carbon-lei/blob/main/docs/schemas/verdict.schema.json",
+  "title": "CarbonLEI verification verdict",
+  "description": "Output of `carbonlei verify --json` and of `verdictFor` in sdk/verdict.ts (format 1). Exit codes: 0 VALID, 1 INVALID, 2 CONTESTED, 3 error (the error object below). Check 8 is advisory: a warning does not change `overall`.",
+  "oneOf": [{ "$ref": "#/$defs/verdict" }, { "$ref": "#/$defs/error" }],
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "carbonlei" },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "status", "code", "detail"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Check number (sdk/verify.ts): 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment, 6 KEL anchor, 7 authority chain, 8 reconciliation (advisory)."
+        },
+        "name": { "type": "string" },
+        "status": { "enum": ["pass", "fail", "warn", "skipped"] },
+        "code": { "type": "string", "description": "Failure or warning code, for example DISCLOSURE_TAMPERED; empty on pass." },
+        "detail": { "type": "string" }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "overall", "primaryCode", "checks", "hidden", "rejected", "disclosed", "credSAID", "chain", "checkedAt", "trustAnchor", "tool"],
+      "properties": {
+        "format": { "const": 1 },
+        "overall": { "enum": ["VALID", "INVALID", "CONTESTED"] },
+        "primaryCode": { "type": "string", "description": "Code of the first failing check; empty when no check failed." },
+        "checks": { "type": "array", "minItems": 1, "maxItems": 9, "items": { "$ref": "#/$defs/check" } },
+        "hidden": { "type": "integer", "minimum": 0, "description": "Signed fields the supplier withheld." },
+        "rejected": { "type": "integer", "minimum": 0, "description": "Disclosures presented but rejected by check 2." },
+        "disclosed": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Field values that matched the signed credential."
+        },
+        "credSAID": { "type": ["string", "null"] },
+        "chain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chainId", "block"],
+          "description": "The chain and the block every on-chain read was pinned to; null when the run stopped before reading the chain (a malformed proof).",
+          "properties": {
+            "chainId": { "type": ["integer", "null"], "minimum": 1 },
+            "block": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        },
+        "checkedAt": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "UNIX seconds used for checks 4 and 5: the shipment's claim time, or the block time."
+        },
+        "trustAnchor": {
+          "type": ["string", "null"],
+          "description": "Root of trust AID check 7 was run with: the demo root unless --trust-anchor was given; null when the caller supplied its own checkers."
+        },
+        "tool": { "$ref": "#/$defs/tool" }
+      },
+      "if": { "properties": { "overall": { "const": "INVALID" } } },
+      "then": { "properties": { "primaryCode": { "type": "string", "minLength": 1 } } },
+      "else": { "properties": { "primaryCode": { "const": "" } } }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "error", "tool"],
+      "properties": {
+        "format": { "const": 1 },
+        "error": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why the verification could not run (RPC failure, unreadable proof, bad option). Exit code 3."
+        },
+        "tool": { "$ref": "#/$defs/tool" }
+      }
+    }
+  }
+}

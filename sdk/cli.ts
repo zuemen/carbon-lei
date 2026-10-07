@@ -13,6 +13,7 @@ import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "./issue.ts";
 import { exportPactFromProof } from "./pact.ts";
 import { verifyPresentation } from "./verify.ts";
+import { EXIT, exitCodeOf, verdictError, verdictFor } from "./verdict.ts";
 import { disclosureSummary } from "./summary.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
@@ -33,6 +34,9 @@ const USAGE = `carbonlei <command> [options]
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
                --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>]
   verify       --proof <proof.json> [--eori <EORI>] [--rpc <url>] [--deployment <file>]
+               [--trust-anchor <AID>]               root of trust for check 7 (default: the demo root)
+               [--json]                             print the verdict as JSON (docs/schemas/verdict.schema.json);
+                                                    exit 0 VALID, 1 INVALID, 2 CONTESTED, 3 error
                [--expect-invalid <CODE>]            exit 0 only if the proof is INVALID with a check failing on CODE
   export-pact  --proof <proof.json> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--out <pact.json>]
@@ -120,6 +124,8 @@ async function main(argv: string[]) {
       "product-description": { type: "string" },
       out: { type: "string" },
       "expect-invalid": { type: "string" },
+      "trust-anchor": { type: "string" },
+      json: { type: "boolean", default: false },
     },
   });
 
@@ -174,9 +180,18 @@ async function main(argv: string[]) {
         }
         throw new Error(`evidence file ${p} not found`);
       };
+      const trustAnchor = values["trust-anchor"] as string | undefined;
+      const expected = values["expect-invalid"] as string | undefined;
+      if (values.json) {
+        // Machine-readable verdict on stdout only; a run that throws exits 3 (see the handler at the end).
+        const v = await verdictFor(proof, reader(values), { importerEORI: values.eori as string | undefined, loadBundle, trustAnchor });
+        process.stdout.write(json(v) + "\n");
+        if (expected) return v.overall === "INVALID" && v.checks.some((c) => c.status === "fail" && c.code === expected) ? 0 : 1;
+        return exitCodeOf(v);
+      }
       const r = await verifyPresentation(proof, reader(values), {
         importerEORI: values.eori as string | undefined,
-        checkers: vleiCheckers({ loadBundle }),
+        checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}) }),
       });
       for (const c of r.checks) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
@@ -190,7 +205,6 @@ async function main(argv: string[]) {
       const advisory = r.checks.find((c) => c.index === 8 && c.status === "warn");
       if (advisory) summary.push(`check 8 advisory: ${advisoryNote(proof, r.disclosed, advisory.code)}`);
       console.log(`\n${summary.join("; ")}`);
-      const expected = values["expect-invalid"] as string | undefined;
       if (expected) {
         const hit = r.overall === "INVALID" ? r.checks.find((c) => c.status === "fail" && c.code === expected) : undefined;
         console.log(
@@ -238,10 +252,15 @@ async function main(argv: string[]) {
   }
 }
 
-main(process.argv.slice(2)).then(
+const args = process.argv.slice(2);
+// `verify --json`: any error (unreadable proof, RPC failure, bad option) prints an error object on
+// stdout and exits 3, so a caller can tell it from INVALID. Every other run that throws exits 1, as before.
+const jsonVerify = args[0] === "verify" && args.includes("--json");
+main(args).then(
   (code) => process.exit(code),
   (err) => {
     console.error(`error: ${(err as Error).message}`);
-    process.exit(1);
+    if (jsonVerify) process.stdout.write(json(verdictError(err)) + "\n");
+    process.exit(jsonVerify ? EXIT.ERROR : 1);
   },
 );

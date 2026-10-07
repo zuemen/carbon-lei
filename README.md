@@ -252,6 +252,29 @@ npm run carbonlei -- import-template <file.xlsx> --product 2 [--out draft.json]
 
 For the example's first product it drafts 7 fields (CN code 73181542, installation name, UN/LOCODE, reporting period 2023-01-01/2023-12-31, intensity 2.00694, value type, process route) and lists 15 still to be supplied: 6 by the supplier (`supplierLEI`, `operatorId`, `installationId`, `cbamRoute`, `energyMix`, `supplierCost`) and 9 by the verification body (verified tonnes and every field of the verification report). Verified tonnes and the energy mix are not mapped: the template's activity data has a different meaning. A blank share of emissions by default values leaves the value type to be supplied; it is not read as actual. The intensity is SEE (direct), not SEE (total): CN 7318 is listed in Annex II of Regulation (EU) 2023/956, so it counts direct emissions only for CBAM certificates in the definitive period (transitional reports also listed indirect emissions). Numbers are rounded half away from zero to 5 decimals; dates are read in UTC. The template is the Commission's transitional-period template (Implementing Regulation (EU) 2023/1773); the Commission has not yet published one for the definitive period, so values imported from it may not follow the definitive-period rules. The Supplier tab of the demo has the same importer in a collapsed panel; it parses the file in a Web Worker in the browser and uploads nothing. The demo's credentials and proofs are still demo data; no imported draft was used to issue them. Importing does not connect to the CBAM Registry and does not show compliance. Source, hashes and reuse terms of the two files: [`fixtures/cbam-template/SOURCE.md`](fixtures/cbam-template/SOURCE.md).
 
+### Machine-readable verdict
+
+`verify --json` prints the verdict as one JSON object instead of text: `overall`, `primaryCode`, each check as `{id, name, status, code, detail}`, `hidden`, `rejected`, the disclosed values, the chain and block the reads were pinned to, the root of trust and the tool version ([schema](docs/schemas/verdict.schema.json)). Exit codes: 0 VALID, 1 INVALID, 2 CONTESTED, 3 when the verification could not run (an error object on stdout); without `--json` the exit codes are unchanged (an error exits 1). `sdk/test/pipeline.integration.test.ts` runs the whole path on a local anvil chain, from the Commission's screws example through `import-template`, `issue`, registration, claim and `present` to a schema-checked VALID verdict; its vLEI evidence comes from a synthetic test chain (deterministic test keys), so it runs with `--trust-anchor` set to that chain's root, and the same proof is INVALID under the default demo root. `--trust-anchor <AID>` pins the root of trust for check 7 (default: the demo's simulated GLEIF root), and the verdict names the root it used. Who runs what in a deployment: [OPERATE](docs/OPERATE.md).
+
+```bash
+npm run verify:demo -- --json
+```
+
+The same verdict from the SDK (save as `verify.mjs` in the repository root and run `node verify.mjs`; `sdk/test/readme-snippet.test.ts` runs this block as written):
+
+```js
+import { readFileSync } from "node:fs";
+import { ChainReader } from "./sdk/chain.ts";
+import { verdictFor } from "./sdk/verdict.ts";
+
+const read = (path) => JSON.parse(readFileSync(path, "utf8"));
+const proof = read("fixtures/sepolia-demo-proof.json");
+const reader = ChainReader.forSepolia(read("contracts/deployments/11155111.json"));
+const loadBundle = (path) => readFileSync(`demo/public/${path}`, "utf8");
+const verdict = await verdictFor(proof, reader, { importerEORI: "NLDEMO000000001", loadBundle });
+console.log(verdict.overall, verdict.primaryCode || "-", verdict.chain.block);
+```
+
 ### Local (full flow)
 
 Requirements: Node.js 22.18 or later (`.nvmrc`: 22.20.0), Foundry 1.7.1 (`forge`, `anvil`), and Docker with Compose for the vLEI part. Sepolia test ETH only if you rerun the demo on Sepolia.
@@ -283,7 +306,7 @@ Command-line tool (never sends transactions; `verify` exits with code 2 when the
 ```bash
 npm run carbonlei -- issue --claims <claims.json> --auditor-aid <AID> --supplier <0x...>
 npm run carbonlei -- present --credential <credential.json> --fields a,b
-npm run carbonlei -- verify --proof <proof.json>
+npm run carbonlei -- verify --proof <proof.json> [--json] [--trust-anchor <AID>]
 npm run carbonlei -- export-pact --proof <proof.json> --company-name <name> --product-name <name> --product-id <id> --product-description <text>
 npm run carbonlei -- import-template <file.xlsx> [--product N]
 ```
@@ -305,7 +328,8 @@ carbon-lei/
                Playwright tests in e2e/; deployed to GitHub Pages
   fixtures/    fictional parties, demo credential, CESR and KEL evidence, Sepolia transactions, cross-language test vectors
   scripts/     demo scenario, one-command local demo, demo data build, deployment record
-  docs/        ARCHITECTURE, SECURITY, CLIMATE_IMPACT, ADOPTION, PILOT, PACT_MAPPING, FAQ, VLEI_SETUP
+  docs/        ARCHITECTURE, SECURITY, CLIMATE_IMPACT, ADOPTION, PILOT, OPERATE, PACT_MAPPING, FAQ, VLEI_SETUP;
+               schemas/verdict.schema.json (output of verify --json)
   .github/workflows/   ci.yml (contracts and SDK), pages.yml (demo deployment)
 ```
 
@@ -314,7 +338,7 @@ carbon-lei/
 ```bash
 forge test                  # 284 contract tests: unit, scenario, property fuzz and invariant fuzz
 npm ci && forge build
-npm test -w sdk             # 215 SDK tests (vitest), including end-to-end runs on a local anvil chain, PACT schema validation and the Communication Template importer
+npm test -w sdk             # 213 SDK tests (vitest), including end-to-end runs on a local anvil chain, PACT schema validation, the Communication Template importer and the JSON verdict
 npx playwright install chromium
 npm test -w verifier        # 28 tests: revocation seal detection, the watcher and the impostor chain (no KERI stack needed)
 npm run e2e -w demo         # 23 browser tests against a local dev server; set DEMO_URL to test the hosted page
@@ -351,7 +375,7 @@ Measured from 2026-10-05 to 2026-10-07. Gas comes from the Sepolia receipts of t
 | Scalability projection (computed, not measured) | Gas for N reports and M shipment claims: 368,616 × N + 155,449 × M; 10 reports and 100 claims: 19,231,060 gas, 0.0192 / 0.0962 / 0.385 ETH at 1 / 5 / 20 gwei. Per report 0.000369 / 0.00184 / 0.00737 ETH; per claim 0.000155 / 0.000777 / 0.00311 ETH. Storage: 14 new 32-byte slots per report, 4 per claim and 1 more on a report's first claim (19 for the demo report and its claim, counted on Sepolia). Verifier: the 7 view calls are fixed mapping lookups, independent of N and M; the 2 event searches cover only the blocks of the 24 hours after registration, 2 `eth_getLogs` requests and at most 18 `eth_getBlockByNumber`, independent of N, M and the deployment's age (if a block read fails they fall back to the full scan from the deployment block, 2 × ceil(block span / 10,000) requests: 44 after 30 days and 526 after a year at 7,200 blocks per day). L2 would be lower; not measured | The measured gas and slot counts; no conversion to currency | `projection` and `storage` in [`docs/data/bench-verify-2026-10-06-windowed.json`](docs/data/bench-verify-2026-10-06-windowed.json). Slots from `forge inspect EmissionsClaimRegistry storage-layout` and `eth_getStorageAt`; no loop or growing array in either contract. Every claim is priced at the first-claim gas, so later claims against the same report are overestimated; revisions and take-overs are not covered. Code: view calls in `sdk/verify.ts` and `sdk/checkers.ts`, event searches in `sdk/chain.ts` (`blockRangeForTimes`, `chunkedLogs`) |
 | Threat-model matrix (tampered inputs) | 19 of 19 tampered inputs detected: 7 in the browser, 8 by comparison with the chain, 4 by a contract revert (3 dry runs and 1 real transaction on a local anvil chain); 0 of 28 valid variants rejected (`sdk/test/tamper-matrix.test.ts`) | An unsigned PDF copy: 0 of the same inputs, because it carries no signature, ledger or anchor that software can check | `sdk/test/tamper-matrix.test.ts` generates each input: changed disclosed value, changed signed field, wrong signer, wrong shipment, replayed batch, over-claim, unlisted verifier, revoked auditor, revoked or expired report, wrong registrant, issuer or scope, malformed proof. Checks 6–8 have their own tests |
 | Detection coverage on inputs we wrote (confusion matrix, local anvil chain) | False-accept rate: 0 of 19 tampered inputs accepted (19 detected). False-reject rate: 0 of 28 valid variants rejected (28 accepted). 4 of 4 contested inputs flagged CONTESTED, none accepted or rejected. Every input was written by the team, so this is coverage of known cases, not a statistical accuracy | Same inputs read from an unsigned PDF copy: nothing can be checked, so tampered and valid inputs cannot be told apart | `sdk/test/tamper-matrix.test.ts` writes `.cache/accuracy-matrix.json`; verdict on checks 0–5, and every contract call of a valid variant must succeed. Valid variants: disclosure subsets (10 required fields up to all 23, fields hidden or reordered), report-only proof, shipments to three importers and to the exact remaining tonnage, fractional and full-tonnage claims, unusual and repeated batch IDs, a second CN code, route and period, same-layer revisions, a new-report-ID revision, a take-over, a second body and a second supplier, an auditor revoked 24 h + 1 s after registration, checks 1 s before and exactly at `validUntil`, and a shipment checked after expiry. Contested: auditor revoked 1 h and exactly 24 h after registration, body suspended 1 h after, and a shipment proof |
-| Contract tests / SDK tests / verifier tests | 284 / 215 / 28, all passing | Each of the 25 distinct custom errors in the contracts is referenced in at least one test | Contracts: Allowlist 101, Registry 66, Supersede 63, Events 15, FixReview 10, Hardening 7, Vectors 7, Invariants 9, Properties 6. SDK: core 21, tamper, valid-variant and contested matrix 54, verification against anvil 17, PACT 11, reconciliation 7, vLEI 25, KEL 14, CLI 1, EIP-712 domain 9, reviewer commands 9, Communication Template 25, event-window search 11, RPC node fallback 11. Verifier: revocation seal detection 14, watcher 7, impostor chain 7. [CI runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) |
+| Contract tests / SDK tests / verifier tests | 284 / 213 / 28, all passing | Each of the 25 distinct custom errors in the contracts is referenced in at least one test | Contracts: Allowlist 101, Registry 66, Supersede 63, Events 15, FixReview 10, Hardening 7, Vectors 7, Invariants 9, Properties 6. SDK: core 21, tamper, valid-variant and contested matrix 54, verification against anvil 17, PACT 11, reconciliation 7, vLEI 25, KEL 14, CLI 1, reviewer commands 9, Communication Template 25, event-window search 11, RPC node fallback 11, JSON verdict and schema 5, Excel-to-verdict pipeline on anvil 1, README SDK example 1. Verifier: revocation seal detection 14, watcher 7, impostor chain 7. [CI runs](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) |
 | Communication Template import (parse coverage) | 7 of 7 of the Commission's filled V2.1 examples parsed (cement, two steel, screws and nuts, fertiliser, aluminium, hydrogen): 16 product rows, 25 to 69 values read per file; credential fields drafted per product: 7 for CN 7318, 5 or 6 for the others (SEE is mapped only for CN 7318). 4 of 4 other files refused with a stated reason: V1.1 and V2.0 (unsupported version), and the blank V2.1 and V2.1.1 templates (no cached values) | None: this counts what the importer reads, not whether the values are right. Correctness is checked only for the screws and nuts example, against values copied by hand | `node sdk/scripts/template-coverage.ts <files>` on the Commission's example zip (sha256 in [`fixtures/cbam-template/SOURCE.md`](fixtures/cbam-template/SOURCE.md)); `sdk/test/template.test.ts` |
 | Coverage, both contracts | lines 100%, statements 99.3%, branches 97.3%, functions 100% | Target set before measuring: every revert path covered; the branch figure shows it is not fully met | `forge coverage --ir-minimum` |
 | Invariant fuzz | 256 runs × 128 calls = 32,768 calls per invariant, 8 invariant functions, 0 violations | Foundry's default is 256 runs × depth 500; we keep the default run count with depth 128 | Invariant tests over random sequences of register (including revisions and take-overs), claim, resending a claimed batch, revoke, suspend, lift, auditor revocation, address rotation and time jumps |
