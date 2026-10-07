@@ -71,11 +71,11 @@ The demo producer, Demo Fasteners Co. (fictional), has a verified report for 500
 
 The gap depends on the verified value. At 1.5 tCO2e/t the 2026 gap is about 1.48 tCO2e per tonne; at 2.5, about 0.48 tCO2e.
 
-| Verified value (tCO2e/t, illustrative) | Gap to 2026 default of 2.978 | Gap to default of 3.519 from 2028 |
-|---|---|---|
-| 1.5 | 1.478 | 2.019 |
-| 1.8 (demo) | 1.178 | 1.719 |
-| 2.5 | 0.478 | 1.019 |
+| Verified value (tCO2e/t, illustrative) | Gap to 2026 default of 2.978 | Gap to default of 3.519 from 2028 | 2026 gap for the demo's 200 t shipment (tCO2e, gross) |
+|---|---|---|---|
+| 1.5 | 1.478 | 2.019 | 295.6 |
+| 1.8 (demo) | 1.178 | 1.719 | 235.6 |
+| 2.5 | 0.478 | 1.019 | 95.6 |
 
 ### Per 500 t report
 
