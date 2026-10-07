@@ -310,6 +310,9 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
 /* Communication Template panel: file names, sheet cells and product names can be long unbroken strings. */
 #template-import > summary, .template-import .fine, .template-import select, .template-import td { overflow-wrap: anywhere; }
 .template-import select { max-width: 100%; }
+/* Firefox sizes a file input by the chosen file's name: keep it, and its label, inside the panel. */
+.template-import label.fine { min-width: 0; max-width: 100%; }
+.template-import input[type="file"] { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .template-warnings { margin: 6px 0; padding-left: 18px; color: var(--red); }
 @media (max-width: 860px) { .pvv-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) {

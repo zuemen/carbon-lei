@@ -63,6 +63,10 @@ export interface ChainReaderOptions {
   searchTolerance?: bigint;
 }
 
+/** The demo page's connection line when every node's head is older than the head-age limit. */
+export const HEAD_BEHIND = (age: number, limit: number) =>
+  `Sepolia nodes are behind: the newest block they report is ${age} s old, more than the ${limit} s allowed, so Verify will refuse it. Try again in a few minutes.`;
+
 /** A block range for an event search, and whether it was narrowed (false: the whole range from deployment). */
 export interface BlockRange {
   fromBlock: bigint;
@@ -214,13 +218,22 @@ export class ChainReader {
   }
 
   /**
+   * The demo page's reader over `rpcUrls` (on Sepolia when the deployment is), and `HEAD_BEHIND` text when every
+   * node's head is older than the head-age limit (`headBehind`, given 4 s).
+   */
+  static async forPage(deployment: Deployment, rpcUrls: string[]): Promise<{ reader: ChainReader; behind?: string }> {
+    const reader = ChainReader.forRpc(deployment, rpcUrls, deployment.chainId === sepolia.id ? sepolia : undefined);
+    return { reader, behind: (await reader.headBehind(4000))?.text };
+  }
+
+  /**
    * Several URLs: tried in order (`historyFallback`), and a node whose latest block is older than the deployment's
    * head-age limit (`Deployment.maxHeadAgeSec`, else `defaultMaxHeadAgeSec`) is passed over for the next one.
    */
   static forRpc(deployment: Deployment, rpcUrls: string[], chain?: Chain, options?: ChainReaderOptions): ChainReader {
     const transport =
       rpcUrls.length === 1
-        ? http(rpcUrls[0])
+        ? timedHttp(rpcUrls[0], { retryCount: 3 })
         : historyFallback(rpcUrls, {
             maxHeadAgeSec: deployment.maxHeadAgeSec === null ? Infinity : (deployment.maxHeadAgeSec ?? defaultMaxHeadAgeSec(deployment.chainId)),
           });
@@ -311,6 +324,50 @@ export class ChainReader {
 
   async latestTimestamp(): Promise<bigint> {
     return (await this.latestBlock()).timestamp;
+  }
+
+  /** The head-age limit, in seconds, that `verifyPresentation` applies by default (`Infinity`: none). */
+  get headAgeLimitSec(): number {
+    return this.maxHeadAgeSec ?? defaultMaxHeadAgeSec(this.chainId);
+  }
+
+  /**
+   * The age of the newest head the nodes report, when it is over `headAgeLimitSec` (the reader passes over a node that
+   * is behind, so this is the case only when every node is). Undefined when the head is recent, there is no limit, or
+   * the head could not be read within `timeoutMs` (a verification then reports any problem itself). The demo page
+   * uses it for its connection line.
+   */
+  async headBehind(timeoutMs: number, now: () => number = Date.now): Promise<{ age: number; limit: number; text: string } | undefined> {
+    const limit = this.headAgeLimitSec;
+    if (!Number.isFinite(limit)) return undefined;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const head = await Promise.race([
+        this.latestBlock(),
+        new Promise<never>((_, reject) => (t = setTimeout(() => reject(new Error("timeout")), timeoutMs))),
+      ]);
+      const age = Math.floor(now() / 1000) - Number(head.timestamp);
+      return age > limit ? { age, limit, text: HEAD_BEHIND(age, limit) } : undefined;
+    } catch {
+      return undefined;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  /** How many RPC nodes this reader can ask (several for a `historyFallback` transport, else 1). */
+  get nodeCount(): number {
+    const n = (this.client.transport as { rpcNodeCount?: unknown }).rpcNodeCount;
+    return typeof n === "number" && n > 0 ? n : 1;
+  }
+
+  /**
+   * Moves the nodes that answered event searches since the last call to the end of the order in which the nodes are
+   * asked, so the next verification reads its events from another node. False when there is no other node to ask.
+   */
+  preferOtherNodes(): boolean {
+    const f = (this.client.transport as { demoteLogNodes?: unknown }).demoteLogNodes;
+    return typeof f === "function" ? Boolean(f()) : false;
   }
 
   /** Number and timestamp of the latest block, in one request (of the pinned block, for a reader from `at`). */
@@ -687,6 +744,82 @@ export function isPrunedHistoryError(err: unknown): boolean {
   return false;
 }
 
+/** How long one request to one RPC node may take before the next node is asked (and a lone node fails). */
+export const RPC_TIMEOUT_MS = 8_000;
+
+/** Seconds, for messages ("8 s", "0.05 s"). */
+const secondsOf = (ms: number) => `${Number((ms / 1000).toFixed(3))} s`;
+
+/** One RPC node did not answer one request within `RPC_TIMEOUT_MS` (no retry on that node). */
+export class RpcTimeoutError extends BaseError {
+  readonly url: string;
+  readonly timeoutMs: number;
+  constructor(url: string, timeoutMs: number) {
+    super(`node ${url} did not answer within ${secondsOf(timeoutMs)}; try again or use another RPC`, { name: "RpcTimeoutError" });
+    this.url = url;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+/** viem's retry rule for HTTP RPC errors (`shouldRetry` in viem's buildRequest), used for every error but a timeout. */
+function retryable(err: unknown): boolean {
+  const e = err as { name?: unknown; code?: unknown; status?: unknown };
+  if (e?.name === "AbortError") return false;
+  if (typeof e?.code === "number") return [-1, -32005, -32603, 429, -32007].includes(e.code);
+  if (e?.name === "HttpRequestError" && typeof e.status === "number") return [403, 408, 413, 429, 500, 502, 503, 504].includes(e.status);
+  return true;
+}
+
+const isTimeout = (err: unknown) => err instanceof BaseError && !!err.walk((e) => (e as { name?: unknown })?.name === "TimeoutError");
+
+/**
+ * viem's `http` transport, with a timeout of `timeoutMs` per request (default `RPC_TIMEOUT_MS`). A request that times
+ * out is not retried on the same node: it fails with `RpcTimeoutError` ("node … did not answer within 8 s"). Other
+ * errors are retried up to `retryCount` times, as viem's `http` does.
+ */
+export function timedHttp(url: string, opts: { retryCount?: number; timeoutMs?: number } = {}): Transport {
+  const timeoutMs = opts.timeoutMs ?? RPC_TIMEOUT_MS;
+  const retryCount = opts.retryCount ?? 1;
+  return ((config: Parameters<Transport>[0]) => {
+    const node = http(url, { timeout: timeoutMs, retryCount: 0 })({ ...config, timeout: timeoutMs, retryCount: 0 });
+    return createTransport(
+      {
+        key: "http",
+        name: "HTTP JSON-RPC",
+        type: "http",
+        retryCount: 0,
+        timeout: timeoutMs,
+        async request(args: { method: string; params?: unknown }): Promise<any> {
+          for (let attempt = 0; ; attempt++) {
+            try {
+              return await node.request(args as never);
+            } catch (err) {
+              if (isTimeout(err)) throw new RpcTimeoutError(url, timeoutMs);
+              if (attempt >= retryCount || shouldThrow(err as Error) || !retryable(err)) throw err;
+              await new Promise((r) => setTimeout(r, 150 * 2 ** attempt));
+            }
+          }
+        },
+      },
+      { url },
+    );
+  }) as Transport;
+}
+
+/**
+ * The RPC URLs a CLI command uses: `--rpc`, else the comma-separated list in `CARBONLEI_RPC_URL`, else `SEPOLIA_RPCS`.
+ * `source` says where the list came from.
+ */
+export function rpcUrlsFrom(flag: string | undefined, env: string | undefined): { urls: string[]; source: "flag" | "env" | "default" } {
+  if (flag !== undefined && flag.trim() !== "") return { urls: [flag.trim()], source: "flag" };
+  const list = (env ?? "")
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+  if (list.length) return { urls: list, source: "env" };
+  return { urls: [...SEPOLIA_RPCS], source: "default" };
+}
+
 /** What one node answered to one request, when it did not give a usable answer. */
 export interface NodeOutcome {
   url: string;
@@ -694,7 +827,7 @@ export interface NodeOutcome {
    * "null": `null` for a method in which it means "not found"; "pruned": a pruned-history error; "behind": a latest
    * block older than the head-age limit, or a request for a block after the latest one the node reported.
    */
-  kind: "null" | "pruned" | "error" | "behind";
+  kind: "null" | "pruned" | "error" | "behind" | "timeout";
   detail: string;
 }
 
@@ -702,10 +835,16 @@ export interface NodeOutcome {
 export class RpcNodesError extends BaseError {
   readonly outcomes: NodeOutcome[];
   constructor(method: string, outcomes: NodeOutcome[]) {
-    super(`${method}: none of the ${outcomes.length} RPC nodes answered`, {
-      name: "RpcNodesError",
-      metaMessages: outcomes.map((o) => `${o.url}: ${o.detail}`),
-    });
+    const silent = outcomes.length > 0 && outcomes.every((o) => o.kind === "timeout");
+    super(
+      silent
+        ? `${method}: none of the ${outcomes.length} RPC nodes answered: ${outcomes.map((o) => `node ${o.url} ${o.detail}`).join("; ")}; try again or use another RPC`
+        : `${method}: none of the ${outcomes.length} RPC nodes answered`,
+      {
+        name: "RpcNodesError",
+        metaMessages: outcomes.map((o) => `${o.url}: ${o.detail}`),
+      },
+    );
     this.outcomes = outcomes;
   }
 }
@@ -731,14 +870,28 @@ export function errorDetail(err: unknown): string {
  * returned, and the caller's own head-age check (verifyPresentation) reports it. A node that was passed over, or
  * any node whose latest block is known, is not asked for a block after that latest block (an event search past a
  * node's head could come back short rather than fail).
+ *
+ * Each request to a node has a timeout (`timeoutMs`, default `RPC_TIMEOUT_MS`). A node that times out is not asked
+ * again for that request and is moved to the end of the order for the next ones, so one node that hangs costs one
+ * timeout, not one per request. `demoteLogNodes` (on the transport, used by `ChainReader.preferOtherNodes`) moves the
+ * nodes that answered `eth_getLogs` to the end in the same way, so a retried verification reads its events elsewhere.
  */
 export function historyFallback(
   urls: string[],
-  opts: { retryCount?: number; maxHeadAgeSec?: number; now?: () => number } = {},
+  opts: { retryCount?: number; maxHeadAgeSec?: number; now?: () => number; timeoutMs?: number } = {},
 ): Transport {
   if (!urls.length) throw new Error("historyFallback needs at least one RPC URL");
   return (({ chain, timeout, ...rest }) => {
-    const nodes = urls.map((u) => http(u)({ ...rest, chain, timeout, retryCount: opts.retryCount ?? 1 }));
+    const timeoutMs = opts.timeoutMs ?? RPC_TIMEOUT_MS;
+    const nodes = urls.map((u) =>
+      timedHttp(u, { retryCount: opts.retryCount ?? 1, timeoutMs })({ ...rest, chain, timeout, retryCount: 0 }),
+    );
+    // The order in which the nodes are asked (indices into `urls`), and the nodes that answered an event search.
+    let order = urls.map((_, i) => i);
+    const toEnd = (picked: number[]) => {
+      order = [...order.filter((i) => !picked.includes(i)), ...order.filter((i) => picked.includes(i))];
+    };
+    let logNodes: number[] = [];
     // Latest block number each node last reported (shared by every request of this transport).
     const knownHead: (bigint | undefined)[] = urls.map(() => undefined);
     const maxAge =
@@ -755,7 +908,7 @@ export function historyFallback(
         const latest = isLatestBlockRequest(method, params);
         const wanted = requestedBlock(method, params);
         let behind: { number: bigint; result: unknown } | undefined;
-        for (let i = 0; i < nodes.length; i++) {
+        for (const i of [...order]) {
           const head = knownHead[i];
           if (wanted !== undefined && head !== undefined && wanted > head) {
             outcomes.push({ url: urls[i], kind: "behind", detail: `its latest block ${head} is before the requested block ${wanted}` });
@@ -766,6 +919,11 @@ export function historyFallback(
             result = await nodes[i].request({ method, params } as never);
           } catch (err) {
             if (shouldThrow(err as Error)) throw err;
+            if (err instanceof RpcTimeoutError) {
+              outcomes.push({ url: urls[i], kind: "timeout", detail: `did not answer within ${secondsOf(timeoutMs)}` });
+              toEnd([i]);
+              continue;
+            }
             const pruned = isPrunedHistoryError(err);
             outcomes.push({
               url: urls[i],
@@ -792,11 +950,22 @@ export function historyFallback(
               }
             }
           }
+          if (method === "eth_getLogs" && !logNodes.includes(i)) logNodes.push(i);
           return result;
         }
         if (behind) return behind.result;
         if (outcomes.every((o) => o.kind === "null")) return null;
         throw new RpcNodesError(method, outcomes);
+      },
+    }, {
+      rpcNodeCount: urls.length,
+      // Moves the nodes that answered `eth_getLogs` since the last call (else, or if that was every node, the first
+      // node in the order) to the end.
+      demoteLogNodes(): boolean {
+        if (urls.length < 2) return false;
+        toEnd(logNodes.length && logNodes.length < urls.length ? logNodes : [order[0]]);
+        logNodes = [];
+        return true;
       },
     });
   }) as Transport;

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { ChainReader, type Deployment } from "./chain.ts";
+import { ChainReader, rpcUrlsFrom, type Deployment } from "./chain.ts";
 import { newSalt } from "./encoding.ts";
 import type { CredentialClaims, Hex } from "./credential.ts";
 import type { Presentation } from "./disclosure.ts";
@@ -34,6 +34,8 @@ const USAGE = `carbonlei <command> [options]
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
                --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>]
   verify       --proof <proof.json> [--rpc <url>] [--deployment <file>]
+                                                    RPC: --rpc, else CARBONLEI_RPC_URL (comma-separated URLs), else
+                                                    the public Sepolia nodes; each request times out after 8 s
                [--eori <EORI>]                      your EORI: binds the shipment to you (check 5); only then is
                                                     the report judged at the shipment's claim time
                [--trust-anchor <AID>]               root of trust for check 7 (default: the demo root)
@@ -87,7 +89,24 @@ function reader(values: Record<string, unknown>): ChainReader {
   const deployment = readJson(
     (values.deployment as string) ?? fileURLToPath(new URL("../contracts/deployments/11155111.json", import.meta.url)),
   ) as Deployment;
-  return values.rpc ? ChainReader.forRpc(deployment, [values.rpc as string], sepolia) : ChainReader.forSepolia(deployment);
+  // `--rpc`, else CARBONLEI_RPC_URL (one URL or a comma-separated list), else the default list (SEPOLIA_RPCS).
+  const { urls } = rpcUrlsFrom(values.rpc as string | undefined, process.env.CARBONLEI_RPC_URL);
+  return ChainReader.forRpc(deployment, urls, sepolia);
+}
+
+/** Longest a command waits for the RPC nodes in all (each request to one node times out after 8 s). */
+const RPC_DEADLINE_SEC = 60;
+
+/** `p`, or an error once the RPC nodes have taken `RPC_DEADLINE_SEC` in all. */
+function withinDeadline<T>(p: Promise<T>): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`the RPC nodes did not answer within ${RPC_DEADLINE_SEC} s in all; try again or use another RPC (--rpc <url> or CARBONLEI_RPC_URL)`)),
+      RPC_DEADLINE_SEC * 1000,
+    );
+  });
+  return Promise.race([p, deadline]).finally(() => clearTimeout(timer));
 }
 
 /** Reads an evidence bundle a proof refers to: relative to the proof file, then to the demo's public folder. */
@@ -205,23 +224,23 @@ async function main(argv: string[]) {
       const maxHeadAgeSec = maxHeadAge(values);
       if (values.json) {
         // Machine-readable verdict on stdout only; a run that throws exits 3 (see the handler at the end).
-        const v = await verdictFor(proof, reader(values), {
+        const v = await withinDeadline(verdictFor(proof, reader(values), {
           importerEORI: values.eori as string | undefined,
           loadBundle,
           trustAnchor,
           maxHeadAgeSec,
           proofText,
-        });
+        }));
         process.stdout.write(json(v) + "\n");
         if (expected) return v.overall === "INVALID" && v.checks.some((c) => c.status === "fail" && c.code === expected) ? 0 : 1;
         return exitCodeOf(v);
       }
-      const r = await verifyPresentation(proof, reader(values), {
+      const r = await withinDeadline(verifyPresentation(proof, reader(values), {
         importerEORI: values.eori as string | undefined,
         checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}) }),
         maxHeadAgeSec,
         proofText,
-      });
+      }));
       for (const c of r.checks) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
@@ -258,18 +277,21 @@ async function main(argv: string[]) {
       if (!values.eori) throw new Error("export-pact needs --eori <EORI>: the importer the shipment was declared to");
       const rd = reader(values);
       const trustAnchor = values["trust-anchor"] as string | undefined;
-      const r = await verifyPresentation(proof, rd, {
-        importerEORI: values.eori as string,
-        checkers: vleiCheckers({ loadBundle: bundleLoader(values.proof as string), ...(trustAnchor ? { trustAnchor } : {}) }),
-        maxHeadAgeSec: maxHeadAge(values),
-        proofText,
-      });
-      const pf = await exportPactFromProof(proof, r, rd, {
-        companyName: values["company-name"] as string,
-        productNameCompany: values["product-name"] as string,
-        productDescription: values["product-description"] as string,
-        productId: values["product-id"] as string,
-      });
+      const pf = await withinDeadline(
+        verifyPresentation(proof, rd, {
+          importerEORI: values.eori as string,
+          checkers: vleiCheckers({ loadBundle: bundleLoader(values.proof as string), ...(trustAnchor ? { trustAnchor } : {}) }),
+          maxHeadAgeSec: maxHeadAge(values),
+          proofText,
+        }).then((r) =>
+          exportPactFromProof(proof, r, rd, {
+            companyName: values["company-name"] as string,
+            productNameCompany: values["product-name"] as string,
+            productDescription: values["product-description"] as string,
+            productId: values["product-id"] as string,
+          }),
+        ),
+      );
       write(values.out, pf);
       return 0;
     }

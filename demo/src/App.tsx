@@ -29,7 +29,8 @@ const STEPS: { n: number; tab: TabId; long: string; short: string }[] = [
 
 export type ConnState =
   | { kind: "connecting"; waited: number; switched: boolean }
-  | { kind: "live"; rpc: string; switched: boolean }
+  // `behind`: every node's latest block is older than the head-age limit (Verify refuses it); shown instead of Connected.
+  | { kind: "live"; rpc: string; switched: boolean; behind?: string }
   | { kind: "failed"; waited: number }
   | { kind: "offline" };
 
@@ -118,10 +119,11 @@ export function App() {
         if (await probe(rpc, 7000)) {
           if (attempt.current !== my) return;
           const ordered = [rpc, ...d.network.rpcs.filter((r) => r !== rpc)];
-          const { ChainReader: Reader, SEPOLIA_CHAIN } = await import("../../sdk/chain.ts");
+          // The reader, and whether every node's head is too old (read in the chain module, not on the first screen).
+          const { reader: r, behind } = await (await import("../../sdk/chain.ts")).ChainReader.forPage(d.deployment, ordered);
           if (attempt.current !== my) return;
-          setReader(Reader.forRpc(d.deployment, ordered, d.network.chainId === 11155111 ? SEPOLIA_CHAIN : undefined));
-          setConn({ kind: "live", rpc, switched: i > 0 });
+          setReader(r);
+          setConn({ kind: "live", rpc, switched: i > 0, behind });
           return;
         }
       }
@@ -443,8 +445,8 @@ function ConnectionLine(props: { conn: ConnState; onRetry: () => void; onCached:
   }
   if (conn.kind === "live") {
     return (
-      <p className={`conn ${conn.switched ? "warn" : ""}`} role="status">
-        {conn.switched ? "Primary node did not respond. Switched to backup node." : "Connected to Sepolia."}
+      <p className={`conn ${conn.switched || conn.behind ? "warn" : ""}`} role="status">
+        {conn.behind ?? (conn.switched ? "Primary node did not respond. Switched to backup node." : "Connected to Sepolia.")}
       </p>
     );
   }

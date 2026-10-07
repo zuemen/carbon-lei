@@ -20,11 +20,19 @@ async function scan(page: Page, label: string) {
   expect(report, `axe on ${label}`).toEqual([]);
 }
 
+// The key that moves focus to the next element. WebKit on macOS follows Safari's default ("Press Tab to highlight
+// each item" off): Tab skips buttons and links, and Option+Tab (Alt+Tab) reaches every focusable element, as a
+// Safari keyboard user would press. Chromium and Firefox use Tab.
+let NEXT = "Tab";
+test.beforeEach(({ browserName }) => {
+  NEXT = browserName === "webkit" ? "Alt+Tab" : "Tab";
+});
+
 /** Presses Tab (or Shift+Tab) until the element is focused, at most `max` times, so a test fails rather than loops. */
 async function tabTo(page: Page, target: Locator, { max = 80, back = false } = {}) {
   for (let i = 0; i < max; i++) {
     if (await target.evaluate((el) => el === document.activeElement)) return;
-    await page.keyboard.press(back ? "Shift+Tab" : "Tab");
+    await page.keyboard.press(back ? `Shift+${NEXT}` : NEXT);
   }
   throw new Error("element not reached with the keyboard");
 }
@@ -144,15 +152,20 @@ test("A3 keyboard only: the evidence note, the tabs, the comparison panel and th
   await expect(page.locator("ol.a4-checks > li")).toHaveCount(8);
 });
 
-test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse click", async ({ page }) => {
+test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse click", async ({ page, browserName }) => {
   await page.goto("./#buyer");
   await connected(page);
   const load = page.getByRole("button", { name: "Load the demo proof" });
   await load.click();
-  await expect(load).toBeFocused();
+  // WebKit on macOS does not focus a button on a mouse click (Safari's behaviour); the button must still show no ring.
+  if (browserName === "webkit") await expect(load).not.toBeFocused();
+  else await expect(load).toBeFocused();
   expect(await load.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("none");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Shift+Tab");
+  if (browserName === "webkit") await tabTo(page, load);
+  else {
+    await page.keyboard.press(NEXT);
+    await page.keyboard.press(`Shift+${NEXT}`);
+  }
   await expect(load).toBeFocused();
   expect(await load.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("solid");
 });

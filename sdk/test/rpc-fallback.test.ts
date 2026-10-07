@@ -8,7 +8,21 @@ import { BaseError, createPublicClient, encodeAbiParameters, encodeEventTopics, 
 import { sepolia } from "viem/chains";
 import { audit, parseOnchainTable, recordedTxs, type Node, type ReceiptSource } from "../../scripts/audit-onchain.ts";
 import { verifierAllowlistAbi } from "../abi.ts";
-import { ChainReader, historyFallback, isPrunedHistoryError, RpcNodesError, SEPOLIA_RPCS } from "../chain.ts";
+import { fileURLToPath } from "node:url";
+import {
+  ChainReader,
+  historyFallback,
+  isPrunedHistoryError,
+  RPC_TIMEOUT_MS,
+  RpcNodesError,
+  rpcUrlsFrom,
+  SEPOLIA_RPCS,
+  timedHttp,
+} from "../chain.ts";
+import { vleiCheckers } from "../checkers.ts";
+import type { Presentation } from "../disclosure.ts";
+import { INCOMPLETE_HISTORY, isIncompleteHistory, verifyPresentation } from "../verify.ts";
+import { replayFetch } from "./helpers/rpc-replay.ts";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const deployment = JSON.parse(read("contracts/deployments/11155111.json"));
@@ -19,7 +33,9 @@ const C = "https://c.example/rpc";
 const TX = `0x${"11".repeat(32)}` as Hex;
 const LEI = `0x${"22".repeat(32)}` as Hex;
 
-type Handler = (method: string, params: unknown[]) => { result?: unknown; error?: { code: number; message: string; data?: Hex } };
+/** A handler's answer that never comes: the request hangs until the caller aborts it (its timeout). */
+const HANG = "hang" as const;
+type Handler = (method: string, params: unknown[]) => { result?: unknown; error?: { code: number; message: string; data?: Hex } } | typeof HANG;
 
 /** Serves JSON-RPC from one handler per URL in place of `fetch`, and records which URL got which method. */
 function serve(nodes: Record<string, Handler>) {
@@ -31,6 +47,11 @@ function serve(nodes: Record<string, Handler>) {
     if (!handle) throw new TypeError(`fetch failed: ${url}`);
     calls.push({ url, method: body.method });
     const answer = handle(body.method, body.params ?? []);
+    if (answer === HANG) {
+      return new Promise<Response>((_, reject) =>
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted.", "AbortError"))),
+      );
+    }
     return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, ...answer }), {
       status: 200,
       headers: { "content-type": "application/json" },
@@ -214,6 +235,138 @@ describe("historyFallback: a node whose latest block is too old", () => {
     });
     expect((await ChainReader.forRpc(deployment, [A, B], sepolia).latestBlock()).number).toBe(400n);
   });
+
+  // Node-failure drill L6: the demo page's connection line says the nodes are behind, rather than "Connected".
+  it("the demo page's reader: every node behind → the text for its connection line; one current node → none", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    serve({ [A]: latestOr(block(100, now - 600), () => ({ result: ok })), [B]: latestOr(block(150, now - 601), () => ({ result: ok })) });
+    const behind = (await ChainReader.forPage(deployment, [A, B])).behind;
+    expect(behind).toMatch(/^Sepolia nodes are behind: the newest block they report is 60\d s old, more than the 300 s allowed, so Verify will refuse it\./);
+    serve({ [A]: latestOr(block(100, now - 600), () => ({ result: ok })), [B]: latestOr(block(400, now), () => ({ result: ok })) });
+    expect((await ChainReader.forPage(deployment, [A, B])).behind).toBeUndefined();
+    // A head that cannot be read is left to Verify to report (no claim either way).
+    serve({ [A]: () => ({ error: { code: -32000, message: "down" } }) });
+    expect((await ChainReader.forPage(deployment, [A])).behind).toBeUndefined();
+  });
+});
+
+// Node-failure drill L5: a node that hangs costs one timeout (8 s by default), not one per request and retry.
+describe("historyFallback: a node that does not answer", () => {
+  const T = 50;
+  const chainId = { result: "0xaa36a7" };
+
+  it("one request waits at most the timeout for a node, then asks the next one; the silent node is asked last afterwards", async () => {
+    const calls = serve({ [A]: () => HANG, [B]: () => chainId });
+    const c = createPublicClient({ chain: sepolia, transport: historyFallback([A, B], { timeoutMs: T }) });
+    const t0 = Date.now();
+    expect(await c.getChainId()).toBe(11155111);
+    expect(Date.now() - t0).toBeLessThan(T * 6);
+    expect(await c.request({ method: "eth_chainId" })).toBe("0xaa36a7");
+    // A once (no retry after its timeout), then B; the second request goes to B first.
+    expect(calls.map((x) => x.url)).toEqual([A, B, B]);
+  });
+
+  it("every node silent → one timeout per node, and an error that says which node did not answer within how long", async () => {
+    const calls = serve({ [A]: () => HANG, [B]: () => HANG });
+    const c = createPublicClient({ chain: sepolia, transport: historyFallback([A, B], { timeoutMs: T }) });
+    const err = (await c.getChainId().then(
+      () => undefined,
+      (e: unknown) => e,
+    )) as BaseError;
+    const nodesErr = err.walk((e) => e instanceof RpcNodesError) as RpcNodesError;
+    expect(nodesErr.outcomes.map((o) => [o.url, o.kind, o.detail])).toEqual([
+      [A, "timeout", "did not answer within 0.05 s"],
+      [B, "timeout", "did not answer within 0.05 s"],
+    ]);
+    expect(err.message).toContain(
+      `eth_chainId: none of the 2 RPC nodes answered: node ${A} did not answer within 0.05 s; node ${B} did not answer within 0.05 s; try again or use another RPC`,
+    );
+    expect(calls).toHaveLength(2);
+  });
+
+  it("a single node (--rpc): one timeout, no retry, and the message names the node and the time", async () => {
+    const calls = serve({ [A]: () => HANG });
+    const c = createPublicClient({ chain: sepolia, transport: timedHttp(A, { retryCount: 3, timeoutMs: T }) });
+    const t0 = Date.now();
+    await expect(c.getChainId()).rejects.toThrow(`node ${A} did not answer within 0.05 s; try again or use another RPC`);
+    expect(Date.now() - t0).toBeLessThan(T * 6);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("other errors are still retried as before (a rate limit), and the default timeout is 8 s", async () => {
+    let n = 0;
+    const calls = serve({ [A]: () => (++n === 1 ? { error: { code: -32005, message: "rate limited" } } : chainId) });
+    const c = createPublicClient({ chain: sepolia, transport: timedHttp(A, { retryCount: 1 }) });
+    expect(await c.getChainId()).toBe(11155111);
+    expect(calls).toHaveLength(2);
+    expect(RPC_TIMEOUT_MS).toBe(8_000);
+  });
+});
+
+// L3: the CLI's node list.
+describe("CLI RPC list: --rpc, then CARBONLEI_RPC_URL, then the default list", () => {
+  it("takes --rpc first, then the comma-separated environment variable, then SEPOLIA_RPCS", () => {
+    expect(rpcUrlsFrom("https://flag.example", `${A},${B}`)).toEqual({ urls: ["https://flag.example"], source: "flag" });
+    expect(rpcUrlsFrom(undefined, ` ${A} , ${B},, `)).toEqual({ urls: [A, B], source: "env" });
+    expect(rpcUrlsFrom(undefined, A)).toEqual({ urls: [A], source: "env" });
+    expect(rpcUrlsFrom(undefined, undefined)).toEqual({ urls: SEPOLIA_RPCS, source: "default" });
+    expect(rpcUrlsFrom("", " , ")).toEqual({ urls: SEPOLIA_RPCS, source: "default" });
+  });
+});
+
+// L7: an incomplete event history from one node is asked of the next node; only when every node's answer is
+// incomplete does the verification fail (fail closed).
+describe("verifyPresentation: an incomplete eth_getLogs answer from one node", () => {
+  const proof = JSON.parse(read("fixtures/sepolia-demo-proof.json")) as Presentation;
+  const recording = fileURLToPath(new URL("./fixtures/sepolia-demo-rpc.json", import.meta.url));
+  const head = JSON.parse(read("sdk/test/fixtures/sepolia-demo-rpc.json")).answers['eth_getBlockByNumber ["latest",false]'].result;
+  const now = () => Number(BigInt(head.timestamp)) * 1000 + 5_000;
+  const loadBundle = async (p: string) => read(`demo/public/${p}`);
+  const opts = { importerEORI: "NLDEMO000000001", now, checkers: vleiCheckers({ loadBundle }) };
+
+  /** The recorded Sepolia answers, except that the nodes in `empty` answer every eth_getLogs with no events. */
+  function replayWithEmptyLogs(empty: string[]) {
+    const replay = replayFetch(recording);
+    const logs: string[] = [];
+    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+      // Node names as in SEPOLIA_RPCS (fetch gets "https://host/" for "https://host").
+      const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const url = [...SEPOLIA_RPCS, A].find((u) => new URL(u).href === new URL(href).href) ?? href;
+      const body = JSON.parse(String(init?.body));
+      if (body.method === "eth_getLogs") {
+        logs.push(url);
+        if (empty.includes(url)) return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: [] }), { headers: { "content-type": "application/json" } });
+      }
+      return replay(input, init);
+    });
+    return logs;
+  }
+
+  it("the first node's answer is empty → the verification is run again with the events read from the next node: VALID", async () => {
+    const logs = replayWithEmptyLogs([SEPOLIA_RPCS[0]]);
+    const r = await verifyPresentation(proof, ChainReader.forSepolia(deployment), opts);
+    expect(r.overall).toBe("VALID");
+    expect(r.checks.filter((c) => c.status === "pass")).toHaveLength(9);
+    expect(logs[0]).toBe(SEPOLIA_RPCS[0]);
+    expect(logs.at(-1)).toBe(SEPOLIA_RPCS[1]);
+  }, 30_000);
+
+  it("every node's answer is empty → fails with the incomplete-history error after asking each node", async () => {
+    const logs = replayWithEmptyLogs(SEPOLIA_RPCS);
+    const err = await verifyPresentation(proof, ChainReader.forSepolia(deployment), opts).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect((err as Error).message).toBe(INCOMPLETE_HISTORY("this report's own ReportRegistered event"));
+    expect(isIncompleteHistory(err)).toBe(true);
+    expect([...new Set(logs)]).toEqual(SEPOLIA_RPCS);
+  }, 30_000);
+
+  it("a single node with an empty answer fails at once (nothing else to ask)", async () => {
+    const logs = replayWithEmptyLogs([A]);
+    await expect(verifyPresentation(proof, ChainReader.forRpc(deployment, [A], sepolia), opts)).rejects.toThrow(/incomplete event history/);
+    expect(new Set(logs)).toEqual(new Set([A]));
+  }, 30_000);
 });
 
 describe("default RPC list", () => {

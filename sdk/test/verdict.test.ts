@@ -4,7 +4,9 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ChainReader, type Deployment } from "../chain.ts";
 import { vleiCheckers } from "../checkers.ts";
 import { decodeDisclosure, type Presentation } from "../disclosure.ts";
@@ -82,6 +84,49 @@ describe("verdict", () => {
     const plain = await run(process.execPath, [cli, "verify", "--proof", missing]).catch((e) => e);
     expect([plain.code, plain.stdout]).toEqual([1, ""]);
   }, 30_000);
+});
+
+// Node-failure drill L3 and L5: the CLI reads CARBONLEI_RPC_URL (--rpc wins), and a node that never answers fails
+// the run after one 8 s timeout with a message naming the node, not after about 40 s with viem's text.
+describe("verify: RPC from CARBONLEI_RPC_URL, and a node that does not answer", () => {
+  const proofPath = fileURLToPath(new URL("../../fixtures/sepolia-demo-proof.json", import.meta.url));
+  let server: Server;
+  let silent = "";
+  beforeAll(async () => {
+    server = createServer(() => {}); // accepts every request and never answers
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    silent = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  });
+  afterAll(() => {
+    server.closeAllConnections();
+    server.close();
+  });
+  const verify = (args: string[], env: Record<string, string>) =>
+    run(process.execPath, [cli, "verify", "--proof", proofPath, "--eori", "NLDEMO000000001", "--json", ...args], {
+      env: { ...process.env, ...env },
+    }).catch((e) => e);
+
+  it("CARBONLEI_RPC_URL names the node; one that never answers fails after one 8 s timeout, naming the node", async () => {
+    const t0 = Date.now();
+    const r = await verify([], { CARBONLEI_RPC_URL: silent });
+    const took = Date.now() - t0;
+    expect(r.code).toBe(3);
+    expect(JSON.parse(r.stdout).error).toContain(`node ${silent} did not answer within 8 s; try again or use another RPC`);
+    expect(took).toBeGreaterThanOrEqual(8_000);
+    expect(took).toBeLessThan(20_000);
+  }, 40_000);
+
+  it("--rpc wins over CARBONLEI_RPC_URL; a comma-separated list is tried in order", async () => {
+    const refused = "http://127.0.0.1:1";
+    const flag = await verify(["--rpc", refused], { CARBONLEI_RPC_URL: silent });
+    expect(flag.code).toBe(3);
+    const err = JSON.parse(flag.stdout).error as string;
+    expect(err).toContain("127.0.0.1:1");
+    expect(err).not.toContain(silent);
+    const list = await verify([], { CARBONLEI_RPC_URL: `${refused}, ${refused}/b` });
+    expect(list.code).toBe(3);
+    expect(JSON.parse(list.stdout).error).toMatch(/none of the 2 RPC nodes answered[\s\S]*127\.0\.0\.1:1:[\s\S]*127\.0\.0\.1:1\/b:/);
+  }, 40_000);
 });
 
 /** A chain with nothing registered, counting the reads verdictFor watches (checks 0-3 run offline). */

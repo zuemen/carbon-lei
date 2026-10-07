@@ -295,6 +295,79 @@ test("all RPCs down → explains, offers retry and the cached view", async ({ pa
   }
 });
 
+/** True for a JSON-RPC request for the latest block (the head the verifier checks the age of). */
+function isLatestBlock(body: unknown): boolean {
+  const b = body as { method?: unknown; params?: unknown[] } | null;
+  return b?.method === "eth_getBlockByNumber" && Array.isArray(b.params) && b.params[0] === "latest";
+}
+
+test("every node 10 minutes behind → the status line says so instead of Connected; Verify refuses the old head", async ({ page }) => {
+  for (const r of await rpcs(page)) {
+    await page.route(`${r}**`, async (route) => {
+      if (!isLatestBlock(route.request().postDataJSON())) return route.continue();
+      const res = await route.fetch();
+      const json = await res.json();
+      if (json.result) json.result.timestamp = `0x${(parseInt(json.result.timestamp, 16) - 600).toString(16)}`;
+      await route.fulfill({ response: res, json });
+    });
+  }
+  await page.goto("./#buyer");
+  await expect(page.getByText(/^Sepolia nodes are behind: the newest block they report is \d+ s old, more than the 300 s allowed/)).toBeVisible();
+  await expect(page.getByText("Connected to Sepolia.")).toHaveCount(0);
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.getByText(/Verification could not finish: RPC node is behind: its latest block \d+ is \d+ s old/)).toBeVisible();
+  await expect(page.locator(".overall .stamp")).toHaveCount(0);
+});
+
+test("the primary node answers every event search with no events → the events are read from the next node: 8 of 8", async ({ page }) => {
+  const [primary, ...others] = await rpcs(page);
+  const searched: string[] = [];
+  for (const r of [primary, ...others]) {
+    await page.route(`${r}**`, async (route) => {
+      const body = route.request().postDataJSON() as { id?: unknown; method?: unknown } | null;
+      if (body?.method !== "eth_getLogs") return route.continue();
+      searched.push(r);
+      if (r !== primary) return route.continue();
+      await route.fulfill({ json: { jsonrpc: "2.0", id: body.id, result: [] }, headers: { "access-control-allow-origin": "*" } });
+    });
+  }
+  await page.goto("./#buyer");
+  await expect(page.getByText("Connected to Sepolia.")).toBeVisible();
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  await expect(page.getByText(/8 of 8 checks passed/).first()).toBeVisible();
+  await expect(page.getByText(/incomplete event history/)).toHaveCount(0);
+  expect(searched[0]).toBe(primary);
+  expect(searched.some((r) => r !== primary)).toBe(true);
+});
+
+test("Verify waits more than about 3 s for a node → a progress line while it waits, gone with the result", async ({ page }) => {
+  const nodes = await rpcs(page);
+  await page.goto("./#buyer");
+  await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
+  const hint = page.getByText("Waiting for a Sepolia node…");
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await expect(hint).toHaveCount(0);
+  // The verification's first read of the head answers after 4.5 s (under the 8 s timeout, so no node is switched).
+  let delayed = false;
+  for (const r of nodes) {
+    await page.route(`${r}**`, async (route) => {
+      if (!delayed && isLatestBlock(route.request().postDataJSON())) {
+        delayed = true;
+        await new Promise((x) => setTimeout(x, 4_500));
+      }
+      await route.continue();
+    });
+  }
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(hint).toBeVisible();
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  await expect(hint).toHaveCount(0);
+  await expect(page.getByText(/8 of 8 checks passed/).first()).toBeVisible();
+});
+
 test("E6 no horizontal scroll at 390 px", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ["buyer", "supplier", "verification-body", "try-to-break-it", "trust-chain", "on-chain-proof"]) {

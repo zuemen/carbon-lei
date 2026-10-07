@@ -468,11 +468,31 @@ export async function verifyOffline(
   };
 }
 
+/** An error thrown with `INCOMPLETE_HISTORY`: the node's event history lacks an event the chain state says is there. */
+export const isIncompleteHistory = (e: unknown): boolean =>
+  typeof (e as Error)?.message === "string" && (e as Error).message.startsWith(INCOMPLETE_HISTORY("").split(":")[0]);
+
+/**
+ * Checks 0-8 of a proof against the chain. When a node's event history is incomplete (`INCOMPLETE_HISTORY`) and the
+ * reader has other nodes, the verification is run again with the event searches sent to another node first, up to
+ * once per node; only when every node's answer is incomplete does it fail (fail closed, with that error).
+ */
 export async function verifyPresentation(
   p: Presentation,
   reader: ChainReader,
   opts: VerifyOptions = {},
 ): Promise<VerificationResult> {
+  const tries = typeof reader.nodeCount === "number" ? Math.max(1, reader.nodeCount) : 1;
+  for (let i = 1; ; i++) {
+    try {
+      return await verifyOnce(p, reader, opts);
+    } catch (e) {
+      if (i >= tries || !isIncompleteHistory(e) || typeof reader.preferOtherNodes !== "function" || !reader.preferOtherNodes()) throw e;
+    }
+  }
+}
+
+async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOptions): Promise<VerificationResult> {
   const local = localChecks(p, opts.proofText);
   if (isFinal(local)) return local;
   const { core, decoded, get, checks, disclosed, hidden } = local;

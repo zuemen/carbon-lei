@@ -294,6 +294,8 @@ export function Buyer() {
   const current = verified && verified.text === proofText ? verified : null;
   const result = current?.result ?? null;
   const [running, setRunning] = useState(false);
+  // Verify has waited more than about 3 s for the chain: a progress line is shown until it finishes.
+  const [slow, setSlow] = useState(false);
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [tampered, setTampered] = useState(false);
@@ -378,6 +380,7 @@ export function Buyer() {
       return;
     }
     setRunning(true);
+    const slowTimer = window.setTimeout(() => setSlow(true), 3000);
     try {
       const r = await verifyPresentation(proof, reader, {
         importerEORI: data.importer.eori,
@@ -389,6 +392,8 @@ export function Buyer() {
     } catch (e) {
       setError(`Verification could not finish: ${(e as Error).message}`);
     } finally {
+      window.clearTimeout(slowTimer);
+      setSlow(false);
       setRunning(false);
     }
   }
@@ -501,6 +506,7 @@ export function Buyer() {
             </button>
           </div>
           <div className="verify-summary-slot" role="status" ref={summaryRef}>
+            {running && slow && <p className="conn">Waiting for a Sepolia node…</p>}
             {result && !running && <VerifySummary result={result} cmp={fromProof ? fromProof.cmp : null} onSeeComparison={seeComparison} />}
           </div>
           {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}

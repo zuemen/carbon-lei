@@ -8,6 +8,12 @@ const hosted = process.env.DEMO_URL;
 const PORT = 5199;
 const local = `http://127.0.0.1:${PORT}/carbon-lei/`;
 
+const DEVICES = { chromium: "Desktop Chrome", firefox: "Desktop Firefox", webkit: "Desktop Safari" } as const;
+type Browser = keyof typeof DEVICES;
+const wanted = (process.env.PW_BROWSERS ?? "chromium").split(",").map((b) => b.trim());
+const browsers = (wanted.includes("all") ? Object.keys(DEVICES) : wanted).filter((b): b is Browser => b in DEVICES);
+if (!browsers.length) throw new Error(`PW_BROWSERS lists no known browser (chromium, firefox, webkit or all): ${process.env.PW_BROWSERS}`);
+
 export default defineConfig({
   testDir: "e2e",
   timeout: 90_000,
@@ -20,7 +26,9 @@ export default defineConfig({
     baseURL: hosted ?? local,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Chromium by default (`npm run e2e`, the counts in the README). Firefox and WebKit are opt-in:
+  // PW_BROWSERS=all (or a list such as firefox,webkit) adds their projects; `npm run e2e:all` runs all three.
+  projects: browsers.map((name) => ({ name, use: { ...devices[DEVICES[name]] } })),
   webServer: hosted
     ? undefined
     : {
