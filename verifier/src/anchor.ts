@@ -57,10 +57,12 @@ function hasSeal(ked: Json, credSaid: string): boolean {
 /** An auditor's agent connection and AID (the demo auditor, or the attack 4 impostor's auditor). */
 export type AnchorParty = Pick<Party, "client" | "aid">;
 
-/** First KEL event sealing `credSaid`, or, with `eventSaid`, exactly that event. */
-async function findAnchor(p: AnchorParty, credSaid: string, eventSaid?: string): Promise<{ ked: Json; atc: string } | undefined> {
-  const events = (await p.client.keyEvents().get(p.aid.prefix)) as { ked: Json; atc: string }[];
-  return events.find((e) => hasSeal(e.ked, credSaid) && (!eventSaid || e.ked.d === eventSaid));
+type KelEvent = { ked: Json; atc: string };
+
+/** First KEL event sealing `credSaid`, or, with `eventSaid`, exactly that event; and the KEL it was found in. */
+async function findAnchor(p: AnchorParty, credSaid: string, eventSaid?: string): Promise<{ anchor?: KelEvent; events: KelEvent[] }> {
+  const events = (await p.client.keyEvents().get(p.aid.prefix)) as KelEvent[];
+  return { anchor: events.find((e) => hasSeal(e.ked, credSaid) && (!eventSaid || e.ked.d === eventSaid)), events };
 }
 
 export interface AnchorResult {
@@ -81,7 +83,8 @@ export async function anchorCredential(
   outDir: string,
   opts: { force?: boolean } = {},
 ): Promise<AnchorResult> {
-  let anchored = opts.force ? undefined : await findAnchor(auditor, credSaid);
+  let found = opts.force ? undefined : await findAnchor(auditor, credSaid);
+  let anchored = found?.anchor;
   let fresh: { raw: string; sigs: string[] } | undefined;
 
   if (anchored) {
@@ -90,7 +93,8 @@ export async function anchorCredential(
     const res = await auditor.client.identifiers().interact(auditor.aid.name, { d: credSaid });
     await waitOp(auditor.client, await res.op());
     fresh = { raw: res.serder.raw, sigs: res.sigs };
-    anchored = await findAnchor(auditor, credSaid, res.serder.sad.d);
+    found = await findAnchor(auditor, credSaid, res.serder.sad.d);
+    anchored = found.anchor;
     if (!anchored) throw new Error("interaction event not found in the auditor's KEL");
   }
 
@@ -131,6 +135,11 @@ export async function anchorCredential(
     signingThreshold: keyState.kt,
     establishmentEvent: { sn: keyState.ee?.s, said: keyState.ee?.d },
     kelAttachment: anchored.atc,
+    // The auditor's events before the anchor, as KERIA serves them: check 6 walks them from the inception,
+    // and fails without them when kelSeq > 1 (a rotation before the anchor could not be ruled out).
+    kel: (found as { events: KelEvent[] }).events
+      .filter((e) => parseInt(e.ked.s, 16) < kelSeq)
+      .map((e) => ({ raw: JSON.stringify(e.ked), atc: e.atc })),
     checks: { saidRecomputed: saidOk, sizeMatchesVersion: sizeOk, signatureValid: sigOk, matchesSubmittedEvent: matchesSubmitted },
     exportedAt: new Date().toISOString(),
   };

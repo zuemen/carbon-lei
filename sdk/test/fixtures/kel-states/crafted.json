@@ -1,0 +1,18 @@
+{
+  "note": "NEGATIVE TEST material (sdk/scripts/make-kel-states.sh): interaction events keripy refuses to make, each built from event #3 of kel-rotation/kel.cesr with i, s and p changed, signed by kli sign with the TEST identifier's current key. Never evidence.",
+  "credSAID": "EKAUNy9Xdelz8wJ9XiJw3t1ke5RAr_38diGjOcqaQC5u",
+  "eo": {
+    "aid": "ECIU5NcJprtXA4Q2bc_m9dNMpb8r_QmF-rO3JMoAy_7g",
+    "sn": 1,
+    "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"ENdmL2onTqB7-HWGCTgLDCP0RMqfc1b1MqEqzPjBGEOF\",\"i\":\"ECIU5NcJprtXA4Q2bc_m9dNMpb8r_QmF-rO3JMoAy_7g\",\"s\":\"1\",\"p\":\"ECIU5NcJprtXA4Q2bc_m9dNMpb8r_QmF-rO3JMoAy_7g\",\"a\":[{\"d\":\"EKAUNy9Xdelz8wJ9XiJw3t1ke5RAr_38diGjOcqaQC5u\"}]}",
+    "signature": "AAC38vD3gdXto721kQkwqpw5e-CKO4-6TrqB73ySb9ms6D9SXY1E_KBb5vVUZAGoCarVcredFOvnp3q2k1dNr_kH",
+    "keripy": "ValidationError: Unexpected non-establishment event = {'v': 'KERI10JSON0000ff_', 't': 'ixn', 'd': 'ENdmL2onTqB7-HWGCTgLDCP0RMqfc1b1MqEqzPjBGEOF', 'i': 'ECIU5NcJprtXA4Q2bc_m9dNMpb8r_QmF-rO3JMoAy_7g', 's': '1', 'p': 'ECIU5NcJprtXA4Q2bc_m9dNMpb8r_QmF-rO3JMoAy_7g', 'a': [{'d': 'EKAUNy9Xdelz8wJ9XiJw3t1ke5RAr_38diGjOcqaQC5u'}]}."
+  },
+  "abandoned": {
+    "aid": "EPB5bAny3-nfIz3iLuDlc3gXz0_OjRmFUMt6Ayvs0hwV",
+    "sn": 2,
+    "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EI4oQ5thKdUqQgj5aEP9_IJaQORyqSFpO3T_U2fKcPtv\",\"i\":\"EPB5bAny3-nfIz3iLuDlc3gXz0_OjRmFUMt6Ayvs0hwV\",\"s\":\"2\",\"p\":\"EBB_mnOo173EnQgpmhmhXSIAd8i9jzSW4EdGl1bBzZVZ\",\"a\":[{\"d\":\"EKAUNy9Xdelz8wJ9XiJw3t1ke5RAr_38diGjOcqaQC5u\"}]}",
+    "signature": "AACYc-gLbKp-CeX3q-V25uyH8AqIejIQP6VE9pt0W9cgwUA66XTqhcVEscOne3GZvfBLPvjCmMH2Dw27NJFEWxwC",
+    "keripy": "ValidationError: Unexpected event = {'v': 'KERI10JSON0000ff_', 't': 'ixn', 'd': 'EI4oQ5thKdUqQgj5aEP9_IJaQORyqSFpO3T_U2fKcPtv', 'i': 'EPB5bAny3-nfIz3iLuDlc3gXz0_OjRmFUMt6Ayvs0hwV', 's': '2', 'p': 'EBB_mnOo173EnQgpmhmhXSIAd8i9jzSW4EdGl1bBzZVZ', 'a': [{'d': 'EKAUNy9Xdelz8wJ9XiJw3t1ke5RAr_38diGjOcqaQC5u'}]} is nontransferable  or abandoned state."
+  }
+}

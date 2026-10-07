@@ -2,15 +2,25 @@
 // (hosted page) and in Node (CLI, onboarding). Uses only @noble and the SDK's SAID code.
 //
 // Check 6 (anchor): the auditor's KERI interaction event that anchors the credential SAID.
-//   - the event's SAID recomputes; it is an `ixn` by the auditor's AID at sequence number kelSeq;
-//     its seals contain { d: credSAID };
+//   - the event's SAID recomputes; it is an `ixn` by the auditor's AID at sequence number kelSeq (`s` in
+//     KERI's form: lowercase hex, no leading zeros); its seals contain { d: credSAID };
 //   - its Ed25519 signature verifies over the exact event bytes;
-//   - the signing key is the auditor's key in force at kelSeq. With `kel` (the auditor's events before
-//     kelSeq) it is walked from the self-addressing inception by sdk/kel.ts keyStateAt (pre-rotation and
-//     witness changes enforced, each event with its witness threshold); without it, it is the key of the
-//     inception event `establishmentRaw`, and a rotation before kelSeq fails closed;
+//   - the signing key is the auditor's key in force at kelSeq, walked by sdk/kel.ts keyStateAt from the
+//     self-addressing inception through `kel` (the auditor's events #0 to #kelSeq-1: pre-rotation and
+//     witness changes enforced, each event with its witness threshold). `kel` is required when kelSeq > 1;
+//     without it check 6 fails, because a rotation before the anchor cannot be ruled out. At kelSeq 1
+//     nothing comes between the inception and the anchor, and the inception event `establishmentRaw` is
+//     enough;
+//   - the anchor event under KERI's state rules (as keripy's Kever.update): its `p` is the SAID of event
+//     #kelSeq-1, the KEL is not establishment-only, a next key is committed (not abandoned), and no other
+//     event of the auditor in the evidence is at kelSeq (duplicity);
 //   - witness receipts: at least `bt` of the witnesses in force at kelSeq signed the anchor event's exact
-//     bytes (from `kelAttachment`), and the inception event (from `establishmentAttachment` or `kel`).
+//     bytes (from `kelAttachment`), and each earlier event (from `kel`, or the inception's
+//     `establishmentAttachment` at kelSeq 1).
+//   Malformed evidence fails with a reason and never throws. Limits: witnesses and watchers are not
+//   queried, so a rotation after kelSeq that the evidence leaves out is not seen, and for an AID without
+//   witnesses (bt 0) a KEL cut before a rotation, with an ixn signed by the old key at that sequence
+//   number, passes.
 // Check 7 (authority): the credential chain QVI → LE (body) → ECR (auditor), plus the NAB's
 //   accreditation of the body, from exported CESR streams: every ACDC SAID recomputes, schemas,
 //   issuers, issuees, edges and LEIs line up, the QVI was issued by the configured root, the
@@ -23,7 +33,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { hashString } from "./commitment.ts";
 import type { Hex } from "./credential.ts";
 import { utf8 } from "./encoding.ts";
-import { controllerSigs, decodeIndexedSig, decodeVerKey, keyStateAt, verifyIssuance, witnessState, witnessThreshold } from "./kel.ts";
+import { controllerSigs, decodeIndexedSig, decodeVerKey, keyStateAt, snOf, verifyIssuance, witnessState, witnessThreshold } from "./kel.ts";
 import { computeSaid } from "./said.ts";
 
 export { decodeIndexedSig, decodeVerKey } from "./kel.ts";
@@ -100,12 +110,15 @@ export interface AnchorEvidence {
 
 /**
  * Check 6 evidence from a KEL stream as `kli export` writes it: event #kelSeq (the anchor) with its
- * attachment and controller signature, and the auditor's events #0 to #kelSeq-1 as `kel`.
+ * attachment and controller signature, and the auditor's events #0 to #kelSeq-1 as `kel`. Throws when the
+ * stream has no event #kelSeq or two different ones (duplicity), so a fork is never dropped here.
  */
 export function anchorEvidenceFromKel(stream: string, auditor: string, kelSeq: number, credSAID: string): AnchorEvidence {
   const msgs = parseCesr(stream).filter((m) => m.ked.i === auditor);
-  const anchor = msgs.find((m) => m.ked.s === kelSeq.toString(16));
-  if (!anchor) throw new Error(`the KEL has no event #${kelSeq}`);
+  const atSn = msgs.filter((m) => m.ked.s === kelSeq.toString(16));
+  if (!atSn.length) throw new Error(`the KEL has no event #${kelSeq}`);
+  if (new Set(atSn.map((m) => m.raw)).size > 1) throw new Error(`the KEL has two different events at #${kelSeq}`);
+  const anchor = atSn[0];
   const sig = controllerSigs(anchor.atc ?? "").find((s) => s.index === 0);
   return {
     credSAID,
@@ -115,25 +128,71 @@ export function anchorEvidenceFromKel(stream: string, auditor: string, kelSeq: n
     signatures: sig ? [{ qb64: sig.qb64, index: 0 }] : [],
     signingKeys: [],
     kelAttachment: anchor.atc,
-    kel: msgs.filter((m) => parseInt(m.ked.s, 16) < kelSeq).map((m) => ({ raw: m.raw, atc: m.atc })),
+    kel: auditorKel(msgs, auditor, kelSeq),
   };
 }
 
-/** Check 6 with the auditor's KEL: the key and witnesses in force at kelSeq, walked from inception. */
-function verifyAnchorWithKel(ev: AnchorEvidence, event: Message, auditorAID: string): CheckOutcome {
-  const code = "ANCHOR_NOT_FOUND";
-  const sn = parseInt(event.ked.s, 16);
-  let msgs: Message[];
-  try {
-    msgs = (ev.kel ?? []).map((m) => ({ raw: m.raw, ked: JSON.parse(m.raw), atc: m.atc }));
-  } catch {
-    return fail(code, "the auditor's KEL is not valid JSON");
+/**
+ * The auditor's events #0 to #kelSeq-1 for `kel`, from exported messages (several exports may hold the same
+ * event): sorted by sequence number, each distinct message (event and attachment) once. Events are taken
+ * as exported; nothing in them is changed.
+ */
+export function auditorKel(msgs: readonly { raw: string; atc?: string }[], auditor: string, kelSeq: number): { raw: string; atc?: string }[] {
+  const seen = new Set<string>();
+  const out: { raw: string; atc?: string; sn: number }[] = [];
+  for (const m of msgs) {
+    const ked = JSON.parse(m.raw);
+    const sn = snOf(ked);
+    // An event with a malformed `s` is kept (last), so that check 6 rejects it rather than not seeing it.
+    if (ked.i !== auditor || !KEL_EVENT.has(ked.t) || sn >= kelSeq) continue;
+    const key = JSON.stringify([m.raw, m.atc ?? null]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ raw: m.raw, ...(m.atc !== undefined ? { atc: m.atc } : {}), sn });
   }
-  if (msgs.some((m) => m.ked.i === auditorAID && m.ked.s === event.ked.s && m.raw !== event.raw)) {
+  const order = (x: number) => (Number.isNaN(x) ? Infinity : x);
+  return out.sort((a, b) => order(a.sn) - order(b.sn)).map(({ sn: _sn, ...m }) => m);
+}
+
+const KEL_EVENT = new Set(["icp", "rot", "ixn", "dip", "drt"]);
+
+/** `kel` as messages: undefined when it is not a list of { raw, atc? } with string fields, null when a raw is not a JSON object. */
+function kelMessages(kel: unknown): Message[] | undefined | null {
+  if (!Array.isArray(kel)) return undefined;
+  const out: Message[] = [];
+  for (const m of kel) {
+    if (!m || typeof m !== "object" || typeof m.raw !== "string" || (m.atc !== undefined && typeof m.atc !== "string")) return undefined;
+    let ked: unknown;
+    try {
+      ked = JSON.parse(m.raw);
+    } catch {
+      return null;
+    }
+    if (!ked || typeof ked !== "object" || Array.isArray(ked)) return null;
+    out.push({ raw: m.raw, ked: ked as Record<string, any>, atc: m.atc });
+  }
+  return out;
+}
+
+const NO_NEXT_KEY = "the auditor's AID has no next key (non-transferable or abandoned), so no later event is valid";
+const EO_KEL = "the auditor's KEL is establishment-only, so an interaction event cannot anchor";
+
+/** Check 6 with the auditor's KEL: the key and witnesses in force at kelSeq, walked from inception. */
+function verifyAnchorWithKel(ev: AnchorEvidence, event: Message, sn: number, auditorAID: string): CheckOutcome {
+  const code = "ANCHOR_NOT_FOUND";
+  const msgs = kelMessages(ev.kel);
+  if (msgs === undefined) return fail(code, "the auditor's KEL is not a list of KERI events");
+  if (msgs === null) return fail(code, "the auditor's KEL is not valid JSON");
+  // Duplicity: another event of the auditor at the anchor's sequence number (compared as numbers).
+  if (msgs.some((m) => m.ked.i === auditorAID && snOf(m.ked) === sn && m.raw !== event.raw)) {
     return fail(code, `the auditor's KEL has another event at #${sn}`);
   }
   const st = keyStateAt(msgs, auditorAID, sn - 1, "auditor");
   if (!st.ok) return fail(code, st.reason);
+  // The anchor event itself, under the state rules keripy applies to it (Kever.update).
+  if (event.ked.p !== st.last) return fail(code, `the anchor event does not link to event #${sn - 1} of the auditor's KEL`);
+  if (st.establishmentOnly) return fail(code, EO_KEL);
+  if (!st.transferable) return fail(code, NO_NEXT_KEY);
   const sig = ev.signatures?.find((s) => s.index === 0)?.qb64;
   if (!sig) return fail(code, "signature or key missing");
   let sigOk = false;
@@ -147,8 +206,23 @@ function verifyAnchorWithKel(ev: AnchorEvidence, event: Message, auditorAID: str
   const wit = st.witnesses;
   const onAnchor = witnessThreshold([{ ...event, atc: ev.kelAttachment ?? undefined }], wit);
   if (onAnchor.reason) return fail(code, `anchor event: ${onAnchor.reason}`);
+  const n = wit.wits.length;
+  if (st.rotations === 0) {
+    // No rotation: the key and witnesses are the inception's, and the detail is the one evidence without
+    // rotations has always shown (recorded in the demo video), word for word.
+    const icps = msgs.filter((m) => m.ked.i === auditorAID && m.ked.t === "icp" && m.ked.s === "0");
+    const onIcp = witnessThreshold(icps, wit);
+    const receipts = wit.toad
+      ? `; witness receipts: ${onAnchor.verified} of ${n} on this event, ${onIcp.verified} of ${n} on the inception event (threshold ${wit.toad})`
+      : "; the auditor's AID has no witnesses";
+    return {
+      ok: true,
+      code: "",
+      detail: `KERI event #${sn} by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event${receipts}`,
+    };
+  }
   const receipts = wit.toad
-    ? `; witness receipts: ${onAnchor.verified} of ${wit.wits.length} on this event (threshold ${wit.toad}), and the threshold on each earlier event`
+    ? `; witness receipts: ${onAnchor.verified} of ${n} on this event (threshold ${wit.toad}), and the threshold on each earlier event`
     : "; the auditor's AID has no witnesses";
   return {
     ok: true,
@@ -162,6 +236,19 @@ export function verifyAnchor(
   expect: { credSAID: string; auditorAID: string; kelSeq: bigint; auditorAidHash?: Hex },
 ): CheckOutcome {
   const code = "ANCHOR_NOT_FOUND";
+  // Malformed evidence fails with a reason; it never throws out of check 6.
+  try {
+    return verifyAnchorEvidence(ev, expect);
+  } catch (e) {
+    return fail(code, `the anchor evidence could not be read: ${(e as Error).message}`);
+  }
+}
+
+function verifyAnchorEvidence(
+  ev: AnchorEvidence,
+  expect: { credSAID: string; auditorAID: string; kelSeq: bigint; auditorAidHash?: Hex },
+): CheckOutcome {
+  const code = "ANCHOR_NOT_FOUND";
   let event: Message;
   try {
     event = { raw: ev.event.raw, ked: JSON.parse(ev.event.raw) };
@@ -169,20 +256,30 @@ export function verifyAnchor(
     return fail(code, "anchor event is not valid JSON");
   }
   const k = event.ked;
+  if (!k || typeof k !== "object") return fail(code, "anchor event is not valid JSON");
   if (k.t !== "ixn") return fail(code, "anchor event is not an interaction event");
   if (k.i !== expect.auditorAID) return fail(code, "anchor event is not from the credential's auditor");
   if (expect.auditorAidHash && hashString(k.i) !== expect.auditorAidHash) {
     return fail(code, "auditor on-chain differs from the event's AID");
   }
-  if (BigInt(parseInt(k.s, 16)) !== expect.kelSeq) {
-    return fail(code, `anchor is event #${parseInt(k.s, 16)}, the registry says #${expect.kelSeq}`);
+  // KERI's `s`: lowercase hex without leading zeros, so "02" is not event #2.
+  const sn = snOf(k);
+  if (!Number.isInteger(sn)) return fail(code, "anchor event has an invalid sequence number");
+  if (BigInt(sn) !== expect.kelSeq) {
+    return fail(code, `anchor is event #${sn}, the registry says #${expect.kelSeq}`);
   }
+  if (sn === 0) return fail(code, "event #0 of a KEL is its inception, not an interaction event");
   if (!Array.isArray(k.a) || !k.a.some((s: any) => s && s.d === expect.credSAID)) {
     return fail(code, "the event does not anchor this credential");
   }
   if (!saidOk(event)) return fail(code, "the event's SAID does not match its content");
   if (parseInt(k.v.slice(10, 16), 16) !== utf8(event.raw).length) return fail(code, "event size differs from its version string");
-  if (ev.kel) return verifyAnchorWithKel(ev, event, expect.auditorAID);
+  if (ev.kel != null) return verifyAnchorWithKel(ev, event, sn, expect.auditorAID);
+  // Without `kel` only the inception is known: that is enough for event #1 (nothing can come between),
+  // not for a later one, where a rotation in between would go unseen.
+  if (sn > 1) {
+    return fail(code, `the auditor's KEL events #0 to #${sn - 1} are not in the evidence, so a key rotation before the anchor cannot be ruled out`);
+  }
 
   const key = ev.signingKeys?.[0]?.qb64;
   const sig = ev.signatures?.find((s) => s.index === 0)?.qb64;
@@ -199,7 +296,7 @@ export function verifyAnchor(
   if (!ev.establishmentRaw) return fail(code, "the auditor's inception event is missing, so the signing key is not bound to the auditor");
   {
     const est: Message = { raw: ev.establishmentRaw, ked: JSON.parse(ev.establishmentRaw) };
-    if (est.ked.t !== "icp" || est.ked.i !== expect.auditorAID || est.ked.d !== est.ked.i) {
+    if (!est.ked || est.ked.t !== "icp" || est.ked.i !== expect.auditorAID || est.ked.d !== est.ked.i) {
       return fail(code, "inception event does not belong to the auditor");
     }
     // Self-addressing inception: both `d` and the prefix `i` hold the SAID and are blanked together.
@@ -209,6 +306,14 @@ export function verifyAnchor(
     if (!Array.isArray(est.ked.k) || est.ked.k[0] !== key || est.ked.kt !== "1") {
       return fail(code, "the signing key is not the auditor's key");
     }
+    // Event #1 under the inception's state: it links to it, the KEL allows interaction events, and a
+    // next key is committed (the same rules the `kel` walk applies).
+    if (k.p !== est.ked.d) return fail(code, "the anchor event does not link to event #0 of the auditor's KEL");
+    if (Array.isArray(est.ked.c) && est.ked.c.includes("EO")) return fail(code, EO_KEL);
+    const n = est.ked.n;
+    if (!Array.isArray(n) || n.length !== 1 || est.ked.nt !== "1") {
+      return fail(code, n?.length === 0 ? NO_NEXT_KEY : `the auditor's inception: only one next key with threshold "1" is supported (nt ${JSON.stringify(est.ked.nt)})`);
+    }
     // Witness receipts, with the witnesses and threshold of the auditor's inception event.
     const wit = witnessState(est.ked);
     if (typeof wit === "string") return fail(code, `the auditor's inception event: ${wit}`);
@@ -216,14 +321,14 @@ export function verifyAnchor(
     if (onAnchor.reason) return fail(code, `anchor event: ${onAnchor.reason}`);
     const onEst = witnessThreshold([{ ...est, atc: ev.establishmentAttachment }], wit);
     if (onEst.reason) return fail(code, `the auditor's inception event: ${onEst.reason}`);
-    const n = wit.wits.length;
+    const nw = wit.wits.length;
     const receipts = wit.toad
-      ? `; witness receipts: ${onAnchor.verified} of ${n} on this event, ${onEst.verified} of ${n} on the inception event (threshold ${wit.toad})`
+      ? `; witness receipts: ${onAnchor.verified} of ${nw} on this event, ${onEst.verified} of ${nw} on the inception event (threshold ${wit.toad})`
       : "; the auditor's AID has no witnesses";
     return {
       ok: true,
       code: "",
-      detail: `KERI event #${parseInt(k.s, 16)} by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event${receipts}`,
+      detail: `KERI event #${sn} by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event${receipts}`,
     };
   }
 }

@@ -6,10 +6,11 @@ import { isSafeBundlePath, sha256Hex, vleiCheckers } from "../checkers.ts";
 import { hashString } from "../commitment.ts";
 import { decodeDisclosure } from "../disclosure.ts";
 import { base64url, utf8 } from "../encoding.ts";
-import { controllerSigs, decodeIndexedSig, decodeVerKey, parseAttachments, verifyIssuance } from "../kel.ts";
+import { controllerSigs, decodeIndexedSig, decodeVerKey, keyStateAt, parseAttachments, verifyIssuance } from "../kel.ts";
 import { SAID_DUMMY, computeSaid } from "../said.ts";
 import {
   anchorEvidenceFromKel,
+  auditorKel,
   DEMO_TRUST_ANCHOR,
   parseCesr,
   verifyAnchor,
@@ -30,6 +31,37 @@ const auditorIcpMsg = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "
 const auditorIcp = auditorIcpMsg?.raw;
 /** The inception's attachment: its controller and witness signatures (the witness receipts check 6 needs). */
 const auditorIcpAtc = auditorIcpMsg?.atc;
+/**
+ * The auditor's events #0 to #kelSeq-1 as exported, unchanged: #0 and #1 from kel-auditor.json, #2 from the
+ * anchor export of the credential it anchors. The demo proof carries the same list as `kel`.
+ */
+const kelExport = JSON.parse(read("kel-auditor.json")) as { ked: Record<string, any>; atc: string }[];
+const exportedKel = auditorKel(
+  [
+    ...kelExport.map((e) => ({ raw: JSON.stringify(e.ked), atc: e.atc })),
+    ...readdirSync(dir)
+      .filter((f) => f.startsWith("anchor-"))
+      .map((f) => JSON.parse(read(f)))
+      .filter((a) => a.auditor === anchor.auditor)
+      .map((a) => ({ raw: a.event.raw as string, atc: a.kelAttachment as string })),
+  ],
+  anchor.auditor,
+  anchor.kelSeq,
+);
+/** Event #1 of the auditor's KEL (kel-auditor.json) as evidence without `kel`: at kelSeq 1 the inception is enough. */
+const ev1 = kelExport[1];
+const legacy1 = {
+  credSAID: ev1.ked.a[0].d,
+  auditor: anchor.auditor,
+  kelSeq: 1,
+  event: { raw: JSON.stringify(ev1.ked) },
+  signatures: [{ qb64: controllerSigs(ev1.atc).find((s) => s.index === 0)!.qb64, index: 0 }],
+  signingKeys: [{ qb64: JSON.parse(auditorIcp as string).k[0] }],
+  kelAttachment: ev1.atc,
+  establishmentRaw: auditorIcp,
+  establishmentAttachment: auditorIcpAtc,
+} as AnchorEvidence;
+const exp1 = { credSAID: legacy1.credSAID, auditorAID: anchor.auditor, kelSeq: 1n, auditorAidHash: hashString(anchor.auditor) };
 
 const authority: AuthorityEvidence = {
   trustAnchor: vlei.trustAnchor,
@@ -56,35 +88,58 @@ const expectAuth = {
 
 describe("check 6: KEL anchor", () => {
   const exp = { credSAID: anchor.credSAID, auditorAID: anchor.auditor, kelSeq: BigInt(anchor.kelSeq), auditorAidHash: hashString(anchor.auditor) };
-  it("verifies the exported anchor event, signature, key binding and witness receipts", () => {
+  const withKel = { ...anchor, kel: exportedKel, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc } as AnchorEvidence;
+  it("verifies the exported anchor event, signature, the auditor's KEL #0 to #2 and witness receipts", () => {
     expect(auditorIcp).toBeDefined();
-    const r = verifyAnchor({ ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc }, exp);
-    expect(r).toMatchObject({ ok: true });
+    expect(exportedKel.map((m) => JSON.parse(m.raw).s)).toEqual(["0", "1", "2"]);
+    expect(verifyAnchor(withKel, exp)).toMatchObject({ ok: true });
   });
-  it("evidence without a `kel` keeps the detail of d58380c word for word (the video shows it)", () => {
-    const r = verifyAnchor({ ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc }, exp);
-    expect(r).toEqual({
+  it("the demo proof's `kel` is the exported events #0 to #2, unchanged", () => {
+    const proof = JSON.parse(readFileSync(new URL("../../fixtures/sepolia-demo-proof.json", import.meta.url), "utf8"));
+    expect(proof.anchorEvidence.kel).toEqual(exportedKel);
+    expect(exportedKel[0].raw).toBe(auditorIcp);
+  });
+  it("evidence with the auditor's KEL and no rotation keeps the detail of d58380c word for word (the video shows it)", () => {
+    expect(verifyAnchor(withKel, exp)).toEqual({
       ok: true,
       code: "",
       detail:
         "KERI event #3 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event; witness receipts: 3 of 3 on this event, 3 of 3 on the inception event (threshold 2)",
     });
   });
+  it("H1: without `kel`, an anchor after event #1 fails, since a rotation before it cannot be ruled out", () => {
+    expect(verifyAnchor({ ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc }, exp)).toEqual({
+      ok: false,
+      code: "ANCHOR_NOT_FOUND",
+      detail: "the auditor's KEL events #0 to #2 are not in the evidence, so a key rotation before the anchor cannot be ruled out",
+    });
+  });
+  it("without `kel`, event #1 is checked against the inception alone (nothing can come between them)", () => {
+    expect(verifyAnchor(legacy1, exp1)).toEqual({
+      ok: true,
+      code: "",
+      detail:
+        "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event; witness receipts: 3 of 3 on this event, 3 of 3 on the inception event (threshold 2)",
+    });
+  });
   it("rejects an anchor without the auditor's inception event (key not bound)", () => {
-    const { establishmentRaw: _drop, ...noEst } = { ...anchor, establishmentRaw: auditorIcp };
-    expect(verifyAnchor(noEst as AnchorEvidence, exp)).toMatchObject({ ok: false, code: "ANCHOR_NOT_FOUND" });
+    const { establishmentRaw: _drop, ...noEst } = legacy1;
+    expect(verifyAnchor(noEst as AnchorEvidence, exp1)).toEqual({
+      ok: false,
+      code: "ANCHOR_NOT_FOUND",
+      detail: "the auditor's inception event is missing, so the signing key is not bound to the auditor",
+    });
   });
   it("rejects a changed event, another credential, another sequence number, another key", () => {
     const changed = anchor.event.raw.replace(anchor.credSAID, anchor.credSAID.slice(0, -1) + "A");
-    expect(verifyAnchor({ ...anchor, event: { raw: changed } }, exp).ok).toBe(false);
-    const full = { ...anchor, establishmentRaw: auditorIcp };
-    expect(verifyAnchor(full, { ...exp, credSAID: "EOtherCredentialSaid000000000000000000000000" }).ok).toBe(false);
-    expect(verifyAnchor(full, { ...exp, kelSeq: exp.kelSeq + 1n }).ok).toBe(false);
+    expect(verifyAnchor({ ...withKel, event: { raw: changed } }, exp).ok).toBe(false);
+    expect(verifyAnchor(withKel, { ...exp, credSAID: "EOtherCredentialSaid000000000000000000000000" }).ok).toBe(false);
+    expect(verifyAnchor(withKel, { ...exp, kelSeq: exp.kelSeq + 1n }).ok).toBe(false);
     const otherIcp = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i !== anchor.auditor)?.raw;
-    expect(verifyAnchor({ ...anchor, establishmentRaw: otherIcp }, exp).ok).toBe(false);
+    expect(verifyAnchor({ ...legacy1, establishmentRaw: otherIcp }, exp1).ok).toBe(false);
   });
   it("each fail-closed step reports its own reason", () => {
-    const full = { ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc };
+    const full = withKel;
     const reason = (ev: AnchorEvidence, x = exp) => {
       const r = verifyAnchor(ev, x);
       expect(r.ok).toBe(false);
@@ -103,15 +158,17 @@ describe("check 6: KEL anchor", () => {
       "the event's SAID does not match its content",
     );
     expect(reason({ ...full, event: { raw: raw + " " } })).toBe("event size differs from its version string");
-    expect(reason({ ...full, signingKeys: [] })).toBe("signature or key missing");
-    const sig0 = full.signatures.find((s) => s.index === 0)!.qb64;
+    expect(reason({ ...full, signatures: [] })).toBe("signature or key missing");
+    // Without `kel` (event #1 of the auditor's KEL, checked against the inception)
+    expect(reason({ ...legacy1, signingKeys: [] }, exp1)).toBe("signature or key missing");
+    const sig0 = legacy1.signatures.find((s) => s.index === 0)!.qb64;
     const badSig = sig0.slice(0, 40) + (sig0[40] === "A" ? "B" : "A") + sig0.slice(41);
-    expect(reason({ ...full, signatures: [{ ...full.signatures[0], index: 0, qb64: badSig }] })).toBe("the event's signature does not verify");
+    expect(reason({ ...legacy1, signatures: [{ index: 0, qb64: badSig }] }, exp1)).toBe("the event's signature does not verify");
     const otherIcp = parseCesr(read("cred-ecr.cesr")).find((m) => m.ked.t === "icp" && m.ked.i !== anchor.auditor)!.raw;
-    expect(reason({ ...full, establishmentRaw: otherIcp })).toBe("inception event does not belong to the auditor");
+    expect(reason({ ...legacy1, establishmentRaw: otherIcp }, exp1)).toBe("inception event does not belong to the auditor");
     const editedIcp = auditorIcp!.replace(/"bt":"(\d)"/, (_m, d) => `"bt":"${d === "1" ? "2" : "1"}"`);
     expect(editedIcp).not.toBe(auditorIcp);
-    expect(reason({ ...full, establishmentRaw: editedIcp })).toBe("the inception event's SAID does not match its content");
+    expect(reason({ ...legacy1, establishmentRaw: editedIcp }, exp1)).toBe("the inception event's SAID does not match its content");
   });
 });
 
@@ -251,7 +308,7 @@ const editAtc = (stream: string, raw: string, fn: (atc: string) => string) =>
 
 describe("check 6: witness receipts on the anchor event and the auditor's inception", () => {
   const exp = { credSAID: anchor.credSAID, auditorAID: anchor.auditor, kelSeq: BigInt(anchor.kelSeq), auditorAidHash: hashString(anchor.auditor) };
-  const full = { ...anchor, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc } as AnchorEvidence;
+  const full = { ...anchor, kel: exportedKel, establishmentRaw: auditorIcp, establishmentAttachment: auditorIcpAtc } as AnchorEvidence;
   const withAnchorWits = (fn: (s: string[]) => string[], extra = "") => ({ ...full, kelAttachment: rewitness(anchor.kelAttachment as string, fn, extra) });
   const failing = (detail: string) => ({ ok: false, code: "ANCHOR_NOT_FOUND", detail });
 
@@ -276,10 +333,14 @@ describe("check 6: witness receipts on the anchor event and the auditor's incept
   it("no receipts: stripped from the anchor event, no attachment at all, or none for the inception", () => {
     expect(verifyAnchor(withAnchorWits(() => []), exp)).toEqual(failing("anchor event: no witness receipts in the evidence"));
     expect(verifyAnchor({ ...full, kelAttachment: undefined }, exp)).toEqual(failing("anchor event: no witness receipts in the evidence"));
-    expect(verifyAnchor({ ...full, establishmentAttachment: undefined }, exp)).toEqual(
+    // the inception's receipts: in `kel` (event #0), or, for event #1 without `kel`, in establishmentAttachment
+    const kelIcp = (fn: (s: string[]) => string[]) => ({ ...full, kel: exportedKel.map((m, i) => (i === 0 ? { ...m, atc: rewitness(m.atc as string, fn) } : m)) });
+    expect(verifyAnchor(kelIcp(() => []), exp)).toEqual(failing("event #0 of the auditor's KEL: no witness receipts in the evidence"));
+    expect(verifyAnchor(kelIcp((s) => corrupt(s, 0, 1)), exp)).toEqual(failing("event #0 of the auditor's KEL: 1 of 3 witness signatures verify, the threshold is 2"));
+    expect(verifyAnchor({ ...legacy1, establishmentAttachment: undefined }, exp1)).toEqual(
       failing("the auditor's inception event: no witness receipts in the evidence"),
     );
-    expect(verifyAnchor({ ...full, establishmentAttachment: rewitness(auditorIcpAtc as string, (s) => corrupt(s, 0, 1)) }, exp)).toEqual(
+    expect(verifyAnchor({ ...legacy1, establishmentAttachment: rewitness(auditorIcpAtc as string, (s) => corrupt(s, 0, 1)) }, exp1)).toEqual(
       failing("the auditor's inception event: 1 of 3 witness signatures verify, the threshold is 2"),
     );
   });
@@ -605,7 +666,7 @@ describe("check 6: the auditor's key state walked through a rotation (keripy tes
         "KERI event #3 by the auditor anchors this credential; Ed25519 signature verified with the key in force at event #3 (1 rotation since inception); witness receipts: 2 of 2 on this event (threshold 2), and the threshold on each earlier event",
     });
   });
-  it("2: an anchor signed with the rotated-out key is rejected; without `kel` the rotated anchor fails closed", () => {
+  it("2: an anchor signed with the rotated-out key is rejected; without `kel` an anchor after event #1 fails", () => {
     // the counter-example is a genuine signature by the inception key over event #3
     expect(ed25519.verify(decodeIndexedSig(cx.oldKeySignatureOnEvent3), utf8(ev.event.raw), decodeVerKey(icpKey))).toBe(true);
     const old = { ...ev, signatures: [{ qb64: cx.oldKeySignatureOnEvent3, index: 0 }], signingKeys: [{ qb64: icpKey }] };
@@ -614,7 +675,29 @@ describe("check 6: the auditor's key state walked through a rotation (keripy tes
     );
     const { kel: _k, ...legacy } = ev;
     expect(verifyAnchor({ ...legacy, signingKeys: [{ qb64: rotKey }], establishmentRaw: msgs[0].raw, establishmentAttachment: msgs[0].atc }, exp)).toEqual(
-      failing("the signing key is not the auditor's key"),
+      failing("the auditor's KEL events #0 to #2 are not in the evidence, so a key rotation before the anchor cannot be ruled out"),
+    );
+  });
+  it("L4 (H1 regression): no `kel`, the rotated-out key and the inception's witnesses, wil included, still fail", () => {
+    // The downgrade of the 2026-10-07 review: the evidence leaves the KEL out and presents the inception, the
+    // inception key's signature over #3 and receipts from the inception's list [wan, wil]. Before the fix
+    // this passed ("2 of 2 on this event"); every signature here is a genuine keripy signature.
+    const wan = parseAttachments(ev.kelAttachment!).witness.find((s) => s.index === 0)!.qb64;
+    const { kel: _k, ...legacy } = ev;
+    const downgrade = {
+      ...legacy,
+      signatures: [{ qb64: cx.oldKeySignatureOnEvent3, index: 0 }],
+      signingKeys: [{ qb64: icpKey }],
+      kelAttachment: "-BAC" + wan + "AB" + cx.removedWitnessWilSignatureOnEvent3.slice(2),
+      establishmentRaw: msgs[0].raw,
+      establishmentAttachment: msgs[0].atc,
+    };
+    expect(verifyAnchor(downgrade, exp)).toEqual(
+      failing("the auditor's KEL events #0 to #2 are not in the evidence, so a key rotation before the anchor cannot be ruled out"),
+    );
+    // and with the KEL, the same signature and receipts fail on the key in force
+    expect(verifyAnchor({ ...downgrade, kel: ev.kel }, exp)).toEqual(
+      failing("the event's signature does not verify with the auditor's key in force at event #3 (1 rotation since inception)"),
     );
   });
   it("3: an event after inception changed (its SAID no longer matches) is rejected", () => {
@@ -649,5 +732,124 @@ describe("check 6: the auditor's key state walked through a rotation (keripy tes
     expect(verifyAnchor(fork, exp)).toEqual(failing("the auditor's KEL has another event at #3"));
     expect(verifyAnchor({ ...ev, kel: [{ raw: "{" }] }, exp)).toEqual(failing("the auditor's KEL is not valid JSON"));
     expect(verifyAnchor({ ...ev, kel: [] }, exp)).toEqual(failing("the auditor's KEL is not in the evidence"));
+  });
+});
+
+// NEGATIVE TESTS for the check 6 review of 2026-10-07 (M1, L1-L3). Each malicious KEL or anchor below is a real
+// keripy event with fields changed (kel-rotation/kel.cesr), or the keripy-made material of kel-states/ (an
+// event keripy refuses, built from event #3 of kel-rotation and signed by `kli sign`, SOURCE.md). None is evidence.
+describe("check 6: KERI state rules on the anchor and the KEL (negative tests from keripy events)", () => {
+  const rdir = new URL("./fixtures/kel-rotation/", import.meta.url);
+  const sdir = new URL("./fixtures/kel-states/", import.meta.url);
+  const stream = readFileSync(new URL("kel.cesr", rdir), "utf8");
+  const cx = JSON.parse(readFileSync(new URL("counter-examples.json", rdir), "utf8"));
+  const crafted = JSON.parse(readFileSync(new URL("crafted.json", sdir), "utf8"));
+  const msgs = parseCesr(stream);
+  const aid: string = msgs[0].ked.i;
+  const ev = anchorEvidenceFromKel(stream, aid, 3, cx.credSAID);
+  const exp = { credSAID: cx.credSAID, auditorAID: aid, kelSeq: 3n };
+  const failing = (detail: string) => ({ ok: false, code: "ANCHOR_NOT_FOUND", detail });
+  /** The event with fields changed and its size and SAID recomputed, as an attacker would. */
+  const remade = (raw: string, edit: (k: Record<string, any>) => void): string => {
+    const k = JSON.parse(raw);
+    edit(k);
+    k.d = SAID_DUMMY;
+    k.v = `KERI10JSON${utf8(JSON.stringify(k)).length.toString(16).padStart(6, "0")}_`;
+    k.d = computeSaid(k);
+    return JSON.stringify(k);
+  };
+  /** ev with KEL event #sn replaced by `raw` (its attachment kept). */
+  const kelWith = (sn: number, raw: string) => ({ ...ev, kel: ev.kel!.map((m) => (JSON.parse(m.raw).s === sn.toString(16) ? { ...m, raw } : m)) });
+  /** A kel-states identifier's KEL and its crafted anchor, as evidence with or without `kel`. */
+  const stateCase = (name: "eo" | "abandoned") => {
+    const c = crafted[name];
+    const kel = parseCesr(readFileSync(new URL(`${name}.cesr`, sdir), "utf8"));
+    const evidence: AnchorEvidence = {
+      credSAID: crafted.credSAID,
+      auditor: c.aid,
+      kelSeq: c.sn,
+      event: { raw: c.raw },
+      signatures: [{ qb64: c.signature, index: 0 }],
+      signingKeys: [{ qb64: kel[kel.length - 1].ked.k[0] }],
+      establishmentRaw: kel[0].raw,
+      establishmentAttachment: kel[0].atc,
+      kel: kel.map((m) => ({ raw: m.raw, atc: m.atc })),
+    };
+    return { c, kel, evidence, x: { credSAID: crafted.credSAID, auditorAID: c.aid, kelSeq: BigInt(c.sn) } };
+  };
+
+  it("M1 T1: an anchor whose `p` is not the SAID of event #sn-1 is rejected (keripy: prior digest mismatch)", () => {
+    const raw = remade(ev.event.raw, (k) => (k.p = msgs[1].ked.d));
+    expect(verifyAnchor({ ...ev, event: { raw } }, exp)).toEqual(failing("the anchor event does not link to event #2 of the auditor's KEL"));
+  });
+  it("M1 T2: an interaction event of an establishment-only AID is rejected, with or without `kel` (keripy rejects it too)", () => {
+    const { c, kel, evidence, x } = stateCase("eo");
+    expect(kel[0].ked.c).toEqual(["EO"]);
+    expect(c.keripy).toContain("Unexpected non-establishment event");
+    // a genuine signature by the AID's key: only the state rule rejects it
+    expect(ed25519.verify(decodeIndexedSig(c.signature), utf8(c.raw), decodeVerKey(kel[0].ked.k[0]))).toBe(true);
+    const eo = "the auditor's KEL is establishment-only, so an interaction event cannot anchor";
+    expect(verifyAnchor(evidence, x)).toEqual(failing(eo));
+    const { kel: _k, ...noKel } = evidence;
+    expect(verifyAnchor(noKel, x)).toEqual(failing(eo));
+  });
+  it("M1 T3: any event after an abandonment (rotation with no next key) is rejected, in check 6 and in check 7's walk", () => {
+    const { c, kel, evidence, x } = stateCase("abandoned");
+    expect(kel.map((m) => [m.ked.t, m.ked.n])).toEqual([["icp", kel[0].ked.n], ["rot", []]]);
+    expect(c.keripy).toContain("nontransferable  or abandoned state");
+    expect(ed25519.verify(decodeIndexedSig(c.signature), utf8(c.raw), decodeVerKey(kel[1].ked.k[0]))).toBe(true);
+    expect(verifyAnchor(evidence, x)).toEqual(failing("the auditor's AID has no next key (non-transferable or abandoned), so no later event is valid"));
+    // check 7 walks the same code: the crafted event as the issuer's event #2
+    const walked = [...kel, { raw: c.raw, ked: JSON.parse(c.raw), atc: "-AAB" + c.signature }];
+    expect(keyStateAt(walked, c.aid, 2)).toEqual({
+      ok: false,
+      reason: "event #2 of the issuer's KEL: the issuer's AID has no next key (non-transferable or abandoned) before this event",
+    });
+    expect(keyStateAt(kel, c.aid, 1)).toMatchObject({ ok: true, transferable: false, rotations: 1, last: kel[1].ked.d });
+  });
+  it("L1 T4: a rotation that cuts and adds the same witness is rejected (keripy: intersecting cuts and adds)", () => {
+    const raw = remade(msgs[2].raw, (k) => (k.ba = [...k.ba, cx.witnesses.wil]));
+    expect(verifyAnchor(kelWith(2, raw), exp)).toEqual(failing("event #2 of the auditor's KEL: the rotation cuts and adds the same witness"));
+  });
+  it("L1 T5: a next-key threshold the next keys cannot meet is rejected", () => {
+    const raw = remade(msgs[2].raw, (k) => (k.nt = "2"));
+    expect(verifyAnchor(kelWith(2, raw), exp)).toEqual(
+      failing('event #2 of the auditor\'s KEL: only one next key with threshold "1", or none with threshold "0", is supported (nt "2")'),
+    );
+  });
+  it("L2: a malformed `kel` or inception fails with a reason and never throws", () => {
+    const cases: [unknown, string][] = [
+      [{}, "the auditor's KEL is not a list of KERI events"],
+      ["x", "the auditor's KEL is not a list of KERI events"],
+      [[null], "the auditor's KEL is not a list of KERI events"],
+      [[{ raw: msgs[0].raw, atc: 5 }], "the auditor's KEL is not a list of KERI events"],
+      [[{ raw: "null" }], "the auditor's KEL is not valid JSON"],
+      [[{ raw: "[]" }], "the auditor's KEL is not valid JSON"],
+      [[{ raw: "{" }], "the auditor's KEL is not valid JSON"],
+      [[{ raw: `{"i":"${aid}","t":"icp","s":"0"}` }], "event #0 of the auditor's KEL: size differs from its version string"],
+    ];
+    for (const [kel, detail] of cases) expect(verifyAnchor({ ...ev, kel } as unknown as AnchorEvidence, exp), JSON.stringify(kel)).toEqual(failing(detail));
+    // an event without `d` reaches the SAID code, which throws; check 6 reports it instead
+    const noD = (m: { raw: string }) => JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(m.raw)).filter(([k]) => k !== "d")));
+    expect(verifyAnchor({ ...ev, kel: ev.kel!.map((m, i) => (i === 1 ? { ...m, raw: noD(m) } : m)) }, exp)).toMatchObject({
+      ok: false,
+      code: "ANCHOR_NOT_FOUND",
+    });
+    expect(verifyAnchor({ ...legacy1, establishmentRaw: "null" }, exp1)).toEqual(failing("inception event does not belong to the auditor"));
+    expect(verifyAnchor({ ...legacy1, establishmentRaw: "{" }, exp1)).toMatchObject({ ok: false, detail: expect.stringContaining("could not be read") });
+    expect(verifyAnchor({ ...ev, event: { raw: "null" } }, exp)).toEqual(failing("anchor event is not valid JSON"));
+  });
+  it("L3: `s` must be lowercase hex without leading zeros, on the anchor and in the KEL", () => {
+    expect(verifyAnchor({ ...ev, event: { raw: remade(ev.event.raw, (k) => (k.s = "03")) } }, exp)).toEqual(failing("anchor event has an invalid sequence number"));
+    expect(verifyAnchor({ ...ev, event: { raw: remade(ev.event.raw, (k) => (k.s = "0x3")) } }, exp)).toEqual(failing("anchor event has an invalid sequence number"));
+    expect(verifyAnchor(kelWith(2, remade(msgs[2].raw, (k) => (k.s = "02"))), exp)).toEqual(
+      failing("the auditor's KEL has an event with an invalid sequence number"),
+    );
+  });
+  it("L3: two different events at the anchor's sequence number (duplicity) fail in the helper and in check 6", () => {
+    const fork = remade(ev.event.raw, (k) => (k.a = [{ d: cx.sealBeforeRotation }]));
+    const forked = stream + fork + (msgs[3].atc ?? "");
+    expect(() => anchorEvidenceFromKel(forked, aid, 3, cx.credSAID)).toThrow("the KEL has two different events at #3");
+    expect(verifyAnchor({ ...ev, kel: [...ev.kel!, { raw: fork }] }, exp)).toEqual(failing("the auditor's KEL has another event at #3"));
   });
 });

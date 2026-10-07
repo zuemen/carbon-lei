@@ -15,8 +15,10 @@
 //     a rotation's `br` cuts and `ba` adds), as indexed witness signatures (-B##, index i = i-th witness)
 //     or non-transferable receipt couples (-C##); a signature by a key not in the list is not counted;
 //   - the registry inception (`vcp`) names the issuer and is anchored in the same KEL.
-// Supported key state: one key with threshold "1" (the demo AIDs). Other thresholds, delegated AIDs
-// (dip, drt) and two different events at one sequence number fail closed. Witnesses are not queried:
+// Supported key state: one key with threshold "1" (the demo AIDs), and one next key with threshold "1"
+// or none with "0". Other thresholds, delegated AIDs (dip, drt), two different events at one sequence
+// number, a rotation that cuts and adds the same witness, and any event after the AID has no next key
+// (non-transferable or abandoned) fail closed. Witnesses are not queried:
 // the receipts are those in the presented evidence.
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { blake3 } from "@noble/hashes/blake3.js";
@@ -250,7 +252,8 @@ export function selfAddressing(ked: Record<string, any>): boolean {
   return typeof ked.d === "string" && ked.d === ked.i && computeSaid({ ...ked, i: SAID_DUMMY }) === ked.d;
 }
 
-const snOf = (ked: Record<string, any>) => (typeof ked.s === "string" && /^(0|[1-9a-f][0-9a-f]*)$/.test(ked.s) ? parseInt(ked.s, 16) : NaN);
+/** The event's sequence number: `s` as lowercase hex without leading zeros (KERI's form), else NaN. */
+export const snOf = (ked: Record<string, any>) => (typeof ked.s === "string" && /^(0|[1-9a-f][0-9a-f]*)$/.test(ked.s) ? parseInt(ked.s, 16) : NaN);
 const sizeOk = (m: KelMessage) => typeof m.ked.v === "string" && parseInt(m.ked.v.slice(10, 16), 16) === utf8(m.raw).length;
 const hasSeal = (m: KelMessage, seal: { i: string; s: string; d: string }) =>
   Array.isArray(m.ked.a) && m.ked.a.some((x: any) => x && x.i === seal.i && x.s === seal.s && x.d === seal.d);
@@ -290,6 +293,8 @@ export function witnessState(ked: Record<string, any>, current?: WitnessState): 
     if (new Set(ked.br).size !== ked.br.length || ked.br.some((w) => !current.wits.includes(w))) {
       return "the rotation removes a witness that is not in the witness list";
     }
+    // keripy rejects a rotation whose cuts and adds intersect ("Intersecting cuts and adds").
+    if (ked.ba.some((w) => ked.br.includes(w))) return "the rotation cuts and adds the same witness";
     const kept = current.wits.filter((w) => !ked.br.includes(w));
     if (ked.ba.some((w) => kept.includes(w))) return "the rotation adds a witness that is already in the witness list";
     wits = [...kept, ...ked.ba];
@@ -364,8 +369,15 @@ export function witnessThreshold(copies: readonly KelMessage[], state: WitnessSt
 
 export type KelResult = { ok: true; keys: string[] } | { ok: false; reason: string };
 
-/** Key state at an event: signing keys, witness state and the number of rotations since inception. */
-export type KeyState = { ok: true; keys: string[]; witnesses: WitnessState; rotations: number } | { ok: false; reason: string };
+/**
+ * Key state at an event: signing keys, witness state, the number of rotations since inception, the SAID
+ * of that event (`last`, which the next event's `p` must equal), whether the inception declared the KEL
+ * establishment-only (`c` has "EO"), and whether a next key is committed (`transferable`; false after an
+ * abandonment, a rotation with no next key, after which keripy accepts no event).
+ */
+export type KeyState =
+  | { ok: true; keys: string[]; witnesses: WitnessState; rotations: number; last: string; establishmentOnly: boolean; transferable: boolean }
+  | { ok: false; reason: string };
 
 /** The KEL events of `aid` in the messages, by sequence number (an event repeated in the stream is kept once per copy). */
 function kelOf(msgs: readonly KelMessage[], aid: string): Map<number, KelMessage[]> {
@@ -418,12 +430,19 @@ export function keyStateAt(msgs: readonly KelMessage[], aid: string, upTo: numbe
     } else {
       if (computeSaid(k) !== k.d) return err(`${at}: SAID does not match its content`);
       if (!prior || k.p !== prior.ked.d) return err(`${at} does not link to the prior event`);
+      // No next key committed (non-transferable inception or abandonment rotation): no later event is valid.
+      if (next.length === 0) return err(`${at}: the ${role}'s AID has no next key (non-transferable or abandoned) before this event`);
     }
     if (k.t === "icp" || k.t === "rot") {
       if (sn > 0 && k.t === "icp") return err(`${at} is a second inception event`);
       if (k.kt !== "1" || !Array.isArray(k.k) || k.k.length !== 1) {
         return err(`${at}: only one signing key with threshold "1" is supported (kt ${JSON.stringify(k.kt)})`);
       }
+      // Next keys: one digest with threshold "1", or none with threshold "0" (keripy rejects a threshold
+      // the digests cannot meet).
+      if (!isList(k.n)) return err(`${at}: the next-key list is not readable`);
+      const nOk = k.n.length === 1 ? k.nt === "1" : k.n.length === 0 && k.nt === "0";
+      if (!nOk) return err(`${at}: only one next key with threshold "1", or none with threshold "0", is supported (nt ${JSON.stringify(k.nt)})`);
       // Pre-rotation: the new key must be the one the prior establishment event committed to.
       if (k.t === "rot" && (next.length !== 1 || nextKeyDigest(k.k[0]) !== next[0])) {
         return err(`${at}: the rotation's key is not the one committed to by the prior next-key digest`);
@@ -432,7 +451,7 @@ export function keyStateAt(msgs: readonly KelMessage[], aid: string, upTo: numbe
       if (typeof w === "string") return err(`${at}: ${w}`);
       wit = w;
       keys = k.k;
-      next = Array.isArray(k.n) ? k.n : [];
+      next = k.n;
       if (k.t === "icp") establishmentOnly = Array.isArray(k.c) && k.c.includes("EO");
       else rotations++;
     } else if (k.t === "ixn") {
@@ -446,7 +465,15 @@ export function keyStateAt(msgs: readonly KelMessage[], aid: string, upTo: numbe
     if (receipts.reason) return err(`${at}: ${receipts.reason}`);
     prior = m;
   }
-  return { ok: true, keys, witnesses: wit as WitnessState, rotations };
+  return {
+    ok: true,
+    keys,
+    witnesses: wit as WitnessState,
+    rotations,
+    last: (prior as KelMessage).ked.d,
+    establishmentOnly,
+    transferable: next.length > 0,
+  };
 }
 
 /** Lowest-numbered event of `aid`'s KEL carrying `seal`. */

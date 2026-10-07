@@ -289,12 +289,10 @@ describe("verifyKel: the event chain itself fails closed", () => {
     expect(verifyKel([signed(e0, 1), signed(drt, 2)], e0.i, 1)).toEqual(at(1, ": event type drt is not supported"));
   });
 
-  it("an inception without a next-key list cannot be rotated (no pre-rotation commitment)", () => {
+  it("an inception without a next-key list is rejected at the inception (no pre-rotation commitment to rotate to)", () => {
     const noNext = icp(1, 2, { n: "ENotAList000000000000000000000000000000000000" });
-    expect(verifyKel([signed(noNext, 1)], noNext.i, 0).ok).toBe(true);
-    expect(verifyKel([signed(noNext, 1), signed(rot(noNext, 2, 3), 2)], noNext.i, 1)).toEqual(
-      at(1, ": the rotation's key is not the one committed to by the prior next-key digest"),
-    );
+    expect(verifyKel([signed(noNext, 1)], noNext.i, 0)).toEqual(at(0, ": the next-key list is not readable"));
+    expect(verifyKel([signed(noNext, 1), signed(rot(noNext, 2, 3), 2)], noNext.i, 1)).toEqual(at(0, ": the next-key list is not readable"));
   });
 });
 
@@ -398,8 +396,9 @@ describe("keyStateAt: a rotation made by keripy 1.2.13 (sdk/test/fixtures/kel-ro
   const cx = JSON.parse(readFileSync(new URL("./fixtures/kel-rotation/counter-examples.json", import.meta.url), "utf8"));
   const aid = msgs[0].ked.i;
   it("before the rotation: the inception key and witnesses; after it: the revealed key and [wan, wes]", () => {
-    expect(keyStateAt(msgs, aid, 1)).toEqual({ ok: true, keys: msgs[0].ked.k, witnesses: { wits: [cx.witnesses.wan, cx.witnesses.wil], toad: 2 }, rotations: 0 });
-    expect(keyStateAt(msgs, aid, 3)).toEqual({ ok: true, keys: msgs[2].ked.k, witnesses: { wits: [cx.witnesses.wan, cx.witnesses.wes], toad: 2 }, rotations: 1 });
+    const rest = (sn: number) => ({ last: msgs[sn].ked.d, establishmentOnly: false, transferable: true });
+    expect(keyStateAt(msgs, aid, 1)).toEqual({ ok: true, keys: msgs[0].ked.k, witnesses: { wits: [cx.witnesses.wan, cx.witnesses.wil], toad: 2 }, rotations: 0, ...rest(1) });
+    expect(keyStateAt(msgs, aid, 3)).toEqual({ ok: true, keys: msgs[2].ked.k, witnesses: { wits: [cx.witnesses.wan, cx.witnesses.wes], toad: 2 }, rotations: 1, ...rest(3) });
     expect(nextKeyDigest(msgs[2].ked.k[0])).toBe(msgs[0].ked.n[0]);
     expect(verifyKel(msgs, aid, 3)).toEqual({ ok: true, keys: msgs[2].ked.k });
   });

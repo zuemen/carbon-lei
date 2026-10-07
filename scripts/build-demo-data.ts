@@ -3,7 +3,7 @@
 // fixtures/vlei.json and fixtures/evidence/*, plus a snapshot of on-chain reads taken now.
 //
 // Usage: node scripts/build-demo-data.ts --network local|sepolia [--rpc <url>] [--out demo/public/demo-data.json]
-import { parseCesr } from "../sdk/vlei.ts";
+import { auditorKel, parseCesr } from "../sdk/vlei.ts";
 import { sha256Hex, vleiCheckers } from "../sdk/checkers.ts";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -463,6 +463,13 @@ export async function buildDemoData(
       if (icp.atc) anchorEvidence.establishmentAttachment = icp.atc;
     }
   }
+  // Check 6 needs the auditor's events before the anchor (`kel`) when the anchor is not event #1: they are
+  // reassembled from the KEL and anchor exports, unchanged.
+  if (anchorEvidence && !anchorEvidence.kel && anchorEvidence.kelSeq > 1) {
+    const kel = auditorKelFromEvidence(EVIDENCE_DIR, anchorEvidence.auditor, anchorEvidence.kelSeq);
+    if (kel) anchorEvidence.kel = kel;
+    else console.log(`  evidence: the auditor's events #0 to #${anchorEvidence.kelSeq - 1} are not all exported; check 6 will fail`);
+  }
   // Check 7: the credential chain travels as a hashed reference to the bundle served next to the page.
   const bundleName = evidenceSrc.find((f) => f === "authority-bundle.json");
   const reportExtract = credFile.reportExtractFile
@@ -632,6 +639,30 @@ async function main() {
   } else {
     console.log("  attack 4: not included");
   }
+}
+
+/**
+ * The auditor's KEL events #0 to #kelSeq-1 for check 6 (`kel`), reassembled from evidence already exported
+ * in `dir`: the KEL exports (kel-*.json, { ked, atc } as KERIA serves them; the event bytes are the compact
+ * JSON of `ked`, which check 6 verifies against the SAID and the size in the version string) and the
+ * anchor exports (anchor-*.json: `event.raw` with its `kelAttachment`). Nothing in an event or its
+ * attachment is changed. Undefined when an event in the range is missing.
+ */
+export function auditorKelFromEvidence(dir: string, auditor: string, kelSeq: number): { raw: string; atc?: string }[] | undefined {
+  const msgs: { raw: string; atc?: string }[] = [];
+  for (const f of readdirSync(dir).sort()) {
+    if (/^kel-.+\.json$/.test(f)) {
+      const events = readJson<{ ked: Record<string, unknown>; atc?: string }[]>(resolve(dir, f));
+      if (Array.isArray(events)) for (const e of events) msgs.push({ raw: JSON.stringify(e.ked), ...(e.atc ? { atc: e.atc } : {}) });
+    } else if (/^anchor-.+\.json$/.test(f)) {
+      const a = readJson<any>(resolve(dir, f));
+      if (a?.auditor === auditor && typeof a.event?.raw === "string") msgs.push({ raw: a.event.raw, ...(a.kelAttachment ? { atc: a.kelAttachment } : {}) });
+    }
+  }
+  const kel = auditorKel(msgs, auditor, kelSeq);
+  const sns = new Set(kel.map((m) => JSON.parse(m.raw).s));
+  for (let sn = 0; sn < kelSeq; sn++) if (!sns.has(sn.toString(16))) return undefined;
+  return kel;
 }
 
 if (isMain(import.meta.url)) {
