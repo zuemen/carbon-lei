@@ -1,5 +1,7 @@
 # Problem statement and solution overview
 
+This document states the problem CarbonLEI addresses: a CBAM verified value is only usable if an importer can check who signed it, whether they were authorised, and whether its tonnes were already claimed. It then says what CarbonLEI does and does not do, and how existing channels compare.
+
 EFDA warns that "so-called verification certificates which are already in circulation" do not meet CBAM's verification requirements and are "not suitable for the required verification" (p. 4) [1]. The same guide expects "that few companies will be granted the status of accredited verifier at least in the first year" (p. 2).
 
 ## The problem

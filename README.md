@@ -4,6 +4,8 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 288 contract, 259 SDK, 29 verifier, 23 browser](https://img.shields.io/badge/tests-288%20contract%20%2B%20259%20SDK%20%2B%2029%20verifier%20%2B%2023%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
+**Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4: press "Verify the impostor's proof".
+
 [![The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment](docs/img/buyer-verified.png)](https://zuemen.github.io/carbon-lei/)
 <sub>Screenshot of the live page on Sepolia, taken 2026-10-06 (not a mock-up).</sub>
 
@@ -19,9 +21,7 @@
 
 All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.
 
-**Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4.
-
-Phone path: scan the product passport QR on the Supplier tab, the Buyer tab opens with the proof; press Verify.
+Phone path: scan the product passport QR on the Supplier tab, the Buyer tab opens with the proof; press Verify. On a desktop, the same link is under the QR ("Open the same link here").
 
 <details><summary>More: links, the 60-second walk-through, scope and the fictional-data notice</summary>
 
@@ -226,7 +226,7 @@ Open [zuemen.github.io/carbon-lei](https://zuemen.github.io/carbon-lei/). The ho
 - **Buyer**: press "Load the demo proof", then "Verify". Checks 1–3 are labelled "live · your browser": check 3 recovers the EIP-712 signer under the signing domain of the deployed registry (it takes only the chain ID from the Sepolia node and reads no contract state) and compares it with the issuer address in the credential. Checks 4–5 are labelled "live · Sepolia": they read the report and the shipment from the contract, including whether the registered issuer and auditor match the credential. Check 6 runs live in your browser on the KEL event that anchors `credSAID`: it recomputes the event's SAID, checks its Ed25519 signature, binds the signing key to the auditor's inception event, and requires signatures by at least 2 of the auditor's 3 witnesses (the inception's threshold) on both events, from the witness receipts in the exported evidence. Check 7 (the full credential chain) runs on vLEI evidence exported from a local KERIA run on 2026-10-05 (`demo/public/evidence/`, from `fixtures/evidence/`), not on a live query, and is labelled as such on the page; it recomputes every credential SAID, verifies each issuer's Ed25519 signature on the KEL event that anchors its issuance and the witness threshold of receipts on every KEL event it walks, and compares the evidence hashes with the live on-chain allowlist. Check 8 is advisory: it can flag the report for human review but never fails the check list. After a valid result, the comparison card offers "Download PACT product footprint (JSON)" next to the verification record (built in the browser by the same `sdk/pact.ts` function as `carbonlei export-pact`; PACT data model v3.0.3, not a conformance claim and not connected to any PACT network) and a hypothetical card, "What a lower verified intensity is worth", whose slider shows that each 0.1 tCO2e/t of verified intensity accounts for about €8.23 per tonne of goods at the same certificate price (declared-emissions gap, gross, illustrative). The card states that this value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed before, and that who captures it is a commercial matter between buyer and producer.
 - **Try to break it**: four counterexamples, each labelled with how it is checked: in your browser with no contract call, as a dry run (`eth_call`) against the live Sepolia contract with no wallet or private key, or as real Sepolia transactions (attack 3: [revocation sync](https://sepolia.etherscan.io/tx/0x4bcd646960c9c129b957e60f267606862a1c36ca6dc976d753e9803ddff0c674), [rejected report](https://sepolia.etherscan.io/tx/0xa8b6b8a8ba067de0ffda301688d64ff6c8c7662563930881c7fecc82e1e65fc5); attack 4, after a simulated compromise of the allowlist owner key: [On-chain proof](#on-chain-proof); details: Q21 in [Six questions reviewers ask](#six-questions-reviewers-ask)).
 - **On-chain proof**: every transaction in the [On-chain proof](#on-chain-proof) table.
-- **Supplier**: a "Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport". It lists the CN code, the verified emissions intensity (illustrative), the verification body's LEI, the validity status and the credential. Its QR code opens the Buyer tab of the hosted page with the `credSAID` and the batch ID; the page loads the matching proof, ready to verify. We do not claim conformance with ESPR or with any DPP specification.
+- **Supplier**: a "Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport". It lists the CN code, the verified emissions intensity (illustrative), the verification body's LEI, the validity status and the credential. Its QR code opens the Buyer tab of the hosted page with the `credSAID` and the batch ID; the page loads the matching proof, ready to verify. On a desktop, the link under the QR ("Open the same link here") does the same on the current page. We do not claim conformance with ESPR or with any DPP specification.
 
 ### Terminal check (Node.js 22.18 or later, `.nvmrc`: 22.20.0; no Docker, wallet or key)
 
@@ -259,8 +259,10 @@ For the example's first product it drafts 7 fields (CN code 73181542, installati
 `verify --json` prints the verdict as one JSON object instead of text: `overall`, `primaryCode`, each check as `{id, name, status, code, detail}`, `hidden`, `rejected`, the disclosed values, the chain and block the reads were pinned to, the root of trust and the tool version ([schema](docs/schemas/verdict.schema.json)). Exit codes: 0 VALID, 1 INVALID, 2 CONTESTED, 3 when the verification could not run (an error object on stdout); without `--json` the exit codes are unchanged (an error exits 1). `sdk/test/pipeline.integration.test.ts` runs the whole path on a local anvil chain, from the Commission's screws example through `import-template`, `issue`, registration, claim and `present` to a schema-checked VALID verdict; its vLEI evidence comes from a synthetic test chain (deterministic test keys), so it runs with `--trust-anchor` set to that chain's root, and the same proof is INVALID under the default demo root. `--trust-anchor <AID>` pins the root of trust for check 7 (default: the demo's simulated GLEIF root), and the verdict names the root it used. Who runs what in a deployment: [OPERATE](docs/OPERATE.md).
 
 ```bash
-npm run verify:demo -- --json
+npm run -s verify:demo -- --json
 ```
+
+(`-s` keeps npm's banner off stdout, so the output is a single JSON object, for example for `jq`.)
 
 The same verdict from the SDK (save as `verify.mjs` in the repository root and run `node verify.mjs`; `sdk/test/readme-snippet.test.ts` runs this block as written):
 
@@ -308,7 +310,7 @@ Command-line tool (never sends transactions; `verify` exits with code 2 when the
 ```bash
 npm run carbonlei -- issue --claims <claims.json> --auditor-aid <AID> --supplier <0x...>
 npm run carbonlei -- present --credential <credential.json> --fields a,b
-npm run carbonlei -- verify --proof <proof.json> [--json] [--trust-anchor <AID>]
+npm run -s carbonlei -- verify --proof <proof.json> [--json] [--trust-anchor <AID>]   # -s: no npm banner, so --json output parses
 npm run carbonlei -- export-pact --proof <proof.json> --company-name <name> --product-name <name> --product-id <id> --product-description <text>
 npm run carbonlei -- import-template <file.xlsx> [--product N]
 ```
@@ -330,7 +332,8 @@ carbon-lei/
                Playwright tests in e2e/; deployed to GitHub Pages
   fixtures/    fictional parties, demo credential, CESR and KEL evidence, Sepolia transactions, cross-language test vectors
   scripts/     demo scenario, one-command local demo, demo data build, deployment record
-  docs/        ARCHITECTURE, SECURITY, CLIMATE_IMPACT, ADOPTION, PILOT, OPERATE, PACT_MAPPING, FAQ, VLEI_SETUP;
+  docs/        PROBLEM_STATEMENT, JUDGING_CRITERIA, ARCHITECTURE, SECURITY, CLIMATE_IMPACT, ADOPTION, PILOT, OPERATE,
+               PACT_MAPPING, FAQ, VLEI_SETUP;
                schemas/verdict.schema.json (output of verify --json)
   .github/workflows/   ci.yml (contracts and SDK), pages.yml (demo deployment)
 ```
@@ -338,12 +341,12 @@ carbon-lei/
 ## Tests
 
 ```bash
-npm ci && forge build              # dependencies and contract artifacts (the SDK tests read contracts/out)
+npm ci && forge build              # dependencies and contract artifacts (the SDK tests read contracts/out); fetches the two submodules if the clone was not recursive; the first build takes about 2-3 minutes (via_ir)
 forge test                         # 288 contract tests: unit, scenario, property fuzz and invariant fuzz
 npm test -w sdk                    # 259 SDK tests (vitest; needs forge build first), including end-to-end runs on a local anvil chain, PACT schema validation, the Communication Template importer and the JSON verdict
 npm test -w verifier               # 29 tests: revocation seal detection, the watcher and the impostor chain (no KERI stack needed)
 npx playwright install chromium    # once, for the browser tests
-npm run e2e -w demo                # 23 browser tests against a local dev server; set DEMO_URL to test the hosted page
+npm run e2e -w demo                # 23 browser tests, one worker, against a Vite server it starts on 127.0.0.1:5199 (fails if that port is in use; it never reuses a running server); set DEMO_URL to test the hosted page
 npm run test:coverage -w sdk       # the same SDK tests with V8 line, branch and function coverage
 npm run test:coverage -w verifier  # the same for the verifier
 ```
@@ -424,7 +427,7 @@ To our knowledge, based on public sources as of October 2026, no public project 
 | Contracts (`VerifierAllowlist`, `EmissionsClaimRegistry`) | Sepolia deployment, Etherscan-verified source | Deployed 2026-10-05, source verified; 288 tests | Independent audit; production chain choice |
 | Allowlist governance | Allowlist owner key (held by the trust-registry operator) adds verification bodies and auditors; a separate watcher key can only suspend a body, lift a suspension or revoke an auditor (limits: Q1 in [Six questions reviewers ask](#six-questions-reviewers-ask)) | Built; the allowlist owner key and the watcher key are single keys held by the team | Multisig, then governance with NAB and QVI representatives; several independent watchers |
 | vLEI chain (LE, ECR, NAB accreditation), KEL anchoring, revocation detection | Local KERIA (`verifier/`) | Built: 8 agents, the full credential chain and KEL anchoring on a local KERIA stack; evidence exported to `fixtures/evidence/`; check 7 fails on a credential whose registry log shows a revocation or whose issuance its issuer did not sign in the presented KEL, and on a KEL event without its witness threshold of receipts | Real vLEIs from a QVI in a pilot |
-| Hosted demo | Read-only; checks 1–2 in the browser, checks 3–5 live against Sepolia; check 6 live in the browser; check 7 on exported evidence ([Quick start](#hosted-for-reviewers-no-installation)) | Live on GitHub Pages | Hosted verifier API |
+| Hosted demo | Read-only; checks 1–3 and 6 live in your browser (check 3 takes only the chain ID from the node), checks 4–5 live against Sepolia; check 7 on exported evidence ([Quick start](#hosted-for-reviewers-no-installation)) | Live on GitHub Pages | Hosted verifier API |
 | Watcher | A report registered within 24 h before a revocation sync is marked CONTESTED by the verifier | Watcher key, CONTESTED marking and a watcher process that polls the body's KEL for an ECR revocation and sends `revokeAuditor` (`verifier/src/watch.ts`); suspensions are sent manually with the watcher key | Several independent watchers; watching accreditation withdrawals; liveness alerts; backdate revocation to the KERI event time |
 | Physical link between goods and batch ID | Batch ID chosen by supplier | Known limitation | Bind to customs declaration or heat numbers |
 

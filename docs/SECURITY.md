@@ -1,5 +1,7 @@
 # Security and data integrity assessment
 
+This document is the threat model and security assessment; for the short answer, read **At a glance** below, and for the remaining risks, [§11](#11-residual-risk-summary).
+
 This document covers what CarbonLEI protects, what it trusts, how it can be attacked and what risk remains. It follows the design in [ARCHITECTURE.md](ARCHITECTURE.md). Everything written as a mitigation is implemented in this repository and covered by the tests named in the Test column, unless it is marked **Roadmap**. Test names refer to the Foundry suites in `contracts/test/` and the vitest suites in `sdk/test/`.
 
 Scope: the two contracts on Ethereum Sepolia, the SDK verification pipeline, the vLEI off-chain service and the hosted demo.

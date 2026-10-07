@@ -223,6 +223,9 @@ export function Supplier() {
             <p className="fine" style={{ textAlign: "center", margin: "4px 0 0" }}>
               Scan to verify
             </p>
+            <p className="fine" style={{ textAlign: "center", margin: "2px 0 0" }}>
+              On a desktop? <a href={passportUrl.slice(passportUrl.indexOf("#"))}>Open the same link here</a>
+            </p>
           </div>
         </div>
         <p className="fine">

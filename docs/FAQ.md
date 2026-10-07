@@ -1,5 +1,7 @@
 # FAQ for reviewers
 
+This document holds the reviewer questions not answered in the README; questions are numbered as in the full list, so the numbering skips.
+
 The full question list; Q1, Q2, Q5, Q6, Q7 and Q21 are answered in the [README](../README.md#six-questions-reviewers-ask), and the other fifteen are answered here under their original numbers.
 
 **Q3. Can one installation obtain two reports and double its claimable tonnage?**

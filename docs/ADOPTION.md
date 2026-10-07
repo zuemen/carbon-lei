@@ -1,5 +1,7 @@
 # Implementation and adoption strategy, and scalability roadmap
 
+This document explains who would adopt CarbonLEI first and why, who pays, how adoption could proceed and how it scales; it does not replace the CBAM Registry.
+
 All companies are fictional. CarbonLEI is a hackathon prototype on a public testnet. Nothing here is connected to the CBAM Registry, Chainlink ACE or any PACT network.
 
 ## Summary

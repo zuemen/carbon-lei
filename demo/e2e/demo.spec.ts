@@ -371,10 +371,20 @@ test("E7 On-chain proof lists the contracts and the demo transactions", async ({
   await expect(page.locator("table.ledger tbody tr")).not.toHaveCount(0);
 });
 
-test("E8 the product passport QR link opens the Buyer tab with the matching proof", async ({ page }) => {
+test("E8 the product passport QR link, and the desktop link under the QR, open the Buyer tab with the matching proof", async ({ page }) => {
   const data = await (await page.request.get("demo-data.json")).json();
   const said = JSON.parse(data.proof.core).d;
-  await page.goto(`./#buyer?said=${encodeURIComponent(said)}&batch=${encodeURIComponent(data.shipment.batchId)}`);
+  const hash = `#buyer?said=${encodeURIComponent(said)}&batch=${encodeURIComponent(data.shipment.batchId)}`;
+  await page.goto(`./${hash}`);
+  await expect(page.getByText(/Proof loaded from the product passport QR code/)).toBeVisible();
+  await expect(page.locator("#proof-in")).toHaveValue(/"core"/);
+
+  // A desktop reviewer cannot scan their own screen: the same link is clickable under the QR.
+  await page.goto("./#supplier");
+  await page.reload(); // a fresh page, so the proof is not already loaded from the first visit
+  const link = page.getByRole("link", { name: "Open the same link here" });
+  await expect(link).toHaveAttribute("href", hash);
+  await link.click();
   await expect(page.getByText(/Proof loaded from the product passport QR code/)).toBeVisible();
   await expect(page.locator("#proof-in")).toHaveValue(/"core"/);
 });
