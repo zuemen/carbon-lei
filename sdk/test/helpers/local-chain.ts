@@ -86,8 +86,10 @@ export async function startLocalChain(port: number, anvilArgs: string[] = []): P
     chain: foundry,
   });
   const r2 = await pub.waitForTransactionReceipt({ hash: h2 });
+  // The tests set block times (days ahead, or minutes behind the clock between transactions): no head-age limit.
   const deployment: Deployment = {
     chainId: 31337,
+    maxHeadAgeSec: Infinity,
     contracts: {
       VerifierAllowlist: { address: allowlist, block: Number(r1.blockNumber) },
       EmissionsClaimRegistry: { address: r2.contractAddress as Hex, block: Number(r2.blockNumber) },

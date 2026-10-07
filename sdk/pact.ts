@@ -213,7 +213,7 @@ export async function exportPactFromProof(
   }
   if (r.overall === "CONTESTED") {
     throw new Error(
-      "the result is CONTESTED (check 4 or 5: a revocation, suspension or address rotation close to the registration, the claim or the report's revocation, or a revision by another body with more tonnes or another supplier); it needs a person's review, nothing exported",
+      `the result is CONTESTED (check ${r.checks.find((c) => c.code === "CONTESTED")?.index ?? 4}: ${r.checks.find((c) => c.code === "CONTESTED")?.detail ?? "see checks 4 and 5"}); it needs a person's review, nothing exported`,
     );
   }
   const core = JSON.parse(proof.core);

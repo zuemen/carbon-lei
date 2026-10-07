@@ -1,7 +1,7 @@
 // The CONTESTED event search on a long chain: after more than 100,000 blocks since the deployment,
 // a verification still sends a constant number of eth_getLogs requests (the search covers only the
-// blocks of [registeredAt, registeredAt + window], and of the windows around a bound shipment's claim and a
-// revocation, found by interpolation search; one request per interval for all three allowlist events), and its
+// blocks of [registeredAt, registeredAt + window] and, for a revoked report, of its revocation, found by
+// interpolation search; one request per interval for the allowlist events and the report's own events), and its
 // result is identical to the full scan from the deployment block. Also: the window edges, a chain with
 // irregular block times, and the fail-safe fallback when block reads fail.
 import { readFileSync } from "node:fs";
@@ -263,7 +263,7 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     expect(r.w.eth_getLogs).toBe(1);
   });
 
-  it("a shipment claimed 10 days after registration: two intervals, 3 eth_getLogs (1 + 2 for the 48 h around the claim); check 4 passes, same as the full scan", async () => {
+  it("a shipment claimed 10 days after registration: one interval, 1 eth_getLogs (the claim needs no event search); check 4 passes, same as the full scan", async () => {
     const aid = "EDemoAuditorAidEventWindowLateClaim000000000";
     await addAuditor(aid);
     const { cr } = await issueAndRegister(aid);
@@ -278,11 +278,11 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
     expect(windowed).toEqual(await verifyPresentation(p, f.reader, { importerEORI: EORI }));
     // (checks 6 and 7 have no evidence here; checks 4 and 5 are what this case is about)
     expect([check4(windowed), windowed.checks[5].status]).toEqual(["pass:", "pass"]);
-    expect(w.counts.eth_getLogs).toBe(3);
-    expect(w.counts.eth_getBlockByNumber).toBeLessThanOrEqual(maxGetBlock(2));
+    expect(w.counts.eth_getLogs).toBe(1);
+    expect(w.counts.eth_getBlockByNumber).toBeLessThanOrEqual(maxGetBlock(1));
   });
 
-  it("CR1 on a long chain: revoked 5 days after the claim, the body rotated 1 h later → checks 4 and 5 CONTESTED; three intervals, 5 eth_getLogs (1 + 2 + 2)", async () => {
+  it("CR1 on a long chain: revoked 5 days after the claim, the revoking address rotated away 1 h later → checks 4 and 5 CONTESTED; two intervals, 2 eth_getLogs (registration, and the revocation's block)", async () => {
     // A third body (the second one was suspended by an earlier case).
     await send(c, c.owner, "allowlist", "addVerifier", [
       {
@@ -315,8 +315,8 @@ describe("CONTESTED event search on a chain more than 100,000 blocks past the de
       "warn:CONTESTED",
       "warn:CONTESTED",
     ]);
-    expect(w.counts.eth_getLogs).toBe(5);
-    expect(w.counts.eth_getBlockByNumber).toBeLessThanOrEqual(maxGetBlock(3));
+    expect(w.counts.eth_getLogs).toBe(2);
+    expect(w.counts.eth_getBlockByNumber).toBeLessThanOrEqual(maxGetBlock(2));
   });
 
   it("fail-safe: when block reads fail, the search falls back to the full scan and the result is unchanged", async () => {

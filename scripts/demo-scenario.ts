@@ -315,6 +315,8 @@ export interface DeploymentFile {
 export function toDeployment(f: DeploymentFile): Deployment {
   return {
     chainId: f.chainId,
+    // The local anvil demo starts at a genesis time in the past and mines only on demand: no head-age limit there.
+    ...(f.chainId === 31337 ? { maxHeadAgeSec: null } : {}),
     contracts: {
       VerifierAllowlist: { address: f.contracts.VerifierAllowlist.address, block: f.contracts.VerifierAllowlist.block },
       EmissionsClaimRegistry: {

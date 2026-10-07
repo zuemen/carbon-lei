@@ -18,7 +18,7 @@ import {
 import { sepolia } from "viem/chains";
 import { emissionsClaimRegistryAbi, verifierAllowlistAbi } from "./abi.ts";
 import type { Hex } from "./credential.ts";
-import { DEFAULT_MAX_HEAD_AGE_SEC } from "./verify.ts";
+import { defaultMaxHeadAgeSec } from "./verify.ts";
 
 export { sepolia as SEPOLIA_CHAIN };
 
@@ -72,6 +72,11 @@ export interface BlockRange {
 
 export interface Deployment {
   chainId: number;
+  /**
+   * Head-age limit, in seconds, for this deployment's chain; overrides `defaultMaxHeadAgeSec(chainId)`. `Infinity`,
+   * or `null` in a JSON file, turns the limit off (tests on a local anvil chain whose block times the test sets).
+   */
+  maxHeadAgeSec?: number | null;
   contracts: {
     VerifierAllowlist: { address: Hex; block: number };
     EmissionsClaimRegistry: { address: Hex; block: number };
@@ -113,20 +118,36 @@ export interface TimedEvent {
 }
 
 /**
- * An allowlist event about one body that the verifier's CONTESTED rules read (`bodyEvents`): an auditor revocation,
- * a suspension of the body, or a rotation of the body's address (`oldAddr` is the address rotated away).
+ * An event the verifier's CONTESTED rules read (`bodyEvents`). From the allowlist, about one body: an auditor
+ * revocation, a suspension of the body, or a rotation of the body's address (`oldAddr` is the address rotated away).
+ * From the registry, about one report: its registration (`registered`, with no time field: `time` is 0) and its
+ * revocation (`reportRevoked`, with the revoking address in `revoker`).
  */
 export interface BodyEvent extends TimedEvent {
-  kind: "auditorRevoked" | "suspended" | "rotated";
+  kind: "auditorRevoked" | "suspended" | "rotated" | "registered" | "reportRevoked";
   oldAddr?: Hex;
   newAddr?: Hex;
+  reportKey?: Hex;
+  revoker?: Hex;
   logIndex: number;
 }
 
-const BODY_EVENT_NAMES = ["AuditorRevoked", "VerifierSuspended", "VerifierAddressRotated"] as const;
-const BODY_EVENT_TOPICS = BODY_EVENT_NAMES.map((name) =>
-  toEventSelector(verifierAllowlistAbi.find((x) => x.type === "event" && x.name === name) as never),
-);
+/** A `ReportRegistered` event of one report scope (`scopeRegistrations`). */
+export interface ScopeRegistration {
+  reportKey: Hex;
+  issuerLeiHash: Hex;
+  supplier: Hex;
+  reportIdHash: Hex;
+  credScopeKey: Hex;
+  blockNumber: bigint;
+  logIndex: number;
+}
+
+const selector = (abi: readonly unknown[], name: string) =>
+  toEventSelector((abi as { type: string; name?: string }[]).find((x) => x.type === "event" && x.name === name) as never);
+const BODY_EVENT_TOPICS = ["AuditorRevoked", "VerifierSuspended", "VerifierAddressRotated"].map((n) => selector(verifierAllowlistAbi, n));
+const REPORT_EVENT_TOPICS = ["ReportRegistered", "ReportRevoked"].map((n) => selector(emissionsClaimRegistryAbi, n));
+const BOTH_ABIS = [...verifierAllowlistAbi, ...emissionsClaimRegistryAbi];
 
 export class ChainReader {
   readonly client: PublicClient;
@@ -140,6 +161,8 @@ export class ChainReader {
   readonly options: ChainReaderOptions;
   /** Chain ID the deployment file names; verification refuses an RPC that reports another one. */
   readonly chainId: number;
+  /** The deployment's head-age limit (`Deployment.maxHeadAgeSec`), when it sets one. */
+  readonly maxHeadAgeSec?: number;
   private readonly deployment: Deployment;
   /**
    * Shared with the readers made by `at`: the deployment block's timestamp, read once, and the
@@ -153,6 +176,7 @@ export class ChainReader {
     this.blockNumber = blockNumber;
     this.options = options;
     this.chainId = deployment.chainId;
+    this.maxHeadAgeSec = deployment.maxHeadAgeSec === null ? Infinity : deployment.maxHeadAgeSec;
     this.allowlist = deployment.contracts.VerifierAllowlist.address;
     this.registry = deployment.contracts.EmissionsClaimRegistry.address;
     this.fromBlock = BigInt(
@@ -190,14 +214,16 @@ export class ChainReader {
   }
 
   /**
-   * Several URLs: tried in order (`historyFallback`), and a node whose latest block is older than the deployment
-   * chain's head-age limit (`DEFAULT_MAX_HEAD_AGE_SEC`) is passed over for the next one.
+   * Several URLs: tried in order (`historyFallback`), and a node whose latest block is older than the deployment's
+   * head-age limit (`Deployment.maxHeadAgeSec`, else `defaultMaxHeadAgeSec`) is passed over for the next one.
    */
   static forRpc(deployment: Deployment, rpcUrls: string[], chain?: Chain, options?: ChainReaderOptions): ChainReader {
     const transport =
       rpcUrls.length === 1
         ? http(rpcUrls[0])
-        : historyFallback(rpcUrls, { maxHeadAgeSec: DEFAULT_MAX_HEAD_AGE_SEC[deployment.chainId] });
+        : historyFallback(rpcUrls, {
+            maxHeadAgeSec: deployment.maxHeadAgeSec === null ? Infinity : (deployment.maxHeadAgeSec ?? defaultMaxHeadAgeSec(deployment.chainId)),
+          });
     return new ChainReader(createPublicClient({ chain, transport }) as PublicClient, deployment, undefined, options);
   }
 
@@ -333,24 +359,30 @@ export class ChainReader {
   }
 
   /**
-   * The allowlist events the CONTESTED rules read, for one body and one auditor, in one `eth_getLogs` request per
-   * chunk: `AuditorRevoked(auditorAidHash, leiHash)`, `VerifierSuspended(leiHash)` and
-   * `VerifierAddressRotated(leiHash, oldAddr, newAddr)`. The request filters topic 0 on the three events and
-   * topic 1 on the auditor or the body (their first indexed field); the result is then filtered on the full key
-   * (an `AuditorRevoked` of the same auditor under another body is dropped). Only the allowlist owner and the
-   * watcher can emit these events, so an outsider cannot add entries. `toBlock` and `fromBlock` as for
-   * `auditorRevocations`; any request error is thrown (fail closed).
+   * The events the CONTESTED rules read, for one body, one auditor and (with `reportKey`) one report, in one
+   * `eth_getLogs` request per chunk: from the allowlist `AuditorRevoked(auditorAidHash, leiHash)`,
+   * `VerifierSuspended(leiHash)` and `VerifierAddressRotated(leiHash, oldAddr, newAddr)`; from the registry
+   * `ReportRegistered(reportKey, …)` and `ReportRevoked(reportKey, revoker, revokedAt)`. The request names both
+   * contracts, filters topic 0 on these events and topic 1 on the auditor, the body or the report (their first indexed
+   * field); the result is then filtered on the contract and the full key (an `AuditorRevoked` of the same auditor
+   * under another body is dropped). Only the allowlist owner and the watcher can emit the allowlist events, and only
+   * the body can register or revoke its report, so an outsider cannot add entries. The report's own
+   * `ReportRegistered` lets the caller tell an answer without events from a node that has lost the history
+   * (`verifyPresentation` refuses one). `toBlock` and `fromBlock` as for `auditorRevocations`; any request error is
+   * thrown (fail closed).
    */
-  async bodyEvents(leiHash: Hex, auditorAidHash: Hex, toBlock?: bigint, fromBlock?: bigint): Promise<BodyEvent[]> {
-    type RawLog = { topics: Hex[]; data: Hex; blockNumber: Hex | bigint; transactionHash: Hex; logIndex: Hex | number };
+  async bodyEvents(leiHash: Hex, auditorAidHash: Hex, toBlock?: bigint, fromBlock?: bigint, reportKey?: Hex): Promise<BodyEvent[]> {
+    type RawLog = { address: Hex; topics: Hex[]; data: Hex; blockNumber: Hex | bigint; transactionHash: Hex; logIndex: Hex | number };
     const raw = await this.chunked<RawLog>(
       (from, to) =>
         this.client.request({
           method: "eth_getLogs",
           params: [
             {
-              address: this.allowlist,
-              topics: [BODY_EVENT_TOPICS, [auditorAidHash, leiHash]],
+              address: reportKey ? [this.allowlist, this.registry] : this.allowlist,
+              topics: reportKey
+                ? [[...BODY_EVENT_TOPICS, ...REPORT_EVENT_TOPICS], [auditorAidHash, leiHash, reportKey]]
+                : [BODY_EVENT_TOPICS, [auditorAidHash, leiHash]],
               fromBlock: numberToHex(from),
               toBlock: numberToHex(to),
             },
@@ -360,23 +392,31 @@ export class ChainReader {
       fromBlock,
     );
     const out: BodyEvent[] = [];
-    for (const l of parseEventLogs({ abi: verifierAllowlistAbi, logs: raw as never, strict: true })) {
+    const eq = (x: unknown, y: Hex) => typeof x === "string" && x.toLowerCase() === y.toLowerCase();
+    for (const l of parseEventLogs({ abi: BOTH_ABIS, logs: raw as never, strict: true })) {
       const a = l.args as Record<string, unknown>;
       const base = {
         blockNumber: BigInt(l.blockNumber as unknown as Hex),
         txHash: l.transactionHash as Hex,
         logIndex: Number(l.logIndex as unknown as Hex),
       };
-      const eq = (x: unknown, y: Hex) => typeof x === "string" && x.toLowerCase() === y.toLowerCase();
-      if (l.eventName === "AuditorRevoked") {
+      const fromAllowlist = eq(l.address, this.allowlist);
+      const fromRegistry = eq(l.address, this.registry);
+      if (fromAllowlist && l.eventName === "AuditorRevoked") {
         if (eq(a.auditorAidHash, auditorAidHash) && eq(a.leiHash, leiHash)) {
           out.push({ kind: "auditorRevoked", time: a.revokedAt as bigint, ...base });
         }
-      } else if (l.eventName === "VerifierSuspended") {
+      } else if (fromAllowlist && l.eventName === "VerifierSuspended") {
         if (eq(a.leiHash, leiHash)) out.push({ kind: "suspended", time: a.suspendedAt as bigint, ...base });
-      } else if (l.eventName === "VerifierAddressRotated") {
+      } else if (fromAllowlist && l.eventName === "VerifierAddressRotated") {
         if (eq(a.leiHash, leiHash)) {
           out.push({ kind: "rotated", time: a.rotatedAt as bigint, oldAddr: a.oldAddr as Hex, newAddr: a.newAddr as Hex, ...base });
+        }
+      } else if (fromRegistry && reportKey && l.eventName === "ReportRegistered") {
+        if (eq(a.reportKey, reportKey)) out.push({ kind: "registered", time: 0n, reportKey, ...base });
+      } else if (fromRegistry && reportKey && l.eventName === "ReportRevoked") {
+        if (eq(a.reportKey, reportKey)) {
+          out.push({ kind: "reportRevoked", time: a.revokedAt as bigint, reportKey, revoker: a.verifier as Hex, ...base });
         }
       }
     }
@@ -384,7 +424,48 @@ export class ChainReader {
   }
 
   /**
-   * `bodyEvents` over every block whose timestamp lies in one of the time `intervals` ([from, to], in seconds), up
+   * The `ReportRegistered` events of one report scope in every block whose timestamp lies in [fromTime, toTime], up
+   * to `head` (`reportScopeKey` is not an indexed field, so every `ReportRegistered` of the range is read and the
+   * scope is filtered here). One block search (`blockRangeForTimes`) and one `eth_getLogs` per chunk of the range;
+   * the whole range from the deployment block if the search could not narrow it. Any request error is thrown.
+   */
+  async scopeRegistrations(
+    reportScopeKey: Hex,
+    fromTime: bigint,
+    toTime: bigint,
+    head: { number: bigint; timestamp: bigint },
+  ): Promise<ScopeRegistration[]> {
+    const range = await this.blockRangeForTimes(fromTime, toTime, head);
+    type RawLog = { address: Hex; topics: Hex[]; data: Hex; blockNumber: Hex | bigint; transactionHash: Hex; logIndex: Hex | number };
+    const raw = await this.chunked<RawLog>(
+      (from, to) =>
+        this.client.request({
+          method: "eth_getLogs",
+          params: [{ address: this.registry, topics: [REPORT_EVENT_TOPICS[0]], fromBlock: numberToHex(from), toBlock: numberToHex(to) }],
+        } as never) as Promise<RawLog[]>,
+      range.toBlock,
+      range.fromBlock,
+    );
+    const out: ScopeRegistration[] = [];
+    for (const l of parseEventLogs({ abi: emissionsClaimRegistryAbi, logs: raw as never, strict: true })) {
+      const a = l.args as Record<string, unknown>;
+      if (l.eventName !== "ReportRegistered" || String(l.address).toLowerCase() !== this.registry.toLowerCase()) continue;
+      if (String(a.reportScopeKey).toLowerCase() !== reportScopeKey.toLowerCase()) continue;
+      out.push({
+        reportKey: a.reportKey as Hex,
+        issuerLeiHash: a.issuerLeiHash as Hex,
+        supplier: a.supplier as Hex,
+        reportIdHash: a.reportIdHash as Hex,
+        credScopeKey: a.credScopeKey as Hex,
+        blockNumber: BigInt(l.blockNumber as unknown as Hex),
+        logIndex: Number(l.logIndex as unknown as Hex),
+      });
+    }
+    return out.sort((x, y) => (x.blockNumber === y.blockNumber ? x.logIndex - y.logIndex : x.blockNumber < y.blockNumber ? -1 : 1));
+  }
+
+  /**
+   * `bodyEvents` (with `reportKey`: also that report's registry events) over every block whose timestamp lies in one of the time `intervals` ([from, to], in seconds), up
    * to `head`. Overlapping intervals are merged first, each remaining interval gets its own block range
    * (`blockRangeForTimes`), and overlapping or adjacent block ranges are merged again, so no block is searched twice.
    * If any range could not be narrowed (a failed block read, `fullEventScan`, a young chain), the whole range from
@@ -395,6 +476,7 @@ export class ChainReader {
     auditorAidHash: Hex,
     intervals: readonly (readonly [bigint, bigint])[],
     head: { number: bigint; timestamp: bigint },
+    reportKey?: Hex,
   ): Promise<BodyEvent[]> {
     const times = intervals.map(([a, b]) => (a <= b ? [a, b] : [b, a]) as [bigint, bigint]).sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
     const merged: [bigint, bigint][] = [];
@@ -416,7 +498,7 @@ export class ChainReader {
       } else joined.push([a, b]);
     }
     blocks = joined;
-    const parts = await Promise.all(blocks.map(([a, b]) => this.bodyEvents(leiHash, auditorAidHash, b, a)));
+    const parts = await Promise.all(blocks.map(([a, b]) => this.bodyEvents(leiHash, auditorAidHash, b, a, reportKey)));
     return parts.flat();
   }
 
