@@ -196,6 +196,7 @@ What CarbonLEI itself adds is the integrity of verified data: software can check
 |---|---|---|
 | EU imports of CN 7318 from Taiwan, 2025 | about €1.22 billion and 371,270 t | [6] |
 | Taiwan's share of extra-EU imports of CN 7318, 2025 | 18.6% by value, 20.3% by weight; second after China | [6] |
+| Declarations that rest on a default or on a verifier's signature | If all 371,270 t were declared at the 2026 default: about 1.11 MtCO2e of declared embedded emissions (371,270 × 2.978). Each 1% of that tonnage declared on a verified value instead moves about 11,060 tCO2e of declaration (3,712.7 t × 2.978) from the default onto one verifier's signature. These are declared amounts, not emissions avoided and not a gap; 2025 tonnes (transitional period) are a proxy for 2026, the 50 t de minimis threshold makes them an upper bound, and the default applies to Taiwan only, so it must not be multiplied by extra-EU tonnes | [1], [6] |
 | Default value, CN 7318 from Taiwan | 2.707 tCO2e/t direct; 2.978 in 2026; about 3.25 in 2027; 3.519 from 2028 | [1] |
 | Company identifier | The Commission's guidance lists LEI as an accepted operator identifier for operators from countries such as Taiwan | [10] |
 | Verification capacity | 5 of 24 EU/EEA national accreditation bodies accepting non-EU verifier applications on 29 September 2026 | [2] |
@@ -248,7 +249,7 @@ Accessed 2026-09-23 unless stated.
 3. European Fastener Distributor Association (EFDA), press release, 9 March 2026. http://www.efda-fastenerdistributors.org/content/files/EFDA%20PRESS%20RELEASE_260309%281%29.pdf
 4. German Environment Agency (UBA), press release No. 36/2024, 6 September 2024. https://www.umweltbundesamt.de/en/press/pressinformation/uba-refuses-to-approve-certificates-for-eight-uer
 5. Commission Implementing Regulation (EU) 2025/2546, Annex (template of the verification report), point 2.6(h). https://eur-lex.europa.eu/eli/reg_impl/2025/2546/oj
-6. Eurostat Comext DS-045409, CN 7318, reporter EU, partners TW and extra-EU, 2025 (dataset updated 15 September 2026); shares computed by the team. https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/DS-045409?format=JSON&freq=A&reporter=EU&partner=TW&product=7318&flow=1&time=2025
+6. Eurostat Comext DS-045409, CN 7318, reporter EU, partners TW and extra-EU, 2025 (dataset updated 15 September 2026); shares computed by the team. https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/DS-045409?format=JSON&freq=A&reporter=EU&partner=TW&product=7318&flow=1&time=2025 ; extra-EU: https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/DS-045409?format=JSON&freq=A&reporter=EU&partner=EXT_EU&product=7318&flow=1&time=2025 (accessed 2026-10-07)
 7. European Commission, "Price of CBAM certificates" (Q1 2026: €75.36, published 7 April 2026; Q2 2026: €75.28, published 6 July 2026; Q3 2026: €82.32, published 5 October 2026), accessed 2026-10-05. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en
 8. Taiwan Ministry of Environment, press meeting, 2 April 2026. https://www.moenv.gov.tw/policies-and-laws/meetings/35593.html
 9. Taiwan Ministry of Environment, press release, 1 March 2026. https://enews.moenv.gov.tw/page/3b3c62c78849f32f/29e658c3-eba2-4087-a3bd-c9808640fc67
