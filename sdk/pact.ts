@@ -9,7 +9,7 @@ import type { ChainReader } from "./chain.ts";
 import { reportKeyOf } from "./commitment.ts";
 import { METHODOLOGY_NOTE, splitReportingPeriod, type Hex } from "./credential.ts";
 import type { Presentation } from "./disclosure.ts";
-import type { VerificationResult } from "./verify.ts";
+import { onlySuperseded, type VerificationResult } from "./verify.ts";
 
 export const PACT_SPEC_VERSION = "3.0.3";
 export const EXTENSION_SPEC_VERSION = "2.0.0";
@@ -162,10 +162,17 @@ export type PactProduct = Pick<PactContext, "companyName" | "productNameCompany"
   Partial<Pick<PactContext, "verifierName" | "extensionSchemaUrl" | "documentationUrl" | "created">>;
 
 /**
- * Export of a verified proof. Exports nothing unless checks 1–3, 6 and 7 passed and the result is not INCOMPLETE; `r` should
- * come from a verification with the importer's EORI (check 5), so that check 4 judged the claim time only for the
- * importer the batch was declared to. Reads the report's on-chain
- * record for `status`, `precedingPfIds` and the KEL sequence number.
+ * Export of a verified proof. Exports nothing unless every check that decides validity passed, with one exception:
+ * a credential whose only failure is that check 4 found it superseded is exported with `status` `Deprecated`.
+ * In detail it refuses a result in which
+ * - check 0, 1, 2, 3, 5, 6 or 7 failed;
+ * - check 4 failed for any other reason (revoked, expired, issuer, supplier or scope mismatch, ...), or for that
+ *   reason as well as supersession;
+ * - check 6 or 7 did not pass (not run, so INCOMPLETE, or only a warning);
+ * - the overall result is CONTESTED (it needs a person's review first).
+ * `r` should come from a verification with the importer's EORI (check 5), so that check 4 judged the claim time only
+ * for the importer the batch was declared to. Reads the report's on-chain record for `status`, `precedingPfIds` and
+ * the KEL sequence number.
  */
 export async function exportPactFromProof(
   proof: Presentation,
@@ -173,7 +180,11 @@ export async function exportPactFromProof(
   rd: ChainReader,
   product: PactProduct,
 ): Promise<Record<string, unknown>> {
-  if ([1, 2, 3].some((i) => r.checks.find((c) => c.index === i)?.status === "fail")) {
+  const check = (i: number) => r.checks.find((c) => c.index === i);
+  if (check(0)?.status === "fail") {
+    throw new Error(`the proof is malformed (check 0: ${check(0)?.detail}); nothing exported`);
+  }
+  if ([1, 2, 3].some((i) => check(i)?.status === "fail")) {
     throw new Error(`the proof does not pass checks 1–3 (${r.primaryCode}); nothing exported`);
   }
   // Checks 6 and 7 decide whether the auditor was authorised; a result without them, or with one failed, says
@@ -184,6 +195,26 @@ export async function exportPactFromProof(
   const failedEvidence = r.checks.find((c) => (c.index === 6 || c.index === 7) && c.status === "fail");
   if (failedEvidence) {
     throw new Error(`the proof fails check ${failedEvidence.index} (${failedEvidence.code}); nothing exported`);
+  }
+  const unconfirmed = [6, 7].find((i) => check(i)?.status !== "pass");
+  if (unconfirmed !== undefined) {
+    throw new Error(`check ${unconfirmed} did not pass (${check(unconfirmed)?.status ?? "missing"}); nothing exported`);
+  }
+  // Check 4: `Deprecated` is only for a credential that was valid and has been replaced. Anything else check 4
+  // found (expired, revoked, a mismatch with the signed credential) means the footprint would state a value the
+  // registry does not support, so nothing is exported rather than an `Active` footprint.
+  const c4 = check(4);
+  if (c4?.status === "fail" && !onlySuperseded(c4)) {
+    throw new Error(`the proof fails check 4 (${c4.code}: ${c4.detail}); nothing exported`);
+  }
+  // Check 5: with an EORI, the shipment must have been declared to that importer.
+  if (check(5)?.status === "fail") {
+    throw new Error(`the proof fails check 5 (${check(5)?.code}: ${check(5)?.detail}); nothing exported`);
+  }
+  if (r.overall === "CONTESTED") {
+    throw new Error(
+      "the result is CONTESTED (check 4: the auditor was revoked or the body suspended soon after registration); it needs a person's review, nothing exported",
+    );
   }
   const core = JSON.parse(proof.core);
   const reportKey = reportKeyOf(core.d);
@@ -209,7 +240,7 @@ export async function exportPactFromProof(
         ? undefined
         : {
             revoked: rep.revokedAt !== 0n,
-            replaced: r.checks[4]?.code === "REPORT_INVALID/SUPERSEDED",
+            replaced: onlySuperseded(check(4)),
             supersedes: supersedesSameLayer === undefined ? undefined : rep.supersedes,
             supersedesSameLayer,
           },

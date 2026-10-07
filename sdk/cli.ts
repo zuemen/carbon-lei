@@ -196,7 +196,8 @@ async function main(argv: string[]) {
       return 0;
     }
     case "verify": {
-      const proof = readJson(values.proof as string) as Presentation;
+      const proofText = readFileSync(values.proof as string, "utf8");
+      const proof = JSON.parse(proofText) as Presentation;
       // Evidence bundles referenced by the proof are read relative to the proof file, then to the demo's public folder.
       const loadBundle = bundleLoader(values.proof as string);
       const trustAnchor = values["trust-anchor"] as string | undefined;
@@ -209,6 +210,7 @@ async function main(argv: string[]) {
           loadBundle,
           trustAnchor,
           maxHeadAgeSec,
+          proofText,
         });
         process.stdout.write(json(v) + "\n");
         if (expected) return v.overall === "INVALID" && v.checks.some((c) => c.status === "fail" && c.code === expected) ? 0 : 1;
@@ -218,6 +220,7 @@ async function main(argv: string[]) {
         importerEORI: values.eori as string | undefined,
         checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}) }),
         maxHeadAgeSec,
+        proofText,
       });
       for (const c of r.checks) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
@@ -248,7 +251,8 @@ async function main(argv: string[]) {
       return EXIT[r.overall];
     }
     case "export-pact": {
-      const proof = readJson(values.proof as string) as Presentation;
+      const proofText = readFileSync(values.proof as string, "utf8");
+      const proof = JSON.parse(proofText) as Presentation;
       // The export states the credential's status for this importer: it runs the full verification, with
       // check 5 bound to the importer's EORI (the claim time applies only then) and the vLEI checkers for 6 and 7.
       if (!values.eori) throw new Error("export-pact needs --eori <EORI>: the importer the shipment was declared to");
@@ -258,6 +262,7 @@ async function main(argv: string[]) {
         importerEORI: values.eori as string,
         checkers: vleiCheckers({ loadBundle: bundleLoader(values.proof as string), ...(trustAnchor ? { trustAnchor } : {}) }),
         maxHeadAgeSec: maxHeadAge(values),
+        proofText,
       });
       const pf = await exportPactFromProof(proof, r, rd, {
         companyName: values["company-name"] as string,

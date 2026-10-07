@@ -15,6 +15,7 @@ import {
 import { sepolia } from "viem/chains";
 import { emissionsClaimRegistryAbi, verifierAllowlistAbi } from "./abi.ts";
 import type { Hex } from "./credential.ts";
+import { DEFAULT_MAX_HEAD_AGE_SEC } from "./verify.ts";
 
 export { sepolia as SEPOLIA_CHAIN };
 
@@ -169,8 +170,15 @@ export class ChainReader {
     return ChainReader.forRpc(deployment, rpcUrls, sepolia, options);
   }
 
+  /**
+   * Several URLs: tried in order (`historyFallback`), and a node whose latest block is older than the deployment
+   * chain's head-age limit (`DEFAULT_MAX_HEAD_AGE_SEC`) is passed over for the next one.
+   */
   static forRpc(deployment: Deployment, rpcUrls: string[], chain?: Chain, options?: ChainReaderOptions): ChainReader {
-    const transport = rpcUrls.length === 1 ? http(rpcUrls[0]) : historyFallback(rpcUrls);
+    const transport =
+      rpcUrls.length === 1
+        ? http(rpcUrls[0])
+        : historyFallback(rpcUrls, { maxHeadAgeSec: DEFAULT_MAX_HEAD_AGE_SEC[deployment.chainId] });
     return new ChainReader(createPublicClient({ chain, transport }) as PublicClient, deployment, undefined, options);
   }
 
@@ -434,6 +442,36 @@ const NULL_IS_MISSING = new Set([
   "eth_getBlockByHash",
 ]);
 
+const hexToBig = (x: unknown): bigint | undefined => {
+  if (typeof x !== "string" || !/^0x[0-9a-f]+$/i.test(x)) return undefined;
+  return BigInt(x);
+};
+
+/** `eth_getBlockByNumber` for the latest block (viem's `getBlock()` without a block number). */
+function isLatestBlockRequest(method: string, params: unknown): boolean {
+  return method === "eth_getBlockByNumber" && Array.isArray(params) && params[0] === "latest";
+}
+
+/** The block number a request reads at, when it names one (a view call, an event search's end, a block). */
+function requestedBlock(method: string, params: unknown): bigint | undefined {
+  if (!Array.isArray(params)) return undefined;
+  switch (method) {
+    case "eth_call":
+    case "eth_getBalance":
+    case "eth_getCode":
+    case "eth_getStorageAt":
+      return hexToBig(params[params.length - 1]);
+    case "eth_getBlockByNumber":
+      return hexToBig(params[0]);
+    case "eth_getLogs": {
+      const f = params[0] as { toBlock?: unknown } | undefined;
+      return hexToBig(f?.toBlock);
+    }
+    default:
+      return undefined;
+  }
+}
+
 const PRUNED = /prun|missing trie node|historical state|header not found|history (is )?(not available|unavailable)/i;
 
 /** An RPC error that says the node no longer has the requested block, state or logs (for example code 4444). */
@@ -450,8 +488,11 @@ export function isPrunedHistoryError(err: unknown): boolean {
 /** What one node answered to one request, when it did not give a usable answer. */
 export interface NodeOutcome {
   url: string;
-  /** "null": `null` for a method in which it means "not found"; "pruned": a pruned-history error. */
-  kind: "null" | "pruned" | "error";
+  /**
+   * "null": `null` for a method in which it means "not found"; "pruned": a pruned-history error; "behind": a latest
+   * block older than the head-age limit, or a request for a block after the latest one the node reported.
+   */
+  kind: "null" | "pruned" | "error" | "behind";
   detail: string;
 }
 
@@ -482,11 +523,26 @@ export function errorDetail(err: unknown): string {
  * block, which is how a pruned node reports history it has dropped. If every node answers `null`,
  * the result is `null` (not found, which callers treat as a failure); if every node fails,
  * `RpcNodesError` lists each node's answer. A missing answer is never turned into a pass.
+ *
+ * With `maxHeadAgeSec`, a node whose latest block (`eth_getBlockByNumber("latest")`) is older than that against
+ * `now` is behind: the next node is asked. If every node that answered is behind, the newest of their blocks is
+ * returned, and the caller's own head-age check (verifyPresentation) reports it. A node that was passed over, or
+ * any node whose latest block is known, is not asked for a block after that latest block (an event search past a
+ * node's head could come back short rather than fail).
  */
-export function historyFallback(urls: string[], opts: { retryCount?: number } = {}): Transport {
+export function historyFallback(
+  urls: string[],
+  opts: { retryCount?: number; maxHeadAgeSec?: number; now?: () => number } = {},
+): Transport {
   if (!urls.length) throw new Error("historyFallback needs at least one RPC URL");
   return (({ chain, timeout, ...rest }) => {
     const nodes = urls.map((u) => http(u)({ ...rest, chain, timeout, retryCount: opts.retryCount ?? 1 }));
+    // Latest block number each node last reported (shared by every request of this transport).
+    const knownHead: (bigint | undefined)[] = urls.map(() => undefined);
+    const maxAge =
+      opts.maxHeadAgeSec === undefined || opts.maxHeadAgeSec === Infinity || Number.isNaN(opts.maxHeadAgeSec)
+        ? undefined
+        : BigInt(Math.floor(Math.max(0, opts.maxHeadAgeSec)));
     return createTransport({
       key: "historyFallback",
       name: "History fallback",
@@ -494,7 +550,15 @@ export function historyFallback(urls: string[], opts: { retryCount?: number } = 
       retryCount: 0,
       async request({ method, params }: { method: string; params?: unknown }): Promise<any> {
         const outcomes: NodeOutcome[] = [];
+        const latest = isLatestBlockRequest(method, params);
+        const wanted = requestedBlock(method, params);
+        let behind: { number: bigint; result: unknown } | undefined;
         for (let i = 0; i < nodes.length; i++) {
+          const head = knownHead[i];
+          if (wanted !== undefined && head !== undefined && wanted > head) {
+            outcomes.push({ url: urls[i], kind: "behind", detail: `its latest block ${head} is before the requested block ${wanted}` });
+            continue;
+          }
           let result: unknown;
           try {
             result = await nodes[i].request({ method, params } as never);
@@ -512,8 +576,23 @@ export function historyFallback(urls: string[], opts: { retryCount?: number } = 
             outcomes.push({ url: urls[i], kind: "null", detail: "null (history pruned, or not known to this node)" });
             continue;
           }
+          if (latest && result && typeof result === "object") {
+            const b = result as { number?: unknown; timestamp?: unknown };
+            const number = hexToBig(b.number);
+            const timestamp = hexToBig(b.timestamp);
+            if (number !== undefined) knownHead[i] = number;
+            if (maxAge !== undefined && number !== undefined && timestamp !== undefined) {
+              const age = BigInt(Math.floor((opts.now ?? Date.now)() / 1000)) - timestamp;
+              if (age > maxAge) {
+                outcomes.push({ url: urls[i], kind: "behind", detail: `latest block ${number} is ${age} s old` });
+                if (!behind || number > behind.number) behind = { number, result };
+                continue;
+              }
+            }
+          }
           return result;
         }
+        if (behind) return behind.result;
         if (outcomes.every((o) => o.kind === "null")) return null;
         throw new RpcNodesError(method, outcomes);
       },

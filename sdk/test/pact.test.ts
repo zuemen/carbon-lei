@@ -21,7 +21,7 @@ import {
   type PactContext,
   type PactProduct,
 } from "../pact.ts";
-import type { VerificationResult } from "../verify.ts";
+import { SUPERSEDED_DETAIL, type CheckResult, type VerificationResult } from "../verify.ts";
 
 const SPEC_URL = "https://raw.githubusercontent.com/wbcsd/data-exchange-protocol/v3.0.3/spec/v3/openapi.yaml";
 const CACHE = new URL("../../.cache/pact-openapi-3.0.3.yaml", import.meta.url);
@@ -159,7 +159,7 @@ describe("PACT v3.0.3 export (S8)", () => {
     const proof = {
       core: JSON.stringify({ d: v.V7.d, issuer: { auditorAID: v.inputs.auditorAID, verifierLEI: v.inputs.verifierLEI } }),
     } as Presentation;
-    const checks = [1, 2, 3, 4, 5].map((index) => ({ index, name: "", status: "pass" as const, code: "", detail: "" }));
+    const checks = [0, 1, 2, 3, 4, 5, 6, 7].map((index) => ({ index, name: "", status: "pass" as const, code: "", detail: "" }));
     const result = { overall: "VALID", checks, disclosed, hidden: 0, primaryCode: "" } as VerificationResult;
     const c = ctx();
     const product = {
@@ -176,6 +176,37 @@ describe("PACT v3.0.3 export (S8)", () => {
     await expect(exportPactFromProof(proof, result, rd(rec({ revokedAt: 5n })), product)).rejects.toThrow(/revoked/);
     const failed = { ...result, checks: checks.map((x) => (x.index === 2 ? { ...x, status: "fail" as const } : x)) };
     await expect(exportPactFromProof(proof, failed as VerificationResult, rd(rec()), product)).rejects.toThrow(/nothing exported/);
+
+    // Red-team round 2 (N-M1, N-L2): only a pass, or a credential that is superseded and nothing else, is exported.
+    const withCheck = (i: number, over: Partial<CheckResult>, overall: VerificationResult["overall"] = "INVALID") =>
+      ({ ...result, overall, checks: checks.map((x) => (x.index === i ? { ...x, ...over } : x)) }) as VerificationResult;
+    const fail4 = (code: string, detail: string) => withCheck(4, { status: "fail", code, detail });
+    for (const [r, msg] of [
+      [fail4("REPORT_INVALID/EXPIRED", "past the credential's validity"), "check 4 (REPORT_INVALID/EXPIRED"],
+      [fail4("REPORT_INVALID/ISSUER_MISMATCH", "auditor, quantity or validity differs from the signed credential"), "check 4 (REPORT_INVALID/ISSUER_MISMATCH"],
+      [fail4("REPORT_INVALID/SCOPE_MISMATCH", "installation, CN code, route, period or report ID differs"), "check 4 (REPORT_INVALID/SCOPE_MISMATCH"],
+      [fail4("REPORT_INVALID", "contract and local checks disagree (SDK or ABI version?)"), "check 4 (REPORT_INVALID:"],
+      // superseded and also expired: not only superseded
+      [fail4("REPORT_INVALID/SUPERSEDED", `${SUPERSEDED_DETAIL.inLayer}; past the credential's validity`), "check 4 (REPORT_INVALID/SUPERSEDED"],
+      [withCheck(5, { status: "fail", code: "SHIPMENT_MISMATCH", detail: "the batch was not declared to your EORI" }), "check 5 (SHIPMENT_MISMATCH"],
+      [withCheck(0, { status: "fail", code: "PRESENTATION_MALFORMED", detail: "x" }), "malformed"],
+      [withCheck(6, { status: "warn", code: "", detail: "custom checker" }, "INCOMPLETE"), "INCOMPLETE"],
+      [withCheck(7, { status: "warn", code: "", detail: "custom checker" }, "VALID"), "check 7 did not pass (warn)"],
+      [withCheck(6, { status: "skipped" }, "CONTESTED"), "check 6 did not pass (skipped)"],
+      [withCheck(4, { code: "CONTESTED" }, "CONTESTED"), "CONTESTED"],
+    ] as const) {
+      await expect(exportPactFromProof(proof, r, rd(rec()), product)).rejects.toThrow(msg);
+    }
+    for (const detail of [
+      SUPERSEDED_DETAIL.inLayer,
+      SUPERSEDED_DETAIL.scopeMoved,
+      SUPERSEDED_DETAIL.inLayer + SUPERSEDED_DETAIL.bodyChanged,
+      SUPERSEDED_DETAIL.scopeMoved + SUPERSEDED_DETAIL.bodyChanged,
+    ]) {
+      const dep = await exportPactFromProof(proof, fail4("REPORT_INVALID/SUPERSEDED", detail), rd(rec()), product);
+      expect(dep.status).toBe("Deprecated");
+      expect(validate(dep)).toBe(true);
+    }
   });
 });
 
@@ -214,7 +245,7 @@ describe("CarbonLEI extension schema (dataSchema)", () => {
       registry: data.deployment.contracts.EmissionsClaimRegistry.address,
       client: { getChainId: async () => data.network.chainId },
     } as unknown as ChainReader;
-    const checks = [1, 2, 3, 4, 5].map((index) => ({ index, name: "", status: "pass" as const, code: "", detail: "" }));
+    const checks = [0, 1, 2, 3, 4, 5, 6, 7].map((index) => ({ index, name: "", status: "pass" as const, code: "", detail: "" }));
     const result = { overall: "VALID", checks, disclosed: shown, hidden: 0, primaryCode: "" } as VerificationResult;
     // The same product arguments as PACT_PRODUCT in demo/src/tabs/Buyer.tsx.
     const product: PactProduct = {

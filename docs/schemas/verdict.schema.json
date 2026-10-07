@@ -39,7 +39,7 @@
         "format": { "const": 2 },
         "overall": {
           "enum": ["VALID", "INVALID", "CONTESTED", "INCOMPLETE"],
-          "description": "INCOMPLETE: no check failed, but checks 6 and 7 were not run (no evidence checkers); not a pass."
+          "description": "INCOMPLETE: no check failed and check 4 is not CONTESTED, but check 6 or 7 did not pass or fail (not run without an evidence checker, or only a warning from a caller's own checker); not a pass."
         },
         "primaryCode": { "type": "string", "description": "Code of the first failing check; empty when no check failed." },
         "checks": { "type": "array", "minItems": 1, "maxItems": 9, "items": { "$ref": "#/$defs/check" } },
@@ -68,7 +68,7 @@
         },
         "warnings": {
           "type": "array",
-          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: checks 6 or 7 were not run (overall INCOMPLETE).",
+          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: check 6 or 7 did not pass or fail (not run, or only a warning from a caller's own checker); overall is then INCOMPLETE, unless a check failed (INVALID) or check 4 is CONTESTED (CONTESTED).",
           "items": {
             "type": "object",
             "additionalProperties": false,

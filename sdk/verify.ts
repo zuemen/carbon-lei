@@ -22,6 +22,7 @@ import {
   SEPOLIA_CHAIN_ID,
   checkNormalForms,
   checkShipmentForms,
+  isoSeconds,
   isoToSeconds,
   kgToTonnes,
   tonnesToKg,
@@ -60,7 +61,8 @@ export interface OnchainView {
 /**
  * VALID: every check that applies passed. INVALID: a check failed. CONTESTED: valid, but the auditor was revoked or
  * the body suspended soon after registration (check 4). INCOMPLETE: no check failed, but checks that decide validity
- * were not run (no evidence checkers for checks 6 and 7, or the offline view without a chain); not a pass.
+ * were not run (no evidence checkers for checks 6 and 7, a checker that answered only `warn` for one of them, or the
+ * offline view without a chain); not a pass.
  */
 export type Overall = "VALID" | "INVALID" | "CONTESTED" | "INCOMPLETE";
 
@@ -120,6 +122,28 @@ export interface VerifyOptions {
   maxHeadAgeSec?: number;
   /** Clock for the head-age limit, in milliseconds (default `Date.now`). */
   now?: () => number;
+  /**
+   * The text the proof was parsed from (a file, a pasted text). When given, check 0 refuses a text that repeats
+   * a key in any object, which `JSON.parse` would silently resolve to the last value.
+   */
+  proofText?: string;
+}
+
+/**
+ * Check 4's detail for a credential that is superseded (code REPORT_INVALID/SUPERSEDED); `bodyChanged` is appended
+ * when the successor has another issuing body. Any other reason check 4 fails is appended after "; ".
+ */
+export const SUPERSEDED_DETAIL = {
+  inLayer: "replaced by a revision in the same credential layer",
+  scopeMoved: "the report scope moved to another report (whole-report revision or takeover by another body)",
+  bodyChanged: "; issuing body changed",
+} as const;
+
+/** Check 4 failed only because the credential was superseded (no other reason, such as expiry, was found). */
+export function onlySuperseded(c: CheckResult | undefined): boolean {
+  if (!c || c.status !== "fail" || c.code !== "REPORT_INVALID/SUPERSEDED") return false;
+  const { inLayer, scopeMoved, bodyChanged } = SUPERSEDED_DETAIL;
+  return [inLayer, scopeMoved, inLayer + bodyChanged, scopeMoved + bodyChanged].includes(c.detail as never);
 }
 
 /** Default head-age limit per chain ID, in seconds (Sepolia makes a block every 12 s). */
@@ -159,8 +183,11 @@ interface LocalPart {
   hidden: number;
 }
 
-/** Checks 0-2: they read only the proof. A malformed proof (check 0) gives its final result. */
-function localChecks(p: Presentation): LocalPart | VerificationResult {
+/**
+ * Checks 0-2: they read only the proof. A malformed proof (check 0) gives its final result. `proofText`, when the
+ * caller has it, is the text `p` was parsed from.
+ */
+function localChecks(p: Presentation, proofText?: string): LocalPart | VerificationResult {
   // ---------------------------------------------------------------- 0 structure
   let core: CredentialCore;
   const checks: CheckResult[] = [];
@@ -173,6 +200,10 @@ function localChecks(p: Presentation): LocalPart | VerificationResult {
     hidden: 0,
     primaryCode: "PRESENTATION_MALFORMED",
   });
+  // JSON.parse keeps the last of two equal keys, where another reader may take the first: a proof whose text
+  // repeats a key (two "core" or "shipment" members, say) is refused rather than read one way here.
+  const repeatedInProof = proofText === undefined ? null : duplicateKey(proofText);
+  if (repeatedInProof !== null) return malformed(`the proof repeats the key ${JSON.stringify(repeatedInProof)}`);
   try {
     core = JSON.parse(p.core) as CredentialCore;
   } catch {
@@ -189,6 +220,9 @@ function localChecks(p: Presentation): LocalPart | VerificationResult {
     !Array.isArray(p.disclosures)
   ) {
     return malformed("missing core, signature or disclosure fields");
+  }
+  if (isoSeconds(core.validUntil) === undefined) {
+    return malformed("the credential core's validUntil is not an ISO 8601 time with a time zone");
   }
   for (const enc of p.disclosures) {
     try {
@@ -308,8 +342,9 @@ const isFinal = (x: LocalPart | VerificationResult): x is VerificationResult => 
 export async function verifyOffline(
   p: Presentation,
   deployment: { registry: Hex; chainId: number },
+  opts: Pick<VerifyOptions, "proofText"> = {},
 ): Promise<VerificationResult> {
-  const local = localChecks(p);
+  const local = localChecks(p, opts.proofText);
   if (isFinal(local)) return local;
   const { checks, disclosed, hidden } = local;
   checks.push((await signatureCheck(p, local, deployment.registry, deployment.chainId)).check);
@@ -330,7 +365,7 @@ export async function verifyPresentation(
   reader: ChainReader,
   opts: VerifyOptions = {},
 ): Promise<VerificationResult> {
-  const local = localChecks(p);
+  const local = localChecks(p, opts.proofText);
   if (isFinal(local)) return local;
   const { core, decoded, get, checks, disclosed, hidden } = local;
 
@@ -489,12 +524,10 @@ export async function verifyPresentation(
       (!replacedInLayer || supersededAt === t) &&
       (!scopeMoved || unboundAt === t);
     if ((replacedInLayer || scopeMoved) && !sameBlockException) {
-      let detail = replacedInLayer
-        ? "replaced by a revision in the same credential layer"
-        : "the report scope moved to another report (whole-report revision or takeover by another body)";
+      let detail = replacedInLayer ? SUPERSEDED_DETAIL.inLayer : SUPERSEDED_DETAIL.scopeMoved;
       const successor = replacedInLayer ? rep.supersededBy : scope.latestReportKey;
       const succ = await rd.report(successor);
-      if (succ.issuerLeiHash !== rep.issuerLeiHash) detail += "; issuing body changed";
+      if (succ.issuerLeiHash !== rep.issuerLeiHash) detail += SUPERSEDED_DETAIL.bodyChanged;
       fails.push(["REPORT_INVALID/SUPERSEDED", detail]);
     } else if (sameBlockException) {
       notes.push("valid when shipped; replaced later in the same block");
@@ -630,11 +663,22 @@ export async function verifyPresentation(
     });
   }
   // Checks 6 and 7 decide whether the auditor and the body were authorised: a result without them is not a pass.
-  const notChecked = [6, 7].filter((i) => checks.find((x) => x.index === i)?.status === "skipped");
+  // Anything but pass or fail counts as not checked: skipped (no checker), and also warn from a caller's own
+  // checker, which does not say the evidence holds.
+  const notChecked = [6, 7].filter((i) => {
+    const s = checks.find((x) => x.index === i)?.status;
+    return s !== "pass" && s !== "fail";
+  });
   if (notChecked.length) {
+    const warned = notChecked.filter((i) => checks.find((x) => x.index === i)?.status === "warn");
+    const notRun = notChecked.filter((i) => !warned.includes(i));
+    const list = (ns: number[]) => `check${ns.length > 1 ? "s" : ""} ${ns.join(" and ")}`;
     warnings.push({
       code: "EVIDENCE_NOT_CHECKED",
-      detail: `check${notChecked.length > 1 ? "s" : ""} ${notChecked.join(" and ")} not run: no evidence checker was supplied`,
+      detail: [
+        ...(notRun.length ? [`${list(notRun)} not run: no evidence checker was supplied`] : []),
+        ...(warned.length ? [`${list(warned)} gave only a warning: the evidence checker did not confirm the evidence`] : []),
+      ].join("; "),
     });
   }
 

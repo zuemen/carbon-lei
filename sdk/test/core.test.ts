@@ -189,6 +189,12 @@ describe("units and normal forms", () => {
   it("ISO times to seconds", () => {
     expect(isoToSeconds("2027-12-31T00:00:00Z")).toBe(1830211200n);
     expect(() => isoToSeconds("31/12/2027")).toThrow();
+    // Red-team round 2 (N-L3): the same rules as check 7's isoSeconds, whatever the machine's time zone.
+    expect(isoToSeconds("2027-12-31T08:00:00+08:00")).toBe(1830211200n);
+    expect(isoToSeconds("2027-12-31T00:00:00.5Z")).toBe(1830211200n);
+    for (const bad of ["2027-12-31T00:00:00", "2027-02-30T00:00:00Z", "2027-12-31T24:00:00Z", "2027-12-31T23:59:60Z", "+002027-12-31T00:00:00Z", "2027-12-31T00:00:00z", "2027-12-31", "0000-01-01T00:00:00Z"]) {
+      expect(() => isoToSeconds(bad), bad).toThrow();
+    }
   });
   it("identifier normal forms (I20)", () => {
     expect(isInstallationId("TW-ZZZZ00TWSCREWDEMO185-0001")).toBe(true);

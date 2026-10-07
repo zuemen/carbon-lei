@@ -170,6 +170,8 @@ export function checkNormalForms(c: Partial<CredentialClaims>): string[] {
   if (c.cnCode !== undefined && !isCnCode(c.cnCode)) bad.push("cnCode");
   if (c.supplierLEI !== undefined && !isLei(c.supplierLEI)) bad.push("supplierLEI");
   if (c.verifierLEI !== undefined && !isLei(c.verifierLEI)) bad.push("verifierLEI");
+  if (c.issuedAt !== undefined && isoSeconds(c.issuedAt) === undefined) bad.push("issuedAt");
+  if (c.validUntil !== undefined && isoSeconds(c.validUntil) === undefined) bad.push("validUntil");
   return bad;
 }
 
@@ -192,11 +194,41 @@ export function tonnesToKg(tonnes: string): bigint {
   return kg;
 }
 
-/** ISO 8601 UTC timestamp to UNIX seconds (milliseconds dropped). */
+const ISO_TZ = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|([+-])(\d{2}):(\d{2}))$/;
+
+/**
+ * Seconds since the epoch of an ISO 8601 date-time with a time zone (`Z` or `±hh:mm`), fractions dropped;
+ * undefined for anything else, including a time without a time zone (never read in the machine's time
+ * zone) and a date that does not exist.
+ */
+export function isoSeconds(s: unknown): bigint | undefined {
+  if (typeof s !== "string") return undefined;
+  const m = ISO_TZ.exec(s);
+  if (!m) return undefined;
+  const [y, mo, d, h, mi, se] = m.slice(1, 7).map(Number);
+  if (mo < 1 || mo > 12 || d < 1 || h > 23 || mi > 59 || se > 59) return undefined;
+  const t = new Date(0);
+  t.setUTCFullYear(y, mo - 1, d);
+  if (t.getUTCFullYear() !== y || t.getUTCMonth() !== mo - 1 || t.getUTCDate() !== d) return undefined;
+  t.setUTCHours(h, mi, se, 0);
+  let offset = 0;
+  if (m[7]) {
+    const oh = Number(m[8]);
+    const om = Number(m[9]);
+    if (oh > 23 || om > 59) return undefined;
+    offset = (m[7] === "+" ? 1 : -1) * (oh * 3600 + om * 60);
+  }
+  return BigInt(t.getTime() / 1000 - offset);
+}
+
+/**
+ * ISO 8601 date-time to UNIX seconds (fractions dropped), with the same rules as `isoSeconds`: a time zone is
+ * required (`Z` or `±hh:mm`) and a date that does not exist is refused, so the value never depends on the
+ * machine's time zone and never rolls over to another day. Throws instead of returning undefined.
+ */
 export function isoToSeconds(iso: string): bigint {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) throw new Error(`not an ISO 8601 time: ${iso}`);
-  const s = BigInt(Math.floor(ms / 1000));
+  const s = isoSeconds(iso);
+  if (s === undefined) throw new Error(`not an ISO 8601 time with a time zone: ${iso}`);
   if (s < 0n || s > UINT64_MAX) throw new Error("time out of uint64 range");
   return s;
 }

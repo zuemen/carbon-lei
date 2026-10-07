@@ -1,7 +1,9 @@
 // Verifier hardening on a local anvil chain, one case per finding of the verifier red-team review (2026-10-07):
 // claim time only for the importer the batch was declared to (H2), a node that is behind (M1), evidence checks
 // that were not run (L1), repeated keys and "__proto__" in the core (L2), the deployment's chain ID (L3), the
-// shipment fields (L4), a malformed report extract (L7), and checks 0-3 without a chain (offline view).
+// shipment fields (L4), a malformed report extract (L7), and checks 0-3 without a chain (offline view); and the
+// second round (N-M1, N-L2, N-L3, N-L6): what the PACT export refuses, checkers that only warn, strict times, and
+// repeated keys in the proof text.
 // Checks 6 and 7 are stubbed as passing where a case is about the other checks.
 import { readFileSync } from "node:fs";
 import { keccak256, stringToBytes } from "viem";
@@ -122,10 +124,11 @@ describe("claim time only for the importer the batch was declared to", () => {
     expect(mine.checkedAt).toBeLessThan(head);
     expect(mine.warnings).toEqual([]);
 
-    // The PACT export of the superseded credential states Deprecated for anyone but the importer it was declared to.
+    // The PACT export of the superseded credential states Deprecated for anyone but the importer it was declared to;
+    // with another importer's EORI check 5 fails as well, and nothing is exported (red-team round 2, N-M1).
     const prod = { companyName: "X", productNameCompany: "Y", productDescription: "Z", productId: "p" };
-    const pactOther = await exportPactFromProof(oldShip, other, c.reader, prod);
-    expect(pactOther.status).toBe("Deprecated");
+    expect((await exportPactFromProof(oldShip, noEori, c.reader, prod)).status).toBe("Deprecated");
+    await expect(exportPactFromProof(oldShip, other, c.reader, prod)).rejects.toThrow("the proof fails check 5 (SHIPMENT_MISMATCH");
     expect((await exportPactFromProof(oldShip, mine, c.reader, prod)).status).toBe("Active");
 
     // Three years later both credentials are past validUntil.
@@ -135,6 +138,8 @@ describe("claim time only for the importer the batch was declared to", () => {
     expect(later.overall).toBe("INVALID");
     expect(check(later, 4).code).toBe("REPORT_INVALID/SUPERSEDED");
     expect(check(later, 4).detail).toContain("past the credential's validity");
+    // Superseded and expired: not only superseded, so not exported as Deprecated either.
+    await expect(exportPactFromProof(oldShip, later, c.reader, prod)).rejects.toThrow("the proof fails check 4 (REPORT_INVALID/SUPERSEDED");
     expect((await verifyPresentation(oldShip, c.reader, { importerEORI: EORI_1, checkers: STUBS })).overall).toBe("VALID");
   });
 
@@ -159,6 +164,14 @@ describe("claim time only for the importer the batch was declared to", () => {
     const wrong = await verifyPresentation(p, c.reader, { importerEORI: EORI_2, checkers: STUBS });
     expect(check(wrong, 4).code).toBe("REPORT_INVALID/EXPIRED");
     expect((await verifyPresentation(p, c.reader, { importerEORI: EORI_1, checkers: STUBS })).overall).toBe("VALID");
+    // Red-team round 2 (N-M1): an expired credential is not exported (before the fix: status Active).
+    const prod = { companyName: "X", productNameCompany: "Y", productDescription: "Z", productId: "p" };
+    for (const r of [unbound, wrong]) {
+      await expect(exportPactFromProof(p, r, c.reader, prod)).rejects.toThrow("the proof fails check 4 (REPORT_INVALID/EXPIRED");
+    }
+    const noShip = await verifyPresentation(withEv(present(cr, DEMO_DISCLOSURE)), c.reader, { importerEORI: EORI_2, checkers: STUBS });
+    expect([noShip.primaryCode, check(noShip, 5).status]).toEqual(["REPORT_INVALID/EXPIRED", "skipped"]);
+    await expect(exportPactFromProof(p, noShip, c.reader, prod)).rejects.toThrow("the proof fails check 4 (REPORT_INVALID/EXPIRED");
   });
 });
 
@@ -326,5 +339,95 @@ describe("authority evidence that is not JSON", () => {
     expect([r.overall, r.primaryCode]).toEqual(["INVALID", "AUTHORITY_INVALID"]);
     const v = await verdictFor(p, c.reader, { loadBundle: () => text });
     expect([v.overall, exitCodeOf(v)]).toEqual(["INVALID", 1]);
+  });
+});
+
+describe("red-team round 2", () => {
+  const prod = { companyName: "X", productNameCompany: "Y", productDescription: "Z", productId: "p" };
+  const AUDITOR_2 = "EDemoAuditorTwoForIntegrationTests000000000";
+
+  it("N-L2: CONTESTED without evidence checkers, or with a checker that only warns: export refused; warn alone is INCOMPLETE, not VALID", async () => {
+    const lei = leiHashOf(demo.entities.verifier.lei);
+    await send(c, c.owner, "allowlist", "addAuditor", [{ auditorAidHash: auditorAidHashOf(AUDITOR_2), leiHash: lei, ecrSaidHash: hashString("ECR2") }]);
+    const cr = await issueCredential({
+      claims: claims({ installationId: demo.entities.supplier.installations[1].id, verificationReportId: "VR-HARD-0101", reportingPeriod: "2040-01-01/2040-12-31", issuedAt: "2040-01-02T00:00:00Z", validUntil: "2045-12-31T00:00:00Z" }),
+      auditorAID: AUDITOR_2,
+      signer: c.verifier,
+      registry: c.deployment.contracts.EmissionsClaimRegistry.address,
+      chainId: 31337,
+    });
+    await register(cr);
+    // A checker of the caller's own that answers `warn` for checks 6 and 7 (before the revocation: no CONTESTED).
+    const warn = (index: number) => (): CheckResult => ({ index, name: "", status: "warn", code: "", detail: "maybe" });
+    const warnCk = { anchor: warn(6), authority: warn(7) };
+    const p = withEv(present(cr, DEMO_DISCLOSURE));
+    const warned = await verifyPresentation(p, c.reader, { checkers: warnCk });
+    expect(warned.overall).toBe("INCOMPLETE");
+    expect(warned.warnings).toEqual([
+      { code: "EVIDENCE_NOT_CHECKED", detail: "checks 6 and 7 gave only a warning: the evidence checker did not confirm the evidence" },
+    ]);
+    const mixed = await verifyPresentation(p, c.reader, { checkers: { anchor: warn(6) } });
+    expect(mixed.warnings?.find((w) => w.code === "EVIDENCE_NOT_CHECKED")?.detail).toBe(
+      "check 7 not run: no evidence checker was supplied; check 6 gave only a warning: the evidence checker did not confirm the evidence",
+    );
+    await expect(exportPactFromProof(p, warned, c.reader, prod)).rejects.toThrow(/INCOMPLETE/);
+
+    // The auditor is revoked within 24 h of the registration: check 4 CONTESTED.
+    await send(c, c.watcher, "allowlist", "revokeAuditor", [auditorAidHashOf(AUDITOR_2), lei]);
+    const bare = { ...present(cr, DEMO_DISCLOSURE), anchorEvidence: "garbage", authorityEvidence: 0 } as unknown as Presentation;
+    const contested = await verifyPresentation(bare, c.reader);
+    expect([contested.overall, check(contested, 4).code]).toEqual(["CONTESTED", "CONTESTED"]);
+    expect(line(contested).slice(6, 8)).toEqual(["6:skipped", "7:skipped"]);
+    expect(contested.warnings?.map((w) => w.code)).toEqual(["EVIDENCE_NOT_CHECKED"]);
+    // Before the fix: exported with status Active.
+    await expect(exportPactFromProof(bare, contested, c.reader, prod)).rejects.toThrow("check 6 did not pass (skipped)");
+    const contestedWarn = await verifyPresentation(p, c.reader, { checkers: warnCk });
+    expect(contestedWarn.overall).toBe("CONTESTED");
+    await expect(exportPactFromProof(p, contestedWarn, c.reader, prod)).rejects.toThrow("check 6 did not pass (warn)");
+    const contestedFull = await verifyPresentation(p, c.reader, { checkers: STUBS });
+    expect(contestedFull.overall).toBe("CONTESTED");
+    await expect(exportPactFromProof(p, contestedFull, c.reader, prod)).rejects.toThrow(/CONTESTED/);
+  });
+
+  it("N-L6: a proof text that repeats a key outside the core fails check 0 (CLI, verdict, offline view); the same proof without the text is unchanged", async () => {
+    const cr = await issue({ installationId: demo.entities.supplier.installations[1].id, verificationReportId: "VR-HARD-0102", reportingPeriod: "2041-01-01/2041-12-31", issuedAt: "2041-01-02T00:00:00Z", validUntil: "2046-12-31T00:00:00Z" });
+    await register(cr);
+    const ship = { batchId: "BATCH-HARD-0102", quantityTonnes: "10", shipmentDate: "2041-02-01", importerSalt: salt("imp102") };
+    const p = withEv(present(cr, DEMO_DISCLOSURE, ship));
+    const text = JSON.stringify(p, null, 2);
+    const twoShipments = text.replace('{\n  "core"', `{\n  "shipment": ${JSON.stringify({ ...ship, quantityTonnes: "999" })},\n  "core"`);
+    expect(twoShipments).not.toBe(text);
+    const parsed = JSON.parse(twoShipments) as Presentation;
+    const detail = 'the proof repeats the key "shipment"';
+    const r = await verifyPresentation(parsed, c.reader, { checkers: STUBS, proofText: twoShipments });
+    expect(r.checks).toEqual([{ index: 0, name: "Structure", status: "fail", code: "PRESENTATION_MALFORMED", detail }]);
+    const v = await verdictFor(parsed, c.reader, { checkers: STUBS, proofText: twoShipments });
+    expect([v.overall, exitCodeOf(v), v.checks[0].detail]).toEqual(["INVALID", 1, detail]);
+    const dep = { registry: c.deployment.contracts.EmissionsClaimRegistry.address, chainId: 31337 };
+    expect((await verifyOffline(parsed, dep, { proofText: twoShipments })).checks[0].detail).toBe(detail);
+    // A nested repeat (inside the evidence) is refused too.
+    const nested = text.replace('"anchorEvidence": {', '"anchorEvidence": {\n    "stub": false,');
+    expect((await verifyPresentation(JSON.parse(nested), c.reader, { checkers: STUBS, proofText: nested })).checks[0].detail).toBe(
+      'the proof repeats the key "stub"',
+    );
+    // The original text passes as before.
+    expect((await verifyPresentation(p, c.reader, { checkers: STUBS, importerEORI: EORI_1, proofText: text })).checks[0].status).toBe("pass");
+  });
+
+  it("N-L3: the core's validUntil needs a time zone and a real date (check 0); issuance refuses such times too", async () => {
+    const cr = await issue({ installationId: demo.entities.supplier.installations[1].id, verificationReportId: "VR-HARD-0103", reportingPeriod: "2042-01-01/2042-12-31", issuedAt: "2042-01-02T00:00:00Z", validUntil: "2047-12-31T00:00:00Z" });
+    const p = present(cr, DEMO_DISCLOSURE);
+    for (const bad of ["2047-12-31T00:00:00", "2047-02-30T00:00:00Z", "2047-12-31T24:00:00Z", "2047-12-31"]) {
+      const q = { ...p, core: p.core.replace('"validUntil":"2047-12-31T00:00:00Z"', `"validUntil":"${bad}"`) };
+      expect(q.core).not.toBe(p.core);
+      const r = await verifyOffline(q, { registry: c.deployment.contracts.EmissionsClaimRegistry.address, chainId: 31337 });
+      expect(r.checks).toEqual([
+        { index: 0, name: "Structure", status: "fail", code: "PRESENTATION_MALFORMED", detail: "the credential core's validUntil is not an ISO 8601 time with a time zone" },
+      ]);
+      await expect(issue({ validUntil: bad })).rejects.toThrow(/validUntil/);
+    }
+    await expect(issue({ issuedAt: "2026-02-30T00:00:00Z" })).rejects.toThrow(/issuedAt/);
+    // The unchanged core passes check 0.
+    expect((await verifyOffline(p, { registry: c.deployment.contracts.EmissionsClaimRegistry.address, chainId: 31337 })).checks[0].status).toBe("pass");
   });
 });

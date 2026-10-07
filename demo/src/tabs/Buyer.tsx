@@ -348,10 +348,11 @@ export function Buyer() {
         setVerified({ text, proof, result: data.cached.verification as VerificationResult, cached: true });
       } else {
         try {
-          const r = await verifyOffline(proof, {
-            registry: data.deployment.contracts.EmissionsClaimRegistry.address,
-            chainId: data.network.chainId,
-          });
+          const r = await verifyOffline(
+            proof,
+            { registry: data.deployment.contracts.EmissionsClaimRegistry.address, chainId: data.network.chainId },
+            { proofText: text },
+          );
           setVerified({ text, proof, result: r, cached: false });
         } catch (e) {
           setError(`Verification could not finish: ${(e as Error).message}`);
@@ -367,7 +368,11 @@ export function Buyer() {
     }
     setRunning(true);
     try {
-      const r = await verifyPresentation(proof, reader, { importerEORI: data.importer.eori, checkers: evidenceCheckers(data) });
+      const r = await verifyPresentation(proof, reader, {
+        importerEORI: data.importer.eori,
+        checkers: evidenceCheckers(data),
+        proofText: text,
+      });
       setVerified({ text, proof, result: r, cached: false });
       setFinished((n) => n + 1);
     } catch (e) {
@@ -383,11 +388,13 @@ export function Buyer() {
   const hiddenText = `${hiddenN} field${hiddenN === 1 ? "" : "s"} hidden by supplier${counts?.rejected ? ` · ${counts.rejected} disclosure${counts.rejected === 1 ? "" : "s"} rejected` : ""}.`;
   const rejectedProof = !!result && !running && result.overall === "INVALID";
   const incomplete = !!result && !running && result.overall === "INCOMPLETE";
+  // CONTESTED: the summary says no declared-emissions gap is shown, so the card shows none either.
+  const contested = !!result && !running && result.overall === "CONTESTED";
   const rejectedCheck = rejectedProof ? result?.checks.find((c) => c.status === "fail") : undefined;
   const malformed = result?.checks.find((c) => c.index === 0 && c.status === "fail");
   // Before any verification the card shows the demo report's figures (illustrative); after one, the verified
   // proof's own figures, or none.
-  const fromProof = result && !rejectedProof && !incomplete ? proofComparison(data.comparison, data.report.cnCode, result, checked?.shipment) : null;
+  const fromProof = result && !rejectedProof && !incomplete && !contested ? proofComparison(data.comparison, data.report.cnCode, result, checked?.shipment) : null;
   const cmp = fromProof ? fromProof.cmp : data.comparison;
   const noComparison = fromProof && !fromProof.cmp ? fromProof.why : "";
   const { q, dq, vq, gap, eur } = comparisonFigures(cmp ?? data.comparison);
@@ -626,7 +633,7 @@ export function Buyer() {
         tabIndex={-1}
       >
         <p className="sheet-kicker" id="cmp-h">
-          {rejectedProof || incomplete ? "CBAM default" : "Verified value vs CBAM default"}
+          {rejectedProof || incomplete || contested ? "CBAM default" : "Verified value vs CBAM default"}
         </p>
         <div className="compare">
           <div>
@@ -634,7 +641,7 @@ export function Buyer() {
             <div className="v">{data.comparison.defaultValue} tCO2e/t</div>
             {cmp && <div className="fine">For {fmt(q)} t: {fmt(dq)} tCO2e</div>}
           </div>
-          {!rejectedProof && !incomplete && (
+          {!rejectedProof && !incomplete && !contested && (
             <div>
               <div className="k">Verified value (illustrative)</div>
               <div className="v">{cmp ? cmp.verifiedValue : (verifiedValue ?? "—")} tCO2e/t</div>
@@ -651,6 +658,11 @@ export function Buyer() {
           <p className="fine no-verified-value" role="status">
             No verified value: checks 4–8 were not run (offline view). The figures from the demo report are not shown as
             a result.
+          </p>
+        ) : contested ? (
+          <p className="fine no-verified-value" role="status">
+            No declared-emissions gap: the report needs review (check 4: the auditor was revoked or the body suspended
+            soon after registration). Do not rely on the verified value until a person has reviewed the report.
           </p>
         ) : noComparison ? (
           <p className="fine no-verified-value" role="status">
@@ -705,7 +717,7 @@ export function Buyer() {
             ✕ {pactError}
           </p>
         )}
-        {!rejectedProof && !incomplete && cmp && <WhatIf key={`${cmp.verifiedValue}/${cmp.quantityTonnes}`} cmp={cmp} />}
+        {!rejectedProof && !incomplete && !contested && cmp && <WhatIf key={`${cmp.verifiedValue}/${cmp.quantityTonnes}`} cmp={cmp} />}
       </section>
 
       <CheckSources checks={CHECKS} />

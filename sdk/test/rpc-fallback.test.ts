@@ -162,6 +162,60 @@ describe("historyFallback (SDK reader)", () => {
   });
 });
 
+// Red-team round 2 (N-L4): a node that is behind no longer stops the verification while another node is current.
+describe("historyFallback: a node whose latest block is too old", () => {
+  const NOW = 1_800_000_000;
+  const clock = () => NOW * 1000;
+  const block = (n: number, ts: number) => ({
+    number: `0x${n.toString(16)}`,
+    timestamp: `0x${ts.toString(16)}`,
+    hash: `0x${n.toString(16).padStart(64, "0")}`,
+    parentHash: `0x${"00".repeat(32)}`,
+    transactions: [],
+  });
+  const latestOr = (b: object, rest: Handler): Handler => (m, p) => (m === "eth_getBlockByNumber" && p[0] === "latest" ? { result: b } : rest(m, p));
+  const ok = encodeAbiParameters([{ type: "bool" }], [true]);
+  const staleClient = (urls: string[], maxHeadAgeSec?: number) =>
+    createPublicClient({ chain: sepolia, transport: historyFallback(urls, { maxHeadAgeSec, now: clock }) });
+
+  it("the first node's head is older than the limit → the next node's head; reads at that block skip the node that is behind", async () => {
+    const calls = serve({
+      [A]: latestOr(block(100, NOW - 3600), () => ({ result: ok })),
+      [B]: latestOr(block(400, NOW - 12), () => ({ result: ok })),
+    });
+    const reader = new ChainReader(staleClient([A, B], 300) as never, deployment);
+    const head = await reader.latestBlock();
+    expect(head).toEqual({ number: 400n, timestamp: BigInt(NOW - 12) });
+    expect(await reader.at(head.number).isInstitutionActiveAt(LEI, 1n)).toBe(true);
+    expect(calls.map((c) => [c.url, c.method])).toEqual([
+      [A, "eth_getBlockByNumber"],
+      [B, "eth_getBlockByNumber"],
+      [B, "eth_call"],
+    ]);
+  });
+
+  it("every node is behind → the newest of their heads, so the verification's head-age check reports it", async () => {
+    serve({ [A]: latestOr(block(100, NOW - 3600), () => ({ result: ok })), [B]: latestOr(block(150, NOW - 1800), () => ({ result: ok })) });
+    const head = await new ChainReader(staleClient([A, B], 300) as never, deployment).latestBlock();
+    expect(head).toEqual({ number: 150n, timestamp: BigInt(NOW - 1800) });
+  });
+
+  it("a current first node is used as before; without a limit an old head is used as before", async () => {
+    const calls = serve({ [A]: latestOr(block(100, NOW - 60), () => ({ result: ok })), [B]: latestOr(block(400, NOW), () => ({ result: ok })) });
+    expect((await new ChainReader(staleClient([A, B], 300) as never, deployment).latestBlock()).number).toBe(100n);
+    expect((await new ChainReader(staleClient([A, B]) as never, deployment).latestBlock()).number).toBe(100n);
+    expect(calls.map((c) => c.url)).toEqual([A, A]);
+  });
+
+  it("ChainReader.forRpc on Sepolia applies the chain's head-age limit (300 s) when choosing among nodes", async () => {
+    serve({
+      [A]: latestOr(block(100, Math.floor(Date.now() / 1000) - 3600), () => ({ result: ok })),
+      [B]: latestOr(block(400, Math.floor(Date.now() / 1000)), () => ({ result: ok })),
+    });
+    expect((await ChainReader.forRpc(deployment, [A, B], sepolia).latestBlock()).number).toBe(400n);
+  });
+});
+
 describe("default RPC list", () => {
   it("lists only full-history nodes (no node known to prune history); the demo page uses the same list", () => {
     expect(SEPOLIA_RPCS).toEqual([
