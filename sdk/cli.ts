@@ -182,6 +182,10 @@ async function main(argv: string[]) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
       }
+      // The EIP-712 signature does not name the importer; only check 5 binds the proof to one (SECURITY.md T4).
+      if (!values.eori && proof.shipment && r.checks.some((c) => c.index === 5 && c.status === "skipped")) {
+        console.log("\nWARNING: check 5 skipped: pass --eori to bind the proof to an importer");
+      }
       const summary = [`${r.overall}${r.primaryCode ? ` (${r.primaryCode})` : ""}`, disclosureSummary(proof, r)];
       const advisory = r.checks.find((c) => c.index === 8 && c.status === "warn");
       if (advisory) summary.push(`check 8 advisory: ${advisoryNote(proof, r.disclosed, advisory.code)}`);

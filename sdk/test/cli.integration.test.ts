@@ -72,6 +72,12 @@ describe("carbonlei CLI", () => {
     expect(verify.stdout).toMatch(/PASS {2}4 On-chain report/);
     expect(verify.stdout).toMatch(/PASS {2}5 Shipment claim/);
     expect(verify.stdout).toMatch(/FAIL {2}6 Auditor anchor \(KEL\) {2}\[ANCHOR_NOT_FOUND\]/);
+    expect(verify.stdout).not.toContain("WARNING: check 5 skipped");
+
+    // Without --eori, check 5 is skipped and the CLI says that nothing binds the proof to an importer.
+    const unbound = await carbonlei("verify", "--proof", `${dir}proof.json`).catch((e) => e);
+    expect(unbound.stdout).toMatch(/SKIP {2}5 Shipment claim/);
+    expect(unbound.stdout).toContain("WARNING: check 5 skipped: pass --eori to bind the proof to an importer");
 
     await carbonlei("export-pact", "--proof", `${dir}proof.json`, "--company-name", "Demo Fasteners Co. (fictional)",
       "--product-name", "Hex bolt (illustrative)", "--product-id", "hex-bolt-m10",

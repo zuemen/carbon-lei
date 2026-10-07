@@ -319,7 +319,7 @@ Overall result: `INVALID` if any check fails, otherwise `CONTESTED` if 4l flagge
 
 | Data | Where | Why |
 |---|---|---|
-| vLEI credentials (LE, ECR, accreditation), KELs | Off-chain (KERI) | Credentials contain names and roles. KERI already provides key state, rotation and revocation. The EVM cannot verify Ed25519 KERI signatures cheaply, and signify-ts generates only Ed25519 keys natively; it can verify P-256 signatures and accept external key modules, but does not support secp256k1 [4] |
+| vLEI credentials (LE, ECR, accreditation), KELs | Off-chain (KERI) | Credentials contain names and roles. KERI already provides key state, rotation and revocation. The EVM cannot verify Ed25519 KERI signatures cheaply (no precompile; a Solidity verifier costs orders of magnitude more than a precompile call, about 500,000 gas per signature by one published estimate, see [SECURITY §12](SECURITY.md#12-future-on-chain-verification-of-keri-signatures)), and signify-ts generates only Ed25519 keys natively; it can verify P-256 signatures and accept external key modules, but does not support secp256k1 [4] |
 | Report fields (emissions, production process description, energy mix, cost) | Off-chain, held by supplier and verification body | Business-sensitive. Only disclosed fields reach the importer |
 | `reportKey = keccak256(bytes(credSAID))` | On-chain | Public, non-guessable key. `credSAID` commits to salted digests |
 | Auditor AID hash (`keccak256(bytes(AID))`), `kelSeq` | On-chain | Links the on-chain record to the KEL anchor |
