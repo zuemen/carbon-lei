@@ -364,6 +364,9 @@ export function witnessThreshold(copies: readonly KelMessage[], state: WitnessSt
 
 export type KelResult = { ok: true; keys: string[] } | { ok: false; reason: string };
 
+/** Key state at an event: signing keys, witness state and the number of rotations since inception. */
+export type KeyState = { ok: true; keys: string[]; witnesses: WitnessState; rotations: number } | { ok: false; reason: string };
+
 /** The KEL events of `aid` in the messages, by sequence number (an event repeated in the stream is kept once per copy). */
 function kelOf(msgs: readonly KelMessage[], aid: string): Map<number, KelMessage[]> {
   const bySn = new Map<number, KelMessage[]>();
@@ -381,27 +384,37 @@ function kelOf(msgs: readonly KelMessage[], aid: string): Map<number, KelMessage
  * supported key state (one key, threshold "1"; no delegation).
  */
 export function verifyKel(msgs: readonly KelMessage[], aid: string, upTo: number): KelResult {
-  const err = (reason: string): KelResult => ({ ok: false, reason });
+  const st = keyStateAt(msgs, aid, upTo);
+  return st.ok ? { ok: true, keys: st.keys } : st;
+}
+
+/**
+ * verifyKel, also returning the witness state in force at `upTo` and the rotations walked. `role` names
+ * the controller in the reasons ("issuer" for check 7, "auditor" for check 6).
+ */
+export function keyStateAt(msgs: readonly KelMessage[], aid: string, upTo: number, role = "issuer"): KeyState {
+  const err = (reason: string): KeyState => ({ ok: false, reason });
   const bySn = kelOf(msgs, aid);
-  if (!bySn.size) return err("the issuer's KEL is not in the evidence");
-  if (bySn.has(NaN) || !Number.isInteger(upTo) || upTo < 0) return err("the issuer's KEL has an event with an invalid sequence number");
+  if (!bySn.size) return err(`the ${role}'s KEL is not in the evidence`);
+  if (bySn.has(NaN) || !Number.isInteger(upTo) || upTo < 0) return err(`the ${role}'s KEL has an event with an invalid sequence number`);
   let keys: string[] = [];
   let next: string[] = [];
   let establishmentOnly = false;
   let wit: WitnessState | undefined;
   let prior: KelMessage | undefined;
+  let rotations = 0;
   for (let sn = 0; sn <= upTo; sn++) {
     const copies = bySn.get(sn);
-    if (!copies) return err(sn === 0 ? "the issuer's inception event is not in the evidence" : `the issuer's KEL has no event #${sn}`);
-    if (new Set(copies.map((c) => c.raw)).size > 1) return err(`the issuer's KEL has two different events at #${sn}`);
+    if (!copies) return err(sn === 0 ? `the ${role}'s inception event is not in the evidence` : `the ${role}'s KEL has no event #${sn}`);
+    if (new Set(copies.map((c) => c.raw)).size > 1) return err(`the ${role}'s KEL has two different events at #${sn}`);
     const m = copies[0];
     const k = m.ked;
-    const at = `event #${sn} of the issuer's KEL`;
+    const at = `event #${sn} of the ${role}'s KEL`;
     if (!sizeOk(m)) return err(`${at}: size differs from its version string`);
     if (sn === 0) {
-      if (k.t === "dip") return err("the issuer is a delegated identifier, which is not supported");
-      if (k.t !== "icp") return err("the issuer's KEL does not start with an inception event");
-      if (!selfAddressing(k)) return err("the issuer's inception event is not self-addressing (its SAID is not the issuer's AID)");
+      if (k.t === "dip") return err(`the ${role} is a delegated identifier, which is not supported`);
+      if (k.t !== "icp") return err(`the ${role}'s KEL does not start with an inception event`);
+      if (!selfAddressing(k)) return err(`the ${role}'s inception event is not self-addressing (its SAID is not the ${role}'s AID)`);
     } else {
       if (computeSaid(k) !== k.d) return err(`${at}: SAID does not match its content`);
       if (!prior || k.p !== prior.ked.d) return err(`${at} does not link to the prior event`);
@@ -421,18 +434,19 @@ export function verifyKel(msgs: readonly KelMessage[], aid: string, upTo: number
       keys = k.k;
       next = Array.isArray(k.n) ? k.n : [];
       if (k.t === "icp") establishmentOnly = Array.isArray(k.c) && k.c.includes("EO");
+      else rotations++;
     } else if (k.t === "ixn") {
       if (establishmentOnly) return err(`${at}: interaction event in an establishment-only KEL`);
     } else {
       return err(`${at}: event type ${k.t} is not supported`);
     }
-    if (!copies.some((c) => signedBy(c, keys[0]))) return err(`${at}: the controller signature does not verify with the issuer's key`);
+    if (!copies.some((c) => signedBy(c, keys[0]))) return err(`${at}: the controller signature does not verify with the ${role}'s key`);
     // Witness receipts: at least `bt` of the witnesses in force at this event signed its exact bytes.
     const receipts = witnessThreshold(copies, wit as WitnessState, false);
     if (receipts.reason) return err(`${at}: ${receipts.reason}`);
     prior = m;
   }
-  return { ok: true, keys };
+  return { ok: true, keys, witnesses: wit as WitnessState, rotations };
 }
 
 /** Lowest-numbered event of `aid`'s KEL carrying `seal`. */

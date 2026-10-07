@@ -293,16 +293,19 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
 .pvv-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 .pvv-col { border-top: 1.5px solid var(--ink); padding-top: 12px; min-width: 0; }
 .pvv-col h3 { font: 600 17px/1.3 var(--serif); margin: 0 0 10px; }
-.pvv-rows, .pvv-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.pvv-rows li, .pvv-steps li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid #cfc5b2; background: #fffdf8; justify-items: start; }
+.pvv-rows, .pvv-steps, .pvv-rot-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pvv-rows li, .pvv-steps li, .pvv-rot-steps li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid #cfc5b2; background: #fffdf8; justify-items: start; }
 .pvv-label { font: 500 12.5px/1.4 var(--mono); color: var(--ink-soft); }
 .pvv-value { font: 600 14px/1.45 var(--mono); color: var(--ink); overflow-wrap: anywhere; }
 .pvv-note { font: 400 12.5px/1.45 var(--mono); color: var(--ink-soft); overflow-wrap: anywhere; }
-.pvv-steps li { grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
-.pvv-steps li > :not(.badge) { grid-column: 1; }
-.pvv-steps .badge { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+.pvv-steps li, .pvv-rot-steps li { grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+.pvv-steps li > :not(.badge), .pvv-rot-steps li > :not(.badge) { grid-column: 1; }
+.pvv-steps .badge, .pvv-rot-steps .badge { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
 .pvv-text { font-size: 14px; margin: 12px 0 0; color: var(--ink); }
 .pvv-error { color: var(--red); }
+.pvv-rot { margin-top: 14px; border-top: 1px solid #cfc5b2; padding-top: 10px; }
+.pvv-rot > summary { font: 600 14px/1.4 var(--sans); color: var(--ink); cursor: pointer; }
+.pvv-rot .pvv-rot-steps { margin-top: 10px; }
 .pvv code { font: 500 0.92em var(--mono); overflow-wrap: anywhere; }
 /* Communication Template panel: file names, sheet cells and product names can be long unbroken strings. */
 #template-import > summary, .template-import .fine, .template-import select, .template-import td { overflow-wrap: anywhere; }

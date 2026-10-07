@@ -1,13 +1,16 @@
 // Trust chain tab, collapsed panel: the verifier as a name field (PDF report, PACT ProductFootprint)
 // next to the same verifier as a vLEI signature chain. Every value is read from the demo data and the
 // exported evidence; checks 6 and 7 (the SDK's functions) are re-run in the browser when the panel opens.
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { sha256Hex } from "../../../sdk/checkers.ts";
 import { witnessState, witnessThreshold } from "../../../sdk/kel.ts";
 import { DEMO_TRUST_ANCHOR, parseCesr, verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "../../../sdk/vlei.ts";
 import fixture from "../../../fixtures/demo.json";
 import { useApp } from "../App.tsx";
 import { short } from "../data.ts";
+
+// Loaded only when its block is opened: it carries the keripy test KEL.
+const KeyRotation = lazy(() => import("./KeyRotation.tsx").then((m) => ({ default: m.KeyRotation })));
 
 interface Acdc {
   d: string;
@@ -35,6 +38,7 @@ export function PactVsVlei() {
   const [view, setView] = useState<ChainView | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rotation, setRotation] = useState(false);
 
   const core = JSON.parse(data.proof.core);
   const extract = (data.proof.reportExtract ?? {}) as Record<string, unknown>;
@@ -184,6 +188,20 @@ export function PactVsVlei() {
                   {mark(view.witnesses.total > 0 && view.witnesses.verified >= view.witnesses.toad)}
                 </li>
               </ol>
+              <details
+                className="pvv-rot"
+                id="key-rotation"
+                onToggle={(e) => {
+                  if ((e.currentTarget as HTMLDetailsElement).open) setRotation(true);
+                }}
+              >
+                <summary>Key rotation: check 6 follows the auditor's key event log</summary>
+                {rotation && (
+                  <Suspense fallback={<p className="pvv-text">Loading…</p>}>
+                    <KeyRotation />
+                  </Suspense>
+                )}
+              </details>
               <p className="pvv-text">
                 Re-checked in your browser when this panel opened (the SDK code of checks 6 and 7, up to the pinned root,{" "}
                 {root?.name ?? "simulated root"}). The checks compare LEIs, AIDs and signatures, not names. Evidence

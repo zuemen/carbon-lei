@@ -1,0 +1,12 @@
+{
+  "note": "TEST identifier produced by keripy 1.2.13 (sdk/scripts/make-kel-rotation.sh); not the demo auditor.",
+  "sealBeforeRotation": "EM44yBWe_LCmAFeVfTFw_10jI-LMNu31YmuNKzJYFbdI",
+  "credSAID": "EKAUNy9Xdelz8wJ9XiJw3t1ke5RAr_38diGjOcqaQC5u",
+  "witnesses": {
+    "wan": "BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha",
+    "wil": "BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM",
+    "wes": "BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX"
+  },
+  "oldKeySignatureOnEvent3": "AACu9-HnAaxwPhUh9fOcAukiOv08udtOTHI7MgnIJ0itTOgU1YJn7M0SQI0AFNgUa3vdk1Itkg33YUvPNX_q_c4F",
+  "removedWitnessWilSignatureOnEvent3": "AABGEaZeYg0Zje5y8QzsLkelJ-YILajp5LTv6DdrKDS3_-9hBIuarIFg-MOgkekHUlTzDVofAo9LqkVQNIc48uEE"
+}

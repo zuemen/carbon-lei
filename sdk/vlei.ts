@@ -5,12 +5,12 @@
 //   - the event's SAID recomputes; it is an `ixn` by the auditor's AID at sequence number kelSeq;
 //     its seals contain { d: credSAID };
 //   - its Ed25519 signature verifies over the exact event bytes;
-//   - the signing key is the key in the auditor's inception event, whose SAID also recomputes
-//     and whose prefix is the auditor's AID (self-addressing);
-//   - witness receipts: at least `bt` of the witnesses named in the auditor's inception event (`b`)
-//     signed the anchor event's exact bytes (from `kelAttachment`), and the inception event itself
-//     (from `establishmentAttachment`). Like the key, the witness list is the inception's: a rotation
-//     between inception and anchor is not walked here, so the signatures would not verify (fail closed).
+//   - the signing key is the auditor's key in force at kelSeq. With `kel` (the auditor's events before
+//     kelSeq) it is walked from the self-addressing inception by sdk/kel.ts keyStateAt (pre-rotation and
+//     witness changes enforced, each event with its witness threshold); without it, it is the key of the
+//     inception event `establishmentRaw`, and a rotation before kelSeq fails closed;
+//   - witness receipts: at least `bt` of the witnesses in force at kelSeq signed the anchor event's exact
+//     bytes (from `kelAttachment`), and the inception event (from `establishmentAttachment` or `kel`).
 // Check 7 (authority): the credential chain QVI → LE (body) → ECR (auditor), plus the NAB's
 //   accreditation of the body, from exported CESR streams: every ACDC SAID recomputes, schemas,
 //   issuers, issuees, edges and LEIs line up, the QVI was issued by the configured root, the
@@ -23,7 +23,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { hashString } from "./commitment.ts";
 import type { Hex } from "./credential.ts";
 import { utf8 } from "./encoding.ts";
-import { decodeIndexedSig, decodeVerKey, verifyIssuance, witnessState, witnessThreshold } from "./kel.ts";
+import { controllerSigs, decodeIndexedSig, decodeVerKey, keyStateAt, verifyIssuance, witnessState, witnessThreshold } from "./kel.ts";
 import { computeSaid } from "./said.ts";
 
 export { decodeIndexedSig, decodeVerKey } from "./kel.ts";
@@ -94,6 +94,67 @@ export interface AnchorEvidence {
   kelAttachment?: string | null;
   /** CESR attachment of the auditor's inception event: its witness receipts. */
   establishmentAttachment?: string;
+  /** The auditor's KEL events #0 to #kelSeq-1, each with its attachment; check 6 then walks rotations. */
+  kel?: { raw: string; atc?: string }[];
+}
+
+/**
+ * Check 6 evidence from a KEL stream as `kli export` writes it: event #kelSeq (the anchor) with its
+ * attachment and controller signature, and the auditor's events #0 to #kelSeq-1 as `kel`.
+ */
+export function anchorEvidenceFromKel(stream: string, auditor: string, kelSeq: number, credSAID: string): AnchorEvidence {
+  const msgs = parseCesr(stream).filter((m) => m.ked.i === auditor);
+  const anchor = msgs.find((m) => m.ked.s === kelSeq.toString(16));
+  if (!anchor) throw new Error(`the KEL has no event #${kelSeq}`);
+  const sig = controllerSigs(anchor.atc ?? "").find((s) => s.index === 0);
+  return {
+    credSAID,
+    auditor,
+    kelSeq,
+    event: { raw: anchor.raw },
+    signatures: sig ? [{ qb64: sig.qb64, index: 0 }] : [],
+    signingKeys: [],
+    kelAttachment: anchor.atc,
+    kel: msgs.filter((m) => parseInt(m.ked.s, 16) < kelSeq).map((m) => ({ raw: m.raw, atc: m.atc })),
+  };
+}
+
+/** Check 6 with the auditor's KEL: the key and witnesses in force at kelSeq, walked from inception. */
+function verifyAnchorWithKel(ev: AnchorEvidence, event: Message, auditorAID: string): CheckOutcome {
+  const code = "ANCHOR_NOT_FOUND";
+  const sn = parseInt(event.ked.s, 16);
+  let msgs: Message[];
+  try {
+    msgs = (ev.kel ?? []).map((m) => ({ raw: m.raw, ked: JSON.parse(m.raw), atc: m.atc }));
+  } catch {
+    return fail(code, "the auditor's KEL is not valid JSON");
+  }
+  if (msgs.some((m) => m.ked.i === auditorAID && m.ked.s === event.ked.s && m.raw !== event.raw)) {
+    return fail(code, `the auditor's KEL has another event at #${sn}`);
+  }
+  const st = keyStateAt(msgs, auditorAID, sn - 1, "auditor");
+  if (!st.ok) return fail(code, st.reason);
+  const sig = ev.signatures?.find((s) => s.index === 0)?.qb64;
+  if (!sig) return fail(code, "signature or key missing");
+  let sigOk = false;
+  try {
+    sigOk = ed25519.verify(decodeIndexedSig(sig), utf8(event.raw), decodeVerKey(st.keys[0]));
+  } catch {
+    sigOk = false;
+  }
+  const rotations = `${st.rotations} rotation${st.rotations === 1 ? "" : "s"} since inception`;
+  if (!sigOk) return fail(code, `the event's signature does not verify with the auditor's key in force at event #${sn} (${rotations})`);
+  const wit = st.witnesses;
+  const onAnchor = witnessThreshold([{ ...event, atc: ev.kelAttachment ?? undefined }], wit);
+  if (onAnchor.reason) return fail(code, `anchor event: ${onAnchor.reason}`);
+  const receipts = wit.toad
+    ? `; witness receipts: ${onAnchor.verified} of ${wit.wits.length} on this event (threshold ${wit.toad}), and the threshold on each earlier event`
+    : "; the auditor's AID has no witnesses";
+  return {
+    ok: true,
+    code: "",
+    detail: `KERI event #${sn} by the auditor anchors this credential; Ed25519 signature verified with the key in force at event #${sn} (${rotations})${receipts}`,
+  };
 }
 
 export function verifyAnchor(
@@ -121,6 +182,7 @@ export function verifyAnchor(
   }
   if (!saidOk(event)) return fail(code, "the event's SAID does not match its content");
   if (parseInt(k.v.slice(10, 16), 16) !== utf8(event.raw).length) return fail(code, "event size differs from its version string");
+  if (ev.kel) return verifyAnchorWithKel(ev, event, expect.auditorAID);
 
   const key = ev.signingKeys?.[0]?.qb64;
   const sig = ev.signatures?.find((s) => s.index === 0)?.qb64;

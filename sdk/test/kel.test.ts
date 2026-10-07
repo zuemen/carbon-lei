@@ -1,14 +1,16 @@
 // sdk/kel.ts on hand-built KELs: the exported demo KELs have no rotation, so pre-rotation, witness
 // rotation (br/ba) and the fail-closed cases (multi-key threshold, delegation, duplicity,
-// establishment-only, witness threshold) are covered here.
+// establishment-only, witness threshold) are covered here; the last block walks a keripy-made rotation.
 // Events are built the way KERI builds them (field order, sizes, SAIDs, next-key digests over the qb64 key).
 import { ed25519 } from "@noble/curves/ed25519.js";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { base64url, utf8 } from "../encoding.ts";
 import {
   controllerSigs,
   decodeIndexedSig,
   decodeVerKey,
+  keyStateAt,
   nextKeyDigest,
   parseAttachments,
   verifyIssuance,
@@ -16,6 +18,7 @@ import {
   type KelMessage,
 } from "../kel.ts";
 import { SAID_DUMMY, computeSaid } from "../said.ts";
+import { parseCesr } from "../vlei.ts";
 
 type Json = Record<string, any>;
 
@@ -387,5 +390,21 @@ describe("parseAttachments: groups that carry no witness signature are skipped, 
     expect(() => controllerSigs("-AAB" + "0B" + "A".repeat(86))).toThrow("unsupported indexed signature 0B");
     expect(() => decodeVerKey("E" + "A".repeat(43))).toThrow("not an Ed25519 key");
     expect(() => decodeIndexedSig("B" + "A".repeat(87))).toThrow("not an indexed Ed25519 signature");
+  });
+});
+
+describe("keyStateAt: a rotation made by keripy 1.2.13 (sdk/test/fixtures/kel-rotation)", () => {
+  const msgs = parseCesr(readFileSync(new URL("./fixtures/kel-rotation/kel.cesr", import.meta.url), "utf8"));
+  const cx = JSON.parse(readFileSync(new URL("./fixtures/kel-rotation/counter-examples.json", import.meta.url), "utf8"));
+  const aid = msgs[0].ked.i;
+  it("before the rotation: the inception key and witnesses; after it: the revealed key and [wan, wes]", () => {
+    expect(keyStateAt(msgs, aid, 1)).toEqual({ ok: true, keys: msgs[0].ked.k, witnesses: { wits: [cx.witnesses.wan, cx.witnesses.wil], toad: 2 }, rotations: 0 });
+    expect(keyStateAt(msgs, aid, 3)).toEqual({ ok: true, keys: msgs[2].ked.k, witnesses: { wits: [cx.witnesses.wan, cx.witnesses.wes], toad: 2 }, rotations: 1 });
+    expect(nextKeyDigest(msgs[2].ked.k[0])).toBe(msgs[0].ked.n[0]);
+    expect(verifyKel(msgs, aid, 3)).toEqual({ ok: true, keys: msgs[2].ked.k });
+  });
+  it("names the controller's role in its reasons (check 7 keeps 'issuer')", () => {
+    expect(keyStateAt(msgs.filter((m) => m.ked.s !== "2"), aid, 3, "auditor")).toEqual({ ok: false, reason: "the auditor's KEL has no event #2" });
+    expect(verifyKel(msgs.filter((m) => m.ked.s !== "2"), aid, 3)).toEqual({ ok: false, reason: "the issuer's KEL has no event #2" });
   });
 });

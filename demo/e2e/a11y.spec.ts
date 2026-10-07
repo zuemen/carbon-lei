@@ -60,7 +60,9 @@ test("A1 axe (WCAG 2.2 AA and best practice): no violations of any impact on the
   await expect(page.locator("#evidence-why")).toBeVisible();
   await page.locator("#name-vs-chain > summary").click();
   await expect(page.locator("#name-vs-chain .pvv-steps .badge")).toHaveCount(4);
-  await scan(page, "Trust chain with the evidence note and the comparison panel open");
+  await page.locator("#key-rotation > summary").click();
+  await expect(page.locator("#key-rotation .pvv-rot-steps .badge")).toHaveCount(4);
+  await scan(page, "Trust chain with the evidence note, the comparison panel and its key rotation block open");
 
   await page.getByRole("tab", { name: "On-chain proof" }).click();
   await expect(page.locator("table.ledger tbody tr")).not.toHaveCount(0);

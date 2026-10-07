@@ -327,6 +327,17 @@ test("Trust chain: name field vs signature chain panel, collapsed by default, op
   await expect(right).toContainText(`key event #${data.credential.kelSeq}`);
   await expect(right).toContainText(/witnesses (\d+)\/\1/);
   await expect(right.locator(".badge.pass")).toHaveCount(4);
+  // Key rotation: loaded only when opened; offline evidence from a keripy test identifier.
+  const rotation = panel.locator("details#key-rotation");
+  await expect(rotation).not.toHaveAttribute("open");
+  await expect(rotation.locator(".pvv-rot-steps")).toHaveCount(0);
+  await rotation.locator("summary").click();
+  await expect(rotation).toContainText("Offline KERI evidence from a test identifier (keripy 1.2.13), not on Sepolia.");
+  await expect(rotation).toContainText("key in force at event #3 (1 rotation since inception)");
+  await expect(rotation).toContainText("rejected");
+  await expect(rotation).toContainText("the event's signature does not verify with the auditor's key in force at event #3");
+  await expect(rotation).toContainText(/allowlist transactions: 0/i);
+  await expect(rotation.locator(".pvv-rot-steps .badge.pass")).toHaveCount(4);
   await page.setViewportSize({ width: 390, height: 844 });
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
