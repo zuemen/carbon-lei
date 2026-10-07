@@ -99,7 +99,7 @@ The pilot would measure these. We set no targets here: the prototype has no real
 | `registerReport` | 368,616 | Once per report |
 | `claimShipment` | 155,449 | Once per shipment |
 | `revokeReport` | 62,345 (median in the test suite) | Only if a report is revoked |
-| One report's on-chain life (registration and one claim) | 524,065; 0.00052 ETH at an assumed 1 gwei | — |
+| One report's on-chain life (registration and one claim) | 524,065; 0.00052 ETH at an assumed 1 gwei. If deployed on mainnet: about US$0.32 at one 2026-10-07 block's base fee, about US$0.43 at the median of the 1,024 blocks before it; base fee only ([inputs](data/gas-usd-2026-10-07.json)) | — |
 
 - **Test network:** test ether has no market value, so the pilot's chain cost is zero in money.
 - **Production chain:** the cost depends on the chain chosen and its gas price; we do not estimate it. Credentials, selective disclosure and the vLEI chain stay off-chain, so the gas count above does not grow with them.
