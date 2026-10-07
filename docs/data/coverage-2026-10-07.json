@@ -1,0 +1,578 @@
+{
+  "measuredAt": "2026-10-07",
+  "tool": "vitest 5.0.3 with @vitest/coverage-v8 5.0.3 (V8 coverage, istanbul-style counts), Node 22.20.0",
+  "commands": [
+    "npm run test:coverage -w sdk",
+    "npm run test:coverage -w verifier"
+  ],
+  "scope": {
+    "sdk": "every sdk/*.ts file (tests, sdk/scripts excluded); cli.ts runs as a child process in the CLI test, so V8 does not see it and it counts as 0%",
+    "verifier": "every verifier/src/**/*.ts file; the KERIA and Docker scripts (setup, export, anchor, revoke, status, onboard-check) need a running KERI stack and are not exercised by the unit tests"
+  },
+  "commit": "37be500",
+  "before": {
+    "baseline": "de449bd (before the tests added in this commit)",
+    "sdk": {
+      "total": {
+        "lines": 84.9,
+        "branches": 75.77,
+        "functions": 88.01,
+        "statements": 80.53,
+        "linesCovered": "1147/1351",
+        "branchesCovered": "998/1317"
+      },
+      "files": {
+        "abi.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "2/2",
+          "branchesCovered": "0/0"
+        },
+        "chain.ts": {
+          "lines": 92.25,
+          "branches": 80.17,
+          "functions": 92.15,
+          "statements": 90.86,
+          "linesCovered": "143/155",
+          "branchesCovered": "93/116"
+        },
+        "checkers.ts": {
+          "lines": 62.5,
+          "branches": 57.14,
+          "functions": 60,
+          "statements": 60,
+          "linesCovered": "20/32",
+          "branchesCovered": "20/35"
+        },
+        "cli.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/96",
+          "branchesCovered": "0/82"
+        },
+        "commitment.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "13/13",
+          "branchesCovered": "0/0"
+        },
+        "consistency.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "36/36",
+          "branchesCovered": "38/38"
+        },
+        "credential.ts": {
+          "lines": 100,
+          "branches": 86.27,
+          "functions": 100,
+          "statements": 89.06,
+          "linesCovered": "50/50",
+          "branchesCovered": "44/51"
+        },
+        "disclosure.ts": {
+          "lines": 100,
+          "branches": 78.94,
+          "functions": 100,
+          "statements": 91.3,
+          "linesCovered": "20/20",
+          "branchesCovered": "15/19"
+        },
+        "eip712.ts": {
+          "lines": 83.33,
+          "branches": 100,
+          "functions": 80,
+          "statements": 83.33,
+          "linesCovered": "5/6",
+          "branchesCovered": "1/1"
+        },
+        "encoding.ts": {
+          "lines": 100,
+          "branches": 91.66,
+          "functions": 100,
+          "statements": 96.55,
+          "linesCovered": "28/28",
+          "branchesCovered": "11/12"
+        },
+        "issue.ts": {
+          "lines": 100,
+          "branches": 90,
+          "functions": 100,
+          "statements": 92.85,
+          "linesCovered": "13/13",
+          "branchesCovered": "9/10"
+        },
+        "kel.ts": {
+          "lines": 81.38,
+          "branches": 81.63,
+          "functions": 97.43,
+          "statements": 76.19,
+          "linesCovered": "188/231",
+          "branchesCovered": "200/245"
+        },
+        "pact.ts": {
+          "lines": 97.36,
+          "branches": 90.24,
+          "functions": 100,
+          "statements": 95.45,
+          "linesCovered": "37/38",
+          "branchesCovered": "37/41"
+        },
+        "said.ts": {
+          "lines": 75,
+          "branches": 66.66,
+          "functions": 75,
+          "statements": 68.42,
+          "linesCovered": "12/16",
+          "branchesCovered": "8/12"
+        },
+        "summary.ts": {
+          "lines": 100,
+          "branches": 87.5,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "9/9",
+          "branchesCovered": "7/8"
+        },
+        "template.ts": {
+          "lines": 95.38,
+          "branches": 74.91,
+          "functions": 97.5,
+          "statements": 89.29,
+          "linesCovered": "310/325",
+          "branchesCovered": "215/287"
+        },
+        "verify.ts": {
+          "lines": 94.04,
+          "branches": 89.95,
+          "functions": 90.47,
+          "statements": 92.7,
+          "linesCovered": "158/168",
+          "branchesCovered": "188/209"
+        },
+        "vlei.ts": {
+          "lines": 91.15,
+          "branches": 74.17,
+          "functions": 93.75,
+          "statements": 79.39,
+          "linesCovered": "103/113",
+          "branchesCovered": "112/151"
+        }
+      }
+    },
+    "verifier": {
+      "total": {
+        "lines": 24.74,
+        "branches": 27.76,
+        "functions": 29.16,
+        "statements": 24.3,
+        "linesCovered": "215/869",
+        "branchesCovered": "138/497"
+      },
+      "files": {
+        "src/anchor.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/73",
+          "branchesCovered": "0/45"
+        },
+        "src/build-authority-bundle.ts": {
+          "lines": 0,
+          "branches": 100,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/7",
+          "branchesCovered": "0/0"
+        },
+        "src/constants.ts": {
+          "lines": 88.88,
+          "branches": 100,
+          "functions": 0,
+          "statements": 88.88,
+          "linesCovered": "8/9",
+          "branchesCovered": "4/4"
+        },
+        "src/export-evidence.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/32",
+          "branchesCovered": "0/4"
+        },
+        "src/impostor-chain.ts": {
+          "lines": 100,
+          "branches": 83.33,
+          "functions": 100,
+          "statements": 99.14,
+          "linesCovered": "98/98",
+          "branchesCovered": "30/36"
+        },
+        "src/keri.ts": {
+          "lines": 4.59,
+          "branches": 0,
+          "functions": 13.63,
+          "statements": 5,
+          "linesCovered": "4/87",
+          "branchesCovered": "0/33"
+        },
+        "src/onboard-check.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/14",
+          "branchesCovered": "0/10"
+        },
+        "src/revocation.ts": {
+          "lines": 91.48,
+          "branches": 88.4,
+          "functions": 93.75,
+          "statements": 89.47,
+          "linesCovered": "43/47",
+          "branchesCovered": "61/69"
+        },
+        "src/revoke-ecr.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/88",
+          "branchesCovered": "0/58"
+        },
+        "src/setup-impostor.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/150",
+          "branchesCovered": "0/67"
+        },
+        "src/setup.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/68",
+          "branchesCovered": "0/13"
+        },
+        "src/state.ts": {
+          "lines": 42.3,
+          "branches": 0,
+          "functions": 22.22,
+          "statements": 37.93,
+          "linesCovered": "11/26",
+          "branchesCovered": "0/6"
+        },
+        "src/status.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/40",
+          "branchesCovered": "0/26"
+        },
+        "src/watch.ts": {
+          "lines": 39.23,
+          "branches": 34.12,
+          "functions": 10.52,
+          "statements": 34.19,
+          "linesCovered": "51/130",
+          "branchesCovered": "43/126"
+        }
+      }
+    }
+  },
+  "after": {
+    "sdk": {
+      "total": {
+        "lines": 89.85,
+        "branches": 82.99,
+        "functions": 91.01,
+        "statements": 87.66,
+        "linesCovered": "1214/1351",
+        "branchesCovered": "1093/1317"
+      },
+      "files": {
+        "abi.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "2/2",
+          "branchesCovered": "0/0"
+        },
+        "chain.ts": {
+          "lines": 92.25,
+          "branches": 84.48,
+          "functions": 92.15,
+          "statements": 93.01,
+          "linesCovered": "143/155",
+          "branchesCovered": "98/116"
+        },
+        "checkers.ts": {
+          "lines": 100,
+          "branches": 97.14,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "32/32",
+          "branchesCovered": "34/35"
+        },
+        "cli.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/96",
+          "branchesCovered": "0/82"
+        },
+        "commitment.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "13/13",
+          "branchesCovered": "0/0"
+        },
+        "consistency.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "36/36",
+          "branchesCovered": "38/38"
+        },
+        "credential.ts": {
+          "lines": 100,
+          "branches": 86.27,
+          "functions": 100,
+          "statements": 89.06,
+          "linesCovered": "50/50",
+          "branchesCovered": "44/51"
+        },
+        "disclosure.ts": {
+          "lines": 100,
+          "branches": 89.47,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "20/20",
+          "branchesCovered": "17/19"
+        },
+        "eip712.ts": {
+          "lines": 83.33,
+          "branches": 100,
+          "functions": 80,
+          "statements": 83.33,
+          "linesCovered": "5/6",
+          "branchesCovered": "1/1"
+        },
+        "encoding.ts": {
+          "lines": 100,
+          "branches": 91.66,
+          "functions": 100,
+          "statements": 96.55,
+          "linesCovered": "28/28",
+          "branchesCovered": "11/12"
+        },
+        "issue.ts": {
+          "lines": 100,
+          "branches": 90,
+          "functions": 100,
+          "statements": 92.85,
+          "linesCovered": "13/13",
+          "branchesCovered": "9/10"
+        },
+        "kel.ts": {
+          "lines": 98.7,
+          "branches": 99.18,
+          "functions": 100,
+          "statements": 99.04,
+          "linesCovered": "228/231",
+          "branchesCovered": "243/245"
+        },
+        "pact.ts": {
+          "lines": 97.36,
+          "branches": 90.24,
+          "functions": 100,
+          "statements": 95.45,
+          "linesCovered": "37/38",
+          "branchesCovered": "37/41"
+        },
+        "said.ts": {
+          "lines": 100,
+          "branches": 100,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "16/16",
+          "branchesCovered": "12/12"
+        },
+        "summary.ts": {
+          "lines": 100,
+          "branches": 87.5,
+          "functions": 100,
+          "statements": 100,
+          "linesCovered": "9/9",
+          "branchesCovered": "7/8"
+        },
+        "template.ts": {
+          "lines": 95.38,
+          "branches": 74.91,
+          "functions": 97.5,
+          "statements": 89.29,
+          "linesCovered": "310/325",
+          "branchesCovered": "215/287"
+        },
+        "verify.ts": {
+          "lines": 97.61,
+          "branches": 95.21,
+          "functions": 100,
+          "statements": 97.39,
+          "linesCovered": "164/168",
+          "branchesCovered": "199/209"
+        },
+        "vlei.ts": {
+          "lines": 95.57,
+          "branches": 84.76,
+          "functions": 93.75,
+          "statements": 87.87,
+          "linesCovered": "108/113",
+          "branchesCovered": "128/151"
+        }
+      }
+    },
+    "verifier": {
+      "total": {
+        "lines": 25.08,
+        "branches": 27.96,
+        "functions": 29.16,
+        "statements": 24.7,
+        "linesCovered": "218/869",
+        "branchesCovered": "139/497"
+      },
+      "files": {
+        "src/anchor.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/73",
+          "branchesCovered": "0/45"
+        },
+        "src/build-authority-bundle.ts": {
+          "lines": 0,
+          "branches": 100,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/7",
+          "branchesCovered": "0/0"
+        },
+        "src/constants.ts": {
+          "lines": 88.88,
+          "branches": 100,
+          "functions": 0,
+          "statements": 88.88,
+          "linesCovered": "8/9",
+          "branchesCovered": "4/4"
+        },
+        "src/export-evidence.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/32",
+          "branchesCovered": "0/4"
+        },
+        "src/impostor-chain.ts": {
+          "lines": 100,
+          "branches": 83.33,
+          "functions": 100,
+          "statements": 99.14,
+          "linesCovered": "98/98",
+          "branchesCovered": "30/36"
+        },
+        "src/keri.ts": {
+          "lines": 4.59,
+          "branches": 0,
+          "functions": 13.63,
+          "statements": 5,
+          "linesCovered": "4/87",
+          "branchesCovered": "0/33"
+        },
+        "src/onboard-check.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/14",
+          "branchesCovered": "0/10"
+        },
+        "src/revocation.ts": {
+          "lines": 97.87,
+          "branches": 89.85,
+          "functions": 93.75,
+          "statements": 96.49,
+          "linesCovered": "46/47",
+          "branchesCovered": "62/69"
+        },
+        "src/revoke-ecr.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/88",
+          "branchesCovered": "0/58"
+        },
+        "src/setup-impostor.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/150",
+          "branchesCovered": "0/67"
+        },
+        "src/setup.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/68",
+          "branchesCovered": "0/13"
+        },
+        "src/state.ts": {
+          "lines": 42.3,
+          "branches": 0,
+          "functions": 22.22,
+          "statements": 37.93,
+          "linesCovered": "11/26",
+          "branchesCovered": "0/6"
+        },
+        "src/status.ts": {
+          "lines": 0,
+          "branches": 0,
+          "functions": 0,
+          "statements": 0,
+          "linesCovered": "0/40",
+          "branchesCovered": "0/26"
+        },
+        "src/watch.ts": {
+          "lines": 39.23,
+          "branches": 34.12,
+          "functions": 10.52,
+          "statements": 34.19,
+          "linesCovered": "51/130",
+          "branchesCovered": "43/126"
+        }
+      }
+    }
+  }
+}
