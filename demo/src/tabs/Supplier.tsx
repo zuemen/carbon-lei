@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { selectDisclosures, type Presentation } from "../../../sdk/disclosure.ts";
 import { decodeDisclosure } from "../../../sdk/disclosure.ts";
 import { DEMO_DISCLOSURE } from "../../../sdk/issue.ts";
 import { REQUIRED_DISCLOSURES } from "../../../sdk/credential.ts";
-import { useApp } from "../App.tsx";
+import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { fmt, TabHead, TxLink } from "../components.tsx";
 import { kgToT } from "../messages.ts";
 import { short } from "../data.ts";
@@ -49,6 +49,17 @@ export function Supplier() {
   const [remaining, setRemaining] = useState<bigint | null>(null);
   const [state, setState] = useState<"valid" | "revoked" | "replaced" | "unknown">("unknown");
   const [templateOpen, setTemplateOpen] = useState(false);
+  const templateRef = useRef<HTMLDetailsElement>(null);
+
+  /** The button at the top of the tab: opens the template panel below and moves focus to it. */
+  function openTemplate() {
+    const d = templateRef.current;
+    if (!d) return;
+    d.open = true;
+    setTemplateOpen(true);
+    scrollBelowTabbar(d);
+    d.querySelector("summary")?.focus({ preventScroll: true });
+  }
 
   const verifiedKg = BigInt(Math.round(Number(data.report.verifiedTonnes) * 1000));
   const claimTx = data.txs.find((t) => t.step === "claim1");
@@ -100,7 +111,14 @@ export function Supplier() {
 
   return (
     <>
-      <TabHead title="Claim a shipment against the report" lede="The supplier — here a fictional screw maker in Kaohsiung — claims part of its verified tonnage for one importer, then chooses what that importer may see." />
+      <TabHead title="Claim a shipment against the report" lede="The supplier — here a fictional screw maker in Kaohsiung — claims part of its verified tonnage for one importer, then chooses what that importer may see.">
+        <div className="btn-row own-template-entry">
+          <button className="btn btn-ghost" aria-controls="template-import" aria-expanded={templateOpen} onClick={openTemplate}>
+            Try your own Communication Template (.xlsx)
+          </button>
+          <span className="fine">Read in this browser, nothing uploaded; then sign it with a demo key and see which checks refuse it.</span>
+        </div>
+      </TabHead>
       <div className="grid-2">
         <section className="sheet reveal" aria-labelledby="claim-h">
           <p className="sheet-kicker" id="claim-h">
@@ -235,6 +253,7 @@ export function Supplier() {
       </section>
 
       <details
+        ref={templateRef}
         id="template-import"
         className="sheet pvv"
         onToggle={(e) => setTemplateOpen((e.currentTarget as HTMLDetailsElement).open)}

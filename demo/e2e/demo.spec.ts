@@ -618,6 +618,52 @@ test("Supplier: the Communication Template panel reads the Commission's example 
   await expect(panel.getByRole("alert")).toHaveText(/Could not read too-large\.xlsx: file larger than 20971520 bytes .*it was not read/);
 });
 
+test("Supplier: own template entry at the top; the Commission's example signed with a demo key passes 0–2, is refused from check 4, never Verified", async ({ page }) => {
+  await page.goto("./#supplier");
+  const panel = page.locator("details#template-import");
+  await expect(panel).not.toHaveAttribute("open");
+  const entry = page.getByRole("button", { name: "Try your own Communication Template (.xlsx)" });
+  await expect(entry).toHaveAttribute("aria-expanded", "false");
+  await entry.click();
+  await expect(panel).toHaveAttribute("open");
+  await expect(entry).toHaveAttribute("aria-expanded", "true");
+  await expect(panel.locator("summary")).toBeFocused();
+  await expect(panel.locator("summary")).toHaveText("Start from the Commission's Communication Template (official example)");
+  await panel.locator('input[type="file"]').setInputFiles(
+    new URL("../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx", import.meta.url).pathname,
+  );
+  await expect(panel.getByTestId("template-summary")).toContainText("CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx");
+  await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
+  const box = panel.getByTestId("self-issue");
+  await box.getByRole("button", { name: "Sign with a demo key and run the checks" }).click();
+  const result = box.getByTestId("self-issue-result");
+  await expect(result).toBeVisible();
+  await expect(box.getByTestId("self-issue-key")).toHaveText(
+    /^Demo key 0x[0-9a-fA-F]{40} — demo key generated in this page; not a verification body; not registered on Sepolia\.$/,
+  );
+  const checks = result.locator("ol.checks > li");
+  await expect(checks).toHaveCount(9);
+  for (const i of [0, 1, 2]) await expect(checks.nth(i).locator(".badge")).toHaveText("✓ Passed");
+  // Check 3 recovers the demo key's own signature (it does not consult the allowlist); the page says so.
+  await expect(checks.nth(3)).toContainText("it shows who signed, not that this signer is allowed to sign");
+  for (const i of [4, 5, 6, 7]) await expect(checks.nth(i).locator(".badge")).toHaveText(/^(✕ Failed|– Not run)$/);
+  await expect(checks.nth(4).locator(".badge")).toHaveText("✕ Failed");
+  await expect(checks.nth(4)).toContainText("REPORT_INVALID/NOT_REGISTERED");
+  await expect(checks.nth(4)).toContainText("this key is not on it");
+  await expect(checks.nth(4)).toContainText(/reverted NotActiveVerifier/);
+  await expect(checks.nth(5)).toContainText("this page sends none");
+  await expect(checks.nth(6)).toContainText("ANCHOR_NOT_FOUND");
+  await expect(checks.nth(7)).toContainText("AUTHORITY_INVALID");
+  await expect(box.getByTestId("self-issue-summary")).toContainText(
+    "This is how far a self-issued report gets: the checks that need an authorised signer and the shared ledger refuse it.",
+  );
+  const text = (await box.innerText()).replace(/INVALID/g, "");
+  expect(text).not.toMatch(/Verified|VALID|✓ Valid/);
+  await expect(box.locator(".stamp.green")).toHaveCount(0);
+  // The existing qualifier stays in the panel.
+  await expect(panel.getByText(/This is not a CBAM Registry integration and does not show compliance\./)).toBeVisible();
+});
+
 /** The offline (cached) view: every RPC blocked, then "Show cached results". */
 async function offlineView(page: Page) {
   const data = await (await page.request.get("demo-data.json")).json();

@@ -323,6 +323,16 @@ details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12px/1.5
 .template-import label.fine { min-width: 0; max-width: 100%; }
 .template-import input[type="file"] { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .template-warnings { margin: 6px 0; padding-left: 18px; color: var(--red); }
+/* Own template: the demo-key signing step under the draft, and the entry button at the top of the Supplier tab. */
+.own-template-entry { margin-top: 8px; }
+.self-issue { margin-top: 22px; padding-top: 14px; border-top: 1.5px dashed var(--ink-soft); }
+.self-issue h3 { font: 600 17px/1.35 var(--serif); margin: 0 0 6px; }
+.self-issue-key { margin: 12px 0 8px; padding: 8px 12px; border: 1.5px dashed var(--ink-soft); background: #fffdf8; font-size: 14px; overflow-wrap: anywhere; }
+.self-issue-fields { margin: 0 0 10px; }
+.self-issue-fields > summary { font-size: 14px; }
+.self-issue-fields ul { margin: 6px 0; padding-left: 18px; }
+.self-issue .check-detail code, .self-issue-fields code { overflow-wrap: anywhere; }
+.self-issue-dry { display: block; margin-top: 4px; }
 @media (max-width: 860px) { .pvv-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) {
   table.check-sources-table, .check-sources-table tbody, .check-sources-table tr, .check-sources-table td { display: block; width: auto; }

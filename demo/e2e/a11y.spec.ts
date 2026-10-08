@@ -189,6 +189,30 @@ test("A6 layer card: both switches by keyboard only, axe in each state", async (
   await scan(page, "Layer card, shared ledger and without check 7");
 });
 
+test("A7 own template: the entry button and the demo-key checks by keyboard only, axe with the result shown", async ({ page }) => {
+  await page.goto("./#supplier");
+  await connected(page);
+  const entry = page.getByRole("button", { name: "Try your own Communication Template (.xlsx)" });
+  await tabTo(page, entry, { max: 120 });
+  await page.keyboard.press("Enter");
+  const panel = page.locator("details#template-import");
+  await expect(panel).toHaveAttribute("open");
+  await expect(panel.locator("summary")).toBeFocused();
+  // A file dialog cannot be driven from the page; the Commission's example is read with its own button.
+  const example = page.getByRole("button", { name: "Load the Commission's example" });
+  await tabTo(page, example);
+  await page.keyboard.press("Enter");
+  const sign = page.getByRole("button", { name: "Sign with a demo key and run the checks" });
+  await expect(sign).toBeVisible();
+  await tabTo(page, sign, { max: 120 });
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("self-issue-summary")).toContainText("This is how far a self-issued report gets");
+  await page.locator(".self-issue-fields > summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".self-issue-fields")).toHaveAttribute("open");
+  await scan(page, "Supplier, own template signed with a demo key, placeholders open");
+});
+
 test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse click", async ({ page, browserName }) => {
   await page.goto("./#buyer");
   await connected(page);

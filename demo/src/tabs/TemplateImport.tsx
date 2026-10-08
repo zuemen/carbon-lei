@@ -1,10 +1,13 @@
 // "Start from the Commission's Communication Template": reads the official xlsx in the browser with the SDK's
 // deterministic importer and shows which credential fields it can fill. Rendered only when the panel is opened;
 // the file is parsed in a Web Worker (with exceljs and fflate), created only when a file is read. Nothing is uploaded.
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import exampleUrl from "../../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx?url";
 import type { CredentialDraft, ParsedTemplate, SuppliedBy } from "../../../sdk/template.ts";
 import type { TemplateResponse } from "./templateWorker.ts";
+
+// The demo-key signing step and the verifier load only once a template has been read.
+const SelfIssue = lazy(() => import("./SelfIssue.tsx"));
 
 /** Same limit as MAX_TEMPLATE_BYTES in sdk/template.ts; checked before the file is read into memory. */
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -183,6 +186,14 @@ export function TemplateImport({ labels }: { labels: Record<string, string> }) {
               );
             })}
             <p className="fine">Set by the SDK when the credential is issued: {draft.setAtIssuance.map((f) => labels[f] ?? f).join(", ")}.</p>
+            <Suspense fallback={<p className="fine">Loading…</p>}>
+              <SelfIssue
+                key={`${state.t.sha256}:${index}`}
+                draft={draft}
+                labels={labels}
+                product={`product row ${index + 1}, CN ${draft.product.cnCode}`}
+              />
+            </Suspense>
           </>
         )}
       </div>
