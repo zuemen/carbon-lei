@@ -115,6 +115,9 @@ export function App() {
       if (attempt.current !== my) return;
       setConn((c) => (c.kind === "connecting" ? { ...c, waited: Math.round((Date.now() - started) / 1000) } : c));
     }, 1000);
+    // The chain module downloads while the first node is probed, not after.
+    const chainP = import("../../sdk/chain.ts");
+    chainP.catch(() => {});
     try {
       for (let i = 0; i < d.network.rpcs.length; i++) {
         const rpc = d.network.rpcs[i];
@@ -122,10 +125,13 @@ export function App() {
         if (await probe(rpc, 7000)) {
           if (attempt.current !== my) return;
           const ordered = [rpc, ...d.network.rpcs.filter((r) => r !== rpc)];
-          // The reader, and whether every node's head is too old (read in the chain module, not on the first screen).
-          const { reader: r, behind } = await (await import("../../sdk/chain.ts")).ChainReader.forPage(d.deployment, ordered);
+          // The reader is handed to the tabs at once, so a waiting Verify starts now (it reads and checks the head
+          // itself); the status line says Connected, or that every node's head is too old, once that is known.
+          const r = (await chainP).ChainReader.pageReader(d.deployment, ordered);
           if (attempt.current !== my) return;
           setReader(r);
+          const behind = (await r.headBehind(4000))?.text;
+          if (attempt.current !== my) return;
           setConn({ kind: "live", rpc, switched: i > 0, behind });
           return;
         }

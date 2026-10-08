@@ -173,6 +173,12 @@ export class ChainReader {
    * timestamps the block search has read of blocks at least `CACHE_DEPTH` below the snapshot.
    */
   private cache: { deploymentTimestamp?: Promise<bigint>; blocks: Map<bigint, bigint> } = { blocks: new Map() };
+  /**
+   * For a reader pinned to a block (`at`): view calls already made at that block, by contract, function and
+   * arguments. The state of one block does not change, so a second identical call (check 4l and check 7 both read
+   * the body's record) gets the first one's answer instead of another request. A failed call is not kept.
+   */
+  private views?: Map<string, Promise<unknown>>;
 
   constructor(client: PublicClient, deployment: Deployment, blockNumber?: bigint, options: ChainReaderOptions = {}) {
     this.client = client;
@@ -195,7 +201,26 @@ export class ChainReader {
   at(blockNumber: bigint): ChainReader {
     const r = new ChainReader(this.client, this.deployment, blockNumber, this.options);
     r.cache = this.cache;
+    r.views = new Map();
     return r;
+  }
+
+  /** A view call at the pinned block, made once per contract, function and arguments (see `views`). */
+  private view<T>(address: Hex, abi: readonly unknown[], functionName: string, args: readonly unknown[]): Promise<T> {
+    const call = () =>
+      this.client.readContract({ address, abi, functionName, args, blockNumber: this.blockNumber } as never) as Promise<T>;
+    if (!this.views) return call();
+    const key = `${address}:${functionName}:${args.map((a) => String(a)).join(",")}`;
+    let p = this.views.get(key) as Promise<T> | undefined;
+    if (!p) {
+      p = call();
+      this.views.set(key, p);
+      const kept = p;
+      kept.catch(() => {
+        if (this.views?.get(key) === kept) this.views.delete(key);
+      });
+    }
+    return p;
   }
 
   /**
@@ -222,8 +247,13 @@ export class ChainReader {
    * node's head is older than the head-age limit (`headBehind`, given 4 s).
    */
   static async forPage(deployment: Deployment, rpcUrls: string[]): Promise<{ reader: ChainReader; behind?: string }> {
-    const reader = ChainReader.forRpc(deployment, rpcUrls, deployment.chainId === sepolia.id ? sepolia : undefined);
+    const reader = ChainReader.pageReader(deployment, rpcUrls);
     return { reader, behind: (await reader.headBehind(4000))?.text };
+  }
+
+  /** The demo page's reader over `rpcUrls`, without reading anything yet (`forPage` also reads the head's age). */
+  static pageReader(deployment: Deployment, rpcUrls: string[]): ChainReader {
+    return ChainReader.forRpc(deployment, rpcUrls, deployment.chainId === sepolia.id ? sepolia : undefined);
   }
 
   /**
@@ -241,23 +271,11 @@ export class ChainReader {
   }
 
   private readRegistry<T>(functionName: string, args: readonly unknown[]): Promise<T> {
-    return this.client.readContract({
-      address: this.registry,
-      abi: emissionsClaimRegistryAbi,
-      functionName,
-      args,
-      blockNumber: this.blockNumber,
-    } as never) as Promise<T>;
+    return this.view<T>(this.registry, emissionsClaimRegistryAbi, functionName, args);
   }
 
   private readAllowlist<T>(functionName: string, args: readonly unknown[]): Promise<T> {
-    return this.client.readContract({
-      address: this.allowlist,
-      abi: verifierAllowlistAbi,
-      functionName,
-      args,
-      blockNumber: this.blockNumber,
-    } as never) as Promise<T>;
+    return this.view<T>(this.allowlist, verifierAllowlistAbi, functionName, args);
   }
 
   report(reportKey: Hex): Promise<ReportRecord> {
