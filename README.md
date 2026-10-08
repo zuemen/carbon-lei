@@ -4,14 +4,14 @@ A carbon number is only as trustworthy as the person who signed it.
 
 **Checkable carbon-border (CBAM) emissions reports: who signed, were they authorised, and has each verified tonne already been claimed? GLEIF-rooted vLEI credentials plus an Ethereum Sepolia ledger.**
 
-**Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) (read-only, no wallet) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4: press "Verify the impostor's proof".
+**Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) (read-only, no wallet) → press **Verify the demo proof** on the first screen (it loads the proof on the Buyer tab and runs the eight checks) → **Try to break it** → card 4: press "Verify the impostor's proof".
 
 One-page judge brief (PDF): [docs/judge-brief.pdf](docs/judge-brief.pdf)
 
 **Five-minute path** (demo, phone QR, three terminal commands): [what you should see at each step](docs/JUDGING_CRITERIA.md#five-minute-path-for-reviewers).
 
-<a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment"></a>
-<sub>Screenshot of the live page on Sepolia, taken 2026-10-06 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
+<a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed, the declared-emissions gap for one 200 t shipment (gross, illustrative), and the first three checks"></a>
+<sub>Screenshot of the live page on Sepolia after one click on "Verify the demo proof", taken 2026-10-08 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
 
 - **Who signed:** the lead auditor's vLEI role credential (a signed statement that this person holds this role at this verification body; vLEIs are specified in ISO 17442-3:2024), is checked against a GLEIF-rooted chain (simulated root in the demo).
 - **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
