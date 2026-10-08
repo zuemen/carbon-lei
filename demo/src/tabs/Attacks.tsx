@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { verifyPresentation, type VerificationResult } from "../../../sdk/verify.ts";
 import { useApp } from "../App.tsx";
 import { Badge, SourceLabel, TabHead, TxLink } from "../components.tsx";
@@ -6,6 +6,10 @@ import { short, type Attack4 } from "../data.ts";
 import { evidenceCheckers } from "../evidence.ts";
 import { CODE_TEXT, revertText } from "../messages.ts";
 import { CHECKS, kindOf, tamperedProof } from "./Buyer.tsx";
+import type { DryOutcome } from "./LayerCard.tsx";
+
+// The "What if one layer were missing?" card loads after the attack cards.
+const LayerCard = lazy(() => import("./LayerCard.tsx"));
 
 type Outcome = { stamp: string; text: string } | null;
 
@@ -190,6 +194,8 @@ export function Attacks() {
   const { data, reader, offline } = useApp();
   const [out, setOut] = useState<Record<string, Outcome>>({});
   const [busy, setBusy] = useState("");
+  // Attack 2b's live dry-run answer, which the layer card reads (it sends no call of its own).
+  const [a2bLive, setA2bLive] = useState<DryOutcome>(null);
   const a3 = data.attacks.attack3;
   const a4 = data.attacks.attack4;
   const reg = data.txs.find((t) => t.step === "registerReport1");
@@ -233,6 +239,7 @@ export function Attacks() {
     const [reportKey, batchKey, qty, commit] = spec.args;
     const r = await reader.dryRun("claimShipment", [reportKey, batchKey, BigInt(qty), commit], spec.caller);
     setBusy("");
+    if (id === "a2b") setA2bLive(r.reverted ? { errorName: r.errorName, args: r.args } : { errorName: "", args: [] });
     setOut((o) => ({
       ...o,
       [id]: r.reverted
@@ -356,6 +363,9 @@ export function Attacks() {
 
         {a4 && <Attack4Card a4={a4} waiting={waiting} />}
       </section>
+      <Suspense fallback={<p aria-live="polite">Loading…</p>}>
+        <LayerCard a2b={a2bLive} />
+      </Suspense>
     </>
   );
 }

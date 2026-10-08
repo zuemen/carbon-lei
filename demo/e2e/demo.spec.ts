@@ -333,6 +333,52 @@ test("E3b attack 4 (when recorded): the impostor's proof fails check 7 at the pi
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
+test("Layer card: separate databases accept both claims, over the verified tonnes; the shared ledger refuses the second; what-if only", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const verified = Number(data.report.verifiedTonnes);
+  const first = Number(data.shipment.quantityTonnes);
+  const second = Number(data.attacks.secondImporter.quantityTonnes);
+  const left = Number(data.cached.dryRuns.secondImporter.args[0]) / 1000;
+  expect([verified, first, second, left], "the demo's 2b figures").toEqual([500, 200, 400, 300]);
+  await page.goto("./#try-to-break-it");
+  const card = page.locator("section.layer-card");
+  await expect(card.getByRole("heading", { name: "What if one layer were missing?" })).toBeVisible();
+  await expect(card).toContainText("What-if in this page only — the verifier itself never switches a check off.");
+  const row = card.locator("#layer-ledger");
+  const total = row.getByTestId("layer-total");
+  const over = row.getByTestId("layer-over");
+  // Default: the shared ledger, with the 2b dry run recorded in the demo data (no call from this card).
+  await expect(row.getByRole("radio", { name: "One shared ledger (the live contract)" })).toBeChecked();
+  await expect(row.locator(".layer-table")).toContainText(`dry run recorded on ${data.cached.time.slice(0, 10)}`);
+  await expect(row.locator(".layer-table")).toContainText(`ExceedsVerifiedTonnage — This claim would exceed the tonnes covered by the verified report (${left} t left, ${second} t requested).`);
+  await expect(total).toHaveText(`${first} t`);
+  await expect(over).toHaveText("0 t");
+  // Separate databases: each accepts its own claim, 600 t declared against 500 t verified.
+  await row.getByRole("radio", { name: "Two importers, separate databases (simulated)" }).check();
+  await expect(row.locator(".layer-table tbody .stamp")).toHaveText(["Accepted", "Accepted"]);
+  await expect(total).toHaveText(`${first + second} t`);
+  await expect(over).toHaveText(`${first + second - verified} t`);
+  await expect(row).toContainText(`Both databases accept: 600 t are declared against a report that verified 500 t.`);
+  // Back to the shared ledger after running card 2b live: the card shows that dry run's answer.
+  await page.getByRole("button", { name: /Claim \d+ t more/ }).click();
+  await expect(page.getByText(/Reverted: ExceedsVerifiedTonnage/).first()).toBeVisible();
+  await row.getByRole("radio", { name: "One shared ledger (the live contract)" }).check();
+  await expect(row.locator(".layer-table")).toContainText("from your dry run in card 2b above");
+  await expect(row.locator(".layer-table tbody .stamp")).toHaveText(["Accepted", "Rejected"]);
+  await expect(total).toHaveText(`${first} t`);
+  await expect(over).toHaveText("0 t");
+  // Check 7: the only failed check in attack 4's recorded verification.
+  if (data.attacks.attack4) {
+    const r7 = card.locator("#layer-check7");
+    await expect(r7).toContainText("Check 7 failed: QVI credential not issued by the configured root of trust.");
+    await r7.getByRole("radio", { name: "Without check 7 (what-if)" }).check();
+    await expect(r7).toContainText("Check 7 was the only check that failed, so no other check stops the impostor.");
+    await expect(r7).toContainText("passed 0, 1, 2, 3, 4, 6; not run 5 (no shipment in this proof), 8 (no report extract in this proof).");
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
 test("E5 primary RPC down → switches to the backup node", async ({ page }) => {
   const [primary] = await rpcs(page);
   await page.route(`${primary}**`, (r) => r.abort());

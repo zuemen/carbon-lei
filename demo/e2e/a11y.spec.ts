@@ -162,6 +162,33 @@ test("A2b keyboard only: Verify the demo proof on the first screen", async ({ pa
   await expect(page.locator(".verify-summary")).toContainText(/\d of 8 checks passed/);
 });
 
+test("A6 layer card: both switches by keyboard only, axe in each state", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.goto("./#try-to-break-it");
+  await connected(page);
+  const row = page.locator("#layer-ledger");
+  const shared = row.getByRole("radio", { name: "One shared ledger (the live contract)" });
+  const separate = row.getByRole("radio", { name: "Two importers, separate databases (simulated)" });
+  await tabTo(page, shared, { max: 120 });
+  // Arrow keys move between the two options and select them (native radio group).
+  await page.keyboard.press("ArrowLeft");
+  await expect(separate).toBeFocused();
+  await expect(separate).toBeChecked();
+  await expect(row.getByTestId("layer-total")).toHaveText("600 t");
+  await scan(page, "Layer card, separate databases");
+  await page.keyboard.press("ArrowRight");
+  await expect(shared).toBeChecked();
+  await expect(row.getByTestId("layer-total")).toHaveText("200 t");
+  if (data.attacks.attack4) {
+    const without = page.getByRole("radio", { name: "Without check 7 (what-if)" });
+    await tabTo(page, page.getByRole("radio", { name: "With check 7 (as deployed)" }));
+    await page.keyboard.press("ArrowRight");
+    await expect(without).toBeChecked();
+    await expect(page.locator("#layer-check7")).toContainText("Check 7 was the only check that failed");
+  }
+  await scan(page, "Layer card, shared ledger and without check 7");
+});
+
 test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse click", async ({ page, browserName }) => {
   await page.goto("./#buyer");
   await connected(page);
