@@ -221,6 +221,28 @@ Notes:
 
 ---
 
+## 5. Terms in the AIA Ontology Suite (vocabulary mapping only)
+
+The LF Decentralized Trust (LFDT) Accountable Impact Commons lab published an onboarding page for teams in this hackathon that points to the Anthropogenic Impact Accounting (AIA) Ontology Suite [6]. The table below names the closest AIA term for each CarbonLEI concept. It is a reading of the published ontology files [7], not an implementation: CarbonLEI emits no RDF or JSON-LD, publishes no SHACL shapes, and nothing here has been reviewed by the ontology authors. Prefixes: `claimont:` = `http://w3id.org/claimont#`, `aiao:` = `http://w3id.org/aiao#`, `impactont:` = `http://w3id.org/impactont#`.
+
+| CarbonLEI concept | Closest AIA term | Checks that test it | Note |
+|---|---|---|---|
+| Report credential (the verification body's signed statement about one installation, CN code, route and period) | `claimont:Attestation` | 1, 2, 3 | The ontology gives "a verifier's statement" as its example of an attestation. The operator's own emissions declaration, which the attestation is about (`claimont:hasSubject` → `claimont:Claim`), is not a separate object in CarbonLEI |
+| Verification body (`verifierLEI`) and lead auditor (`auditorAID`) | `claimont:Attester` via `claimont:isMadeBy`; also `aiao:Agent` with an `aiao:Role` | 3, 4, 6, 7 | AIA names who made the statement; CarbonLEI additionally tests that the signer had authority to make it (vLEI chain, KEL anchor). No AIA property expresses that authority |
+| Supplier (`supplierLEI`) and its on-chain shipment claim | `aiao:Agent`; the claim as `claimont:Claim` made by a `claimont:Claimant` | 4, 5 | A shipment claim is linked to the report it draws on, which fits `claimont:isSupportedBy` |
+| `specificEmbeddedEmissions_tCO2e_per_t` (1.8, illustrative) | `impactont:IndicatorValue` of an `impactont:Indicator` (direct embedded emissions, tCO2e per tonne) | 1, 2, 8 | The ontology requires the indicator to have a description and a unit; CarbonLEI's unit is fixed by the field name |
+| `reportingPeriod` | `impactont:TemporalLocation` | 4 | Period = two instants, as the ontology describes |
+| `unLocode`, `installationId` | `impactont:SpatialLocation` (UN/LOCODE); installation: no exact term | 1, 2 | We do not map the installation to `aiao:Instrument`; the definitions do not settle it |
+| CBAM methodology and check 8's twelve reconciliation rules | `aiao:Control` | 8 | The ontology says a methodology is a Control. CarbonLEI's values are illustrative and not calculated under the CBAM methodology |
+| KEL anchor, witness receipts, vLEI chain, Sepolia transactions | Evidence linked through `claimont:isSupportedBy` | 4, 6, 7 | AIA links a claim to its evidence; CarbonLEI's checks test that evidence cryptographically |
+| `verifiedTonnes` and the claimable-tonnage ledger (500 verified, 200 claimed, 300 left) | No equivalent | 4, 5 | No AIA term caps how much of a quantity later claims may draw on; this is the part CarbonLEI adds |
+| `accreditationNumber`, `nabName`, `assuranceLevel`, `materialityThreshold`, `siteVisit` | No equivalent | 7, 8 | No property for an attester's accreditation or the assurance terms of an attestation in the files we read |
+| Supersession and revocation (`precedingPfIds`, `revokeAuditor`) | No equivalent | 4, 7 | `claimont:Claim` is "a defeasible statement"; the ontology has no property for which statement replaces which |
+
+Ontology files read on 2026-10-08 from their W3ID addresses [7]. If a later version of the suite changes these terms, this table may be out of date.
+
+---
+
 ## Sources
 
 Accessed 2026-09-29 unless stated.
@@ -230,3 +252,5 @@ Accessed 2026-09-29 unless stated.
 3. WBCSD PACT, Technical Specification for Data Model Extensions, Living Document, 27 June 2024. https://wbcsd.github.io/data-model-extensions/spec/
 4. Commission Implementing Regulation (EU) 2025/2546, Annex (template of the verification report), points 1.1–1.3 and 2.1–2.6, OJ L, 22 December 2025, accessed 2026-10-05. https://eur-lex.europa.eu/eli/reg_impl/2025/2546/oj
 5. IETF, RFC 9562, "Universally Unique IDentifiers (UUIDs)", May 2024 (UUID version 8). https://www.rfc-editor.org/rfc/rfc9562
+6. LF Decentralized Trust, Accountable Impact Commons, "Getting Up to Speed with the Anthropogenic Impact Accounting Ontology", 26 September 2026 ("An onboarding guide for teams in the IEEE ClimateChain Global Hackathon"), accessed 2026-10-08. https://github.com/Accountable-Impact-Commons/accountable-impact-commons.github.io/blob/main/content/posts/2026-09-26-getting-up-to-speed-with-aiao.md
+7. AIA Ontology Suite, OWL files retrieved from their W3ID addresses on 2026-10-08: Claim Ontology https://w3id.org/claimont (classes Claim, Claimant, Attestation, Attester; properties isMadeBy, hasSubject, isSupportedBy), Anthropogenic Impact Accounting Ontology https://w3id.org/aiao (Agent, Role, Activity, Control), Impact Ontology https://w3id.org/impactont (Indicator, IndicatorValue, TemporalLocation, SpatialLocation).
