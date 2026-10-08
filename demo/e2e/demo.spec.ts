@@ -285,6 +285,60 @@ test("PACT download after a VALID verification: the SDK's ProductFootprint of th
   await expect(pactButton).toHaveCount(0);
 });
 
+test("Buyer: the printable importer's file holds this result, the credential ID and the pinned block; a rejected proof prints as rejected", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const credSAID = JSON.parse(data.proof.core).d as string;
+  // The print dialog is replaced by a counter: the test checks what the page would print.
+  await page.addInitScript(() => {
+    (window as unknown as { __prints: number }).__prints = 0;
+    window.print = () => {
+      (window as unknown as { __prints: number }).__prints++;
+    };
+  });
+  const prints = () => page.evaluate(() => (window as unknown as { __prints: number }).__prints);
+  const printButton = page.getByRole("button", { name: "Print the importer's file" });
+  const file = page.getByTestId("importer-file");
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await expect(printButton).toHaveCount(0);
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  const overall = (await page.locator(".overall .stamp").textContent())?.trim();
+  await printButton.click();
+  await expect.poll(prints).toBe(1);
+  // On screen the file stays hidden; in print media it is the only thing shown.
+  await expect(file).toBeHidden();
+  await page.emulateMedia({ media: "print" });
+  await expect(file).toBeVisible();
+  await expect(page.locator("#root")).toBeHidden();
+  await expect(file).toContainText("Fictional demo data");
+  await expect(file).toContainText("Not a filing to the CBAM Registry");
+  await expect(file).toContainText("gross and illustrative, not CBAM methodology");
+  await expect(file).toContainText("not signed");
+  await expect(file).toContainText(credSAID);
+  await expect(file).toContainText(data.deployment.contracts.EmissionsClaimRegistry.address);
+  await expect(file).toContainText(data.deployment.contracts.VerifierAllowlist.address);
+  await expect(file).toContainText(/Chain reads pinned to\s*block \d+/);
+  await expect(file.locator(".if-checks tbody tr")).toHaveCount(9);
+  if (overall === "Verified") {
+    await expect(file).toContainText("VALID — Verified");
+    const claim = (data.txs as { step: string; hash: string }[]).find((x) => x.step === "claim1");
+    if (claim) await expect(file).toContainText(claim.hash);
+  }
+  for (const word of ["€", "compliant", "accepted by"]) await expect(file).not.toContainText(word);
+  // A rejected proof: the file says so, with the failed check.
+  await page.emulateMedia({ media: "screen" });
+  await page.getByRole("button", { name: "Tamper with one number" }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText("Rejected");
+  await printButton.click();
+  await expect.poll(prints).toBe(2);
+  await page.emulateMedia({ media: "print" });
+  await expect(file).toHaveCount(1);
+  await expect(file).toContainText("INVALID — Rejected: a check failed");
+  await expect(file.locator(".if-checks tbody tr").nth(2)).toContainText("Failed");
+  await expect(file).not.toContainText("VALID — Verified");
+});
+
 test("E10 Tamper with one number → check 2 fails", async ({ page }) => {
   await page.goto("./#buyer");
   await page.getByRole("button", { name: "Load the demo proof" }).click();

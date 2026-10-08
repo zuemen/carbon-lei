@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { exportPactFromProof, type PactProduct } from "../../../sdk/pact.ts";
 import { disclosureCounts } from "../../../sdk/summary.ts";
@@ -10,6 +10,9 @@ import { comparisonFigures, proofComparison, whatIfFigures, type DemoData } from
 import { CODE_TEXT } from "../messages.ts";
 import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 import { CheckSources } from "./CheckSources.tsx";
+
+// The printable importer's file: loaded only when the importer asks for it.
+const ImporterFile = lazy(() => import("./ImporterFile.tsx"));
 
 const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 1, text: "The credential has not been altered since it was issued (its content hash matches its ID)", source: "browser" },
@@ -289,7 +292,7 @@ export function Buyer() {
   const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer, demoVerify, setDemoVerify } = useApp();
   // The last verification: the text it read, that text's proof and the result. It is shown only while the text box
   // still holds that same text, so editing, loading or tampering never leaves an earlier result on screen.
-  const [verified, setVerified] = useState<{ text: string; proof: Presentation; result: VerificationResult; cached: boolean } | null>(null);
+  const [verified, setVerified] = useState<{ text: string; proof: Presentation; result: VerificationResult; cached: boolean; at: string } | null>(null);
   const current = verified && verified.text === proofText ? verified : null;
   const result = current?.result ?? null;
   const [running, setRunning] = useState(false);
@@ -302,6 +305,9 @@ export function Buyer() {
   // The proof behind `result`; used by the PACT export and the verification record.
   const checked = current?.proof ?? null;
   const [pactBusy, setPactBusy] = useState(false);
+  // "Print the importer's file": each press mounts the printable page again (n), which opens the print dialog. It
+  // belongs to the verification it was pressed for (at), so a later result never opens the dialog by itself.
+  const [printReq, setPrintReq] = useState<{ n: number; at: string } | null>(null);
   const [pactError, setPactError] = useState("");
   // Bumped when a verification finishes; on narrow screens the summary line under Verify is then scrolled into view.
   const [finished, setFinished] = useState(0);
@@ -368,7 +374,7 @@ export function Buyer() {
       // puts it in the box). Any other text gets checks 0-3 in this browser, under the deployment's signing domain;
       // checks 4-8 need the chain, so the result is never VALID.
       if (data.cached?.verification && text === JSON.stringify(data.proof, null, 2)) {
-        setVerified({ text, proof, result: data.cached.verification as VerificationResult, cached: true });
+        setVerified({ text, proof, result: data.cached.verification as VerificationResult, cached: true, at: data.cached.time });
       } else {
         try {
           const r = await verifyOffline(
@@ -376,7 +382,7 @@ export function Buyer() {
             { registry: data.deployment.contracts.EmissionsClaimRegistry.address, chainId: data.network.chainId },
             { proofText: text },
           );
-          setVerified({ text, proof, result: r, cached: false });
+          setVerified({ text, proof, result: r, cached: false, at: new Date().toISOString() });
         } catch (e) {
           setError(`Verification could not finish: ${(e as Error).message}`);
           return;
@@ -397,7 +403,7 @@ export function Buyer() {
         checkers: evidenceCheckers(data),
         proofText: text,
       });
-      setVerified({ text, proof, result: r, cached: false });
+      setVerified({ text, proof, result: r, cached: false, at: new Date().toISOString() });
       setFinished((n) => n + 1);
     } catch (e) {
       setError(`Verification could not finish: ${(e as Error).message}`);
@@ -745,6 +751,32 @@ export function Buyer() {
           </p>
         )}
         {!rejectedProof && !incomplete && !contested && cmp && <WhatIf key={`${cmp.verifiedValue}/${cmp.quantityTonnes}`} cmp={cmp} />}
+        {result && checked && current && !running && (
+          <div className="btn-row">
+            <button className="btn btn-ghost" onClick={() => setPrintReq((r) => ({ n: (r?.n ?? 0) + 1, at: current.at }))}>
+              Print the importer's file
+            </button>
+            <span className="fine">
+              One page with this result, the credential ID, the block the checks read and the on-chain claim — print it
+              or save it as PDF for your own file. Not signed; not a CBAM document.
+            </span>
+          </div>
+        )}
+        {printReq && result && checked && current && printReq.at === current.at && (
+          <Suspense fallback={null}>
+            <ImporterFile
+              key={printReq.n}
+              data={data}
+              result={result}
+              proof={checked}
+              verifiedAt={current.at}
+              cached={current.cached}
+              pinnedBlock={current.cached ? (data.cached ? String(data.cached.block) : undefined) : result.atBlock?.toString()}
+              claim={claimTx && batchId === data.shipment.batchId ? claimTx : undefined}
+              explorer={explorer}
+            />
+          </Suspense>
+        )}
       </section>
 
       <CheckSources checks={CHECKS} />

@@ -88,6 +88,8 @@ export interface VerificationResult {
    * otherwise the time of the pinned head block.
    */
   checkedAt?: bigint;
+  /** The block every chain read was pinned to (absent when checks 4–8 did not run). */
+  atBlock?: bigint;
   /** Absent in results recorded before warnings existed (the demo's cached view). */
   warnings?: VerificationWarning[];
 }
@@ -927,6 +929,7 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     onchain,
     primaryCode: failed[0]?.code ?? "",
     checkedAt: t,
+    atBlock: head.number,
     warnings,
   };
 }

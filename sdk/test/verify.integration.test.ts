@@ -158,6 +158,14 @@ describe("verifyPresentation on a local chain", () => {
     expect(r.checkedAt).toBe(r.onchain?.claimedAt);
   });
 
+  it("reports the block every chain read was pinned to (the latest block when Verify started)", async () => {
+    const before = await c.pub.getBlockNumber({ cacheTime: 0 });
+    const r = await verifyPresentation(proof, c.reader, { importerEORI: EORI_1 });
+    const after = await c.pub.getBlockNumber({ cacheTime: 0 });
+    expect(r.atBlock).toBeTypeOf("bigint");
+    expect(r.atBlock! >= before && r.atBlock! <= after).toBe(true);
+  });
+
   it("S2 Tamper: intensity changed from 1.8 to 1.2 → DISCLOSURE_TAMPERED", async () => {
     const i = proof.disclosures.findIndex((d) => decodeDisclosure(d).name === "specificEmbeddedEmissions_tCO2e_per_t");
     const tampered = [...proof.disclosures];
