@@ -14,7 +14,7 @@ import { CheckSources } from "./CheckSources.tsx";
 const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 1, text: "The credential has not been altered since it was issued (its content hash matches its ID)", source: "browser" },
   { n: 2, text: "No disclosed field was changed", source: "browser" },
-  { n: 3, text: "Signed by the registered verification body", source: "browser" },
+  { n: 3, text: "Signed by the issuer address named in the credential (whether that address is registered is check 4)", source: "browser" },
   { n: 4, text: "The report is registered, valid for this shipment, and issued by this verification body and auditor", source: "sepolia" },
   { n: 5, text: "This batch was claimed for you, for this quantity", source: "sepolia" },
   {
