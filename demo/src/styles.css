@@ -55,23 +55,32 @@ a:hover { color: var(--ink); }
 .wordmark span { color: var(--green); }
 .masthead-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font: 400 13px/1.3 var(--mono); color: var(--ink-soft); }
 .net-chip { border: 1px solid var(--ink); padding: 3px 8px; background: var(--sheet); white-space: nowrap; }
-/* First screen: the stake (same figures as the Buyer comparison card), the question, then the evidence caveat. */
-.stake { font: 600 clamp(20px, 2.8vw, 28px)/1.3 var(--serif); margin: 16px 0 8px; max-width: 58ch; letter-spacing: -0.005em; }
-.stake-num { color: var(--green); font-weight: 700; box-shadow: inset 0 -0.34em 0 var(--green-wash); }
-.stake-note { font: 400 14px/1.45 var(--sans); color: var(--ink-soft); letter-spacing: 0; }
-/* Ledger strip under the stake: the double-claim refusal at a glance (same values as the Supplier tab's ledger). */
-.ledger-strip {
-  width: fit-content; max-width: 100%; margin: 0 0 12px; padding: 6px 12px;
-  font: 400 13px/1.6 var(--mono); color: var(--ink);
+/* First screen, largest first: the claim, the three answers (the ledger one refuses a double claim), the button
+   that verifies the demo proof, then the declared-emissions gap in body text. */
+.claim { font: 600 clamp(25px, 3.6vw, 42px)/1.18 var(--serif); margin: 18px 0 14px; max-width: 30ch; letter-spacing: -0.01em; }
+.answers {
+  list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr);
   background: var(--sheet); border: 1px solid var(--ink); border-left: 4px solid var(--green);
 }
-.ledger-tag { font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); }
+.answer { display: flex; flex-direction: column; gap: 3px; padding: 10px 14px; min-width: 0; }
+.answer + .answer { border-left: 1px solid var(--paper-rule); }
+.answer-q { font: 600 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--green); }
+.answer-a { font: 600 17px/1.3 var(--sans); color: var(--ink); }
+.answer-note { font: 400 13px/1.45 var(--sans); color: var(--ink-soft); }
+.lead-go { margin: 0 0 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.stake { font: 400 15px/1.5 var(--sans); color: var(--ink-soft); margin: 0 0 8px; max-width: 82ch; }
 .ledger-fig, .ledger-try { white-space: nowrap; }
 .ledger-sep { color: var(--ink-faint); }
 .ledger-refused { color: var(--red); text-transform: uppercase; letter-spacing: 0.04em; }
 .ledger-try { font-weight: 600; }
+@media (max-width: 760px) {
+  .answers { grid-template-columns: minmax(0, 1fr); }
+  .answer { padding: 8px 12px; }
+  .answer + .answer { border-left: 0; border-top: 1px solid var(--paper-rule); }
+  .answer-a { font-size: 16px; }
+}
 .attack:focus { outline: 2px dashed var(--green); outline-offset: 6px; }
-.subtitle { font: italic 400 clamp(16px, 1.9vw, 18.5px)/1.45 var(--sans); margin: 0 0 10px; max-width: 72ch; }
 .readonly-note { font: 400 12.5px/1.5 var(--mono); color: var(--ink-soft); margin: 0; }
 .why-note { font-size: 13px; color: var(--ink-soft); max-width: 82ch; margin: 6px 0 0; padding-left: 10px; border-left: 2px solid var(--ink-soft); }
 .link-btn {

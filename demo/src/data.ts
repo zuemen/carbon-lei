@@ -127,6 +127,14 @@ export async function loadDemoData(): Promise<DemoData> {
 export const short = (h: string, head = 6, tail = 4) =>
   h.length > head + tail + 2 ? `${h.slice(0, head)}…${h.slice(-tail)}` : h;
 
+/** Kilograms (an integer, as the contract stores tonnage) to tonnes, without trailing zeros. */
+export function kgToT(kg: unknown): string {
+  const n = BigInt(String(kg));
+  const whole = n / 1000n;
+  const frac = n % 1000n;
+  return frac === 0n ? whole.toString() : `${whole}.${frac.toString().padStart(3, "0").replace(/0+$/, "")}`;
+}
+
 export const fmt = (n: number, digits = 1) =>
   n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits });
 

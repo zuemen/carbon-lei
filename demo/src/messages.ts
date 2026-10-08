@@ -1,5 +1,9 @@
 // Plain-English text for contract reverts and verification failure codes.
 // Identifiers stay as they are in the contracts and the SDK; the page shows both.
+import { kgToT } from "./data.ts";
+
+// kgToT lives in data.ts, so the first screen does not load these tables.
+export { kgToT };
 
 export const REVERT_TEXT: Record<string, string> = {
   NotActiveVerifier:
@@ -74,9 +78,3 @@ export function revertText(name: string, args: readonly unknown[] = []): string 
   return REVERT_TEXT[name] ?? "The contract rejected this call.";
 }
 
-export function kgToT(kg: unknown): string {
-  const n = BigInt(String(kg));
-  const whole = n / 1000n;
-  const frac = n % 1000n;
-  return frac === 0n ? whole.toString() : `${whole}.${frac.toString().padStart(3, "0").replace(/0+$/, "")}`;
-}

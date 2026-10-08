@@ -1,7 +1,6 @@
 import { createContext, type KeyboardEvent, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
-import { comparisonFigures, EVIDENCE_WHY, fmt, loadDemoData, type DemoData } from "./data.ts";
-import { kgToT } from "./messages.ts";
+import { comparisonFigures, EVIDENCE_WHY, fmt, kgToT, loadDemoData, type DemoData } from "./data.ts";
 
 // Tabs and the chain client load on demand, so the first screen needs only the page shell.
 const Buyer = lazy(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
@@ -45,6 +44,9 @@ interface Ctx {
   setProofText: (s: string, fromSupplier?: boolean) => void;
   proofFromSupplier: boolean;
   explorer: (kind: "tx" | "address", value: string) => string | null;
+  /** Set by the first screen's "Verify the demo proof": the Buyer tab verifies the demo proof once it can. */
+  demoVerify: boolean;
+  setDemoVerify: (on: boolean) => void;
 }
 
 const AppContext = createContext<Ctx | null>(null);
@@ -95,6 +97,7 @@ export function App() {
   const [proofText, setProofTextRaw] = useState("");
   const [proofFromSupplier, setProofFromSupplier] = useState(false);
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
+  const [demoVerify, setDemoVerify] = useState(false);
   const attempt = useRef(0);
 
   useEffect(() => {
@@ -177,8 +180,10 @@ export function App() {
       },
       proofFromSupplier,
       explorer: (kind, value) => (data.network.explorer ? `${data.network.explorer}/${kind}/${value}` : null),
+      demoVerify,
+      setDemoVerify,
     };
-  }, [data, reader, conn, go, proofText, proofFromSupplier]);
+  }, [data, reader, conn, go, proofText, proofFromSupplier, demoVerify]);
 
   if (loadError) {
     return (
@@ -227,7 +232,18 @@ export function App() {
           </div>
         </header>
         <section aria-label="At a glance">
-          <Lead data={data} reader={reader} offline={conn.kind === "offline"} onTry={() => go("try-to-break-it", "attack-2b")} />
+          <Lead
+            data={data}
+            reader={reader}
+            offline={conn.kind === "offline"}
+            onTry={() => go("try-to-break-it", "attack-2b")}
+            onVerify={() => {
+              setProofTextRaw(JSON.stringify(data.proof, null, 2));
+              setProofFromSupplier(false);
+              setDemoVerify(true);
+              go("buyer", "proof-h");
+            }}
+          />
           <ConnectionLine conn={conn} onRetry={() => connect(data)} onCached={() => setConn({ kind: "offline" })} cachedDate={data.cached?.time} />
         </section>
       </div>
@@ -317,27 +333,42 @@ export function App() {
 }
 
 /**
- * First screen: what is at stake (same figures as the Buyer tab's comparison card), the tonnage ledger
- * refusing a double claim, the question the demo answers, and — smaller but still visible — that the
- * vLEI chain is checked against exported evidence.
+ * First screen, in order of size: the claim, three answers (who signed, authorised, tonnes left; the last one
+ * refusing a double claim), one button that runs the Buyer tab's checks on the demo proof, then — in body text —
+ * the declared-emissions gap (true of any verified value, not CarbonLEI's contribution) and the evidence caveat.
  */
-function Lead(props: { data: DemoData; reader: ChainReader | null; offline: boolean; onTry: () => void }) {
+function Lead(props: { data: DemoData; reader: ChainReader | null; offline: boolean; onTry: () => void; onVerify: () => void }) {
   const { data } = props;
   const [why, setWhy] = useState(false);
   const cmp = data.comparison;
   const f = comparisonFigures(cmp);
+  const body = data.trustChain.find((n) => n.id === "body")?.name;
   return (
     <>
-      <p className="stake">
-        Declaring this supplier's verified {cmp.verifiedValue} tCO2e/t instead of the CBAM default of{" "}
-        {cmp.defaultValue} tCO2e/t (with 2026 mark-up) means{" "}
-        <strong className="stake-num">{fmt(f.gap)} tCO2e less declared</strong> on one {fmt(f.q)} t shipment{" "}
-        <span className="stake-note">— illustrative, gross: a gap in what is declared, not a physical reduction.</span>
+      <p className="claim">A carbon number is only as trustworthy as the person who signed it.</p>
+      <ul className="answers" aria-label="What the checks answer">
+        <li className="answer">
+          <span className="answer-q">Who signed</span>
+          <strong className="answer-a">Signer identified · vLEI credential</strong>
+          {body && <span className="answer-note">{body}</span>}
+        </li>
+        <li className="answer">
+          <span className="answer-q">Authorised</span>
+          <strong className="answer-a">Role at the registering block</strong>
+          <span className="answer-note">checked by the contract when the report was registered</span>
+        </li>
+        <LedgerStrip data={data} reader={props.reader} offline={props.offline} onTry={props.onTry} />
+      </ul>
+      <p className="lead-go">
+        <button type="button" className="btn" onClick={props.onVerify}>
+          Verify the demo proof
+        </button>{" "}
+        <span className="answer-note">Loads it on the Buyer tab and runs the eight checks.</span>
       </p>
-      <LedgerStrip data={data} reader={props.reader} offline={props.offline} onTry={props.onTry} />
-      <p className="subtitle">
-        Before an importer relies on that number: who signed it, were they authorised, and were these tonnes already
-        claimed?
+      <p className="stake">
+        {fmt(f.gap)} tCO2e on one {fmt(f.q)} t shipment ({cmp.verifiedValue} verified vs the {cmp.defaultValue} tCO2e/t
+        CBAM default with 2026 mark-up): the declared-emissions gap any verified value has (gross, illustrative), not a
+        physical reduction.
       </p>
       <p className="readonly-note">
         Read-only, no wallet needed · on-chain checks live on Sepolia · vLEI chain: exported evidence (
@@ -362,10 +393,10 @@ function Lead(props: { data: DemoData; reader: ChainReader | null; offline: bool
 const tonnesToKg = (t: string) => BigInt(Math.round(Number(t) * 1000));
 
 /**
- * One line under the stake: the report's verified tonnes, what is claimed and what is left, and the second
- * importer's claim that the contract refuses (Try to break it, card 2b). Same source as the Supplier tab's
- * ledger: the live contract once connected, the cached snapshot in the offline view; until then the
- * snapshot recorded when the demo data was built (or, without one, the demo shipment).
+ * The third answer: the report's verified tonnes, what is claimed and what is left, and the second importer's
+ * claim that the contract refuses (Try to break it, card 2b). Same source as the Supplier tab's ledger: the live
+ * contract once connected, the cached snapshot in the offline view; until then the snapshot recorded when the
+ * demo data was built (or, without one, the demo shipment).
  */
 function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offline: boolean; onTry: () => void }) {
   const { data, reader, offline } = props;
@@ -396,40 +427,43 @@ function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offlin
     </>
   );
   return (
-    <p className="ledger-strip">
-      <span className="ledger-tag">Ledger</span>{" "}
-      <span className="ledger-fig">
-        <strong className="ledger-verified">{kgToT(verifiedKg)}</strong> t verified
-      </span>{" "}
-      {sep}
-      <span className="ledger-fig">
-        <strong className="ledger-claimed">{kgToT(claimedKg)}</strong> t claimed
-      </span>{" "}
-      {sep}
-      <span className="ledger-fig">
-        <strong className="ledger-left">{kgToT(leftKg)}</strong> t left
+    <li className="answer ledger-strip">
+      <span className="answer-q">Tonnes left</span>
+      <strong className="answer-a">
+        <span className="ledger-fig">
+          <span className="ledger-verified">{kgToT(verifiedKg)}</span> verified
+        </span>{" "}
+        {sep}
+        <span className="ledger-fig">
+          <span className="ledger-claimed">{kgToT(claimedKg)}</span> claimed
+        </span>{" "}
+        {sep}
+        <span className="ledger-fig">
+          <span className="ledger-left">{kgToT(leftKg)}</span> left
+        </span>
+      </strong>
+      <span className="answer-note">
+        {refused && (
+          <>
+            <span className="ledger-refusal">
+              a <span className="ledger-second">{second}</span>&nbsp;t claim is <strong className="ledger-refused">refused</strong>
+            </span>{" "}
+            {sep}
+          </>
+        )}
+        <a
+          className="ledger-try"
+          href="#try-to-break-it"
+          onClick={(e) => {
+            e.preventDefault();
+            props.onTry();
+          }}
+        >
+          Try it (2b)<span aria-hidden="true"> →</span>
+          <span className="sr-only"> on the Try to break it tab</span>
+        </a>
       </span>
-      {refused && (
-        <>
-          {" "}
-          <span className="ledger-refusal">
-            — a <strong className="ledger-second">{second}</strong>&nbsp;t claim for a second importer is{" "}
-            <strong className="ledger-refused">refused</strong>.
-          </span>
-        </>
-      )}{" "}
-      <a
-        className="ledger-try"
-        href="#try-to-break-it"
-        onClick={(e) => {
-          e.preventDefault();
-          props.onTry();
-        }}
-      >
-        Try it (2b)<span aria-hidden="true"> →</span>
-        <span className="sr-only"> on the Try to break it tab</span>
-      </a>
-    </p>
+    </li>
   );
 }
 

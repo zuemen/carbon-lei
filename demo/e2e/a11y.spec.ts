@@ -152,6 +152,16 @@ test("A3 keyboard only: the evidence note, the tabs, the comparison panel and th
   await expect(page.locator("ol.a4-checks > li")).toHaveCount(8);
 });
 
+test("A2b keyboard only: Verify the demo proof on the first screen", async ({ page }) => {
+  await page.goto("./#buyer");
+  await connected(page);
+  const go = page.getByRole("button", { name: "Verify the demo proof" });
+  await tabTo(page, go);
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  await expect(page.locator(".verify-summary")).toContainText(/\d of 8 checks passed/);
+});
+
 test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse click", async ({ page, browserName }) => {
   await page.goto("./#buyer");
   await connected(page);

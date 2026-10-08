@@ -140,7 +140,7 @@ async function supplierLedger(page: Page) {
   return { verified: num("Verified"), claimed: num("Claimed"), left: num("Remaining") };
 }
 
-test("First screen ledger strip: the Supplier tab's ledger values, the second importer's claim refused, one line, a link to card 2b", async ({ page }) => {
+test("First screen ledger answer: the Supplier tab's ledger values, the second importer's claim refused, a link to card 2b", async ({ page }) => {
   const data = await (await page.request.get("demo-data.json")).json();
   await page.goto("./#buyer");
   await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
@@ -152,21 +152,77 @@ test("First screen ledger strip: the Supplier tab's ledger values, the second im
   await expect(strip.locator(".ledger-left")).toHaveText(ledger.left);
   await expect(strip.locator(".ledger-second")).toHaveText(data.attacks.secondImporter.quantityTonnes);
   expect(Number(data.attacks.secondImporter.quantityTonnes)).toBeGreaterThan(Number(ledger.left));
-  await expect(strip.locator(".ledger-refusal")).toHaveText(
-    `— a ${data.attacks.secondImporter.quantityTonnes} t claim for a second importer is refused.`,
-  );
-  // One line at 1280 px (the default viewport here is 1280 wide).
+  await expect(strip.locator(".ledger-refusal")).toHaveText(`a ${data.attacks.secondImporter.quantityTonnes} t claim is refused`);
+  // The figures stay on one line at 1280 px (the default viewport here is 1280 wide).
   expect(page.viewportSize()?.width).toBe(1280);
-  const lines = await strip.evaluate((el) => {
-    const cs = getComputedStyle(el);
-    return Math.round((el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight));
-  });
+  const figs = strip.locator(".answer-a");
+  const lines = await figs.evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)));
   expect(lines).toBe(1);
   // The link opens Try to break it and focuses card 2b.
   await strip.getByRole("link", { name: /^Try it \(2b\)/ }).click();
   await expect(page.getByRole("tab", { name: "Try to break it" })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("#attack-2b")).toBeFocused();
   await expect(page.locator("#attack-2b")).toBeInViewport();
+});
+
+test("First screen order: the claim largest, three answers in one row, the declared-emissions gap in body text", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const c = data.comparison;
+  const gap = (Number(c.defaultValue) * Number(c.quantityTonnes) - Number(c.verifiedValue) * Number(c.quantityTonnes)).toFixed(1);
+  await page.goto("./#buyer");
+  const glance = page.getByRole("region", { name: "At a glance" });
+  const claim = glance.locator(".claim");
+  await expect(claim).toHaveText("A carbon number is only as trustworthy as the person who signed it.");
+  const answers = glance.getByRole("list", { name: "What the checks answer" }).getByRole("listitem");
+  await expect(answers).toHaveCount(3);
+  await expect(answers.locator(".answer-q")).toHaveText(["Who signed", "Authorised", "Tonnes left"]);
+  await expect(answers.nth(0).locator(".answer-a")).toHaveText("Signer identified · vLEI credential");
+  await expect(answers.nth(1).locator(".answer-a")).toHaveText("Role at the registering block");
+  // One row at 1280 px: the three answers share a top edge.
+  const tops = await answers.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  // The gap is stated with its attribution, in body text, and in no currency.
+  const stake = glance.locator(".stake");
+  await expect(stake).toContainText(`${gap} tCO2e`);
+  await expect(stake).toContainText("the declared-emissions gap any verified value has (gross, illustrative)");
+  await expect(stake).toContainText("not a physical reduction");
+  await expect(glance).not.toContainText("€");
+  // Font sizes: the claim is the largest text in the region; the element holding the gap is smaller than the
+  // claim and than the answers.
+  const px = (l: typeof claim) => l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  const largest = await glance.evaluate((root) => {
+    let max = 0;
+    const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const el = n.parentElement;
+      if (n.textContent?.trim() && el && el.offsetParent !== null) max = Math.max(max, parseFloat(getComputedStyle(el).fontSize));
+    }
+    return max;
+  });
+  const gapEl = glance.getByText(new RegExp(`^${gap.replace(".", "\\.")} tCO2e`));
+  expect(await px(claim)).toBe(largest);
+  expect(await px(gapEl)).toBeLessThan(await px(claim));
+  expect(await px(gapEl)).toBeLessThan(await px(answers.nth(2).locator(".answer-a")));
+  await expect(glance.getByText(/Read-only, no wallet needed/)).toBeVisible();
+});
+
+test("First screen on a 390 px phone: Verify the demo proof is on screen and runs the Buyer tab's checks", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./#supplier");
+  await expect(page.locator(".claim")).toBeInViewport();
+  const go = page.getByRole("button", { name: "Verify the demo proof" });
+  const box = await go.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(844);
+  await expect(page.locator(".answers")).toBeInViewport({ ratio: 1 });
+  // Pressed before the chain is reached, it still runs once the page is connected.
+  await go.click();
+  await expect(page.getByRole("tab", { name: "Buyer" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#proof-in")).toHaveValue(/"core"/);
+  const summary = page.locator(".verify-summary");
+  await expect(summary).toContainText(/\d of 8 checks passed/);
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  await expect(summary).toBeInViewport();
 });
 
 test("First screen ledger strip in the offline view: the cached ledger, as on the Supplier tab", async ({ page }) => {

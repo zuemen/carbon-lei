@@ -286,7 +286,7 @@ function ProofSummary({ text }: { text: string }) {
 }
 
 export function Buyer() {
-  const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer } = useApp();
+  const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer, demoVerify, setDemoVerify } = useApp();
   // The last verification: the text it read, that text's proof and the result. It is shown only while the text box
   // still holds that same text, so editing, loading or tampering never leaves an earlier result on screen.
   const [verified, setVerified] = useState<{ text: string; proof: Presentation; result: VerificationResult; cached: boolean } | null>(null);
@@ -340,6 +340,17 @@ export function Buyer() {
       setFromQr(true);
     }
   }, [data, proofText, setProofText]);
+
+  // "Verify the demo proof" on the first screen put the demo proof in the box: verify it once the chain is
+  // reachable (or the cached view is chosen). Any other text in the box by then cancels the request.
+  useEffect(() => {
+    if (!demoVerify || running || (!reader && !offline)) return;
+    setDemoVerify(false);
+    if (proofText !== JSON.stringify(data.proof, null, 2)) return;
+    setAccepted(false);
+    setTampered(false);
+    void run(proofText);
+  }, [demoVerify, running, reader, offline, proofText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run(text: string) {
     setError("");
