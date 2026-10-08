@@ -1,5 +1,7 @@
 # Judging criteria and where the evidence is
 
+One-page judge brief (PDF): [docs/judge-brief.pdf](judge-brief.pdf)
+
 Two sets of criteria apply: the five on the [Devpost page](https://ieee-climatechain-hack.devpost.com/), and the weighted criteria and deliverables on the [organiser's hackathon page](https://cmte.ieee.org/turkiye-blockchain/hackatlon/) (IEEE Blockchain Türkiye; both read 2026-10-07). Each row links to the evidence in this repository. Where we have nothing to show, we say so.
 
 ## Five-minute path for reviewers

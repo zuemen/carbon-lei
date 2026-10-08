@@ -6,6 +6,8 @@ A carbon number is only as trustworthy as the person who signed it.
 
 **Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) (read-only, no wallet) → **Load** (the demo proof) → **Verify** → **Try to break it** → card 4: press "Verify the impostor's proof".
 
+One-page judge brief (PDF): [docs/judge-brief.pdf](docs/judge-brief.pdf)
+
 **Five-minute path** (demo, phone QR, three terminal commands): [what you should see at each step](docs/JUDGING_CRITERIA.md#five-minute-path-for-reviewers).
 
 <a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed and the declared-emissions gap for one 200 t shipment"></a>
