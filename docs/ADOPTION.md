@@ -151,6 +151,11 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 
 The tonnage cap binds only among buyers that check proofs against the same ledger, that is, the same contract deployment. An importer that does not take part can still claim the same verified value elsewhere, and CarbonLEI cannot stop it. The cap is voluntary, not a CBAM rule.
 
+**What a passing check guarantees, and what it does not.** When checks 1–5 pass:
+
+- *Guaranteed, within this deployment:* the credential is unaltered and was signed by the verification body's registered address for this chain and contract (checks 1–3); the report is registered here and, at the time the check judges it ([FAQ Q15](FAQ.md)), was not revoked, superseded or expired (check 4); the shipment was claimed once, for the importer whose EORI was given, and the claims of every importer on this deployment stay within the report's verified tonnage (check 5 and the ledger). With checks 6 and 7, the lead auditor anchored the credential and held authority under the pinned root at registration, as far as the presented evidence and the synced allowlist show.
+- *Not guaranteed:* that the same tonnes were not also given to a buyer outside this deployment, through the e-signed PDF, the Excel file, the CBAM Registry or a credential the body signed again for another deployment ([SECURITY T22](SECURITY.md#4-threat-model)); that the emissions value is correct, which is the verification body's work; that the goods come from the installation (T6); that an off-chain revocation the watcher has not synced is reflected (T18); or that any CBAM authority accepts the record (§7).
+
 Who has a reason to enforce it:
 
 - **Verification bodies.** CarbonLEI's verification treats a report credential as valid only once it is registered: a proof whose report is not on-chain fails check 4 (`REPORT_INVALID/NOT_REGISTERED`). A body whose customers check proofs therefore has a reason to register every report it issues.
