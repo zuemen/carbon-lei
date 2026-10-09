@@ -1,0 +1,43 @@
+*** CarbonLEI Maude checks: one command per line, each run in its own Maude process by run.sh.
+*** Each line is "<expected> : <command>": none = no solution, found = a solution, true = the LTL
+*** formula holds, counterexample = it does not. run.sh fails if any result differs. Results: README.md.
+select CARBONLEI .
+*** --- A. Safety: every property expected to hold (safetyBad), expected: No solution
+none : search keriInst(up, 4) =>* { S:Conf } such that safetyBad(S:Conf) .
+none : search (keriInst(up, 4) withDelta 2) =>* { S:Conf } such that safetyBad(S:Conf) .
+none : search suspInst(3) =>* { S:Conf } such that safetyBad(S:Conf) .
+none : search (suspInst(3) withDelta 2) =>* { S:Conf } such that safetyBad(S:Conf) .
+none : search revInst(4) =>* { S:Conf } such that safetyBad(S:Conf) .
+none : search dupInst(4) =>* { S:Conf } such that safetyBad(S:Conf) .
+*** --- B. Non-vacuity: the safe instances do reach the interesting states, expected: a solution
+found : search [1] revInst(4) =>* { S:Conf } such that revWitness(S:Conf) .
+found : search [1] keriInst(up, 4) =>* { S:Conf } such that contestedAfterKeri(S:Conf) .
+found : search [1] keriInst(up, 4) =>* { S:Conf } such that twoImporters(S:Conf) .
+*** --- C. Sanity counterexample: the watcher stopped (down) or later than delta (late), expected: a solution (keriBad)
+found : search [1] keriInst(down, 4) =>* { S:Conf } such that keriBad(S:Conf) .
+found : search [1] keriInst(late, 4) =>* { S:Conf } such that keriBad(S:Conf) .
+*** --- D. Documented limits, expected: a solution each (T2/T18 sync window, T19 (8), CR6, attack 4 on-chain)
+found : search [1] keriInst(up, 4) =>* { S:Conf } such that keriRace(S:Conf) .
+found : search [1] dupInst(4) =>* { S:Conf } such that onchainSumBad(S:Conf) .
+found : search [1] keriInst(up, 4) =>* { S:Conf } such that viewsBad(S:Conf) .
+found : search [1] keriInst(up, 4) =>* { S:Conf } such that impostorRegistered(S:Conf) .
+*** --- E. Mutants: one guard or check removed, expected: a solution each (the properties can fail)
+found : search [1] dupInst(4) +mut noCap =>* { S:Conf } such that p1Bad(S:Conf) .
+found : search [1] keriInst(up, 4) +mut noAuthGuard =>* { S:Conf } such that regAfterRevBad(S:Conf) .
+found : search [1] keriInst(up, 4) +mut noCheck5 =>* { S:Conf } such that replayBad(S:Conf) .
+found : search [1] keriInst(up, 4) +mut noCheck5 =>* { S:Conf } such that ledgerBad(S:Conf) .
+found : search [1] keriInst(up, 4) +mut noRoot =>* { S:Conf } such that authBad(S:Conf) .
+found : search [1] dupInst(4) +mut noScope =>* { S:Conf } such that ledgerBad(S:Conf) .
+found : search [1] keriInst(up, 4) +mut noContested =>* { S:Conf } such that windowBad(S:Conf) .
+found : search [1] suspInst(3) +mut noContested =>* { S:Conf } such that windowBad(S:Conf) .
+found : search [1] keriInst(up, 4) +mut noEvidenceRev =>* { S:Conf } such that evidenceBad(S:Conf) .
+found : search [1] revInst(4) +mut noSupersede =>* { S:Conf } such that supersededBad(S:Conf) .
+select CARBONLEI-LTL .
+*** --- F. LTL: true expected, except the second (watcher down: counterexample)
+true : red modelCheck(keriInst(up, 3), [] (keriRevokedP(a1) -> <> chainRevokedP(a1))) .
+counterexample : red modelCheck(keriInst(down, 3), [] (keriRevokedP(a1) -> <> chainRevokedP(a1))) .
+true : red modelCheck(keriInst(up, 3), [] (contestedP(r1) -> [] ~ validP(r1))) .
+true : red modelCheck(suspInst(2), [] (contestedP(r1) -> [] ~ validP(r1))) .
+true : red modelCheck(keriInst(up, 3), [] (chainRevokedP(a1) -> [] chainRevokedP(a1))) .
+true : red modelCheck(keriInst(up, 3), [] safeP) .
+true : red modelCheck(revInst(3), [] safeP) .

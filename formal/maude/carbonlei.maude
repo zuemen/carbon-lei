@@ -1,0 +1,533 @@
+*** CarbonLEI protocol model in rewriting logic (Maude 3.5.1).
+***
+*** A bounded, abstract model of the CarbonLEI protocol: the allowlist (bodies, auditors,
+*** suspension), the off-chain ECR revocation in KERI, the watcher that mirrors it on-chain,
+*** registration and the tonnage ledger of EmissionsClaimRegistry, claims, and the verdict of
+*** the SDK verifier (checks 4, 5 and 7, with the CONTESTED window of check 4).
+***
+*** Cryptography is assumed perfect: nobody can forge a credential, an EIP-712 signature or a KEL
+*** anchor, so checks 1-3 and 6 pass for every genuine object and the attacker can only re-use,
+*** re-present, mis-register or mis-quantify genuine objects (Dolev-Yao without key compromise,
+*** except the stolen allowlist owner key of attack 4, modelled as an impostor body on the allowlist).
+*** Time is discretised into ticks; delta is both the CONTESTED window and the watcher's sync bound
+*** of assumption A-Watch, in ticks.
+***
+*** See formal/maude/README.md and docs/SECURITY.md §9.3 for what is modelled, what is not, and
+*** the results. This is a bounded model check of an abstract model, not a proof that the protocol
+*** or the code is secure.
+
+load model-checker
+
+fmod CARBONLEI-DATA is
+  protecting NAT .
+  sorts Body Auditor Report OptReport Importer Root Slot WMode Ev Verdict Mutant .
+  subsort Report < OptReport .
+  ops b1 b2 : -> Body [ctor] .
+  ops a1 a2 : -> Auditor [ctor] .
+  ops r1 r2 : -> Report [ctor] .
+  op noRep : -> OptReport [ctor] .
+  ops i1 i2 : -> Importer [ctor] .
+  *** root of the body's vLEI chain: the pinned root, or another root (attack 4)
+  ops pinned other : -> Root [ctor] .
+  *** ledger slots: the pair (reportScopeKey, credScopeKey) collapsed to one label
+  ops X Y Z : -> Slot [ctor] .
+  *** watcher: up = syncs within delta (A-Watch); late = syncs at any later time or never; down = never
+  ops up late down : -> WMode [ctor] .
+  *** evidence: the supplier includes the ECR's anchored TEL revocation, or leaves it out
+  ops withRev noRev : -> Ev [ctor] .
+  ops VALID CONTESTED INVALID : -> Verdict [ctor] .
+  *** mutants: each removes one guard of the contract or one check of the verifier
+  ops noCap noAuthGuard noCheck5 noRoot noScope noContested noEvidenceRev noSupersede : -> Mutant [ctor] .
+endfm
+
+mod CARBONLEI is
+  protecting CARBONLEI-DATA .
+  sorts Fact Conf Sys Acc AccSet .
+  subsort Fact < Conf .
+  subsort Acc < AccSet .
+  op empty : -> Conf [ctor] .
+  op __ : Conf Conf -> Conf [ctor assoc comm id: empty] .
+  op {_} : Conf -> Sys [ctor] .
+  *** ac(r, i, q): importer i accepted (VALID or CONTESTED) a proof of this batch attached to
+  *** credential r and stating quantity q
+  op ac : Report Importer Nat -> Acc [ctor] .
+  op noAcc : -> AccSet [ctor] .
+  op _;_ : AccSet AccSet -> AccSet [ctor assoc comm id: noAcc] .
+
+  *** --- environment and parameters
+  op clock : Nat -> Fact [ctor] .
+  op tmax : Nat -> Fact [ctor] .
+  op delta : Nat -> Fact [ctor] .
+  op wmode : WMode -> Fact [ctor] .
+  op mut : Mutant -> Fact [ctor] .
+  *** one-shot permissions for the environment's actions
+  op allowSuspend : Body -> Fact [ctor] .
+  op allowLift : Body -> Fact [ctor] .
+  op allowKeri : Auditor -> Fact [ctor] .
+  *** claim times are recorded only where check 4 can use them (supersession); elsewhere 0
+  op claimTimes : -> Fact [ctor] .
+  op slotLabel : Slot -> Fact [ctor] .
+  *** the slot labels a registrant may name for a credential (its true slot, or another one: T19 (8))
+  op canReg : Report Slot -> Fact [ctor] .
+  op importer : Importer -> Fact [ctor] .
+  *** --- allowlist (VerifierAllowlist); every entry added at time 0
+  *** body(b, root of its vLEI chain, accreditedUntil)
+  op body : Body Root Nat -> Fact [ctor] .
+  op aud : Auditor Body -> Fact [ctor] .
+  op susp : Body Nat -> Fact [ctor] .
+  op lifted : Body Nat -> Fact [ctor] .
+  *** allowlist revokedAt: block time of the watcher's revokeAuditor, not the KERI time
+  op chainRev : Auditor Nat -> Fact [ctor] .
+  *** --- KERI (off-chain truth): the body revoked the auditor's ECR at time n
+  op keriRev : Auditor Nat -> Fact [ctor] .
+  *** the watcher's queue: a KERI revocation (time n) not yet mirrored on-chain
+  op pend : Auditor Nat -> Fact [ctor] .
+  *** --- credentials signed by a body's key and anchored by its auditor
+  *** cred(r, body, auditor, verifiedKg, true slot from the signed fields, supersedes)
+  op cred : Report Body Auditor Nat Slot OptReport -> Fact [ctor] .
+  *** --- EmissionsClaimRegistry
+  *** reg(r, registeredAt, slot label it was registered under,
+  ***     ghost: auditor's ECR already revoked in KERI, ghost: already revoked on the allowlist)
+  op reg : Report Nat Slot Bool Bool -> Fact [ctor] .
+  *** slot(label, latest credential, cumulative claimedKg)
+  op slot : Slot Report Nat -> Fact [ctor] .
+  op supBy : Report Report Nat -> Fact [ctor] .
+  *** an unclaimed batch of q tonnes (batches are anonymous: symmetric, so not named)
+  op ship : Nat -> Fact [ctor] .
+  *** claimed(report, importer, quantity, claimedAt, the proofs of this batch accepted so far)
+  op claimed : Report Importer Nat Nat AccSet -> Fact [ctor] .
+
+  vars S ST : Conf . vars N M K T T' E Q Q0 Q' V C D TR T2 : Nat .
+  vars B B' : Body . vars A A' : Auditor . vars R R' R0 : Report . var O : OptReport .
+  vars L P : Slot . var W : WMode . vars I I0 I' : Importer .
+  var Rt : Root . vars F1 F2 : Bool . var EV : Ev . var Mu : Mutant . vars AS AS' AS'' : AccSet .
+
+  *** ------------------------------------------------------------ state queries
+  op mutant : Mutant Conf -> Bool .
+  eq mutant(Mu, mut(Mu) S) = true .
+  eq mutant(Mu, S) = false [owise] .
+
+  op now : Conf -> Nat .
+  eq now(clock(N) S) = N .
+  op dlt : Conf -> Nat .
+  eq dlt(delta(D) S) = D .
+  op claimTime : Conf -> Nat .
+  eq claimTime(claimTimes clock(N) S) = N .
+  eq claimTime(S) = 0 [owise] .
+
+  op keriRevoked : Auditor Conf -> Bool .
+  eq keriRevoked(A, keriRev(A, N) S) = true .
+  eq keriRevoked(A, S) = false [owise] .
+  op chainRevoked : Auditor Conf -> Bool .
+  eq chainRevoked(A, chainRev(A, N) S) = true .
+  eq chainRevoked(A, S) = false [owise] .
+  op hasSusp : Body Conf -> Bool .
+  eq hasSusp(B, susp(B, N) S) = true .
+  eq hasSusp(B, S) = false [owise] .
+  op hasLift : Body Conf -> Bool .
+  eq hasLift(B, lifted(B, N) S) = true .
+  eq hasLift(B, S) = false [owise] .
+
+  *** contract view at the current time: isInstitutionActiveAt(now), latest suspension interval
+  op activeNow : Body Nat Conf -> Bool .
+  eq activeNow(B, N, body(B, Rt, T) S) = N <= T and (not hasSusp(B, S) or hasLift(B, S)) .
+  eq activeNow(B, N, S) = false [owise] .
+  *** isAuthorizedAt(now): the auditor is listed under the body and not revoked on the allowlist
+  op audAuthNow : Auditor Body Conf -> Bool .
+  eq audAuthNow(A, B, aud(A, B) S) = mutant(noAuthGuard, S) or not chainRevoked(A, S) .
+  eq audAuthNow(A, B, S) = false [owise] .
+
+  op isReg : Report Conf -> Bool .
+  eq isReg(R, reg(R, N, L, F1, F2) S) = true .
+  eq isReg(R, S) = false [owise] .
+  op regTime : Report Conf -> Nat .
+  eq regTime(R, reg(R, N, L, F1, F2) S) = N .
+  op regSlot : Report Conf -> Slot .
+  eq regSlot(R, reg(R, N, L, F1, F2) S) = L .
+  op hasSlot : Slot Conf -> Bool .
+  eq hasSlot(L, slot(L, R, C) S) = true .
+  eq hasSlot(L, S) = false [owise] .
+
+  op bodyOf : Report Conf -> Body .
+  eq bodyOf(R, cred(R, B, A, V, P, O) S) = B .
+  op audOf : Report Conf -> Auditor .
+  eq audOf(R, cred(R, B, A, V, P, O) S) = A .
+  op vkg : Report Conf -> Nat .
+  eq vkg(R, cred(R, B, A, V, P, O) S) = V .
+  op trueSlot : Report Conf -> Slot .
+  eq trueSlot(R, cred(R, B, A, V, P, O) S) = P .
+  op rootOf : Body Conf -> Root .
+  eq rootOf(B, body(B, Rt, T) S) = Rt .
+  op accUntil : Body Conf -> Nat .
+  eq accUntil(B, body(B, Rt, T) S) = T .
+
+  *** ------------------------------------------------------------ rules
+  *** time advances; with a watcher that is up, not past an unsynced revocation's deadline (A-Watch)
+  crl [tick] : { clock(N) tmax(M) S } => { clock(s N) tmax(M) S }
+    if N < M /\ noOverdue(N, S) .
+  op noOverdue : Nat Conf -> Bool .
+  eq noOverdue(N, wmode(up) delta(D) pend(A, K) S) =
+     N < K + D and noOverdue(N, wmode(up) delta(D) S) .
+  eq noOverdue(N, S) = true [owise] .
+
+  *** the body revokes its auditor's ECR in KERI (the auditor leaves); the auditor keeps its KERI keys,
+  *** so it can still anchor a credential (check 6 passes)
+  rl [keri-revoke] : { allowKeri(A) clock(N) S } => { clock(N) S keriRev(A, N) pend(A, N) } .
+
+  *** the watcher mirrors it with revokeAuditor
+  crl [watcher-sync] : { pend(A, K) wmode(W) clock(N) S } => { wmode(W) clock(N) S chainRev(A, N) }
+    if W =/= down .
+
+  *** suspendVerifier / liftSuspension, sent by hand with the watcher key
+  rl [suspend] : { allowSuspend(B) clock(N) S } => { clock(N) S susp(B, N) } .
+  crl [lift] : { allowLift(B) clock(N) S } => { clock(N) S lifted(B, N) } if hasSusp(B, S) .
+
+  *** registerReport into an empty slot (branch a); the registrant names the slot label
+  crl [register-new] :
+    { cred(R, B, A, V, P, noRep) canReg(R, L) clock(N) S }
+    => { cred(R, B, A, V, P, noRep) canReg(R, L) clock(N) S
+         reg(R, N, L, keriRevoked(A, S), chainRevoked(A, S)) slot(L, R, 0) }
+    if not isReg(R, S) /\ activeNow(B, N, S) /\ audAuthNow(A, B, S) /\ not hasSlot(L, S) .
+
+  *** registerReport revising the slot's latest credential (branch b): another body only while the
+  *** original issuer is not active (NotReportIssuer); claimedKg carries over and must be covered
+  *** (SupersedeOverClaimed)
+  crl [register-revise] :
+    { cred(R, B, A, V, P, R') slot(L, R', C) clock(N) S }
+    => { cred(R, B, A, V, P, R') slot(L, R, C) clock(N) S
+         reg(R, N, L, keriRevoked(A, S), chainRevoked(A, S)) supBy(R', R, N) }
+    if not isReg(R, S) /\ activeNow(B, N, S) /\ audAuthNow(A, B, S)
+       /\ (V >= C or mutant(noCap, S))
+       /\ (bodyOf(R', S) == B or not activeNow(bodyOf(R', S), N, S)) .
+
+  *** claimShipment by the supplier, against a slot's latest credential, declared to any importer
+  crl [claim] :
+    { ship(Q) slot(L, R, C) importer(I) S }
+    => { slot(L, R, C + Q) importer(I) S claimed(R, I, Q, claimTime(S), noAcc) }
+    if C + Q <= vkg(R, S) or mutant(noCap, S) .
+
+  *** Acceptance ghost. An importer may verify any proof at any time: a claimed batch attached to ANY
+  *** credential R (Dolev-Yao re-use), presented to ANY importer I (replay to another importer), stating
+  *** the claimed quantity or one more (over-claim); the supplier leaves revocations out of the evidence.
+  *** Rather than one interleaving per verification, every reached state is closed under acceptance:
+  *** each proof the verifier would accept (VALID or CONTESTED) there is recorded in the batch's AccSet.
+  *** So the AccSets hold exactly the proofs accepted by some importer at some reached state.
+  ceq { claimed(R0, I0, Q0, T, AS) cred(R, B, A, V, P, O) importer(I) S }
+    = { claimed(R0, I0, Q0, T, AS ; ac(R, I, Q0)) cred(R, B, A, V, P, O) importer(I) S }
+    if not inAcc(ac(R, I, Q0), AS)
+       /\ verdictShip(R, I, Q0, noRev, R0, I0, Q0, T,
+            claimed(R0, I0, Q0, T, AS) cred(R, B, A, V, P, O) importer(I) S) =/= INVALID .
+  ceq { claimed(R0, I0, Q0, T, AS) cred(R, B, A, V, P, O) importer(I) S }
+    = { claimed(R0, I0, Q0, T, AS ; ac(R, I, s Q0)) cred(R, B, A, V, P, O) importer(I) S }
+    if not inAcc(ac(R, I, s Q0), AS)
+       /\ verdictShip(R, I, s Q0, noRev, R0, I0, Q0, T,
+            claimed(R0, I0, Q0, T, AS) cred(R, B, A, V, P, O) importer(I) S) =/= INVALID .
+  op inAcc : Acc AccSet -> Bool .
+  eq inAcc(ac(R, I, Q), ac(R, I, Q) ; AS) = true .
+  eq inAcc(ac(R, I, Q), AS) = false [owise] .
+
+  *** ------------------------------------------------------------ the verifier (sdk/verify.ts)
+  *** A proof of a batch: credential R, presented to importer I, stating quantity Q; the batch was
+  *** claimed against R0 for I0 with Q0 at T. Checks 4, 5 and 7; checks 1-3 and 6 pass (perfect crypto).
+  op verdictShip : Report Importer Nat Ev Report Importer Nat Nat Conf -> Verdict .
+  eq verdictShip(R, I, Q, EV, R0, I0, Q0, T, ST) =
+     if not isReg(R, ST) then INVALID
+     else if check4fail(R, (if R == R0 and I == I0 then T else now(ST) fi), R == R0 and I == I0, ST)
+             or check5fail(R, I, Q, R0, I0, Q0, ST) or check7fail(R, EV, ST) then INVALID
+     else if contested(R, ST) then CONTESTED else VALID fi fi fi .
+  *** a proof without a shipment (check 5 skipped; check 4 judged at the latest block)
+  op verdictCred : Report Ev Conf -> Verdict .
+  eq verdictCred(R, EV, ST) =
+     if not isReg(R, ST) then INVALID
+     else if check4fail(R, now(ST), false, ST) or check7fail(R, EV, ST) then INVALID
+     else if contested(R, ST) then CONTESTED else VALID fi fi fi .
+
+  *** check 4: scope keys (4j) and supersession at t (4d). t is the claim time only for the importer
+  *** the batch was declared to (boundToVerifier), else the latest block; the same-block exception
+  *** keeps a batch claimed in the block of the revision valid for its importer.
+  op check4fail : Report Nat Bool Conf -> Bool .
+  eq check4fail(R, T, F1, ST) =
+     (regSlot(R, ST) =/= trueSlot(R, ST) and not mutant(noScope, ST))
+     or (supersededAt(R, T, F1, ST) and not mutant(noSupersede, ST)) .
+  op supersededAt : Report Nat Bool Conf -> Bool .
+  eq supersededAt(R, T, F1, supBy(R, R', T2) S) = T >= T2 and not (F1 and T2 == T) .
+  eq supersededAt(R, T, F1, S) = false [owise] .
+
+  *** check 5: the batch was claimed against this credential, for this importer, with this quantity
+  op check5fail : Report Importer Nat Report Importer Nat Conf -> Bool .
+  eq check5fail(R, I, Q, R0, I0, Q0, ST) =
+     not (R == R0 and I == I0 and Q == Q0) and not mutant(noCheck5, ST) .
+
+  *** check 7: chain under the pinned root; allowlist at registration (revokedAt < registeredAt fails,
+  *** registeredAt > accreditedUntil fails); an anchored ECR revocation in the evidence dated before
+  *** registration fails (one dated in the same second or later is only noted)
+  op check7fail : Report Ev Conf -> Bool .
+  eq check7fail(R, EV, ST) =
+     (rootOf(bodyOf(R, ST), ST) =/= pinned and not mutant(noRoot, ST))
+     or allowlistRevokedBefore(audOf(R, ST), regTime(R, ST), ST)
+     or regTime(R, ST) > accUntil(bodyOf(R, ST), ST)
+     or (EV == withRev and evidenceRevokedBefore(audOf(R, ST), regTime(R, ST), ST)
+         and not mutant(noEvidenceRev, ST)) .
+  op allowlistRevokedBefore : Auditor Nat Conf -> Bool .
+  eq allowlistRevokedBefore(A, TR, chainRev(A, E) S) = E < TR .
+  eq allowlistRevokedBefore(A, TR, S) = false [owise] .
+  op evidenceRevokedBefore : Auditor Nat Conf -> Bool .
+  eq evidenceRevokedBefore(A, TR, keriRev(A, K) S) = K < TR .
+  eq evidenceRevokedBefore(A, TR, S) = false [owise] .
+
+  *** check 4l: CONTESTED if the auditor was revoked (on the allowlist) or the body suspended in
+  *** [registeredAt, registeredAt + delta], as seen at the latest block
+  op contested : Report Conf -> Bool .
+  eq contested(R, ST) =
+     not mutant(noContested, ST) and
+     (inWindow(chainTime(audOf(R, ST), ST), regTime(R, ST), dlt(ST))
+      or inWindow(suspTime(bodyOf(R, ST), ST), regTime(R, ST), dlt(ST))) .
+  *** event times shifted by one: 0 = no event
+  op chainTime : Auditor Conf -> Nat .
+  eq chainTime(A, chainRev(A, E) S) = s E .
+  eq chainTime(A, S) = 0 [owise] .
+  op suspTime : Body Conf -> Nat .
+  eq suspTime(B, susp(B, E) S) = s E .
+  eq suspTime(B, S) = 0 [owise] .
+  op inWindow : Nat Nat Nat -> Bool .
+  eq inWindow(0, TR, D) = false .
+  eq inWindow(s E, TR, D) = TR <= E and E <= TR + D .
+
+  *** ------------------------------------------------------------ properties (bad-state predicates)
+  *** P1 on-chain: every slot's claimedKg is at most verifiedKg of its latest credential
+  op p1Bad : Conf -> Bool .
+  eq p1Bad(slot(L, R, C) S) = C > vkg(R, S) or p1Bad(S) .
+  eq p1Bad(S) = false [owise] .
+
+  *** LEDGER: for a product (true slot), the tonnes accepted by importers, summed over every batch,
+  *** every importer and every accepted proof, exceed verifiedKg of the latest credential registered
+  *** under that slot (0 if none)
+  op ledgerBad : Conf -> Bool .
+  eq ledgerBad(ST) = ledgerBadL(ST, ST) .
+  op ledgerBadL : Conf Conf -> Bool .
+  eq ledgerBadL(slotLabel(L) S, ST) = accSum(L, ST, ST) > capOf(L, ST) or ledgerBadL(S, ST) .
+  eq ledgerBadL(S, ST) = false [owise] .
+  op accSum : Slot Conf Conf -> Nat .
+  eq accSum(L, claimed(R0, I0, Q0, T, AS) S, ST) = accSumA(L, AS, ST) + accSum(L, S, ST) .
+  eq accSum(L, S, ST) = 0 [owise] .
+  op accSumA : Slot AccSet Conf -> Nat .
+  eq accSumA(L, ac(R, I, Q) ; AS, ST) = (if trueSlot(R, ST) == L then Q else 0 fi) + accSumA(L, AS, ST) .
+  eq accSumA(L, noAcc, ST) = 0 .
+  op capOf : Slot Conf -> Nat .
+  eq capOf(L, slot(L, R, C) S) = vkg(R, S) .
+  eq capOf(L, S) = 0 [owise] .
+
+  *** ON-CHAIN SUM per product across slots (T19 (8)): claims summed over every slot holding a
+  *** credential of that product exceed the largest verifiedKg signed for that product
+  op onchainSumBad : Conf -> Bool .
+  eq onchainSumBad(ST) = onchainSumBadL(ST, ST) .
+  op onchainSumBadL : Conf Conf -> Bool .
+  eq onchainSumBadL(slotLabel(L) S, ST) = claimSum(L, ST, ST) > maxSigned(L, ST) or onchainSumBadL(S, ST) .
+  op maxSigned : Slot Conf -> Nat .
+  eq maxSigned(L, cred(R, B, A, V, P, O) S) = if P == L then max(V, maxSigned(L, S)) else maxSigned(L, S) fi .
+  eq maxSigned(L, S) = 0 [owise] .
+  eq onchainSumBadL(S, ST) = false [owise] .
+  op claimSum : Slot Conf Conf -> Nat .
+  eq claimSum(L, claimed(R, I, Q, T, AS) S, ST) = (if trueSlot(R, ST) == L then Q else 0 fi) + claimSum(L, S, ST) .
+  eq claimSum(L, S, ST) = 0 [owise] .
+
+  *** REPLAY: one batch accepted by two different importers
+  op replayBad : Conf -> Bool .
+  ceq replayBad(claimed(R0, I0, Q0, T, ac(R, I, Q) ; ac(R', I', Q') ; AS) S) = true if I =/= I' .
+  eq replayBad(S) = false [owise] .
+
+  *** AUTH: an accepted proof whose credential was not registered, was registered with an auditor
+  *** already revoked on the allowlist, or belongs to a body outside the pinned root
+  op authBad : Conf -> Bool .
+  eq authBad(ST) = authBadL(ST, ST) .
+  op authBadL : Conf Conf -> Bool .
+  eq authBadL(claimed(R0, I0, Q0, T, AS) S, ST) = authBadA(AS, ST) or authBadL(S, ST) .
+  eq authBadL(S, ST) = false [owise] .
+  op authBadA : AccSet Conf -> Bool .
+  eq authBadA(ac(R, I, Q) ; AS, ST) = authBad1(R, ST) or authBadA(AS, ST) .
+  eq authBadA(noAcc, ST) = false .
+  op authBad1 : Report Conf -> Bool .
+  eq authBad1(R, reg(R, N, L, F1, F2) S) = F2 or rootOf(bodyOf(R, S), S) =/= pinned .
+  eq authBad1(R, S) = true [owise] .
+
+  *** REG-AFTER-REVOCATION: a registration with an auditor already revoked on the allowlist (P3, P6)
+  op regAfterRevBad : Conf -> Bool .
+  eq regAfterRevBad(reg(R, N, L, F1, true) S) = true .
+  eq regAfterRevBad(S) = false [owise] .
+
+  *** EVIDENCE: a credential whose proof carries an anchored ECR revocation dated before its
+  *** registration is not INVALID
+  op evidenceBad : Conf -> Bool .
+  eq evidenceBad(ST) = evidenceBadL(ST, ST) .
+  op evidenceBadL : Conf Conf -> Bool .
+  eq evidenceBadL(reg(R, N, L, F1, F2) S, ST) =
+     (evidenceRevokedBefore(audOf(R, ST), N, ST) and verdictCred(R, withRev, ST) =/= INVALID)
+     or evidenceBadL(S, ST) .
+  eq evidenceBadL(S, ST) = false [owise] .
+
+  *** WINDOW: a credential whose auditor was revoked on the allowlist, or whose body was suspended,
+  *** within delta after its registration is VALID (alone, or with a batch shown to its own importer)
+  op windowBad : Conf -> Bool .
+  eq windowBad(ST) = windowBadL(ST, ST) .
+  op windowBadL : Conf Conf -> Bool .
+  eq windowBadL(reg(R, N, L, F1, F2) S, ST) =
+     ((inWindow(chainTime(audOf(R, ST), ST), N, dlt(ST)) or inWindow(suspTime(bodyOf(R, ST), ST), N, dlt(ST)))
+      and anyValid(R, ST))
+     or windowBadL(S, ST) .
+  eq windowBadL(S, ST) = false [owise] .
+  op anyValid : Report Conf -> Bool .
+  eq anyValid(R, ST) = verdictCred(R, noRev, ST) == VALID or anyValidShip(R, ST, ST) .
+  op anyValidShip : Report Conf Conf -> Bool .
+  eq anyValidShip(R, claimed(R0, I0, Q0, T, AS) S, ST) =
+     verdictShip(R, I0, Q0, noRev, R0, I0, Q0, T, ST) == VALID or anyValidShip(R, S, ST) .
+  eq anyValidShip(R, S, ST) = false [owise] .
+
+  *** KERI: VALID for a credential registered after its auditor's ECR was revoked in KERI, once the
+  *** watcher's deadline (KERI time + delta, A-Watch) has passed
+  op keriBad : Conf -> Bool .
+  eq keriBad(ST) = keriBadL(ST, ST) .
+  op keriBadL : Conf Conf -> Bool .
+  eq keriBadL(reg(R, N, L, true, F2) S, ST) =
+     (now(ST) > keriTime(audOf(R, ST), ST) + dlt(ST) and anyValid(R, ST)) or keriBadL(S, ST) .
+  eq keriBadL(S, ST) = false [owise] .
+  *** the same before that deadline: the watcher's sync latency of T2 and T18
+  op keriRace : Conf -> Bool .
+  eq keriRace(ST) = keriRaceL(ST, ST) .
+  op keriRaceL : Conf Conf -> Bool .
+  eq keriRaceL(reg(R, N, L, true, F2) S, ST) =
+     (now(ST) <= keriTime(audOf(R, ST), ST) + dlt(ST) and anyValid(R, ST)) or keriRaceL(S, ST) .
+  eq keriRaceL(S, ST) = false [owise] .
+  op keriTime : Auditor Conf -> Nat .
+  eq keriTime(A, keriRev(A, K) S) = K .
+
+  *** CR6: an accepted credential for which the allowlist views at registeredAt answer "not
+  *** authorised", because the revocation or suspension came later in the same block
+  op viewsBad : Conf -> Bool .
+  eq viewsBad(ST) = viewsBadL(ST, ST) .
+  op viewsBadL : Conf Conf -> Bool .
+  eq viewsBadL(reg(R, N, L, F1, F2) S, ST) =
+     ((chainTime(audOf(R, ST), ST) == s N or suspTime(bodyOf(R, ST), ST) == s N)
+      and verdictCred(R, noRev, ST) =/= INVALID)
+     or viewsBadL(S, ST) .
+  eq viewsBadL(S, ST) = false [owise] .
+
+  *** an impostor body's credential registered on-chain (attack 4: the contract accepts what a stolen
+  *** owner key listed)
+  op impostorRegistered : Conf -> Bool .
+  eq impostorRegistered(reg(R, N, L, F1, F2) S) = rootOf(bodyOf(R, S), S) =/= pinned or impostorRegistered(S) .
+  eq impostorRegistered(S) = false [owise] .
+
+  *** SUPERSEDED: a credential replaced by a revision at or before the latest block is not INVALID
+  *** when presented alone (T4 (a))
+  op supersededBad : Conf -> Bool .
+  eq supersededBad(ST) = supersededBadL(ST, ST) .
+  op supersededBadL : Conf Conf -> Bool .
+  eq supersededBadL(supBy(R, R', T2) S, ST) = verdictCred(R, noRev, ST) =/= INVALID or supersededBadL(S, ST) .
+  eq supersededBadL(S, ST) = false [owise] .
+
+  *** --- non-vacuity witnesses: states the properties above must not rule out
+  *** a downward revision by another body after the first body's suspension, with a batch claimed on
+  *** the superseded credential still accepted by its importer at the latest block, and the revision
+  *** itself accepted when presented alone
+  op revWitness : Conf -> Bool .
+  ceq revWitness(supBy(r1, r2, T2) claimed(r1, I0, Q0, T, AS) S) = true
+    if verdictShip(r1, I0, Q0, noRev, r1, I0, Q0, T, supBy(r1, r2, T2) claimed(r1, I0, Q0, T, AS) S) =/= INVALID
+       /\ verdictCred(r2, noRev, supBy(r1, r2, T2) claimed(r1, I0, Q0, T, AS) S) =/= INVALID .
+  eq revWitness(S) = false [owise] .
+  *** a credential registered after its auditor's ECR was revoked in KERI, CONTESTED at the latest block
+  op contestedAfterKeri : Conf -> Bool .
+  eq contestedAfterKeri(ST) = contestedAfterKeriL(ST, ST) .
+  op contestedAfterKeriL : Conf Conf -> Bool .
+  eq contestedAfterKeriL(reg(R, N, L, true, F2) S, ST) =
+     verdictCred(R, noRev, ST) == CONTESTED or contestedAfterKeriL(S, ST) .
+  eq contestedAfterKeriL(S, ST) = false [owise] .
+  *** two batches of one credential claimed for two different importers, each accepted by its own
+  *** importer (the shared cap is exercised across importers)
+  op twoImporters : Conf -> Bool .
+  ceq twoImporters(claimed(R, I, Q, T, ac(R, I, Q) ; AS) claimed(R, I', Q', T', ac(R, I', Q') ; AS') S) = true
+    if I =/= I' .
+  eq twoImporters(S) = false [owise] .
+
+  *** every safety property expected to hold (under A-Watch for keriBad)
+  op safetyBad : Conf -> Bool .
+  eq safetyBad(ST) = p1Bad(ST) or ledgerBad(ST) or replayBad(ST) or authBad(ST) or regAfterRevBad(ST)
+                     or evidenceBad(ST) or windowBad(ST) or supersededBad(ST) or keriBad(ST) .
+
+  *** ------------------------------------------------------------ instances
+  *** every instance: delta = 1 tick, three batches of 1 t, two importers, ticks 0..M
+  op common : Nat -> Conf .
+  eq common(M) = clock(0) tmax(M) delta(1) importer(i1) importer(i2) ship(1) ship(1) ship(1) .
+
+  *** KERI: b1 (pinned root) and its auditor a1, whose ECR the body may revoke in KERI at any tick;
+  *** b2 is an impostor body a stolen owner key listed (attack 4), with auditor a2; r1 by b1/a1 and
+  *** r2 by b2/a2, 2 t each, in separate products; W is the watcher's behaviour
+  op keriInst : WMode Nat -> Sys .
+  eq keriInst(W, M) = { common(M) wmode(W) allowKeri(a1)
+       slotLabel(X) slotLabel(Z) canReg(r1, X) canReg(r2, Z)
+       body(b1, pinned, M) body(b2, other, M) aud(a1, b1) aud(a2, b2)
+       cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep) } .
+
+  *** SUSPENSION: as KERI without the KERI revocation; the watcher may suspend b1 and lift it again,
+  *** and suspend the impostor b2
+  op suspInst : Nat -> Sys .
+  eq suspInst(M) = { common(M) wmode(up) allowSuspend(b1) allowLift(b1) allowSuspend(b2)
+       slotLabel(X) slotLabel(Z) canReg(r1, X) canReg(r2, Z)
+       body(b1, pinned, M) body(b2, other, M) aud(a1, b1) aud(a2, b2)
+       cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep) } .
+
+  *** REVISION: two accredited bodies; r2 by b2 revises b1's r1 downwards (2 t -> 1 t), which the
+  *** contract allows only while b1 is inactive (suspended, or accreditation expired at tick 2) and
+  *** only if 1 t covers the claimed quantity; the watcher may suspend b1 and lift it; claim times
+  *** are recorded
+  op revInst : Nat -> Sys .
+  eq revInst(M) = { common(M) wmode(up) claimTimes allowSuspend(b1) allowLift(b1)
+       slotLabel(X) canReg(r1, X)
+       body(b1, pinned, 2) body(b2, pinned, M) aud(a1, b1) aud(a2, b2)
+       cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1) } .
+
+  *** DUPLICATE: one body signs two credentials of 2 t for the same product; the second can be
+  *** registered under the true slot (refused, CredScopeAlreadyCovered) or under another slot label,
+  *** where it starts a ledger of its own (T19 (8))
+  op dupInst : Nat -> Sys .
+  eq dupInst(M) = { common(M) wmode(up)
+       slotLabel(X) slotLabel(Y) canReg(r1, X) canReg(r2, X) canReg(r2, Y)
+       body(b1, pinned, M) aud(a1, b1)
+       cred(r1, b1, a1, 2, X, noRep) cred(r2, b1, a1, 2, X, noRep) } .
+
+  *** FULL: the KERI and SUSPENSION instances together, with both auditors revocable in KERI
+  op fullInst : WMode Nat -> Sys .
+  eq fullInst(W, M) = { common(M) wmode(W) allowKeri(a1) allowKeri(a2)
+       allowSuspend(b1) allowLift(b1) allowSuspend(b2)
+       slotLabel(X) slotLabel(Z) canReg(r1, X) canReg(r2, Z)
+       body(b1, pinned, M) body(b2, other, M) aud(a1, b1) aud(a2, b2)
+       cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep) } .
+
+  *** change the CONTESTED window and watcher bound delta (in ticks) of an instance
+  op _withDelta_ : Sys Nat -> Sys .
+  eq { delta(D) S } withDelta N = { delta(N) S } .
+
+  *** add a mutant to an instance
+  op _+mut_ : Sys Mutant -> Sys .
+  eq { S } +mut Mu = { S mut(Mu) } .
+endm
+
+*** LTL: propositions over the same states
+mod CARBONLEI-LTL is
+  protecting CARBONLEI .
+  including MODEL-CHECKER .
+  including LTL-SIMPLIFIER .
+  subsort Sys < State .
+  op keriRevokedP : Auditor -> Prop [ctor] .
+  op chainRevokedP : Auditor -> Prop [ctor] .
+  op validP : Report -> Prop [ctor] .
+  op contestedP : Report -> Prop [ctor] .
+  op registeredP : Report -> Prop [ctor] .
+  op safeP : -> Prop [ctor] .
+  vars S : Conf . var A : Auditor . var R : Report .
+  eq { S } |= keriRevokedP(A) = keriRevoked(A, S) .
+  eq { S } |= chainRevokedP(A) = chainRevoked(A, S) .
+  eq { S } |= validP(R) = isReg(R, S) and verdictCred(R, noRev, S) == VALID .
+  eq { S } |= contestedP(R) = isReg(R, S) and verdictCred(R, noRev, S) == CONTESTED .
+  eq { S } |= registeredP(R) = isReg(R, S) .
+  eq { S } |= safeP = not safetyBad(S) .
+endm
