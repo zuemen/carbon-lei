@@ -27,7 +27,7 @@ found : search [1] keriInst(up, 4) =>* { S:Conf } such that impostorRegistered(S
 found : search [1] dupInst(4) +mut noClaimCap =>* { S:Conf } such that p1Bad(S:Conf) .
 found : search [1] revInst(4) +mut noOverClaimed =>* { S:Conf } such that p1Bad(S:Conf) .
 found : search [1] dupInst(4) +mut noCovered =>* { S:Conf } such that ledgerBad(S:Conf) .
-*** contract, registration guards (noSuspGuard and noIssuerGuard as written by an outside reviewer)
+*** contract, registration guards (noSuspGuard and noIssuerGuard from our own red-team review)
 found : search [1] keriInst(up, 4) +mut noAuthGuard =>* { S:Conf } such that regAfterRevBad(S:Conf) .
 found : search [1] suspInst(3) +mut noSuspGuard =>* { S:Conf } such that regInactiveBad(S:Conf) .
 found : search [1] suspInst(3) +mut noSuspGuard =>* { S:Conf } such that authBad(S:Conf) .
