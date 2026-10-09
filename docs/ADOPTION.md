@@ -174,7 +174,7 @@ No real organisation takes part today, and none has been contacted ([PILOT.md](P
 
 | Item | Plan |
 |---|---|
-| Throughput and cost | Per report: one registration; per shipment: one claim. State grows linearly with reports and shipments. Measured on Sepolia: 368,616 gas per `registerReport` and 155,449 gas per `claimShipment` (§3) |
+| Throughput and cost | Per report: one registration; per shipment: one claim. State grows linearly with reports and shipments. Measured on Sepolia: 368,616 gas per `registerReport` and 155,449 gas per `claimShipment` (§3); on a local chain the same gas from 3 to 5,006 reports, and a constant number of verifier requests (measured scaling, below) |
 | Chain choice | Any EVM chain. Sepolia for the prototype; an L2 or a permissioned EVM for production, chosen by the criteria below |
 | Watchers | Several independent watchers; alerts on sync delay |
 | Allowlist governance | Multisig → timelocked governance; watcher role limited to suspend, lift and revoke |
@@ -202,7 +202,27 @@ No real organisation takes part today, and none has been contacted ([PILOT.md](P
 - Total: about 2,600 to 19,300 transactions a year, or about 7 to 53 a day.
 - Gas: 743 × 368,616 ≈ 0.27 billion for registrations plus 1,856 to 18,564 × 155,449 ≈ 0.29 to 2.89 billion for claims, about 0.56 to 3.16 billion gas a year. At the same mainnet base fees as PILOT §6 (US$0.32–0.43 per 524,065 gas), that is about US$340–460 to US$1,930–2,590 a year for the whole corridor, base fee only, again an upper bound. At the L2 fees estimated in PILOT §6 (median of six samples, 2026-10-09 09:23–09:35 UTC, ETH US$2,504, L1 data fee included; an estimate at those fees, not a measurement of a deployment): about US$7–40 a year on Base (US$8–48 with the suggested tip), US$0.02–0.13 on OP Mainnet (US$1.4–8.0 with the suggested tip) and US$28–159 on Arbitrum One.
 
-This is a scale estimate; no load test has been run.
+This is a scale estimate of the corridor's volume; the corridor itself has not been load-tested.
+
+**Measured scaling on a local chain (9 October 2026).** `npm run bench:scale` ([raw data](data/bench-scale-2026-10-10.json)) deploys both contracts on a local anvil chain (no fork), mines 107,200 empty blocks at 12 s after one old report and its two claims, then grows the ledger in steps to 3, 13, 104, 1,005 and 5,006 reports, each with two shipment claims, spread over 20 verification bodies, 40 auditors and 50 suppliers. At every step it reads the gas of every new transaction, verifies a fresh proof and the old proof with the SDK (seven runs each, a new reader per run, every JSON-RPC request counted) and counts the registry's storage slots.
+
+| Reports / claims on the ledger | 3 / 6 | 104 / 208 | 1,005 / 2,010 | 5,006 / 10,012 |
+|---|---|---|---|---|
+| `registerReport` gas, mean of the step | 368,592 | 368,605 | 368,605 | 368,605 |
+| `claimShipment` gas, first / later claim of a report (mean) | 155,449 / 138,337 | 155,444 / 138,344 | 155,445 / 138,345 | 155,445 / 138,345 |
+| Requests per verification, fresh / old proof | 14 / 15 | 14 / 15 | 14 / 15 | 14 / 15 |
+| `eth_getLogs` per verification, blocks searched (fresh / old) | 1, 28 / 1, 7,222 | 1, 28 / 1, 7,221 | 1, 28 / 1, 7,221 | 1, 29 / 1, 7,221 |
+| Verifier p50, fresh / old proof (ms) | 8.8 / 10.6 | 5.9 / 9.1 | 6.1 / 9.0 | 8.1 / 9.7 |
+| Full-scan fallback, `eth_getLogs` requests | 11 | 11 | 11 | 12 |
+| Registry storage slots | 69 | 2,392 | 23,115 | 115,138 |
+
+What it shows. Gas per operation does not depend on the size of the ledger: over all 5,005 bulk registrations the range is 368,544 to 368,616 gas (the spread comes from zero bytes in the random calldata), and neither contract has a loop or a growing array. A later claim against the same report costs about 17,100 gas less than the first, because the report's claimed total is already non-zero. Each report with two claims adds 23 non-zero storage slots (14 for the report, 4 per claim, 1 for the first claim), 736 bytes of values; state grows linearly, as §6.1 says. A verification sends the same number of requests at every step, one `eth_getLogs` over the proof's own 24 h window (or up to the head while the window is open), which returns one log, the report's own registration: the event filter names the report, the body and the auditor, so other reports in the same blocks are not returned. The same fresh proof verified one day later, at 1,005 reports, searched 7,205 blocks with 20 requests (more block reads to find the window's end) in 14.7 ms. At every step the median stayed between 5.9 and 10.6 ms.
+
+What grows. Two paths depend on history, and we report them as found. (1) The fallback when a block read fails searches every block from the deployment, one `eth_getLogs` per 10,000 blocks: 11 requests at 107,221 blocks, 12 at 114,599; at 12 s blocks that is about 263 requests a year of chain. It runs only after a failed read. (2) A credential whose revision chain is longer than eight same-body revisions makes the verifier read every `ReportRegistered` event of the registry in the scope's time range (`scopeRegistrations` in `sdk/chain.ts`; the scope key is not an indexed event field), so that answer grows with the registrations of all bodies in that period. The benchmark does not exercise it; an indexed `reportScopeKey` would need a contract change.
+
+Throughput headroom (gas limit divided by measured gas; block capacity only, ignoring other traffic and an L2's own limits). A 30,000,000-gas block holds 192 first claims or 81 registrations; the bulk steps filled blocks with 200 claims (first and later mixed) or 80 registrations. Block gas limits read on 9 October 2026 at 11:10 UTC: Ethereum mainnet 60,000,000 (385 claims), Base 400,000,000 (2,573), OP Mainnet 40,000,000 (257); Arbitrum One's gasLimit field is a fixed placeholder, not a capacity. The corridor's upper estimate of 53 transactions a day needs at most 53 × 368,616 ≈ 19.5 million gas even if all were registrations: less than one 30-million-gas block a day, about 0.009% of a day of such blocks at 12 s. Capacity is not the constraint for this corridor; fees and the chain choice above are.
+
+Limits. One machine (Apple M4, 16 GB), a local anvil node with no network latency, every request answered by the same node: against a public Sepolia RPC a whole verification takes about 1.8 s at the median (README Measurements, verifier latency) and cap `eth_getLogs` ranges and result sizes differently (the SDK asks for at most 10,000 blocks per request). This measures how the contracts and the verifier behave as the ledger grows; it is not a load test of a public chain, and it does not measure contention for block space. Checks 6 and 7 (vLEI evidence) were stubbed to pass, because they are local computations that do not read the ledger; their cost is in the verifier latency row of the README. The bulk reports carry random 32-byte keys (the contract sees only bytes32); the probes are real SDK credentials. anvil recomputes the whole state root for every block it mines, so its time per empty block grows with the state (2,000 empty blocks took 34 ms with no storage and 87 s with 50,000 slots; one day of blocks at 1,005 reports took 174 s): the long empty history was therefore mined before the bulk data. That is a cost of the test node, not of the contracts.
 
 ### 6.2 Other CBAM goods and countries
 

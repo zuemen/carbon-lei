@@ -1,0 +1,1440 @@
+{
+  "description": "Raw output of scripts/bench-scale.ts: the ledger grown in steps on a local anvil chain (no fork, no network latency), with gas, verifier requests and latency, eth_getLogs ranges and storage measured at each step. Checks 6 and 7 stubbed to pass (local computations, not ledger reads). One machine; not a load test of a public chain.",
+  "startedAt": "2026-10-09T11:06:14.538Z",
+  "finishedAt": "2026-10-09T11:10:19.010Z",
+  "totalSeconds": 244.5,
+  "machine": {
+    "cpu": "Apple M4",
+    "logicalCpus": 10,
+    "memoryGiB": 16,
+    "os": "darwin 25.3.0 arm64",
+    "node": "v25.9.0",
+    "anvil": "anvil Version: 1.7.1",
+    "commit": "5145664"
+  },
+  "setup": {
+    "anvil": "--hardfork cancun --prune-history --gas-limit 30000000 --timestamp 1790000000",
+    "bodies": 20,
+    "auditorsPerBody": 2,
+    "suppliers": 50,
+    "claimsPerReport": 2,
+    "reportKg": 500000,
+    "claimKg": 200000,
+    "steps": [
+      1,
+      10,
+      100,
+      1000,
+      5000
+    ],
+    "runsPerProof": 7,
+    "dayAfterSteps": [
+      1000
+    ],
+    "logChunk": 10000,
+    "onboarding": {
+      "blocks": 1,
+      "addVerifierGas": {
+        "count": 20,
+        "min": 163497,
+        "mean": 163516.2,
+        "max": 163521
+      },
+      "addAuditorGas": {
+        "count": 40,
+        "min": 75083,
+        "mean": 75115.4,
+        "max": 75119
+      }
+    },
+    "bulkInputs": "bulk reports use random 32-byte keys and commitments (the contract sees only bytes32), each a first report in a new installation scope; probes use real SDK credentials (issueCredential, reportInputOf, claimArgsOf)",
+    "verifier": "verifyPresentation with the importer's EORI, a new ChainReader (new client, empty caches) per run, one unrecorded warm-up run per series; fresh = the probe registered at this step (one day after the step's bulk data); old = the probe registered before any bulk data"
+  },
+  "stateBeforeProbes": {
+    "registrySlots": 0,
+    "registryValueBytes": 0,
+    "allowlistSlots": 203
+  },
+  "oldProbe": {
+    "reportKey": "0xf015aab4074603ad53a6d9bd88ea965f00360cf89d50ae761bfd8979ea04cfc6",
+    "gas": {
+      "registerReport": 368580,
+      "claimShipmentFirst": 155425,
+      "claimShipmentSecond": 138325
+    }
+  },
+  "history": {
+    "blocksMined": 107200,
+    "blockTimeSec": 12,
+    "seconds": 30.4,
+    "headBlock": 107206,
+    "note": "mined right after the old probe, before any bulk data (see the header of scripts/bench-scale.ts)"
+  },
+  "steps": [
+    {
+      "bulkReports": 1,
+      "bulkClaims": 2,
+      "totalReports": 3,
+      "totalClaims": 6,
+      "headBlock": 107221,
+      "blocksSinceDeployment": 107221,
+      "bulk": {
+        "sendAndMineSeconds": 0,
+        "blocksMined": 2,
+        "registerReportGas": {
+          "count": 1,
+          "min": 368592,
+          "mean": 368592,
+          "max": 368592
+        },
+        "claimShipmentFirstGas": {
+          "count": 1,
+          "min": 155449,
+          "mean": 155449,
+          "max": 155449
+        },
+        "claimShipmentLaterGas": {
+          "count": 1,
+          "min": 138337,
+          "mean": 138337,
+          "max": 138337
+        },
+        "registerReportsPerFullBlock": 1,
+        "claimsPerFullBlock": 2
+      },
+      "probeGas": {
+        "registerReport": 368604,
+        "claimShipmentFirst": 155425,
+        "claimShipmentSecond": 138313
+      },
+      "storage": {
+        "registrySlots": 69,
+        "registryValueBytes": 2208,
+        "allowlistSlots": 203,
+        "bulkDeltaRegistrySlots": 23,
+        "bulkDeltaRegistrySlotsPerReportWithClaims": 23,
+        "note": "the bulk delta covers 1 reports and 2 claims of this step (probes excluded)"
+      },
+      "verifyFresh": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 8.8,
+          "p95": 26.1,
+          "min": 7.1,
+          "max": 26.1
+        },
+        "rpcRequests": {
+          "p50": 14,
+          "p95": 14,
+          "min": 14,
+          "max": 14
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 6,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 107194,
+            "toBlock": 107221,
+            "blocks": 28,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 28,
+          "p95": 28,
+          "min": 28,
+          "max": 28
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOld": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 10.6,
+          "p95": 11.5,
+          "min": 10,
+          "max": 11.5
+        },
+        "rpcRequests": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 7222,
+            "blocks": 7222,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 7222,
+          "p95": 7222,
+          "min": 7222,
+          "max": 7222
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOldFullScan": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 41.1,
+          "p95": 41.1,
+          "min": 41.1,
+          "max": 41.1
+        },
+        "rpcRequests": {
+          "p50": 20,
+          "p95": 20,
+          "min": 20,
+          "max": 20
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 11
+        },
+        "getLogs": [
+          {
+            "fromBlock": 30001,
+            "toBlock": 40000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 20001,
+            "toBlock": 30000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 10001,
+            "toBlock": 20000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 1,
+            "toBlock": 10000,
+            "blocks": 10000,
+            "logs": 1
+          },
+          {
+            "fromBlock": 40001,
+            "toBlock": 50000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 50001,
+            "toBlock": 60000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 70001,
+            "toBlock": 80000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 60001,
+            "toBlock": 70000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 80001,
+            "toBlock": 90000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 90001,
+            "toBlock": 100000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 100001,
+            "toBlock": 107221,
+            "blocks": 7221,
+            "logs": 0
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 11,
+          "p95": 11,
+          "min": 11,
+          "max": 11
+        },
+        "getLogsBlocksSearched": {
+          "p50": 107221,
+          "p95": 107221,
+          "min": 107221,
+          "max": 107221
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "memoryFreePct": 88,
+      "stepSeconds": 2.7
+    },
+    {
+      "bulkReports": 10,
+      "bulkClaims": 20,
+      "totalReports": 13,
+      "totalClaims": 26,
+      "headBlock": 107236,
+      "blocksSinceDeployment": 107236,
+      "bulk": {
+        "sendAndMineSeconds": 0,
+        "blocksMined": 2,
+        "registerReportGas": {
+          "count": 9,
+          "min": 368592,
+          "mean": 368605.3,
+          "max": 368616
+        },
+        "claimShipmentFirstGas": {
+          "count": 9,
+          "min": 155437,
+          "mean": 155446.3,
+          "max": 155449
+        },
+        "claimShipmentLaterGas": {
+          "count": 9,
+          "min": 138325,
+          "mean": 138343.7,
+          "max": 138349
+        },
+        "registerReportsPerFullBlock": 9,
+        "claimsPerFullBlock": 18
+      },
+      "probeGas": {
+        "registerReport": 368592,
+        "claimShipmentFirst": 155449,
+        "claimShipmentSecond": 138349
+      },
+      "storage": {
+        "registrySlots": 299,
+        "registryValueBytes": 9568,
+        "allowlistSlots": 203,
+        "bulkDeltaRegistrySlots": 207,
+        "bulkDeltaRegistrySlotsPerReportWithClaims": 23,
+        "note": "the bulk delta covers 9 reports and 18 claims of this step (probes excluded)"
+      },
+      "verifyFresh": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 7.6,
+          "p95": 15.6,
+          "min": 6,
+          "max": 15.6
+        },
+        "rpcRequests": {
+          "p50": 14,
+          "p95": 14,
+          "min": 14,
+          "max": 14
+        },
+        "byMethod": {
+          "eth_getBlockByNumber": 6,
+          "eth_chainId": 1,
+          "eth_call": 6,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 107209,
+            "toBlock": 107236,
+            "blocks": 28,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 28,
+          "p95": 28,
+          "min": 28,
+          "max": 28
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOld": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 9.8,
+          "p95": 11.2,
+          "min": 9.1,
+          "max": 11.2
+        },
+        "rpcRequests": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 7222,
+            "blocks": 7222,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 7222,
+          "p95": 7222,
+          "min": 7222,
+          "max": 7222
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOldFullScan": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 35.3,
+          "p95": 35.3,
+          "min": 35.3,
+          "max": 35.3
+        },
+        "rpcRequests": {
+          "p50": 20,
+          "p95": 20,
+          "min": 20,
+          "max": 20
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 11
+        },
+        "getLogs": [
+          {
+            "fromBlock": 10001,
+            "toBlock": 20000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 1,
+            "toBlock": 10000,
+            "blocks": 10000,
+            "logs": 1
+          },
+          {
+            "fromBlock": 20001,
+            "toBlock": 30000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 30001,
+            "toBlock": 40000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 40001,
+            "toBlock": 50000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 50001,
+            "toBlock": 60000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 60001,
+            "toBlock": 70000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 70001,
+            "toBlock": 80000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 100001,
+            "toBlock": 107236,
+            "blocks": 7236,
+            "logs": 0
+          },
+          {
+            "fromBlock": 80001,
+            "toBlock": 90000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 90001,
+            "toBlock": 100000,
+            "blocks": 10000,
+            "logs": 0
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 11,
+          "p95": 11,
+          "min": 11,
+          "max": 11
+        },
+        "getLogsBlocksSearched": {
+          "p50": 107236,
+          "p95": 107236,
+          "min": 107236,
+          "max": 107236
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "memoryFreePct": 88,
+      "stepSeconds": 2.7
+    },
+    {
+      "bulkReports": 100,
+      "bulkClaims": 200,
+      "totalReports": 104,
+      "totalClaims": 208,
+      "headBlock": 107252,
+      "blocksSinceDeployment": 107252,
+      "bulk": {
+        "sendAndMineSeconds": 0.1,
+        "blocksMined": 3,
+        "registerReportGas": {
+          "count": 90,
+          "min": 368568,
+          "mean": 368605.2,
+          "max": 368616
+        },
+        "claimShipmentFirstGas": {
+          "count": 90,
+          "min": 155425,
+          "mean": 155444.1,
+          "max": 155449
+        },
+        "claimShipmentLaterGas": {
+          "count": 90,
+          "min": 138313,
+          "mean": 138343.7,
+          "max": 138349
+        },
+        "registerReportsPerFullBlock": 45,
+        "claimsPerFullBlock": 180
+      },
+      "probeGas": {
+        "registerReport": 368604,
+        "claimShipmentFirst": 155449,
+        "claimShipmentSecond": 138349
+      },
+      "storage": {
+        "registrySlots": 2392,
+        "registryValueBytes": 76544,
+        "allowlistSlots": 203,
+        "bulkDeltaRegistrySlots": 2070,
+        "bulkDeltaRegistrySlotsPerReportWithClaims": 23,
+        "note": "the bulk delta covers 90 reports and 180 claims of this step (probes excluded)"
+      },
+      "verifyFresh": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 5.9,
+          "p95": 7,
+          "min": 5.7,
+          "max": 7
+        },
+        "rpcRequests": {
+          "p50": 14,
+          "p95": 14,
+          "min": 14,
+          "max": 14
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 6,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 107225,
+            "toBlock": 107252,
+            "blocks": 28,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 28,
+          "p95": 28,
+          "min": 28,
+          "max": 28
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOld": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 9.1,
+          "p95": 11.8,
+          "min": 8.8,
+          "max": 11.8
+        },
+        "rpcRequests": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 7221,
+            "blocks": 7221,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 7221,
+          "p95": 7221,
+          "min": 7221,
+          "max": 7221
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOldFullScan": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 41.1,
+          "p95": 41.1,
+          "min": 41.1,
+          "max": 41.1
+        },
+        "rpcRequests": {
+          "p50": 20,
+          "p95": 20,
+          "min": 20,
+          "max": 20
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 11
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 10000,
+            "blocks": 10000,
+            "logs": 1
+          },
+          {
+            "fromBlock": 10001,
+            "toBlock": 20000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 30001,
+            "toBlock": 40000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 20001,
+            "toBlock": 30000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 40001,
+            "toBlock": 50000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 50001,
+            "toBlock": 60000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 60001,
+            "toBlock": 70000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 70001,
+            "toBlock": 80000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 80001,
+            "toBlock": 90000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 100001,
+            "toBlock": 107252,
+            "blocks": 7252,
+            "logs": 0
+          },
+          {
+            "fromBlock": 90001,
+            "toBlock": 100000,
+            "blocks": 10000,
+            "logs": 0
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 11,
+          "p95": 11,
+          "min": 11,
+          "max": 11
+        },
+        "getLogsBlocksSearched": {
+          "p50": 107252,
+          "p95": 107252,
+          "min": 107252,
+          "max": 107252
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "memoryFreePct": 88,
+      "stepSeconds": 3
+    },
+    {
+      "bulkReports": 1000,
+      "bulkClaims": 2000,
+      "totalReports": 1005,
+      "totalClaims": 2010,
+      "headBlock": 107286,
+      "blocksSinceDeployment": 107286,
+      "bulk": {
+        "sendAndMineSeconds": 1,
+        "blocksMined": 21,
+        "registerReportGas": {
+          "count": 900,
+          "min": 368556,
+          "mean": 368604.7,
+          "max": 368616
+        },
+        "claimShipmentFirstGas": {
+          "count": 900,
+          "min": 155413,
+          "mean": 155444.7,
+          "max": 155449
+        },
+        "claimShipmentLaterGas": {
+          "count": 900,
+          "min": 138313,
+          "mean": 138344.5,
+          "max": 138349
+        },
+        "registerReportsPerFullBlock": 75,
+        "claimsPerFullBlock": 200
+      },
+      "probeGas": {
+        "registerReport": 368592,
+        "claimShipmentFirst": 155437,
+        "claimShipmentSecond": 138337
+      },
+      "storage": {
+        "registrySlots": 23115,
+        "registryValueBytes": 739680,
+        "allowlistSlots": 203,
+        "bulkDeltaRegistrySlots": 20700,
+        "bulkDeltaRegistrySlotsPerReportWithClaims": 23,
+        "note": "the bulk delta covers 900 reports and 1800 claims of this step (probes excluded)"
+      },
+      "verifyFresh": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 6.1,
+          "p95": 7.3,
+          "min": 5.9,
+          "max": 7.3
+        },
+        "rpcRequests": {
+          "p50": 14,
+          "p95": 14,
+          "min": 14,
+          "max": 14
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 6,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 107259,
+            "toBlock": 107286,
+            "blocks": 28,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 28,
+          "p95": 28,
+          "min": 28,
+          "max": 28
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOld": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 9,
+          "p95": 10.1,
+          "min": 8.4,
+          "max": 10.1
+        },
+        "rpcRequests": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 7221,
+            "blocks": 7221,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 7221,
+          "p95": 7221,
+          "min": 7221,
+          "max": 7221
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOldFullScan": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 45.4,
+          "p95": 45.4,
+          "min": 45.4,
+          "max": 45.4
+        },
+        "rpcRequests": {
+          "p50": 20,
+          "p95": 20,
+          "min": 20,
+          "max": 20
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 11
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 10000,
+            "blocks": 10000,
+            "logs": 1
+          },
+          {
+            "fromBlock": 10001,
+            "toBlock": 20000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 30001,
+            "toBlock": 40000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 20001,
+            "toBlock": 30000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 40001,
+            "toBlock": 50000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 70001,
+            "toBlock": 80000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 50001,
+            "toBlock": 60000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 60001,
+            "toBlock": 70000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 80001,
+            "toBlock": 90000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 90001,
+            "toBlock": 100000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 100001,
+            "toBlock": 107286,
+            "blocks": 7286,
+            "logs": 0
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 11,
+          "p95": 11,
+          "min": 11,
+          "max": 11
+        },
+        "getLogsBlocksSearched": {
+          "p50": 107286,
+          "p95": 107286,
+          "min": 107286,
+          "max": 107286
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyFreshOneDayLater": {
+        "blocksMined": 7210,
+        "mineSeconds": 173.7,
+        "headBlock": 114496,
+        "verify": {
+          "overall": "VALID",
+          "ms": {
+            "p50": 14.7,
+            "p95": 16.7,
+            "min": 14,
+            "max": 16.7
+          },
+          "rpcRequests": {
+            "p50": 20,
+            "p95": 20,
+            "min": 20,
+            "max": 20
+          },
+          "byMethod": {
+            "eth_chainId": 1,
+            "eth_getBlockByNumber": 12,
+            "eth_call": 6,
+            "eth_getLogs": 1
+          },
+          "getLogs": [
+            {
+              "fromBlock": 107273,
+              "toBlock": 114477,
+              "blocks": 7205,
+              "logs": 1
+            }
+          ],
+          "getLogsRequests": {
+            "p50": 1,
+            "p95": 1,
+            "min": 1,
+            "max": 1
+          },
+          "getLogsBlocksSearched": {
+            "p50": 7205,
+            "p95": 7205,
+            "min": 7205,
+            "max": 7205
+          },
+          "getLogsLogsReturned": {
+            "p50": 1,
+            "p95": 1,
+            "min": 1,
+            "max": 1
+          }
+        }
+      },
+      "memoryFreePct": 88,
+      "stepSeconds": 179.6
+    },
+    {
+      "bulkReports": 5000,
+      "bulkClaims": 10000,
+      "totalReports": 5006,
+      "totalClaims": 10012,
+      "headBlock": 114599,
+      "blocksSinceDeployment": 114599,
+      "bulk": {
+        "sendAndMineSeconds": 10.7,
+        "blocksMined": 90,
+        "registerReportGas": {
+          "count": 4000,
+          "min": 368544,
+          "mean": 368605.2,
+          "max": 368616
+        },
+        "claimShipmentFirstGas": {
+          "count": 4000,
+          "min": 155413,
+          "mean": 155444.7,
+          "max": 155449
+        },
+        "claimShipmentLaterGas": {
+          "count": 4000,
+          "min": 138301,
+          "mean": 138344.6,
+          "max": 138349
+        },
+        "registerReportsPerFullBlock": 80,
+        "claimsPerFullBlock": 200
+      },
+      "probeGas": {
+        "registerReport": 368616,
+        "claimShipmentFirst": 155449,
+        "claimShipmentSecond": 138349
+      },
+      "storage": {
+        "registrySlots": 115138,
+        "registryValueBytes": 3684416,
+        "allowlistSlots": 203,
+        "bulkDeltaRegistrySlots": 92000,
+        "bulkDeltaRegistrySlotsPerReportWithClaims": 23,
+        "note": "the bulk delta covers 4000 reports and 8000 claims of this step (probes excluded)"
+      },
+      "verifyFresh": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 8.1,
+          "p95": 9,
+          "min": 6.8,
+          "max": 9
+        },
+        "rpcRequests": {
+          "p50": 14,
+          "p95": 14,
+          "min": 14,
+          "max": 14
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 6,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 114571,
+            "toBlock": 114599,
+            "blocks": 29,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 29,
+          "p95": 29,
+          "min": 29,
+          "max": 29
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOld": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 9.7,
+          "p95": 12,
+          "min": 9.1,
+          "max": 12
+        },
+        "rpcRequests": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 6,
+          "eth_call": 7,
+          "eth_getLogs": 1
+        },
+        "getLogs": [
+          {
+            "fromBlock": 1,
+            "toBlock": 7221,
+            "blocks": 7221,
+            "logs": 1
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "getLogsBlocksSearched": {
+          "p50": 7221,
+          "p95": 7221,
+          "min": 7221,
+          "max": 7221
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "verifyOldFullScan": {
+        "overall": "VALID",
+        "ms": {
+          "p50": 39.2,
+          "p95": 39.2,
+          "min": 39.2,
+          "max": 39.2
+        },
+        "rpcRequests": {
+          "p50": 21,
+          "p95": 21,
+          "min": 21,
+          "max": 21
+        },
+        "byMethod": {
+          "eth_chainId": 1,
+          "eth_getBlockByNumber": 1,
+          "eth_call": 7,
+          "eth_getLogs": 12
+        },
+        "getLogs": [
+          {
+            "fromBlock": 30001,
+            "toBlock": 40000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 20001,
+            "toBlock": 30000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 10001,
+            "toBlock": 20000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 1,
+            "toBlock": 10000,
+            "blocks": 10000,
+            "logs": 1
+          },
+          {
+            "fromBlock": 40001,
+            "toBlock": 50000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 50001,
+            "toBlock": 60000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 60001,
+            "toBlock": 70000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 70001,
+            "toBlock": 80000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 80001,
+            "toBlock": 90000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 90001,
+            "toBlock": 100000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 100001,
+            "toBlock": 110000,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "fromBlock": 110001,
+            "toBlock": 114599,
+            "blocks": 4599,
+            "logs": 0
+          }
+        ],
+        "getLogsRequests": {
+          "p50": 12,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "getLogsBlocksSearched": {
+          "p50": 114599,
+          "p95": 114599,
+          "min": 114599,
+          "max": 114599
+        },
+        "getLogsLogsReturned": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "memoryFreePct": 86,
+      "stepSeconds": 22.9
+    }
+  ],
+  "headroom": {
+    "method": "gas limit / measured gas per operation (first claim of a report, the dearer one; first report in a new scope). Block capacity only: ignores other traffic on a public chain, L1 data limits of an L2 and per-second gas targets",
+    "claimGas": 155449,
+    "registerGas": 368616,
+    "l1_30M": {
+      "gasLimit": 30000000,
+      "claimsPerBlock": 192,
+      "registrationsPerBlock": 81,
+      "corridorDayAt53TxShareOfOneBlock": 0.2746,
+      "perDayAt12s": {
+        "claims": 1382400
+      }
+    },
+    "corridor": {
+      "source": "docs/ADOPTION.md §6.1 corridor estimate: about 7 to 53 transactions a day (an assumption, not a measurement)",
+      "txPerDay": [
+        7,
+        53
+      ],
+      "shareOfOne30MBlock": {
+        "at53PerDay": 0.2746
+      },
+      "shareOfOneDayOf30MBlocks": {
+        "at53PerDay": 0.000038142578703703707
+      }
+    },
+    "liveGasLimits": [
+      {
+        "name": "Ethereum mainnet",
+        "rpc": "https://ethereum-rpc.publicnode.com",
+        "block": 26154462,
+        "blockTime": "2026-10-09T11:10:11.000Z",
+        "gasLimit": 60000000,
+        "claimsPerBlock": 385,
+        "registrationsPerBlock": 162,
+        "corridorDayAt53TxShareOfOneBlock": 0.1373
+      },
+      {
+        "name": "Base mainnet",
+        "rpc": "https://mainnet.base.org",
+        "block": 52377435,
+        "blockTime": "2026-10-09T11:10:17.000Z",
+        "gasLimit": 400000000,
+        "claimsPerBlock": 2573,
+        "registrationsPerBlock": 1085,
+        "corridorDayAt53TxShareOfOneBlock": 0.0206
+      },
+      {
+        "name": "OP Mainnet",
+        "rpc": "https://mainnet.optimism.io",
+        "block": 157972720,
+        "blockTime": "2026-10-09T11:10:17.000Z",
+        "gasLimit": 40000000,
+        "claimsPerBlock": 257,
+        "registrationsPerBlock": 108,
+        "corridorDayAt53TxShareOfOneBlock": 0.206
+      },
+      {
+        "name": "Arbitrum One",
+        "rpc": "https://arb1.arbitrum.io/rpc",
+        "block": 513178574,
+        "blockTime": "2026-10-09T11:10:18.000Z",
+        "gasLimit": 1125899906842624,
+        "note": "the block gasLimit field is a fixed placeholder on this chain, not a block capacity; no per-block figure is computed"
+      }
+    ]
+  }
+}

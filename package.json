@@ -30,6 +30,7 @@
     "data:annex2": "node scripts/eurostat-annex2.ts",
     "bench:verify": "node scripts/bench-verify.ts",
     "bench:l2fees": "node scripts/l2-fee-estimate.ts",
+    "bench:scale": "node scripts/bench-scale.ts",
     "vlei:up": "npm run vlei:up -w verifier",
     "vlei:setup": "npm run vlei:setup -w verifier",
     "demo:local": "node scripts/demo-local.ts",
