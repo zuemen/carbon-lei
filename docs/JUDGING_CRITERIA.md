@@ -33,7 +33,7 @@ On 2026-10-07 we followed steps 1–5 with a Playwright script against the live 
 
 ## Organiser's weighted criteria
 
-The organiser's page gives these weights. It also gives a second split (70% technical innovation and blockchain implementation, 20% climate impact, 10% scalability); we list the evidence once.
+The organiser's page gives these weights under "Evaluation Criteria (Weighted)". The same page also lists "Submission Categories" (70% technical innovation and blockchain implementation, 20% climate impact, 10% scalability) under its submission requirements; that list is not labelled as a scoring weight, so we map the evidence to the weighted criteria only.
 
 | Criterion | Weight | Evidence |
 |---|---|---|
