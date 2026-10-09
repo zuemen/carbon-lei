@@ -68,22 +68,28 @@
   .label { font: 600 14px/1 var(--mono); letter-spacing: .115em; color: var(--muted); text-transform: uppercase; }
   .sec { margin-top: 11px; }
 
-  /* architecture */
-  .arch { position: relative; width: 601px; height: 216px; margin: 8px auto 0; }
-  .box { position: absolute; top: 0; width: 284px; height: 161px; background: var(--card);
-    border: 1.5px solid var(--ink); padding: 3px 10px; }
+  /* architecture: off-chain | on-chain | the centralised operator (A32 item 3) */
+  .arch { position: relative; width: 718px; height: 216px; margin: 8px 0 0; }
+  .box { position: absolute; top: 0; height: 161px; background: var(--card);
+    border: 1.5px solid var(--ink); padding: 3px 8px; }
   .box .t { font-weight: 600; letter-spacing: .06em; margin-bottom: 7px; white-space: nowrap; }
-  .off { left: 0; }
-  .on { right: 0; }
+  .off { left: 0; width: 262px; }
+  .on { left: 272px; width: 274px; }
+  .op { position: absolute; top: 0; left: 556px; width: 162px; height: 214px; border: 1.5px dashed var(--red);
+    background: rgba(158, 32, 25, .06); padding: 2px 7px; font-size: 13px; line-height: 1.2; }
+  .op .t { font-weight: 600; letter-spacing: .04em; color: var(--red); margin-bottom: 1px; }
+  .op .s { color: var(--red); margin-bottom: 2px; }
+  .op b { display: block; margin-top: 3px; }
+  .op .x { margin-top: 4px; color: var(--red); }
   .tl { list-style: none; position: relative; margin-left: 4px; }
   .tl::before { content: ""; position: absolute; left: 3px; top: 9px; bottom: 9px; width: 2px; background: var(--green); }
   .tl li { position: relative; padding-left: 19px; height: 26px; line-height: 20px; white-space: nowrap; }
   .tl li::before { content: ""; position: absolute; left: 0; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
-  .tl .badge { position: absolute; left: 232px; top: 2px; }
-  .inner { position: relative; background: var(--paper); border: 1.5px solid var(--rule); padding: 3px 9px 2px; line-height: 1.15; margin-bottom: 10px; }
+  .tl .badge { position: absolute; left: 218px; top: 2px; }
+  .inner { position: relative; background: var(--paper); border: 1.5px solid var(--rule); padding: 3px 7px 2px; line-height: 1.15; margin-bottom: 10px; white-space: nowrap; }
   .inner b { display: block; margin-bottom: 1px; letter-spacing: 0; }
   .inner .badge { position: absolute; right: 7px; top: 6px; }
-  .bar { position: absolute; left: 0; right: 0; top: 175px; height: 27px; background: var(--ink); color: var(--card);
+  .bar { position: absolute; left: 0; width: 546px; top: 175px; height: 27px; background: var(--ink); color: var(--card);
     text-align: center; line-height: 27px; }
   .arch svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 
@@ -163,16 +169,28 @@
       <div class="inner"><b>VerifierAllowlist</b>body active, accredited;<br>auditor not revoked<span class="badge">2</span></div>
       <div class="inner"><b>EmissionsClaimRegistry</b>500 t verified · 200 claimed<br>300 t left<span class="badge">3</span></div>
     </div>
+    <div class="op">
+      <div class="t">CENTRALISED</div>
+      <div class="s">the team (demo)</div>
+      <b>Owner key</b>lists bodies and auditors; 1 test key, multisig proposed
+      <b>Watcher key</b>syncs revocations
+      <div class="x">Contract trusts both; neither edits tonnage</div>
+    </div>
     <div class="bar">EU importer · 8 checks in the browser · no wallet</div>
-    <svg width="601" height="216" aria-hidden="true">
+    <svg width="718" height="216" aria-hidden="true">
       <defs>
         <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0 0 L10 5 L0 10 z" fill="#1d2320"/>
         </marker>
+        <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#9e2019"/>
+        </marker>
       </defs>
-      <line x1="189" y1="91" x2="322" y2="120" stroke="#1d2320" stroke-width="1.3" marker-end="url(#ah)"/>
-      <line x1="141" y1="175" x2="141" y2="163" stroke="#1d2320" stroke-width="1.3" marker-end="url(#ah)"/>
-      <line x1="458" y1="175" x2="458" y2="163" stroke="#1d2320" stroke-width="1.3" marker-end="url(#ah)"/>
+      <line x1="170" y1="91" x2="281" y2="120" stroke="#1d2320" stroke-width="1.3" marker-end="url(#ah)"/>
+      <line x1="129" y1="175" x2="129" y2="163" stroke="#1d2320" stroke-width="1.3" marker-end="url(#ah)"/>
+      <line x1="409" y1="175" x2="409" y2="163" stroke="#1d2320" stroke-width="1.3" marker-end="url(#ah)"/>
+      <line x1="560" y1="46" x2="538" y2="46" stroke="#9e2019" stroke-width="1.3" marker-end="url(#ahr)"/>
+      <line x1="560" y1="127" x2="538" y2="76" stroke="#9e2019" stroke-width="1.3" marker-end="url(#ahr)"/>
     </svg>
   </div>
 
