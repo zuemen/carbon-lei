@@ -89,7 +89,7 @@ The pilot would measure these. We set no targets here: the prototype has no real
 | 5–6 | The body issues and registers its first pilot report; the auditor anchors it; the operator builds proofs | Report registered; a proof passes all seven verification checks |
 | 7–9 | The operator claims shipments for two or three importers; importers verify each one; watchers run; one revocation drill on a test auditor credential | Every pilot shipment verified; the drill's sync delay recorded |
 | 10–11 | Importers try the PACT export in their declaration software; the metrics in §4 are collected | Each importer has reported whether the import worked |
-| 12 | Review with all partners: results, open risks, the production chain and governance (multisig of accreditation bodies, then shared governance) | A written go or no-go for phase 2 ([ADOPTION §5](ADOPTION.md#5-adoption-path)) |
+| 12 | Review with all partners: results, open risks, the production chain and governance (the team's multisig owner key, then hand-over to a governance body of NAB and QVI representatives) | A written go or no-go for phase 2 ([ADOPTION §5](ADOPTION.md#5-adoption-path)) |
 
 ## 6. Costs: test network and production chain
 

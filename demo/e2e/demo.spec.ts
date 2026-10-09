@@ -646,6 +646,11 @@ test("Trust chain: name field vs signature chain panel, collapsed by default, op
   const panel = page.locator("details#name-vs-chain");
   await expect(panel).not.toHaveAttribute("open");
   await expect(page.locator("li.node")).toHaveCount(data.trustChain.length);
+  // Same roadmap as OPERATE and the Devpost text: team multisig in a pilot, then a NAB/QVI governance body.
+  const allowlist = page.getByRole("region", { name: "Who writes the allowlist" });
+  await expect(allowlist).toContainText("in a pilot the team holds this key in a multisig");
+  await expect(allowlist).toContainText("governance body of NAB and QVI representatives");
+  await expect(allowlist).not.toContainText("multisig of accreditation bodies");
   const summary = panel.locator("summary");
   await summary.focus();
   await page.keyboard.press("Enter");

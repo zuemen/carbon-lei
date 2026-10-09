@@ -112,7 +112,8 @@ export function TrustChain() {
               can edit, revoke or re-assign a report or its tonnage. Every allowlist write is an on-chain event, and each
               addition carries credential hashes (SAIDs) you can re-check. The contract trusts these keys: a stolen allowlist
               owner key can list a fake body whose reports the contract accepts, and only the verifier's pinned root of trust
-              catches it (Try to break it, card 4). Roadmap: a multisig of accreditation bodies.
+              catches it (Try to break it, card 4). Roadmap (a proposal; no organisation contacted): in a pilot the team
+              holds this key in a multisig, then hands it to a governance body of NAB and QVI representatives.
             </p>
           </section>
         </div>
