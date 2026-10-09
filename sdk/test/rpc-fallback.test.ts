@@ -184,6 +184,49 @@ describe("historyFallback (SDK reader)", () => {
 });
 
 // Red-team round 2 (N-L4): a node that is behind no longer stops the verification while another node is current.
+describe("ChainReader.at: a repeated view call at the pinned block", () => {
+  const T = encodeAbiParameters([{ type: "bool" }], [true]);
+  const LEI2 = `0x${"66".repeat(32)}` as Hex;
+  const ethCalls = (calls: { method: string }[]) => calls.filter((c) => c.method === "eth_call").length;
+
+  it("the same function and arguments at the same block → one eth_call, the same answer", async () => {
+    const calls = serve({ [A]: () => ({ result: T }) });
+    const reader = ChainReader.forRpc(deployment, [A], sepolia).at(11_846_770n);
+    const [x, y] = await Promise.all([reader.isInstitutionActiveAt(LEI, 1n), reader.isInstitutionActiveAt(LEI, 1n)]);
+    expect([x, y, await reader.isInstitutionActiveAt(LEI, 1n)]).toEqual([true, true, true]);
+    expect(ethCalls(calls)).toBe(1);
+  });
+
+  it("other arguments, another reader pinned by at, or an unpinned reader → a new eth_call each", async () => {
+    const calls = serve({ [A]: () => ({ result: T }) });
+    const base = ChainReader.forRpc(deployment, [A], sepolia);
+    const r1 = base.at(11_846_770n);
+    await r1.isInstitutionActiveAt(LEI, 1n);
+    await r1.isInstitutionActiveAt(LEI, 2n);
+    await r1.isInstitutionActiveAt(LEI2, 1n);
+    expect(ethCalls(calls)).toBe(3);
+    await base.at(11_846_770n).isInstitutionActiveAt(LEI, 1n);
+    expect(ethCalls(calls)).toBe(4);
+    await base.isInstitutionActiveAt(LEI, 1n);
+    await base.isInstitutionActiveAt(LEI, 1n);
+    expect(ethCalls(calls)).toBe(6);
+  });
+
+  it("a failed call is not kept: the next identical call asks the node again", async () => {
+    let fail = true;
+    const calls = serve({
+      [A]: (m) => (m === "eth_call" && fail ? { error: { code: -32000, message: "missing trie node 381efd (path ) state is not available" } } : { result: T }),
+    });
+    const reader = ChainReader.forRpc(deployment, [A], sepolia).at(11_846_770n);
+    await expect(reader.isInstitutionActiveAt(LEI, 1n)).rejects.toThrow();
+    const failed = ethCalls(calls);
+    expect(failed).toBeGreaterThan(0);
+    fail = false;
+    expect(await reader.isInstitutionActiveAt(LEI, 1n)).toBe(true);
+    expect(ethCalls(calls)).toBe(failed + 1);
+  });
+});
+
 describe("historyFallback: a node whose latest block is too old", () => {
   const NOW = 1_800_000_000;
   const clock = () => NOW * 1000;
