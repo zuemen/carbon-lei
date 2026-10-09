@@ -99,13 +99,13 @@ The tonnage ledger stops over-use across importers only when the importers that 
 
 ## 3. Who pays
 
-Options for a pilot. None is tested. Main case (our inference): the verification body folds the cost into its verification fee, because it is the party that registers the report and it already has a fee relationship with the operator. The other rows are alternatives.
+Options for a pilot. None is tested. Main case (our inference), the first and third rows together: the verification body folds registration gas and credential costs into its verification fee, because it is the party that registers the report and it already has a fee relationship with the operator; the operator pays the claim gas of its own shipments, because it sends `claimShipment` from its own wallet ([OPERATE](OPERATE.md#operating-model-at-a-glance)). The other rows are alternatives.
 
 | Option | Payer | What they pay for |
 |---|---|---|
 | Per registered report | Verification body, passed into its verification fee (main case; inference, not tested) | Anchoring, registration gas, credential issuance |
 | Per verification | EU importer | Hosted verification API and evidence archive |
-| Per claim | Operator | Claim gas and hosting of the supplier's proof |
+| Per claim | Operator (main case; inference, not tested) | Claim gas and hosting of the supplier's proof |
 | Public infrastructure | Trade or climate agencies | Allowlist governance and watchers as a shared service |
 
 Measured gas on Sepolia (transaction receipts of the demo, 5 October 2026): `registerReport` 368,616 gas and `claimShipment` 155,449 gas; the medians in the contract test suite's gas report are 368,604 and 155,425. Adding a verification body (`addVerifier`) took 163,521 gas and adding an auditor (`addAuditor`) 75,119 gas. What this costs in money depends on the production chain and its gas price (§6.1); Sepolia test ether has no value. vLEI issuance fees are set by each QVI and are not estimated here. They fall on verification bodies (and on an accreditation body that chooses to issue credentials), not on operators or importers.

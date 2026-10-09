@@ -103,7 +103,7 @@ The pilot would measure these. We set no targets here: the prototype has no real
 
 - **Test network:** test ether has no market value, so the pilot's chain cost is zero in money.
 - **Production chain:** the cost depends on the chain chosen and its gas price; we do not estimate it. Credentials, selective disclosure and the vLEI chain stay off-chain, so the gas count above does not grow with them.
-- **Not estimated:** vLEI issuance fees, which each QVI sets and which fall on the verification body (and on an accreditation body that issues credentials itself); hosting of KERI agents and watchers. Who pays in the main case (our inference, not tested): the verification body, inside its verification fee ([ADOPTION §3](ADOPTION.md#3-who-pays)).
+- **Not estimated:** vLEI issuance fees, which each QVI sets and which fall on the verification body (and on an accreditation body that issues credentials itself); hosting of KERI agents and watchers. Who pays in the main case (our inference, not tested): the verification body pays registration gas and vLEI fees inside its verification fee, and the supplier (operator) pays claim gas ([ADOPTION §3](ADOPTION.md#3-who-pays), [OPERATE](OPERATE.md#operating-model-at-a-glance)).
 
 ## 7. Risks
 
