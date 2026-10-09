@@ -17,7 +17,7 @@ One-page judge brief (PDF): [docs/judge-brief.pdf](docs/judge-brief.pdf)
 - **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
 - **Already claimed?** An on-chain ledger deducts each shipment from the report's verified tonnage (500 t in the demo) and rejects a batch claimed twice or a claim beyond what remains.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 288 contract, 364 SDK, 29 verifier, 36 browser](https://img.shields.io/badge/tests-288%20contract%20%2B%20364%20SDK%20%2B%2029%20verifier%20%2B%2036%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 288 contract, 368 SDK, 29 verifier, 37 browser](https://img.shields.io/badge/tests-288%20contract%20%2B%20368%20SDK%20%2B%2029%20verifier%20%2B%2037%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
 ## Who uses CarbonLEI
 
