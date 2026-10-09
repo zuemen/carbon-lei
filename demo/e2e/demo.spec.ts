@@ -524,6 +524,112 @@ test("Verify waits more than about 3 s for a node → a progress line while it w
   await expect(page.getByText(/8 of 8 checks passed/).first()).toBeVisible();
 });
 
+test("First screen plain context: what CBAM charges for and what this checks, between the claim and the answers; Verify above the fold", async ({ page }) => {
+  await page.goto("./#buyer");
+  const glance = page.getByRole("region", { name: "At a glance" });
+  const context = glance.locator(".context");
+  await expect(context).toHaveText(
+    "The EU charges importers for the carbon emitted making steel, aluminium and other goods (CBAM). The charge depends on a verified emissions value: this checks who signed it and that it is not reused beyond its verified tonnes.",
+  );
+  const bottom = async (l: typeof context) => (await l.boundingBox())!.y + (await l.boundingBox())!.height;
+  const top = async (l: typeof context) => (await l.boundingBox())!.y;
+  expect(await top(context)).toBeGreaterThanOrEqual(await bottom(glance.locator(".claim")));
+  expect(await bottom(context)).toBeLessThanOrEqual(await top(glance.locator(".answers")));
+  // The headline and the one-click Verify stay above the fold on a 1280 × 800 screen and on a 390 × 844 phone.
+  for (const [w, h] of [[1280, 800], [390, 844]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(glance.locator(".claim")).toBeInViewport({ ratio: 1 });
+    expect(await bottom(page.getByRole("button", { name: "Verify the demo proof" })), `${w} px`).toBeLessThanOrEqual(h);
+  }
+});
+
+test("Phone (390 px): the sticky tab bar is one row that scrolls sideways, main-path tabs numbered, links at least 44 px tall", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./#on-chain-proof");
+  const bar = page.locator(".tabbar");
+  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(60);
+  const tabs = page.getByRole("tab");
+  await expect(tabs).toHaveCount(6);
+  const tops = await tabs.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size, "one row").toBe(1);
+  for (const h of await tabs.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))) expect(h).toBeGreaterThanOrEqual(44);
+  await expect(page.getByRole("tab", { name: "1 Supplier" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "2 Buyer" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "3 Break it" })).toBeVisible();
+  await expect(page.locator(".pathbar")).toBeHidden();
+  // The selected tab, the last one, is scrolled into the row's view (the bar sticks once the page is scrolled).
+  await page.evaluate(() => window.scrollTo(0, 1500));
+  await expect(page.getByRole("tab", { name: "Proof" })).toBeInViewport({ ratio: 1 });
+  // Touch targets on the judge's path: the first screen's links, the evidence note, the footer, explorer links.
+  const small = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>(".masthead-meta a, .ledger-try, .readonly-note .link-btn, .footer a, a.hash")]
+      .filter((e) => e.offsetParent !== null)
+      .map((e) => [e.textContent?.trim().slice(0, 24), e.getBoundingClientRect().height] as const)
+      .filter(([, h]) => h < 44),
+  );
+  expect(small).toEqual([]);
+  // The sticky bar stays one row while scrolling down a tab.
+  await page.getByRole("tab", { name: "3 Break it" }).click();
+  await page.evaluate(() => window.scrollTo(0, 2000));
+  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(60);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("Desktop: a button scrolled into view is not under the sticky tab bar (attack 4)", async ({ page }) => {
+  await page.goto("./#try-to-break-it");
+  const btn = page.getByRole("button", { name: "Verify the impostor's proof" });
+  await expect(btn).toBeVisible();
+  for (const block of ["start", "nearest"] as const) {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await btn.evaluate((el, b) => el.scrollIntoView({ block: b }), block);
+    const barBottom = await page.locator(".tabbar").evaluate((el) => el.getBoundingClientRect().bottom);
+    expect((await btn.boundingBox())!.y, `scrollIntoView ${block}`).toBeGreaterThanOrEqual(barBottom);
+  }
+});
+
+test("Climate link under a VALID result: the price per 0.1 tCO2e/t at the card's price; it scrolls to the price table and slider", async ({ page }) => {
+  const c = (await (await page.request.get("demo-data.json")).json()).comparison;
+  const per = (0.1 * Number(c.priceEur)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  await page.goto("./#buyer");
+  await page.getByRole("button", { name: "Verify the demo proof" }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible({ timeout: 60_000 });
+  const line = page.locator(".verify-climate");
+  if ((await page.locator(".overall .stamp").textContent()) !== "Verified") {
+    await expect(line).toHaveCount(0);
+    return;
+  }
+  await expect(line).toHaveText(
+    `Climate link: CBAM's price rewards lower verified emissions only if buyers trust the verified value instead of the higher default. At €${c.priceEur}/tCO2e, each 0.1 tCO2e/t lower is worth about €${per} per tonne of goods (gross, illustrative). Price table and slider ↓`,
+  );
+  // The same figure as the slider's rate line.
+  await expect(page.locator(".whatif-rate")).toContainText(`€${per} per tonne of goods`);
+  await line.getByRole("button", { name: "Price table and slider ↓" }).click();
+  await expect(page.locator("#comparison")).toBeFocused();
+  await expect(page.locator("#comparison")).toBeInViewport();
+  // A rejected proof gets no climate line.
+  await page.getByRole("button", { name: "Tamper with one number" }).click();
+  await expect(page.locator(".verify-summary")).toContainText("Rejected");
+  await expect(line).toHaveCount(0);
+});
+
+test("Card 2b: the tonnes beyond the verified report and their declared-emissions gap, from the demo data, labelled illustrative", async ({ page }) => {
+  const data = await (await page.request.get("demo-data.json")).json();
+  const verified = Number(data.report.verifiedTonnes);
+  const excess = Number(data.shipment.quantityTonnes) + Number(data.attacks.secondImporter.quantityTonnes) - verified;
+  const c = data.comparison;
+  const x = excess * (Number(c.defaultValue) - Number(c.verifiedValue));
+  const f = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  expect([excess, f(x)], "the demo's figures").toEqual([100, "117.8"]);
+  await page.goto("./#try-to-break-it");
+  const note = page.locator("#attack-2b").getByTestId("overclaim-note");
+  await expect(note).toHaveText(
+    `If accepted: ${f(excess)} t beyond the ${f(verified)} t verified → ${f(x)} tCO2e less declared than the CBAM default (${f(excess)} × (${c.defaultValue} − ${c.verifiedValue})), with no verified emissions behind it. Gross, illustrative; contrary to CBAM Art. 8, not a normal outcome.`,
+  );
+  await expect(note).not.toContainText(/avoid|reduc|saved/i);
+});
+
 test("E6 no horizontal scroll at 390 px", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const tab of ["buyer", "supplier", "verification-body", "try-to-break-it", "trust-chain", "on-chain-proof"]) {

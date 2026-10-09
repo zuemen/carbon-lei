@@ -213,6 +213,7 @@ function VerifySummary({
   }
   const f = cmp ? comparisonFigures(cmp) : null;
   return (
+    <>
     <p className="verify-summary ok">
       <span aria-hidden="true">✓ </span>
       <strong>{counts}</strong> ·{" "}
@@ -227,6 +228,17 @@ function VerifySummary({
         See comparison ↓
       </button>
     </p>
+    {cmp && (
+      <p className="verify-climate">
+        <strong>Climate link:</strong> CBAM's price rewards lower verified emissions only if buyers trust the verified
+        value instead of the higher default. At €{cmp.priceEur}/tCO2e, each 0.1 tCO2e/t lower is worth about €
+        {eur2(whatIfFigures(cmp, 0).eurPerTenth)} per tonne of goods (gross, illustrative).{" "}
+        <button type="button" className="link-btn" onClick={onSeeComparison}>
+          Price table and slider ↓
+        </button>
+      </p>
+    )}
+    </>
   );
 }
 

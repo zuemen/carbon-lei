@@ -162,6 +162,20 @@ test("A2b keyboard only: Verify the demo proof on the first screen", async ({ pa
   await expect(page.locator(".verify-summary")).toContainText(/\d of 8 checks passed/);
 });
 
+test("A8 axe on a 390 px phone: the first screen, the Buyer result with the climate link, Try to break it", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./#buyer");
+  await connected(page);
+  await scan(page, "first screen at 390 px");
+  await page.getByRole("button", { name: "Verify the demo proof" }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  await scan(page, "Buyer after Verify at 390 px");
+  await page.getByRole("tab", { name: "Break it" }).click();
+  await page.getByRole("button", { name: /Claim \d+ t more/ }).click();
+  await expect(page.getByText(/Reverted: ExceedsVerifiedTonnage/)).toBeVisible();
+  await scan(page, "Try to break it at 390 px");
+});
+
 test("A6 layer card: both switches by keyboard only, axe in each state", async ({ page }) => {
   const data = await (await page.request.get("demo-data.json")).json();
   await page.goto("./#try-to-break-it");

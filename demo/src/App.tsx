@@ -26,6 +26,9 @@ const STEPS: { n: number; tab: TabId; long: string; short: string }[] = [
   { n: 3, tab: "try-to-break-it", long: "Try to break it", short: "Break it" },
 ];
 
+/** Step number of each main-path tab; on phones the tab row shows it instead of a second (main path) row. */
+const STEP_OF: Partial<Record<TabId, number>> = Object.fromEntries(STEPS.map((s) => [s.tab, s.n]));
+
 export type ConnState =
   | { kind: "connecting"; waited: number; switched: boolean }
   // `behind`: every node's latest block is older than the head-age limit (Verify refuses it); shown instead of Connected.
@@ -171,6 +174,30 @@ export function App() {
     return () => window.cancelAnimationFrame(raf);
   }, [focusTarget, tab]);
 
+  // The sticky tab bar's height, as --tabbar-h: scroll-padding-top keeps anything scrolled into view (by focus,
+  // by scrollIntoView) clear of the bar instead of under it.
+  const hasData = data !== null;
+  useEffect(() => {
+    const bar = document.querySelector<HTMLElement>(".tabbar");
+    if (!bar) return;
+    const set = () => document.documentElement.style.setProperty("--tabbar-h", `${Math.ceil(bar.getBoundingClientRect().height)}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [hasData]);
+
+  // On phones the tabs are one row that scrolls sideways: keep the selected tab in view.
+  useEffect(() => {
+    const el = document.getElementById(`tab-${tab}`);
+    const row = el?.parentElement;
+    if (!el || !row || row.scrollWidth <= row.clientWidth) return;
+    const left = el.offsetLeft - row.offsetLeft;
+    if (left < row.scrollLeft || left + el.offsetWidth > row.scrollLeft + row.clientWidth) {
+      row.scrollLeft = Math.max(0, left - (row.clientWidth - el.offsetWidth) / 2);
+    }
+  }, [tab, hasData]);
+
   const ctx = useMemo<Ctx | null>(() => {
     if (!data) return null;
     return {
@@ -269,7 +296,10 @@ export function App() {
                 onClick={() => go(t.id)}
               >
                 <span className="long-label">{t.label}</span>
-                <span className="short-label">{t.short}</span>
+                <span className="short-label">
+                  {STEP_OF[t.id] ? `${STEP_OF[t.id]} ` : ""}
+                  {t.short}
+                </span>
               </button>
             ))}
           </div>
@@ -352,6 +382,11 @@ function Lead(props: { data: DemoData; reader: ChainReader | null; offline: bool
   return (
     <>
       <p className="claim">A carbon number is only as trustworthy as the person who signed it.</p>
+      <p className="context">
+        The EU charges importers for the carbon emitted making steel, aluminium and other goods (CBAM). The charge
+        depends on a verified emissions value: this checks who signed it and that it is not reused beyond its verified
+        tonnes.
+      </p>
       <ul className="answers" aria-label="What the checks answer">
         <li className="answer">
           <span className="answer-q">Who signed</span>

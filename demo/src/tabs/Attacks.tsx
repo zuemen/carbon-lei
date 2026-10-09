@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { verifyPresentation, type VerificationResult } from "../../../sdk/verify.ts";
 import { useApp } from "../App.tsx";
 import { Badge, SourceLabel, TabHead, TxLink } from "../components.tsx";
-import { short, type Attack4 } from "../data.ts";
+import { fmt, short, type Attack4 } from "../data.ts";
 import { evidenceCheckers } from "../evidence.ts";
 import { CODE_TEXT, revertText } from "../messages.ts";
 import { CHECKS, kindOf, tamperedProof } from "./Buyer.tsx";
@@ -201,6 +201,14 @@ export function Attacks() {
   const reg = data.txs.find((t) => t.step === "registerReport1");
   const waiting = !reader && !offline;
   const revoke = data.txs.find((t) => t.step === "revokeAuditor");
+  // Card 2b's excess, from the demo data only: tonnes the second claim would put beyond the verified report, and
+  // the declared-emissions gap (default minus verified intensity) those tonnes would carry without verification.
+  const over = (() => {
+    const verified = Number(data.report.verifiedTonnes);
+    const excess = Number(data.shipment.quantityTonnes) + Number(data.attacks.secondImporter.quantityTonnes) - verified;
+    const gapPerT = Number(data.comparison.defaultValue) - Number(data.comparison.verifiedValue);
+    return excess > 0 && gapPerT > 0 ? { verified, excess, tco2e: excess * gapPerT } : null;
+  })();
 
   async function attack1() {
     setBusy("a1");
@@ -304,6 +312,14 @@ export function Attacks() {
               Only {data.report.verifiedTonnes} t were verified and {data.shipment.quantityTonnes} t are already claimed. The
               ledger is shared by every importer.
             </p>
+            {over && (
+              <p className="fine overclaim-note" data-testid="overclaim-note">
+                If accepted: {fmt(over.excess)} t beyond the {fmt(over.verified)} t verified →{" "}
+                <strong>{fmt(over.tco2e)} tCO2e</strong> less declared than the CBAM default ({fmt(over.excess)} × (
+                {data.comparison.defaultValue} − {data.comparison.verifiedValue})), with no verified emissions behind it.
+                Gross, illustrative; contrary to CBAM Art. 8, not a normal outcome.
+              </p>
+            )}
           </div>
           <button className="btn" disabled={busy === "a2b" || waiting} onClick={() => dry("a2b")}>
             Claim {data.attacks.secondImporter.quantityTonnes} t more
