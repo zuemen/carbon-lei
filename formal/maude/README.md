@@ -20,7 +20,7 @@ MAUDE=/path/to/maude npm run formal:maude:full         # checks-full.maude
 MAUDE=/path/to/maude npm run formal:maude -- revInst   # only the lines containing "revInst"
 ```
 
-CI (job `maude` in `.github/workflows/ci.yml`) downloads the Linux release, checks its SHA-256 and runs `checks.maude` on every push (the 32 commands of the first version took about 90 s there, with the same state counts as on macOS; the 50 commands now take 102 s on the development machine).
+CI (job `maude` in `.github/workflows/ci.yml`) downloads the Linux release, checks its SHA-256 and runs `checks.maude` on every push (the 50 commands take about 105 s there, with the same state counts as on macOS; 102 s on the development machine).
 
 `run.sh` exits non-zero if any result differs from the expectation written on its line, or if the watchdog stops Maude: it kills Maude above 3 GB of resident memory (`MAUDE_MAX_RSS_MB`), and on macOS also when the system-wide free memory reported by `memory_pressure` is below 15 % (`MAUDE_MIN_FREE_PCT`) while Maude holds more than 256 MB (`MAUDE_FREE_CHECK_MIN_RSS_MB`). Only one Maude process runs at a time.
 
