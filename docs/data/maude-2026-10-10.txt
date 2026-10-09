@@ -1,0 +1,631 @@
+# npm run formal:maude, then npm run formal:maude:full; Maude 3.5.1 (macOS arm64 release, sha256 95851274f57b3853aab833674e2b770ed800f38fb1f3d03c97dcac56346c13dc), Apple M4, 16 GB. Run on 9 October 2026, about 19:35-19:43 Taiwan time (UTC+8); the file is named 2026-10-10 so that the first run of that day, docs/data/maude-2026-10-09.txt, stays as it was. Each command in its own Maude process (formal/maude/run.sh). This run: eleven safety properties stated with their own spec helpers, 15 mutants in 26 runs, 50 commands in checks.maude.
+[run.sh] Maude 3.5.1 at $MAUDE
+*** CarbonLEI Maude checks: one command per line, each run in its own Maude process by run.sh.
+*** Each line is "<expected> : <command>": none = no solution, found = a solution, true = the LTL
+*** formula holds, counterexample = it does not. run.sh fails if any result differs. Results: README.md.
+*** --- A. Safety: every property expected to hold (safetyBad, eleven properties), expected: No solution
+==========================================
+search in CARBONLEI : keriInst(up, 4) =>* {S} such that safetyBad(S) = true .
+
+No solution.
+states: 16662  rewrites: 71133735 in 8535ms cpu (8543ms real) (8333400
+    rewrites/second)
+[run.sh] as expected (none); wall 9 s, peak resident memory 49232 KB (sampled every 0.5 s)
+==========================================
+search in CARBONLEI : keriInst(up, 4) withDelta 2 =>* {S} such that safetyBad(
+    S) = true .
+
+No solution.
+states: 22152  rewrites: 95368788 in 12165ms cpu (12174ms real) (7839504
+    rewrites/second)
+[run.sh] as expected (none); wall 12 s, peak resident memory 61760 KB (sampled every 0.5 s)
+==========================================
+search in CARBONLEI : suspInst(3) =>* {S} such that safetyBad(S) = true .
+
+No solution.
+states: 31378  rewrites: 130232806 in 18245ms cpu (18256ms real) (7137675
+    rewrites/second)
+[run.sh] as expected (none); wall 19 s, peak resident memory 83104 KB (sampled every 0.5 s)
+==========================================
+search in CARBONLEI : suspInst(3) withDelta 2 =>* {S} such that safetyBad(S) =
+    true .
+
+No solution.
+states: 31378  rewrites: 130232807 in 18361ms cpu (18367ms real) (7092855
+    rewrites/second)
+[run.sh] as expected (none); wall 18 s, peak resident memory 82768 KB (sampled every 0.5 s)
+==========================================
+search in CARBONLEI : revInst(4) =>* {S} such that safetyBad(S) = true .
+
+No solution.
+states: 7096  rewrites: 9147574 in 1107ms cpu (1109ms real) (8256328
+    rewrites/second)
+[run.sh] as expected (none); wall 1 s, peak resident memory 26416 KB (sampled every 0.5 s)
+==========================================
+search in CARBONLEI : dupInst(4) =>* {S} such that safetyBad(S) = true .
+
+No solution.
+states: 1760  rewrites: 6594340 in 629ms cpu (629ms real) (10481097
+    rewrites/second)
+[run.sh] as expected (none); wall 1 s, peak resident memory 16320 KB (sampled every 0.5 s)
+*** --- B. Non-vacuity: the safe instances do reach the interesting states, expected: a solution
+==========================================
+search [1] in CARBONLEI : revInst(4) =>* {S} such that revWitness(S) = true .
+
+Solution 1 (state 97)
+states: 98  rewrites: 26616 in 3ms cpu (3ms real) (7563512 rewrites/second)
+S --> claimTimes clock(0) tmax(4) delta(1) wmode(up) allowLift(b1) slotLabel(X)
+    importer(i1) importer(i2) ship(1) ship(1) canReg(r1, X) aud(a1, b1) aud(a2,
+    b2) susp(b1, 0) gReg(r1, false) gReg(r2, false) gRev(r2, false) body(b1,
+    pinned, 2) body(b2, pinned, 4) slot(X, r2, 1) supBy(r1, r2, 0) reg(r1, 0,
+    X, false, false) reg(r2, 0, X, false, false) claimed(r1, i1, 1, 0, ac(r1,
+    i1, 1)) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1312 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) =>* {S} such that contestedAfterKeri(
+    S) = true .
+
+Solution 1 (state 43)
+states: 44  rewrites: 4816 in 0ms cpu (0ms real) (5504000 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) slotLabel(X) slotLabel(Z) importer(
+    i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(
+    a1, b1) aud(a2, b2) chainRev(a1, 0) keriRev(a1, 0) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(r1, 0, X, true, false)
+    cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1296 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) =>* {S} such that twoImporters(S) =
+    true .
+
+Solution 1 (state 66)
+states: 67  rewrites: 13535 in 1ms cpu (1ms real) (9182496 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) allowKeri(a1) slotLabel(X) slotLabel(
+    Z) importer(i1) importer(i2) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1,
+    b1) aud(a2, b2) gReg(r1, false) body(b1, pinned, 4) body(b2, other, 4)
+    slot(X, r1, 2) reg(r1, 0, X, false, false) claimed(r1, i1, 1, 0, ac(r1, i1,
+    1)) claimed(r1, i2, 1, 0, ac(r1, i2, 1)) cred(r1, b1, a1, 2, X, noRep)
+    cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1536 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) =>* {S} such that regAfterLift(S) = true
+    .
+
+Solution 1 (state 547)
+states: 548  rewrites: 273220 in 30ms cpu (31ms real) (8865022 rewrites/second)
+S --> clock(1) tmax(3) delta(1) wmode(up) allowSuspend(b2) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) canReg(r1, X)
+    canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(b1, 0) lifted(b1, 1) gReg(r1,
+    false) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1, 1) reg(r1, 1, X,
+    false, false) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) cred(r1, b1, a1, 2, X,
+    noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+*** --- C. Sanity counterexample: the watcher stopped (down) or later than delta (late), expected: a solution (keriBad)
+==========================================
+search [1] in CARBONLEI : keriInst(down, 4) =>* {S} such that keriBad(S) = true
+    .
+
+Solution 1 (state 121)
+states: 122  rewrites: 43744 in 3ms cpu (5ms real) (13989126 rewrites/second)
+S --> clock(2) tmax(4) delta(1) wmode(down) slotLabel(X) slotLabel(Z) importer(
+    i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(
+    a1, b1) aud(a2, b2) keriRev(a1, 0) pend(a1, 0) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(r1, 2, X, true, false)
+    cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1200 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(late, 4) =>* {S} such that keriBad(S) = true
+    .
+
+Solution 1 (state 135)
+states: 136  rewrites: 44172 in 5ms cpu (5ms real) (8394526 rewrites/second)
+S --> clock(2) tmax(4) delta(1) wmode(late) slotLabel(X) slotLabel(Z) importer(
+    i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(
+    a1, b1) aud(a2, b2) keriRev(a1, 0) pend(a1, 0) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(r1, 2, X, true, false)
+    cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+*** --- D. Documented limits, expected: a solution each (T2/T18 sync window, T19 (8), CR6, attack 4 on-chain)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) =>* {S} such that keriRace(S) = true
+    .
+
+Solution 1 (state 11)
+states: 12  rewrites: 396 in 0ms cpu (0ms real) (3000000 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) slotLabel(X) slotLabel(Z) importer(
+    i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(
+    a1, b1) aud(a2, b2) keriRev(a1, 0) pend(a1, 0) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(r1, 0, X, true, false)
+    cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1296 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : dupInst(4) =>* {S} such that onchainSumBad(S) = true
+    .
+
+Solution 1 (state 267)
+states: 268  rewrites: 254851 in 25ms cpu (26ms real) (9864181 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) slotLabel(X) slotLabel(Y) importer(
+    i1) importer(i2) canReg(r1, X) canReg(r2, X) canReg(r2, Y) aud(a1, b1)
+    gReg(r1, false) gReg(r2, false) body(b1, pinned, 4) slot(X, r1, 2) slot(Y,
+    r2, 1) reg(r1, 0, X, false, false) reg(r2, 0, Y, false, false) claimed(r1,
+    i1, 1, 0, ac(r1, i1, 1)) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) claimed(r2,
+    i1, 1, 0, noAcc) cred(r1, b1, a1, 2, X, noRep) cred(r2, b1, a1, 2, X,
+    noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1328 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) =>* {S} such that viewsBad(S) = true
+    .
+
+Solution 1 (state 43)
+states: 44  rewrites: 7040 in 1ms cpu (1ms real) (5935919 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) slotLabel(X) slotLabel(Z) importer(
+    i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(
+    a1, b1) aud(a2, b2) chainRev(a1, 0) keriRev(a1, 0) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(r1, 0, X, true, false)
+    cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 752 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) =>* {S} such that impostorRegistered(
+    S) = true .
+
+Solution 1 (state 4)
+states: 5  rewrites: 134 in 0ms cpu (0ms real) (4187500 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) allowKeri(a1) slotLabel(X) slotLabel(
+    Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1, X) canReg(
+    r2, Z) aud(a1, b1) aud(a2, b2) gReg(r2, false) body(b1, pinned, 4) body(b2,
+    other, 4) slot(Z, r2, 0) reg(r2, 0, Z, false, false) cred(r1, b1, a1, 2, X,
+    noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+*** --- E. Mutants: 15 mutants, each removing or weakening one guard or check, 26 runs; expected: a solution each
+*** contract, claim and ledger guards
+==========================================
+search [1] in CARBONLEI : dupInst(4) +mut noClaimCap =>* {S} such that p1Bad(S)
+    = true .
+
+Solution 1 (state 124)
+states: 125  rewrites: 81728 in 4ms cpu (8ms real) (18324663 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noClaimCap) slotLabel(X)
+    slotLabel(Y) importer(i1) importer(i2) canReg(r1, X) canReg(r2, X) canReg(
+    r2, Y) aud(a1, b1) gReg(r1, false) body(b1, pinned, 4) slot(X, r1, 3) reg(
+    r1, 0, X, false, false) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) claimed(r1,
+    i1, 1, 0, ac(r1, i1, 1)) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) cred(r1, b1,
+    a1, 2, X, noRep) cred(r2, b1, a1, 2, X, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut noOverClaimed =>* {S} such that
+    p1Bad(S) = true .
+
+Solution 1 (state 289)
+states: 290  rewrites: 117044 in 14ms cpu (14ms real) (8170040 rewrites/second)
+S --> claimTimes clock(0) tmax(4) delta(1) wmode(up) mut(noOverClaimed)
+    allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(1) canReg(r1, X)
+    aud(a1, b1) aud(a2, b2) susp(b1, 0) gReg(r1, false) gReg(r2, false) gRev(
+    r2, false) body(b1, pinned, 2) body(b2, pinned, 4) slot(X, r2, 2) supBy(r1,
+    r2, 0) reg(r1, 0, X, false, false) reg(r2, 0, X, false, false) claimed(r1,
+    i1, 1, 0, ac(r1, i1, 1)) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) cred(r1, b1,
+    a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : dupInst(4) +mut noCovered =>* {S} such that
+    ledgerBad(S) = true .
+
+Solution 1 (state 367)
+states: 368  rewrites: 395270 in 38ms cpu (38ms real) (10205783
+    rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noCovered) slotLabel(X)
+    slotLabel(Y) importer(i1) importer(i2) canReg(r1, X) canReg(r2, X) canReg(
+    r2, Y) aud(a1, b1) gReg(r1, false) gReg(r2, false) body(b1, pinned, 4)
+    slot(X, r1, 2) slot(X, r2, 1) reg(r1, 0, X, false, false) reg(r2, 0, X,
+    false, false) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) claimed(r1, i1, 1, 0,
+    ac(r1, i1, 1)) claimed(r2, i1, 1, 0, ac(r2, i1, 1)) cred(r1, b1, a1, 2, X,
+    noRep) cred(r2, b1, a1, 2, X, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1120 KB (sampled every 0.5 s)
+*** contract, registration guards (noSuspGuard and noIssuerGuard as written by an outside reviewer)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut noAuthGuard =>* {S} such that
+    regAfterRevBad(S) = true .
+
+Solution 1 (state 41)
+states: 42  rewrites: 4295 in 0ms cpu (0ms real) (6344165 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noAuthGuard) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1,
+    X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) chainRev(a1, 0) keriRev(a1, 0)
+    gReg(r1, false) body(b1, pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(
+    r1, 0, X, true, true) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z,
+    noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1696 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut noSuspGuard =>* {S} such that
+    regInactiveBad(S) = true .
+
+Solution 1 (state 14)
+states: 15  rewrites: 294 in 0ms cpu (0ms real) (2296875 rewrites/second)
+S --> clock(0) tmax(3) delta(1) wmode(up) mut(noSuspGuard) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(
+    b1, 0) gReg(r1, true) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1, 0)
+    reg(r1, 0, X, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2,
+    2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 848 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut noSuspGuard =>* {S} such that
+    authBad(S) = true .
+
+Solution 1 (state 65)
+states: 66  rewrites: 5397 in 0ms cpu (1ms real) (7754310 rewrites/second)
+S --> clock(0) tmax(3) delta(1) wmode(up) mut(noSuspGuard) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(b1, 0)
+    gReg(r1, true) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1, 1) reg(
+    r1, 0, X, false, false) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) cred(r1, b1,
+    a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1328 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut noSuspGuard =>* {S} such that
+    regInactiveBad(S) = true .
+
+Solution 1 (state 9)
+states: 10  rewrites: 184 in 0ms cpu (0ms real) (1495934 rewrites/second)
+S --> claimTimes clock(0) tmax(4) delta(1) wmode(up) mut(noSuspGuard)
+    allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(1) ship(1) ship(
+    1) canReg(r1, X) aud(a1, b1) aud(a2, b2) susp(b1, 0) gReg(r1, true) body(
+    b1, pinned, 2) body(b2, pinned, 4) slot(X, r1, 0) reg(r1, 0, X, false,
+    false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1200 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut noSuspGuard =>* {S} such that
+    safetyBad(S) = true .
+
+Solution 1 (state 14)
+states: 15  rewrites: 2321 in 0ms cpu (0ms real) (5759305 rewrites/second)
+S --> clock(0) tmax(3) delta(1) wmode(up) mut(noSuspGuard) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(
+    b1, 0) gReg(r1, true) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1, 0)
+    reg(r1, 0, X, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2,
+    2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1312 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut noExpiryGuard =>* {S} such that
+    regInactiveBad(S) = true .
+
+Solution 1 (state 41)
+states: 42  rewrites: 8260 in 0ms cpu (1ms real) (12926447 rewrites/second)
+S --> claimTimes clock(3) tmax(4) delta(1) wmode(up) mut(noExpiryGuard)
+    allowSuspend(b1) allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(
+    1) ship(1) ship(1) canReg(r1, X) aud(a1, b1) aud(a2, b2) gReg(r1, true)
+    body(b1, pinned, 2) body(b2, pinned, 4) slot(X, r1, 0) reg(r1, 3, X, false,
+    false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1296 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut noIssuerGuard =>* {S} such that
+    foreignReviseBad(S) = true .
+
+Solution 1 (state 11)
+states: 12  rewrites: 259 in 0ms cpu (0ms real) (2122950 rewrites/second)
+S --> claimTimes clock(0) tmax(4) delta(1) wmode(up) mut(noIssuerGuard)
+    allowSuspend(b1) allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(
+    1) ship(1) ship(1) canReg(r1, X) aud(a1, b1) aud(a2, b2) gReg(r1, false)
+    gReg(r2, false) gRev(r2, true) body(b1, pinned, 2) body(b2, pinned, 4)
+    slot(X, r2, 0) supBy(r1, r2, 0) reg(r1, 0, X, false, false) reg(r2, 0, X,
+    false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1328 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut noIssuerGuard =>* {S} such that
+    safetyBad(S) = true .
+
+Solution 1 (state 11)
+states: 12  rewrites: 2271 in 0ms cpu (0ms real) (5663341 rewrites/second)
+S --> claimTimes clock(0) tmax(4) delta(1) wmode(up) mut(noIssuerGuard)
+    allowSuspend(b1) allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(
+    1) ship(1) ship(1) canReg(r1, X) aud(a1, b1) aud(a2, b2) gReg(r1, false)
+    gReg(r2, false) gRev(r2, true) body(b1, pinned, 2) body(b2, pinned, 4)
+    slot(X, r2, 0) supBy(r1, r2, 0) reg(r1, 0, X, false, false) reg(r2, 0, X,
+    false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1312 KB (sampled every 0.5 s)
+*** verifier checks
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut noCheck5 =>* {S} such that
+    replayBad(S) = true .
+
+Solution 1 (state 16)
+states: 17  rewrites: 943 in 0ms cpu (0ms real) (3571969 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noCheck5) allowKeri(a1)
+    slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) canReg(
+    r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 1) reg(r1, 0, X, false, false)
+    claimed(r1, i1, 1, 0, ac(r1, i1, 1) ; ac(r1, i1, 2) ; ac(r1, i2, 1) ; ac(
+    r1, i2, 2)) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut noCheck5 =>* {S} such that
+    ledgerBad(S) = true .
+
+Solution 1 (state 16)
+states: 17  rewrites: 1309 in 0ms cpu (0ms real) (4263843 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noCheck5) allowKeri(a1)
+    slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) canReg(
+    r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) gReg(r1, false) body(b1,
+    pinned, 4) body(b2, other, 4) slot(X, r1, 1) reg(r1, 0, X, false, false)
+    claimed(r1, i1, 1, 0, ac(r1, i1, 1) ; ac(r1, i1, 2) ; ac(r1, i2, 1) ; ac(
+    r1, i2, 2)) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1232 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut noRoot =>* {S} such that
+    authBad(S) = true .
+
+Solution 1 (state 19)
+states: 20  rewrites: 1859 in 0ms cpu (0ms real) (4791237 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noRoot) allowKeri(a1) slotLabel(
+    X) slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) canReg(r1, X)
+    canReg(r2, Z) aud(a1, b1) aud(a2, b2) gReg(r2, false) body(b1, pinned, 4)
+    body(b2, other, 4) slot(Z, r2, 1) reg(r2, 0, Z, false, false) claimed(r2,
+    i1, 1, 0, ac(r2, i1, 1)) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2,
+    Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1696 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : dupInst(4) +mut noScope =>* {S} such that ledgerBad(
+    S) = true .
+
+Solution 1 (state 17)
+states: 18  rewrites: 3198 in 0ms cpu (0ms real) (5259868 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noScope) slotLabel(X) slotLabel(
+    Y) importer(i1) importer(i2) ship(1) ship(1) canReg(r1, X) canReg(r2, X)
+    canReg(r2, Y) aud(a1, b1) gReg(r2, false) body(b1, pinned, 4) slot(Y, r2,
+    1) reg(r2, 0, Y, false, false) claimed(r2, i1, 1, 0, ac(r2, i1, 1)) cred(
+    r1, b1, a1, 2, X, noRep) cred(r2, b1, a1, 2, X, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut noContested =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 43)
+states: 44  rewrites: 8057 in 1ms cpu (1ms real) (6255434 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(noContested) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1,
+    X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) chainRev(a1, 0) keriRev(a1, 0)
+    gReg(r1, false) body(b1, pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(
+    r1, 0, X, true, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z,
+    noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1536 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut noContested =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 18)
+states: 19  rewrites: 1152 in 0ms cpu (0ms real) (3480362 rewrites/second)
+S --> clock(0) tmax(3) delta(1) wmode(up) mut(noContested) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(
+    b1, 0) gReg(r1, false) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1,
+    0) reg(r1, 0, X, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2,
+    a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1312 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut winLeftOpen =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 43)
+states: 44  rewrites: 8057 in 1ms cpu (1ms real) (6260295 rewrites/second)
+S --> clock(0) tmax(4) delta(1) wmode(up) mut(winLeftOpen) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1,
+    X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) chainRev(a1, 0) keriRev(a1, 0)
+    gReg(r1, false) body(b1, pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(
+    r1, 0, X, true, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z,
+    noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1296 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut winLeftOpen =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 18)
+states: 19  rewrites: 1152 in 0ms cpu (0ms real) (3480362 rewrites/second)
+S --> clock(0) tmax(3) delta(1) wmode(up) mut(winLeftOpen) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(
+    b1, 0) gReg(r1, false) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1,
+    0) reg(r1, 0, X, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2,
+    a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut winRightOpen =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 144)
+states: 145  rewrites: 65153 in 8ms cpu (8ms real) (8022780 rewrites/second)
+S --> clock(1) tmax(4) delta(1) wmode(up) mut(winRightOpen) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1,
+    X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) chainRev(a1, 1) keriRev(a1, 0)
+    gReg(r1, false) body(b1, pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(
+    r1, 0, X, true, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z,
+    noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut winRightOpen =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 67)
+states: 68  rewrites: 11466 in 0ms cpu (1ms real) (11881865 rewrites/second)
+S --> clock(1) tmax(3) delta(1) wmode(up) mut(winRightOpen) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(
+    b1, 1) gReg(r1, false) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1,
+    0) reg(r1, 0, X, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2,
+    a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut winRightOpen =>* {S} such that
+    windowBad(S) = true .
+
+Solution 1 (state 27)
+states: 28  rewrites: 4151 in 0ms cpu (0ms real) (8187376 rewrites/second)
+S --> claimTimes clock(1) tmax(4) delta(1) wmode(up) mut(winRightOpen)
+    allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(1) ship(1) ship(
+    1) canReg(r1, X) aud(a1, b1) aud(a2, b2) susp(b1, 1) gReg(r1, false) body(
+    b1, pinned, 2) body(b2, pinned, 4) slot(X, r1, 0) reg(r1, 0, X, false,
+    false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut winRightOpen =>* {S} such that
+    keriBad(S) = true .
+
+Solution 1 (state 425)
+states: 426  rewrites: 268883 in 27ms cpu (29ms real) (9811457 rewrites/second)
+S --> clock(2) tmax(4) delta(1) wmode(up) mut(winRightOpen) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1,
+    X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) chainRev(a1, 1) keriRev(a1, 0)
+    gReg(r1, false) body(b1, pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(
+    r1, 0, X, true, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z,
+    noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : suspInst(3) +mut winRightOpen =>* {S} such that
+    safetyBad(S) = true .
+
+Solution 1 (state 67)
+states: 68  rewrites: 20666 in 1ms cpu (2ms real) (12029103 rewrites/second)
+S --> clock(1) tmax(3) delta(1) wmode(up) mut(winRightOpen) allowSuspend(b2)
+    allowLift(b1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) susp(
+    b1, 1) gReg(r1, false) body(b1, pinned, 3) body(b2, other, 3) slot(X, r1,
+    0) reg(r1, 0, X, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2,
+    a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1328 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : keriInst(up, 4) +mut noEvidenceRev =>* {S} such that
+    evidenceBad(S) = true .
+
+Solution 1 (state 38)
+states: 39  rewrites: 6525 in 1ms cpu (1ms real) (6109550 rewrites/second)
+S --> clock(1) tmax(4) delta(1) wmode(up) mut(noEvidenceRev) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) ship(1) canReg(r1,
+    X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) keriRev(a1, 0) pend(a1, 0) gReg(
+    r1, false) body(b1, pinned, 4) body(b2, other, 4) slot(X, r1, 0) reg(r1, 1,
+    X, true, false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)
+[run.sh] as expected (found); wall 1 s, peak resident memory 1312 KB (sampled every 0.5 s)
+==========================================
+search [1] in CARBONLEI : revInst(4) +mut noSupersede =>* {S} such that
+    supersededBad(S) = true .
+
+Solution 1 (state 31)
+states: 32  rewrites: 3517 in 0ms cpu (0ms real) (5609250 rewrites/second)
+S --> claimTimes clock(0) tmax(4) delta(1) wmode(up) mut(noSupersede)
+    allowLift(b1) slotLabel(X) importer(i1) importer(i2) ship(1) ship(1) ship(
+    1) canReg(r1, X) aud(a1, b1) aud(a2, b2) susp(b1, 0) gReg(r1, false) gReg(
+    r2, false) gRev(r2, false) body(b1, pinned, 2) body(b2, pinned, 4) slot(X,
+    r2, 0) supBy(r1, r2, 0) reg(r1, 0, X, false, false) reg(r2, 0, X, false,
+    false) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 1, X, r1)
+[run.sh] as expected (found); wall 0 s, peak resident memory 1216 KB (sampled every 0.5 s)
+*** --- F. LTL. Evidence: eventual sync with the watcher up (true) and down (counterexample). Sanity
+*** checks, which hold by construction of the model (no rule removes a revocation or a suspension, and
+*** registeredAt never changes) and are not evidence about the code: eventual sync with the watcher
+*** late (true: the formula does not check the bound delta), CONTESTED never VALID again, P6, and
+*** [] safeP (the same as the searches of A).
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(keriInst(up, 3), [](keriRevokedP(a1) -> <>
+    chainRevokedP(a1))) .
+rewrites: 27701199 in 2607ms cpu (2608ms real) (10625471 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 3 s, peak resident memory 33744 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(keriInst(down, 3), [](keriRevokedP(a1) ->
+    <> chainRevokedP(a1))) .
+rewrites: 2895 in 0ms cpu (0ms real) (5351201 rewrites/second)
+result ModelCheckResult: counterexample({{clock(0) tmax(3) delta(1) wmode(down)
+    allowKeri(a1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) body(
+    b1, pinned, 3) body(b2, other, 3) cred(r1, b1, a1, 2, X, noRep) cred(r2,
+    b2, a2, 2, Z, noRep)}, 'tick} {{clock(1) tmax(3) delta(1) wmode(down)
+    allowKeri(a1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) body(
+    b1, pinned, 3) body(b2, other, 3) cred(r1, b1, a1, 2, X, noRep) cred(r2,
+    b2, a2, 2, Z, noRep)}, 'tick} {{clock(2) tmax(3) delta(1) wmode(down)
+    allowKeri(a1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) body(
+    b1, pinned, 3) body(b2, other, 3) cred(r1, b1, a1, 2, X, noRep) cred(r2,
+    b2, a2, 2, Z, noRep)}, 'tick} {{clock(3) tmax(3) delta(1) wmode(down)
+    allowKeri(a1) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) body(
+    b1, pinned, 3) body(b2, other, 3) cred(r1, b1, a1, 2, X, noRep) cred(r2,
+    b2, a2, 2, Z, noRep)}, 'keri-revoke} {{clock(3) tmax(3) delta(1) wmode(
+    down) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1)
+    ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) keriRev(a1, 3)
+    pend(a1, 3) body(b1, pinned, 3) body(b2, other, 3) cred(r1, b1, a1, 2, X,
+    noRep) cred(r2, b2, a2, 2, Z, noRep)}, 'register-new} {{clock(3) tmax(3)
+    delta(1) wmode(down) slotLabel(X) slotLabel(Z) importer(i1) importer(i2)
+    ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2)
+    keriRev(a1, 3) pend(a1, 3) gReg(r1, false) body(b1, pinned, 3) body(b2,
+    other, 3) slot(X, r1, 0) reg(r1, 3, X, true, false) cred(r1, b1, a1, 2, X,
+    noRep) cred(r2, b2, a2, 2, Z, noRep)}, 'register-new} {{clock(3) tmax(3)
+    delta(1) wmode(down) slotLabel(X) slotLabel(Z) importer(i1) importer(i2)
+    ship(1) ship(1) ship(1) canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2)
+    keriRev(a1, 3) pend(a1, 3) gReg(r1, false) gReg(r2, false) body(b1, pinned,
+    3) body(b2, other, 3) slot(X, r1, 0) slot(Z, r2, 0) reg(r1, 3, X, true,
+    false) reg(r2, 3, Z, false, false) cred(r1, b1, a1, 2, X, noRep) cred(r2,
+    b2, a2, 2, Z, noRep)}, 'claim} {{clock(3) tmax(3) delta(1) wmode(down)
+    slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1) ship(1) canReg(
+    r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) keriRev(a1, 3) pend(a1, 3)
+    gReg(r1, false) gReg(r2, false) body(b1, pinned, 3) body(b2, other, 3)
+    slot(X, r1, 1) slot(Z, r2, 0) reg(r1, 3, X, true, false) reg(r2, 3, Z,
+    false, false) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) cred(r1, b1, a1, 2, X,
+    noRep) cred(r2, b2, a2, 2, Z, noRep)}, 'claim} {{clock(3) tmax(3) delta(1)
+    wmode(down) slotLabel(X) slotLabel(Z) importer(i1) importer(i2) ship(1)
+    canReg(r1, X) canReg(r2, Z) aud(a1, b1) aud(a2, b2) keriRev(a1, 3) pend(a1,
+    3) gReg(r1, false) gReg(r2, false) body(b1, pinned, 3) body(b2, other, 3)
+    slot(X, r1, 2) slot(Z, r2, 0) reg(r1, 3, X, true, false) reg(r2, 3, Z,
+    false, false) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) claimed(r1, i1, 1, 0,
+    ac(r1, i1, 1)) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z,
+    noRep)}, 'claim}, {{clock(3) tmax(3) delta(1) wmode(down) slotLabel(X)
+    slotLabel(Z) importer(i1) importer(i2) canReg(r1, X) canReg(r2, Z) aud(a1,
+    b1) aud(a2, b2) keriRev(a1, 3) pend(a1, 3) gReg(r1, false) gReg(r2, false)
+    body(b1, pinned, 3) body(b2, other, 3) slot(X, r1, 2) slot(Z, r2, 1) reg(
+    r1, 3, X, true, false) reg(r2, 3, Z, false, false) claimed(r1, i1, 1, 0,
+    ac(r1, i1, 1)) claimed(r1, i1, 1, 0, ac(r1, i1, 1)) claimed(r2, i1, 1, 0,
+    noAcc) cred(r1, b1, a1, 2, X, noRep) cred(r2, b2, a2, 2, Z, noRep)},
+    deadlock})
+[run.sh] as expected (counterexample); wall 1 s, peak resident memory 784 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(keriInst(late, 3), [](keriRevokedP(a1) ->
+    <> chainRevokedP(a1))) .
+rewrites: 39686350 in 4042ms cpu (4044ms real) (9817436 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 4 s, peak resident memory 39520 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(keriInst(up, 3), [](contestedP(r1) -> []~
+    validP(r1))) .
+rewrites: 28730397 in 2849ms cpu (2850ms real) (10083540 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 3 s, peak resident memory 31664 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(suspInst(2), [](contestedP(r1) -> []~
+    validP(r1))) .
+rewrites: 32547239 in 3295ms cpu (3296ms real) (9877082 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 4 s, peak resident memory 35520 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(keriInst(up, 3), [](chainRevokedP(a1) -> [
+    ]chainRevokedP(a1))) .
+rewrites: 27685997 in 2664ms cpu (2665ms real) (10392290 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 3 s, peak resident memory 33712 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(keriInst(up, 3), []safeP) .
+rewrites: 35833663 in 3800ms cpu (3801ms real) (9429901 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 4 s, peak resident memory 32896 KB (sampled every 0.5 s)
+==========================================
+reduce in CARBONLEI-LTL : modelCheck(revInst(3), []safeP) .
+rewrites: 3575434 in 427ms cpu (428ms real) (8359247 rewrites/second)
+result Bool: true
+[run.sh] as expected (true); wall 1 s, peak resident memory 1216 KB (sampled every 0.5 s)
+[run.sh] 50 command(s) run, every result as expected
+[run.sh] Maude 3.5.1 at $MAUDE
+*** The larger instance: KERI revocation of both auditors, suspensions and a lift, impostor body,
+*** ticks 0..1 (about 120,000 states, about 4 minutes and 300 MB on the development machine).
+==========================================
+search in CARBONLEI : fullInst(up, 1) =>* {S} such that safetyBad(S) = true .
+
+No solution.
+states: 122823  rewrites: 658794612 in 254873ms cpu (254939ms real) (2584788
+    rewrites/second)
+[run.sh] as expected (none); wall 256 s, peak resident memory 316368 KB (sampled every 0.5 s)
+[run.sh] 1 command(s) run, every result as expected

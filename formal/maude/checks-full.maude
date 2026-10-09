@@ -1,4 +1,4 @@
 *** The larger instance: KERI revocation of both auditors, suspensions and a lift, impostor body,
-*** ticks 0..1 (about 120,000 states, about 4 minutes and 300 MB on the development machine).
+*** ticks 0..1 (122,823 states, about 4.5 minutes and 310 MB on the development machine).
 select CARBONLEI .
 none : search fullInst(up, 1) =>* { S:Conf } such that safetyBad(S:Conf) .
