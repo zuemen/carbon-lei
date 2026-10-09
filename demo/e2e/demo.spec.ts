@@ -651,6 +651,10 @@ test("Trust chain: name field vs signature chain panel, collapsed by default, op
   await expect(allowlist).toContainText("in a pilot the team holds this key in a multisig");
   await expect(allowlist).toContainText("governance body of NAB and QVI representatives");
   await expect(allowlist).not.toContainText("multisig of accreditation bodies");
+  // Same limit as SECURITY T10/CR1: a stolen owner key can rotate a body's address and then revoke its reports.
+  await expect(allowlist).toContainText("rotate a body's address to its own");
+  await expect(allowlist).toContainText("revoke that body's reports, which nothing can undo");
+  await expect(allowlist).not.toContainText("revoke or re-assign a report");
   const summary = panel.locator("summary");
   await summary.focus();
   await page.keyboard.press("Enter");

@@ -109,9 +109,13 @@ export function TrustChain() {
               In this demo, the allowlist owner key and the watcher key. The allowlist owner key (held by the trust-registry
               operator) adds verification bodies and auditors and can rotate a body's address; a separate watcher key syncs an auditor's revocation automatically (a watcher process
               polls the body's key event log) and, in this demo, sends suspensions by hand. Neither key
-              can edit, revoke or re-assign a report or its tonnage. Every allowlist write is an on-chain event, and each
+              can change a registered report's values, its registration time or the tonnage ledger. But a stolen allowlist
+              owner key can rotate a body's address to its own, then register or revise reports in that body's name and
+              revoke that body's reports, which nothing can undo;
+              the verifier flags those revocations for review (CONTESTED) only once that address is rotated away again within
+              30 days of the rotation (SECURITY T10, CR1). Every allowlist write is an on-chain event, and each
               addition carries credential hashes (SAIDs) you can re-check. The contract trusts these keys: a stolen allowlist
-              owner key can list a fake body whose reports the contract accepts, and only the verifier's pinned root of trust
+              owner key can also list a fake body whose reports the contract accepts, and only the verifier's pinned root of trust
               catches it (Try to break it, card 4). Roadmap (a proposal; no organisation contacted): in a pilot the team
               holds this key in a multisig, then hands it to a governance body of NAB and QVI representatives.
             </p>

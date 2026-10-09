@@ -8,7 +8,7 @@ A rewriting-logic model of the CarbonLEI protocol, checked with Maude's breadth-
 | `checks.maude` | 50 commands with their expected outcome, under 2 minutes |
 | `checks-full.maude` | One larger instance (122,823 states, about 4.5 minutes, about 310 MB) |
 | `run.sh` | Runs each command in its own Maude process under a memory watchdog and compares each result with its expectation |
-| [`docs/data/maude-2026-10-10.txt`](../../docs/data/maude-2026-10-10.txt) | Full output of both files for the current model ([`maude-2026-10-09.txt`](../../docs/data/maude-2026-10-09.txt): the first version, nine properties and 10 mutant runs) |
+| [`docs/data/maude-2026-10-09b.txt`](../../docs/data/maude-2026-10-09b.txt) | Full output of both files for the current model ([`maude-2026-10-09.txt`](../../docs/data/maude-2026-10-09.txt): the first version, nine properties and 10 mutant runs) |
 
 ## Running it
 
@@ -168,7 +168,7 @@ Each property is a predicate on states that is true in a bad state; "holds" mean
 
 ## Results (10 October 2026 revision)
 
-Maude 3.5.1 on the development machine (Apple M4, 16 GB). Times are Maude's CPU time; peak memory is sampled by `run.sh` every 0.5 s. Full output: [`docs/data/maude-2026-10-10.txt`](../../docs/data/maude-2026-10-10.txt). The state counts are the same as in the first version: the new ghosts are written once per registration and add no states.
+Maude 3.5.1 on the development machine (Apple M4, 16 GB). Times are Maude's CPU time; peak memory is sampled by `run.sh` every 0.5 s. Full output: [`docs/data/maude-2026-10-09b.txt`](../../docs/data/maude-2026-10-09b.txt). The state counts are the same as in the first version: the new ghosts are written once per registration and add no states.
 
 | Check | Expected | Result | States | Time | Memory |
 |---|---|---|---|---|---|

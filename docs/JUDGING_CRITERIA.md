@@ -42,7 +42,7 @@ The organiser's page gives these weights under "Evaluation Criteria (Weighted)".
 | Feasibility & Implementation Quality | 10% | [README — Current status vs roadmap](../README.md#current-status-vs-roadmap); [ADOPTION §8](ADOPTION.md#8-current-status-by-area) |
 | Data Security & Transparency | 10% | [SECURITY — Threat model](SECURITY.md#4-threat-model); [SECURITY — Privacy of on-chain data](SECURITY.md#7-privacy-of-on-chain-data); [SECURITY — Security properties P1–P6](SECURITY.md#9-security-properties), with bounded symbolic checks of P1, P2, P3 and P6 in [§9.2](SECURITY.md#92-symbolic-and-bounded-checking) (fixed call sequences, not all sequences); a bounded model check of an abstract protocol model (Maude: allowlist, watcher, ledger, checks 4, 5 and 7, on small instances; not a proof) in [§9.3](SECURITY.md#93-protocol-model-maude) |
 | User Experience & Design | 10% | [README — Hosted](../README.md#hosted-for-reviewers-no-installation); scripted task timing below |
-| Scalability & Sustainability | 10% | [ADOPTION §6 — Scalability roadmap](ADOPTION.md#6-scalability-roadmap); measured scaling from 3 to 5,006 reports on a local chain: [ADOPTION §6.1](ADOPTION.md#61-technical), [raw data](data/bench-scale-2026-10-10.json); [Footprint of CarbonLEI](CLIMATE_IMPACT.md#footprint-of-carbonlei) |
+| Scalability & Sustainability | 10% | [ADOPTION §6 — Scalability roadmap](ADOPTION.md#6-scalability-roadmap); measured scaling from 3 to 5,006 reports on a local chain: [ADOPTION §6.1](ADOPTION.md#61-technical), [raw data](data/bench-scale-2026-10-09.json); [Footprint of CarbonLEI](CLIMATE_IMPACT.md#footprint-of-carbonlei) |
 
 ## Organiser's deliverables
 

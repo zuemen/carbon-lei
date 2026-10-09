@@ -30,3 +30,5 @@ Judging criteria: Climate Impact · Innovation & Creativity · Technical Executi
 
 ## AI usage disclosure
 During development we used Claude (Anthropic) as a coding and writing assistant under the team's direction: it drafted contract and SDK code, tests, documentation and the submission text, and ran our adversarial review of the verifier. Each change was run through the test suite and our pre-push checks before it was pushed, and CI reruns the contract and SDK tests on GitHub; the team set the scope and the rules the text must follow. The video narration is a synthetic voice (Microsoft Edge TTS). None of the eight checks in the product uses AI.
+
+Two commit messages, `f1b1f29` ("after an external review") and `9b747f8` ("an outside review found"), refer to our own AI-run reviews, not to an outside party; no outside party has reviewed this project. We left the history as it is rather than rewrite it.
