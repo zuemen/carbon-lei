@@ -46,6 +46,22 @@ jobs:
       - name: Halmos, 10 of 11 checks
         run: npm run contracts:symbolic:quick
 
+  maude:
+    name: maude (bounded model check of the protocol model)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # docs/SECURITY.md §9.3. The Maude 3.5.1 release binary, checked against its SHA-256.
+      - name: Install Maude 3.5.1
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/maude.zip" https://github.com/maude-lang/Maude/releases/download/Maude3.5.1/Maude-3.5.1-linux-x86_64.zip
+          echo "72ed1ca87e3b3d0dfc6ee1436baf154bf04c45ff97d521bec040c5e8dfc8f92c  $RUNNER_TEMP/maude.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/maude.zip" -d "$RUNNER_TEMP/maude"
+          chmod +x "$RUNNER_TEMP/maude/maude"
+      - name: Maude checks (formal/maude/checks.maude, 32 commands)
+        run: MAUDE="$RUNNER_TEMP/maude/maude" bash formal/maude/run.sh formal/maude/checks.maude
+
   sdk:
     name: sdk (vitest, local anvil chain)
     runs-on: ubuntu-latest
