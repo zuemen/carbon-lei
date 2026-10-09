@@ -247,6 +247,10 @@ Limits. One machine (Apple M4, 16 GB), a local anvil node with no network latenc
 - UNTP's Digital Identity Anchor links a DID to a registered identity and lets accreditation bodies attest accredited conformity assessment bodies [13].
 - CarbonLEI's NAB accreditation credential follows the same idea. Roadmap: express the report as a UNTP conformity credential and use the vLEI as the identity anchor.
 
+### 6.6 Standardising the credential schemas
+
+The demo's NAB accreditation credential and report credential use schemas we wrote; no body has adopted them. GLEIF's vLEI Ecosystem Governance Framework (v4.0, Primary Document v1.2, 25 March 2026) offers no route for adding them: GLEIF governs it and approves its revisions through its own change management process, other governance frameworks that use vLEI credentials are out of its scope, and it does not plan formal extensions from them [26]. ACDC leaves the list of allowed schema SAIDs to each ecosystem governance framework [27], and the ECR framework allows further ACDCs to be chained to an ECR credential [26]. Our proposal (no organisation contacted) is therefore a separate CBAM ecosystem governance framework that chains to the vLEI and publishes its own schema registry, owned by the accreditation side; EA has run a task force group on EU CBAM since March 2026 [28]. We have not checked whether EA or the Commission would take on such a framework, or how.
+
 ---
 
 ## 7. Adoption risks
@@ -312,3 +316,6 @@ Accessed 23–24 September 2026 unless stated.
 23. Council of the EU, press release, 12 June 2026. https://www.consilium.europa.eu/en/press/press-releases/2026/06/12/council-moves-to-strengthen-the-eu-s-carbon-border-adjustment-mechanism/ ; EPRS, "Extension of CBAM scope to downstream goods and anti-circumvention measures", 7 September 2026. https://eprs.europarl.europa.eu/contents/publications/EPRS/2026/09/EPRS_ATA(2026)791461.html ; Parliament plenary vote of 15 September 2026, secondary source: https://cbamguide.com/news/2026-09-15-ep-plenary-adopts-cbam-downstream-mandate-464-50/ ; accessed 2026-10-07.
 24. Commission Implementing Decision (EU) 2026/1736 of 14 July 2026, OJ 15 July 2026. https://eur-lex.europa.eu/eli/dec_impl/2026/1736/oj ; CEN-CENELEC, news, 15 July 2026 (the eight standards of the series; six cited in the OJ). https://www.cencenelec.eu/news-events/news/2026/en-in-the-spotlight/2026-07-15-dpp/ ; accessed 2026-10-07.
 25. Council of the EU, press release on the European Business Wallets negotiating position, 9 June 2026, accessed 2026-10-07. https://www.consilium.europa.eu/en/press/press-releases/2026/06/09/european-business-wallets-council-adopts-negotiating-position/
+26. GLEIF, vLEI Ecosystem Governance Framework v4.0: Primary Document v1.2 (§§4, 7, 11, 12) and Legal Entity Engagement Context Role vLEI Credential Framework v1.5 (§9.1.2), 25 March 2026, accessed 2026-10-09. https://www.gleif.org/organizational-identity/become-a-vlei-issuer-qvi/vlei-ecosystem-governance-framework/2026-03-25_vlei-egf-v4.0-primary-document_v1.2_final.pdf
+27. Trust over IP, KERI Suite WG, ACDC specification v1.1 (schema section: the allowed schema SAIDs are published by each ecosystem governance framework), accessed 2026-10-09. https://trustoverip.github.io/kswg-acdc-specification/
+28. European co-operation for Accreditation, "EA TFG EU CBAM established", 26 February 2026, accessed 2026-10-09. https://european-accreditation.org/ea-tfg-eu-cbam-established/
