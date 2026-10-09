@@ -17,7 +17,7 @@ All companies, people and LEIs are fictional. Emissions values are illustrative 
 ## 1. Design principles
 
 1. **Layered.** P0 is EIP-712 signatures plus on-chain rules; the contracts and verification checks 1–5 do not depend on KERI. P1 adds vLEI role authority and the KEL anchor (checks 6 and 7). A proof without KEL anchor or vLEI evidence fails checks 6 and 7 (`ANCHOR_NOT_FOUND`, `AUTHORITY_INVALID`); a verifier that has no vLEI checker reports those checks as skipped instead.
-2. **Only hashes and status on-chain.** No trade secrets and no personal data go on-chain, because anything written to a public chain stays readable by everyone for good.
+2. **Only hashes and status on-chain.** No trade secrets, names or contact details go on-chain, because anything written to a public chain stays readable by everyone for good. One on-chain value does relate to a natural person: `auditorAidHash`, an unsalted hash of the lead auditor's KERI identifier, which is likely pseudonymised personal data under the GDPR; what that means and what is not solved is in [SECURITY §7.1](SECURITY.md#71-personal-data).
 3. **One identifier end to end.** The report credential's SAID (`credSAID`, a Blake3-256 self-addressing identifier starting with `E`) is used in the KEL seal, in the EIP-712 signature and, hashed, as the on-chain key.
 4. **The chain orders transactions, not KEL events.** KERI orders the events inside one KEL, but two KELs share no clock. CarbonLEI does not claim to order KEL events. Block time orders two on-chain transactions: the one that registered a report and the one in which the watcher synced a revocation. CarbonLEI compares those two block timestamps.
 
