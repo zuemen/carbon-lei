@@ -175,11 +175,34 @@ No real organisation takes part today, and none has been contacted ([PILOT.md](P
 | Item | Plan |
 |---|---|
 | Throughput and cost | Per report: one registration; per shipment: one claim. State grows linearly with reports and shipments. Measured on Sepolia: 368,616 gas per `registerReport` and 155,449 gas per `claimShipment` (§3) |
-| Chain choice | Any EVM chain. Sepolia for the prototype; an L2 or a permissioned EVM for production |
+| Chain choice | Any EVM chain. Sepolia for the prototype; an L2 or a permissioned EVM for production, chosen by the criteria below |
 | Watchers | Several independent watchers; alerts on sync delay |
 | Allowlist governance | Multisig → timelocked governance; watcher role limited to suspend, lift and revoke |
 | Signature verification on-chain | P-256 precompile path (see [SECURITY.md](SECURITY.md#12-future-on-chain-verification-of-keri-signatures)) |
 | Interoperability | `credentialRecord(address)` returns `(credType, expiresAt, credHash)`, in the pattern of Chainlink CCID credential records [9]. It does not reflect a suspension: during one it still returns the body's record, so an integrator must also call `isVerifierActiveAt` ([SECURITY §4.2](SECURITY.md#42-findings-of-the-contract-red-team-review-7-october-2026) CR7). Not integrated; Chainlink ACE is in beta |
+
+**Chain choice: criteria.** The contracts and the SDK run on any EVM chain; only the deployment file and the chain ID in the EIP-712 domain change, so credentials are signed for the chain chosen (T4 c in [SECURITY.md](SECURITY.md#4-threat-model)).
+
+| Criterion | Public L1 (Ethereum mainnet) | Public EVM L2 | Permissioned EVM chain |
+|---|---|---|---|
+| Who can read and verify without joining (banks, buyers outside the pilot) | Anyone | Anyone | Admitted participants only, unless its state root is anchored on a public chain (roadmap, [SECURITY §7](SECURITY.md#7-privacy-of-on-chain-data)) |
+| Tonnages and the auditor AID hash ([SECURITY §7](SECURITY.md#7-privacy-of-on-chain-data), [§7.1](SECURITY.md#71-personal-data)) | Public for good | Public for good | Visible to participants only; the EDPB says organisations should favour permissioned blockchains ([SECURITY §7.1](SECURITY.md#71-personal-data)) |
+| Gas cost per report and first claim (524,065 gas) | Measured upper bound: about US$0.32–0.43 at one October 2026 base fee, base fee only ([PILOT §6](PILOT.md#6-costs-test-network-and-production-chain)) | Not measured | Set by the network's operators; not measured |
+| Who can delay or exclude a transaction | The validator set | Depends on the L2; many run a single sequencer | The network's operators |
+| Who must keep running for the records to stay readable | The public network | The L2 and the chain it settles on | The organisations running the nodes |
+| Additional parties to trust, beyond the allowlist operator | None | The L2's operator, as far as its design requires | The network's operators |
+
+**Conditional default (our proposal, not tested).** If the participants accept that tonnages are public and one of the options in SECURITY §7.1 removes the auditor's identifier from plain view, a public EVM L2: anyone can verify without joining, and the cost is expected to be lower than mainnet. If tonnages must stay confidential, or personal data on-chain cannot be avoided, a permissioned EVM chain with its state root anchored on a public chain. Mainnet figures in this repository are an upper bound for either choice: we have measured gas only, and priced it only at mainnet base fees.
+
+**Corridor volume (an assumption, not a measurement).** An order of magnitude for the corridor the prototype targets, from figures in [CLIMATE_IMPACT.md](CLIMATE_IMPACT.md):
+
+- EU imports of CN 7318 goods from Taiwan in 2025: 371,270 t (CLIMATE_IMPACT, Section 5, source [6] there).
+- Assumption 1, an upper bound: every tonne moves under a verified report, each of 500 t (the demo report; assumption A1 in CLIMATE_IMPACT). That gives 371,270 / 500 ≈ 743 registrations a year.
+- Assumption 2: shipments of 200 t (the demo shipment) down to 20 t (our assumption, not data). That gives 371,270 / 200 ≈ 1,856 to 371,270 / 20 ≈ 18,564 claims a year.
+- Total: about 2,600 to 19,300 transactions a year, or about 7 to 53 a day.
+- Gas: 743 × 368,616 ≈ 0.27 billion for registrations plus 1,856 to 18,564 × 155,449 ≈ 0.29 to 2.89 billion for claims, about 0.56 to 3.16 billion gas a year. At the same mainnet base fees as PILOT §6 (US$0.32–0.43 per 524,065 gas), that is about US$340–460 to US$1,930–2,590 a year for the whole corridor, base fee only, again an upper bound.
+
+This is a scale estimate; no load test has been run.
 
 ### 6.2 Other CBAM goods and countries
 
