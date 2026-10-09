@@ -26,6 +26,26 @@ jobs:
       - name: Test (unit + invariant fuzz, 256 runs x depth 128)
         run: forge test -vv
 
+  halmos:
+    name: halmos (bounded symbolic checks of P1, P2, P3, P6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install halmos==0.3.3
+      # docs/SECURITY.md §9.2. Every check except check_P1_secondRegistrationThenClaim
+      # (7 minutes on the development machine), which `npm run contracts:symbolic` runs.
+      - name: Halmos, 10 of 11 checks
+        run: npm run contracts:symbolic:quick
+
   sdk:
     name: sdk (vitest, local anvil chain)
     runs-on: ubuntu-latest

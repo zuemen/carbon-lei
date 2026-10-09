@@ -57,3 +57,10 @@ engine = "chc"
 targets = ["assert", "overflow"]
 timeout = 60000
 show_unproved = true
+
+# Halmos bounded symbolic run (docs/SECURITY.md §9.2): `npm run contracts:symbolic`.
+# Separate out and cache directories, so the build Halmos needs (with ASTs) does not touch
+# contracts/out. CI job `halmos` runs `npm run contracts:symbolic:quick`.
+[profile.halmos]
+out = "contracts/out-halmos"
+cache_path = "contracts/cache-halmos"

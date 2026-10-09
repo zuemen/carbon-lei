@@ -1,0 +1,90 @@
+CarbonLEI — bounded symbolic checks of P1, P2, P3, P6 with Halmos (docs/SECURITY.md §9.2)
+Date: 2026-10-09 (final run 08:42:09Z–08:51:07Z)
+Source: contracts/src at 4126b3c (unchanged); checks in contracts/test/Halmos.t.sol
+
+ENVIRONMENT
+  Machine     Apple M4, 10 cores, 16 GB RAM, macOS 26.3
+  Halmos      0.3.3 (pip, isolated venv, Python 3.14.3)
+  Solver      Yices 2.6.4 (yices-solver 2.6.4.post23, the Halmos default; installed with Halmos)
+  Foundry     forge 1.7.1 (4072e48), solc 0.8.28, via_ir, optimizer 200 runs, EVM cancun
+  Resource limits: one solver thread, sequential tests, per-assertion solver timeout 60 s,
+              solver memory cap 1500 MB; a watchdog stopped a run below 8 % free memory or
+              after 20 minutes. Free memory stayed at 85–88 % in the final runs.
+
+COMMAND (repository root, Halmos on PATH)
+  npm run contracts:symbolic
+  = FOUNDRY_PROFILE=halmos halmos --forge-build-out contracts/out-halmos \
+      --contract HalmosPropertiesTest --loop 3 --solver-timeout-assertion 60000 \
+      --solver-threads 1 --solver-max-memory 1500
+  npm run contracts:symbolic:quick  (all but check_P1_secondRegistrationThenClaim; CI job "halmos")
+
+MEANING OF A PASS
+  Every check_ parameter is symbolic: Halmos covers every value of its type, not a sample.
+  The call sequence is fixed per check (length and order below) and starts from the Base
+  fixture: bodies L1 (v1) and L2 (v2), auditors AID_A under L1 and AID_B under L2, both
+  added at START = 1790000000, accredited until 1924905600; time START + 1 h. A pass is
+  "no input violates an assertion for this sequence", i.e. proved within these bounds; it
+  is not a proof over all call sequences. Fixture addresses are concrete (see MODELLING).
+  Loops: one fixed-length loop of 3 (check_P1_threeClaims), within --loop 3. "bounds: []"
+  in every result: no loop or path bound was hit.
+
+RESULTS, FINAL RUN (all 11 PASS; 488.22 s checking, 538.4 s wall time incl. 47.8 s compile)
+  check                                      prop  paths  time      sequence and symbolic inputs
+  check_P1_threeClaims                       P1    79     4.54 s    reg + 3 claims; verifiedKg (any non-zero uint96), 3 quantities (any uint96)
+  check_P1_revision                          P1    17     1.35 s    reg + claim + revision + claim on old + claim on new; verifiedKg, c1, newKg, quantities, old-claim batch key
+  check_P1_secondRegistrationThenClaim       P1    2818   425.51 s  reg + claim + 2nd reg (128 input combinations, verifiedKg and validUntil symbolic) + claim (report KA/KB, either supplier, symbolic batch key and quantity); P1 on 4 slots
+  check_P2_batchClaimedOnce                  P2    11     0.60 s    2 regs + 2 claims of one symbolic batch key; quantities, importer commits, 2nd caller (any address), report KA/KB, delay up to 2^32 s
+  check_P2_recordNeverRewritten              P2    1028   50.40 s   reg + claim + 1 call with symbolic calldata (any registry function, any arguments: svm.createCalldata) from any sender
+  check_P3_senderAuditorExpiry               P3    16     1.19 s    1 reg; sender (any address), auditor AID (any bytes32), time (any uint64 >= START+1h)
+  check_P3_suspension                        P3    10     0.80 s    suspend L1 (+ optional lift) + reg by v1; AID, event times, registration time
+  check_P3_auditorRevocation                 P3    10     0.96 s    revoke AID_A or AID_B + reg by v1; AID, revocation time, registration time
+  check_P3_rotation                          P3    8      0.65 s    rotate L1 v1->v1n + reg by v1 or v1n; AID, rotation time, registration time
+  check_P6_revokedReportNeverClaimable       P6    15     1.25 s    reg + optional claim + revokeReport + claim + 2nd revoke; claim caller/batch/quantity/importer, times, isValidAt time (any uint64)
+  check_P6_auditorRevocationIsPermanent      P6    14     0.76 s    revokeAuditor + optional suspend/lift + re-add attempt + reg; all event and registration times
+
+  P3 checks compare the outcome with the spec predicate computed in the test from the event
+  times (not from the allowlist's views), and also assert the views agree with it.
+  Path counts vary between runs (e.g. 607 vs 1028 for check_P2_recordNeverRewritten,
+  55 vs 79 for check_P1_threeClaims) because branch feasibility queries have a short
+  timeout; the verdicts did not change. Quick set (10 checks): 37.87 s checking, 46.5 s wall.
+  Per-check runs earlier the same day: peak memory 245–405 MB per Halmos process.
+
+MUTATION CONTROLS (each removes one guard in a copy of the source; never committed)
+  Every mutant gave a counterexample ([FAIL]) in the check named:
+  M1  claimShipment: BatchAlreadyClaimed check removed     -> check_P2_batchClaimedOnce            FAIL 0.90 s
+  M2  claimShipment: ExceedsVerifiedTonnage cap removed    -> check_P1_threeClaims                 FAIL 1.84 s
+  M3  _checkRevision: SupersedeOverClaimed check removed   -> check_P1_revision                    FAIL 1.30 s
+  M4  _checkCommon: isAuthorizedAt check removed           -> check_P3_auditorRevocation           FAIL 1.28 s
+  M5  isInstitutionActiveAt: suspension ignored            -> check_P3_suspension                  FAIL 0.71 s
+  M6  isValidAt: revokedAt check removed                   -> check_P6_revokedReportNeverClaimable FAIL 4.52 s
+  M7  addAuditor: AuditorExists check removed              -> check_P6_auditorRevocationIsPermanent FAIL 0.67 s
+
+ATTEMPTS THAT DID NOT COMPLETE, AND MODELLING ERRORS FOUND (same day)
+  1. Fixture addresses from makeAddr (vm.addr). Halmos models vm.addr as an uninterpreted
+     function f_vmaddr(key), distinct from other vm.addr results but free to equal any other
+     address (a deployed contract, a precompile). With these, a single P3 check over all
+     events (13 symbolic inputs) reported 15 counterexamples in 649 s (stopped by hand), and
+     check_P3_senderAuditorExpiry reported 2 (e.g. sender 0x4000…0 with AID_A, t = 0x70000000).
+     We replayed two counterexamples of the first run concretely in forge (a temporary test
+     calling the check with the reported values; v1 sending with AID_A, L1 not suspended):
+     both passed. The others need a fixture address equal to the symbolic sender. Spurious:
+     a modelling error, not a contract bug. Fix: HalmosPropertiesTest.setUp assigns
+     concrete, distinct addresses (0xA00001…, 0xB00001…, 0xC00001…) before Base.setUp. With
+     the fix all checks pass, and the mutation controls above show they can still fail.
+  2. The single P3 check over all events (4 senders x rotation x suspension of L1 or L2 x
+     lift x revocation of AID_A or AID_B, all times symbolic): no result after 11 minutes
+     (1.3 GB), stopped. Replaced by the four P3 checks above, one per kind of event.
+  3. check_P1_anyRegistrationThenClaim: the second registration with every input field
+     symbolic (scope keys, report key, supersedes, supplier, ...) from any sender, then a
+     claim with a symbolic report key: no result after 1202 s (watchdog), 4.7 GB resident.
+     Symbolic keys into nested mappings make each storage read a case split over all
+     written slots. Replaced by check_P1_secondRegistrationThenClaim (finite key choices).
+
+NOT COVERED
+  - Sequences longer than those listed (e.g. two revisions in a row, several claims after a
+    takeover (branch (c) is reached in check_P1_secondRegistrationThenClaim with supersedes =
+    KA, report ID rid(2) and an empty slot, followed by one claim), interleaved suspensions
+    of both bodies).
+  - Scope and report keys outside the finite sets in check_P1_secondRegistrationThenClaim.
+  - P4 and P5 (off-chain SDK properties, not EVM code).
+  - Halmos does not prove the absence of bugs in the compiler or in Halmos itself.
