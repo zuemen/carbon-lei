@@ -316,7 +316,7 @@ export function projection(gasRegister: number, gasClaim: number, logBlockSpan: 
       "every claim is priced at the measured first-claim gas; a later claim against the same report does not turn CredScope.claimedKg from zero to non-zero, so it should cost less (not measured)",
       "onboarding (addVerifier 163,521 gas, addAuditor 75,119 gas) is once per body and per auditor and is not included",
       "neither contract has a loop or a growing array: registerReport and claimShipment write fixed sets of mapping entries, so the gas per operation does not depend on N or M",
-      "L2 would be lower; not measured",
+      "L2 fees are estimated separately (fork and the chain's own fee oracle, not a deployment): npm run bench:l2fees, docs/data/l2-fees-*.json",
     ],
     perOperationEth: {
       registerReport: { gas: gasRegister, eth: eth(gasRegister) },

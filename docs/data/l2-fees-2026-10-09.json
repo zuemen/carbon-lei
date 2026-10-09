@@ -1,0 +1,2037 @@
+{
+  "kind": "estimate, not a deployment",
+  "startedAtUtc": "2026-10-09T09:22:34.430Z",
+  "finishedAtUtc": "2026-10-09T09:34:56.974Z",
+  "method": "Execution gas: the six Sepolia demo transactions (same senders, impersonated; same calldata; the registry's constructor argument replaced by the fork's allowlist) replayed on `anvil --fork-url` of each L2. Fees: read from the live chain at the sampled block. OP stack: gasUsed × latest baseFeePerGas, plus GasPriceOracle.getL1Fee(unsigned RLP EIP-1559 tx), plus GasPriceOracle.getOperatorFee(gasUsed). Arbitrum One: (gasUsed + NodeInterface.gasEstimateL1Component(...).gasEstimateForL1) × the base fee it returns. totalWei excludes the priority tip; totalWithTipWei adds eth_maxPriorityFeePerGas × gasUsed (OP stack; Arbitrum has no priority fee, so the two are equal there).",
+  "caveats": [
+    "The unsigned transaction uses the fork's nonce, a gas limit of 1.2 × gasUsed and maxFeePerGas = 2 × base fee + tip; a real wallet's fields differ by a few bytes, which changes the L1 data fee slightly.",
+    "Every claim is priced as the demo's first claim against a report; later claims against the same report use less gas.",
+    "Arbitrum: the L1 component is estimated with `to` = an address without code for calls (the estimate depends on the transaction's bytes); Arbitrum execution gas taken from an anvil fork, which runs the EVM, not ArbOS.",
+    "Fees vary with L1 and L2 demand; the samples cover only the minutes listed."
+  ],
+  "ethUsd": {
+    "median": 2504.4449999999997,
+    "samples": [
+      {
+        "usd": 2503.4,
+        "at": "2026-10-09T09:22:31.000Z",
+        "source": "CoinGecko /api/v3/simple/price (ids=ethereum, vs_currencies=usd); `at` is CoinGecko's last_updated_at"
+      },
+      {
+        "usd": 2503.87,
+        "at": "2026-10-09T09:24:19.000Z",
+        "source": "CoinGecko /api/v3/simple/price (ids=ethereum, vs_currencies=usd); `at` is CoinGecko's last_updated_at"
+      },
+      {
+        "usd": 2504.97,
+        "at": "2026-10-09T09:27:09.000Z",
+        "source": "CoinGecko /api/v3/simple/price (ids=ethereum, vs_currencies=usd); `at` is CoinGecko's last_updated_at"
+      },
+      {
+        "usd": 2504.83,
+        "at": "2026-10-09T09:29:31.000Z",
+        "source": "CoinGecko /api/v3/simple/price (ids=ethereum, vs_currencies=usd); `at` is CoinGecko's last_updated_at"
+      },
+      {
+        "usd": 2504.67,
+        "at": "2026-10-09T09:31:20.000Z",
+        "source": "CoinGecko /api/v3/simple/price (ids=ethereum, vs_currencies=usd); `at` is CoinGecko's last_updated_at"
+      },
+      {
+        "usd": 2504.22,
+        "at": "2026-10-09T09:33:29.000Z",
+        "source": "CoinGecko /api/v3/simple/price (ids=ethereum, vs_currencies=usd); `at` is CoinGecko's last_updated_at"
+      }
+    ]
+  },
+  "corridor": {
+    "registrations": 743,
+    "claimsLow": 1856,
+    "claimsHigh": 18564,
+    "source": "docs/ADOPTION.md §6.1"
+  },
+  "sepoliaSource": {
+    "rpc": "https://rpc.sepolia.ethpandaops.io",
+    "txs": [
+      {
+        "step": "deploy:VerifierAllowlist",
+        "hash": "0x6937f992b2acd9354d1b43f7c85162b87ef86a50787f95f0f1c714ba13342a69",
+        "gasUsed": 1305144
+      },
+      {
+        "step": "deploy:EmissionsClaimRegistry",
+        "hash": "0xc36877c6774adf47c728c8303cd0dac0a8ed2487f72908d9083aec39fce40094",
+        "gasUsed": 1296067
+      },
+      {
+        "step": "addVerifier",
+        "hash": "0x7d393bda2d7ec11ca4f453ec9ff4b55cafb9a100aa66789eb4909237fc4ef1b6",
+        "gasUsed": 163521
+      },
+      {
+        "step": "addAuditor",
+        "hash": "0x1c0be29a41dec1cd2442168213ef3ce1f8785c9f54ec5d99aa269ba247fd416e",
+        "gasUsed": 75119
+      },
+      {
+        "step": "registerReport1",
+        "hash": "0x5cba53bb5a438883252721407dba8e58962ef71f1f91493c266a4ae561981de2",
+        "gasUsed": 368616
+      },
+      {
+        "step": "claim1",
+        "hash": "0x2f873bd582ac399f83fcea28ffb048100d4d002f9a03e43b61e46991ae288484",
+        "gasUsed": 155449
+      }
+    ]
+  },
+  "chains": {
+    "base": {
+      "name": "Base mainnet",
+      "chainId": 8453,
+      "rpc": "https://mainnet.base.org",
+      "forkBlock": 52374204,
+      "executionGas": [
+        {
+          "op": "deployAllowlist",
+          "gasUsed": 1305144,
+          "sepoliaGasUsed": 1305144,
+          "nonce": 0
+        },
+        {
+          "op": "deployRegistry",
+          "gasUsed": 1296067,
+          "sepoliaGasUsed": 1296067,
+          "nonce": 1
+        },
+        {
+          "op": "addVerifier",
+          "gasUsed": 163521,
+          "sepoliaGasUsed": 163521,
+          "nonce": 2
+        },
+        {
+          "op": "addAuditor",
+          "gasUsed": 75119,
+          "sepoliaGasUsed": 75119,
+          "nonce": 3
+        },
+        {
+          "op": "registerReport",
+          "gasUsed": 368616,
+          "sepoliaGasUsed": 368616,
+          "nonce": 0
+        },
+        {
+          "op": "claimShipment",
+          "gasUsed": 155449,
+          "sepoliaGasUsed": 155449,
+          "nonce": 0
+        }
+      ],
+      "samples": [
+        {
+          "sampledAtUtc": "2026-10-09T09:23:01.017Z",
+          "block": 52374217,
+          "blockTimestampUtc": "2026-10-09T09:23:01.000Z",
+          "l2BaseFeeWei": "5000000",
+          "l2BaseFeeGwei": 0.005,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "6000000",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "109806782",
+            "blobBaseFeeWei": "6080233",
+            "baseFeeScalar": 2269,
+            "blobBaseFeeScalar": 1055762
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6186,
+              "l2ExecutionFeeAtBaseFeeWei": "6525720000000",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "35061999010",
+              "l1DataFeeUpperBoundWei": "54342182330",
+              "operatorFeeWei": "0",
+              "totalWei": "6560781999010",
+              "totalWithTipWei": "7865925999010"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5972,
+              "l2ExecutionFeeAtBaseFeeWei": "6480335000000",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "35888914321",
+              "l1DataFeeUpperBoundWei": "52470742414",
+              "operatorFeeWei": "0",
+              "totalWei": "6516223914321",
+              "totalWithTipWei": "7812290914321"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 208,
+              "l2ExecutionFeeAtBaseFeeWei": "817605000000",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "1759072876",
+              "l1DataFeeUpperBoundWei": "2107247744",
+              "operatorFeeWei": "0",
+              "totalWei": "819364072876",
+              "totalWithTipWei": "982885072876"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 144,
+              "l2ExecutionFeeAtBaseFeeWei": "375595000000",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "1445715495",
+              "l1DataFeeUpperBoundWei": "1541463584",
+              "operatorFeeWei": "0",
+              "totalWei": "377040715495",
+              "totalWithTipWei": "452159715495"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 434,
+              "l2ExecutionFeeAtBaseFeeWei": "1843080000000",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "3151772349",
+              "l1DataFeeUpperBoundWei": "4074435749",
+              "operatorFeeWei": "0",
+              "totalWei": "1846231772349",
+              "totalWithTipWei": "2214847772349"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 176,
+              "l2ExecutionFeeAtBaseFeeWei": "777245000000",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "1515350469",
+              "l1DataFeeUpperBoundWei": "1820003478",
+              "operatorFeeWei": "0",
+              "totalWei": "778760350469",
+              "totalWithTipWei": "934209350469"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:25:21.275Z",
+          "block": 52374287,
+          "blockTimestampUtc": "2026-10-09T09:25:21.000Z",
+          "l2BaseFeeWei": "5000000",
+          "l2BaseFeeGwei": 0.005,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "6000000",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "117175095",
+            "blobBaseFeeWei": "7061153",
+            "baseFeeScalar": 2269,
+            "blobBaseFeeScalar": 1055762
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6186,
+              "l2ExecutionFeeAtBaseFeeWei": "6525720000000",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "39452850003",
+              "l1DataFeeUpperBoundWei": "61147510948",
+              "operatorFeeWei": "0",
+              "totalWei": "6565172850003",
+              "totalWithTipWei": "7870316850003"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5972,
+              "l2ExecutionFeeAtBaseFeeWei": "6480335000000",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "40383320788",
+              "l1DataFeeUpperBoundWei": "59041708644",
+              "operatorFeeWei": "0",
+              "totalWei": "6520718320788",
+              "totalWithTipWei": "7816785320788"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 208,
+              "l2ExecutionFeeAtBaseFeeWei": "817605000000",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "1979363422",
+              "l1DataFeeUpperBoundWei": "2371140595",
+              "operatorFeeWei": "0",
+              "totalWei": "819584363422",
+              "totalWithTipWei": "983105363422"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 144,
+              "l2ExecutionFeeAtBaseFeeWei": "375595000000",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "1626763966",
+              "l1DataFeeUpperBoundWei": "1734502689",
+              "operatorFeeWei": "0",
+              "totalWei": "377221763966",
+              "totalWithTipWei": "452340763966"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 434,
+              "l2ExecutionFeeAtBaseFeeWei": "1843080000000",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "3546472113",
+              "l1DataFeeUpperBoundWei": "4584681621",
+              "operatorFeeWei": "0",
+              "totalWei": "1846626472113",
+              "totalWithTipWei": "2215242472113"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 176,
+              "l2ExecutionFeeAtBaseFeeWei": "777245000000",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "1705119401",
+              "l1DataFeeUpperBoundWei": "2047924427",
+              "operatorFeeWei": "0",
+              "totalWei": "778950119401",
+              "totalWithTipWei": "934399119401"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:27:40.433Z",
+          "block": 52374357,
+          "blockTimestampUtc": "2026-10-09T09:27:41.000Z",
+          "l2BaseFeeWei": "5000000",
+          "l2BaseFeeGwei": 0.005,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "6000000",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "115262803",
+            "blobBaseFeeWei": "6288324",
+            "baseFeeScalar": 2269,
+            "blobBaseFeeScalar": 1055762
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6186,
+              "l2ExecutionFeeAtBaseFeeWei": "6525720000000",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "36469674002",
+              "l1DataFeeUpperBoundWei": "56523921342",
+              "operatorFeeWei": "0",
+              "totalWei": "6562189674002",
+              "totalWithTipWei": "7867333674002"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5972,
+              "l2ExecutionFeeAtBaseFeeWei": "6480335000000",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "37329788447",
+              "l1DataFeeUpperBoundWei": "54577346544",
+              "operatorFeeWei": "0",
+              "totalWei": "6517664788447",
+              "totalWithTipWei": "7813731788447"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 208,
+              "l2ExecutionFeeAtBaseFeeWei": "817605000000",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "1829696428",
+              "l1DataFeeUpperBoundWei": "2191849879",
+              "operatorFeeWei": "0",
+              "totalWei": "819434696428",
+              "totalWithTipWei": "982955696428"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 144,
+              "l2ExecutionFeeAtBaseFeeWei": "375595000000",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "1503758322",
+              "l1DataFeeUpperBoundWei": "1603350521",
+              "operatorFeeWei": "0",
+              "totalWei": "377098758322",
+              "totalWithTipWei": "452217758322"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 434,
+              "l2ExecutionFeeAtBaseFeeWei": "1843080000000",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "3278310231",
+              "l1DataFeeUpperBoundWei": "4238016876",
+              "operatorFeeWei": "0",
+              "totalWei": "1846358310231",
+              "totalWithTipWei": "2214974310231"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 176,
+              "l2ExecutionFeeAtBaseFeeWei": "777245000000",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "1576189012",
+              "l1DataFeeUpperBoundWei": "1893073282",
+              "operatorFeeWei": "0",
+              "totalWei": "778821189012",
+              "totalWithTipWei": "934270189012"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:30:00.037Z",
+          "block": 52374426,
+          "blockTimestampUtc": "2026-10-09T09:29:59.000Z",
+          "l2BaseFeeWei": "5000000",
+          "l2BaseFeeGwei": 0.005,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "6000000",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "98964726",
+            "blobBaseFeeWei": "6956324",
+            "baseFeeScalar": 2269,
+            "blobBaseFeeScalar": 1055762
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6186,
+              "l2ExecutionFeeAtBaseFeeWei": "6525720000000",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "36852326410",
+              "l1DataFeeUpperBoundWei": "57116989836",
+              "operatorFeeWei": "0",
+              "totalWei": "6562572326410",
+              "totalWithTipWei": "7867716326410"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5972,
+              "l2ExecutionFeeAtBaseFeeWei": "6480335000000",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "37721465473",
+              "l1DataFeeUpperBoundWei": "55149990903",
+              "operatorFeeWei": "0",
+              "totalWei": "6518056465473",
+              "totalWithTipWei": "7814123465473"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 208,
+              "l2ExecutionFeeAtBaseFeeWei": "817605000000",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "1848894234",
+              "l1DataFeeUpperBoundWei": "2214847524",
+              "operatorFeeWei": "0",
+              "totalWei": "819453894234",
+              "totalWithTipWei": "982974894234"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 144,
+              "l2ExecutionFeeAtBaseFeeWei": "375595000000",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "1519536274",
+              "l1DataFeeUpperBoundWei": "1620173428",
+              "operatorFeeWei": "0",
+              "totalWei": "377114536274",
+              "totalWithTipWei": "452233536274"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 434,
+              "l2ExecutionFeeAtBaseFeeWei": "1843080000000",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "3312707394",
+              "l1DataFeeUpperBoundWei": "4282483612",
+              "operatorFeeWei": "0",
+              "totalWei": "1846392707394",
+              "totalWithTipWei": "2215008707394"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 176,
+              "l2ExecutionFeeAtBaseFeeWei": "777245000000",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "1592726932",
+              "l1DataFeeUpperBoundWei": "1912936060",
+              "operatorFeeWei": "0",
+              "totalWei": "778837726932",
+              "totalWithTipWei": "934286726932"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:32:19.400Z",
+          "block": 52374496,
+          "blockTimestampUtc": "2026-10-09T09:32:19.000Z",
+          "l2BaseFeeWei": "5000000",
+          "l2BaseFeeGwei": 0.005,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "6000000",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "107769175",
+            "blobBaseFeeWei": "6827477",
+            "baseFeeScalar": 2269,
+            "blobBaseFeeScalar": 1055762
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6186,
+              "l2ExecutionFeeAtBaseFeeWei": "6525720000000",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "37470982903",
+              "l1DataFeeUpperBoundWei": "58075838302",
+              "operatorFeeWei": "0",
+              "totalWei": "6563190982903",
+              "totalWithTipWei": "7868334982903"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5972,
+              "l2ExecutionFeeAtBaseFeeWei": "6480335000000",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "38354712593",
+              "l1DataFeeUpperBoundWei": "56075818478",
+              "operatorFeeWei": "0",
+              "totalWei": "6518689712593",
+              "totalWithTipWei": "7814756712593"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 208,
+              "l2ExecutionFeeAtBaseFeeWei": "817605000000",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "1879932449",
+              "l1DataFeeUpperBoundWei": "2252029161",
+              "operatorFeeWei": "0",
+              "totalWei": "819484932449",
+              "totalWithTipWei": "983005932449"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 144,
+              "l2ExecutionFeeAtBaseFeeWei": "375595000000",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "1545045409",
+              "l1DataFeeUpperBoundWei": "1647372005",
+              "operatorFeeWei": "0",
+              "totalWei": "377140045409",
+              "totalWithTipWei": "452259045409"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 434,
+              "l2ExecutionFeeAtBaseFeeWei": "1843080000000",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "3368319295",
+              "l1DataFeeUpperBoundWei": "4354375581",
+              "operatorFeeWei": "0",
+              "totalWei": "1846448319295",
+              "totalWithTipWei": "2215064319295"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 176,
+              "l2ExecutionFeeAtBaseFeeWei": "777245000000",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "1619464751",
+              "l1DataFeeUpperBoundWei": "1945049374",
+              "operatorFeeWei": "0",
+              "totalWei": "778864464751",
+              "totalWithTipWei": "934313464751"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:34:38.356Z",
+          "block": 52374565,
+          "blockTimestampUtc": "2026-10-09T09:34:37.000Z",
+          "l2BaseFeeWei": "5000000",
+          "l2BaseFeeGwei": 0.005,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "6000000",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "132229650",
+            "blobBaseFeeWei": "6751317",
+            "baseFeeScalar": 2269,
+            "blobBaseFeeScalar": 1055762
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6186,
+              "l2ExecutionFeeAtBaseFeeWei": "6525720000000",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "40192210468",
+              "l1DataFeeUpperBoundWei": "62293437089",
+              "operatorFeeWei": "0",
+              "totalWei": "6565912210468",
+              "totalWithTipWei": "7871056210468"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5972,
+              "l2ExecutionFeeAtBaseFeeWei": "6480335000000",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "41140118608",
+              "l1DataFeeUpperBoundWei": "60148171300",
+              "operatorFeeWei": "0",
+              "totalWei": "6521475118608",
+              "totalWithTipWei": "7817542118608"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 208,
+              "l2ExecutionFeeAtBaseFeeWei": "817605000000",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "2016457398",
+              "l1DataFeeUpperBoundWei": "2415576614",
+              "operatorFeeWei": "0",
+              "totalWei": "819621457398",
+              "totalWithTipWei": "983142457398"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 144,
+              "l2ExecutionFeeAtBaseFeeWei": "375595000000",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "1657250103",
+              "l1DataFeeUpperBoundWei": "1767007887",
+              "operatorFeeWei": "0",
+              "totalWei": "377252250103",
+              "totalWithTipWei": "452371250103"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 434,
+              "l2ExecutionFeeAtBaseFeeWei": "1843080000000",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "3612934264",
+              "l1DataFeeUpperBoundWei": "4670600188",
+              "operatorFeeWei": "0",
+              "totalWei": "1846692934264",
+              "totalWithTipWei": "2215308934264"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 176,
+              "l2ExecutionFeeAtBaseFeeWei": "777245000000",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "1737073946",
+              "l1DataFeeUpperBoundWei": "2086303261",
+              "operatorFeeWei": "0",
+              "totalWei": "778982073946",
+              "totalWithTipWei": "934431073946"
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "note": "USD at the median ETH price of the run. Corridor: an estimate at the median sampled fees, registrations × registerReport + claims × claimShipment (every claim priced as a first claim); not a forecast.",
+        "baseFeeOnly": {
+          "perOperationUsd": {
+            "deployAllowlist": {
+              "median": 0.016436376145596197,
+              "min": 0.016431117673510597,
+              "max": 0.01644396600594553,
+              "l1ShareMedian": 0.005662396812095898
+            },
+            "deployRegistry": {
+              "median": 0.01632490689096325,
+              "min": 0.016319524401101654,
+              "max": 0.01633267575342221,
+              "l1ShareMedian": 0.005835516504427852
+            },
+            "addVerifier": {
+              "median": 0.002052316074896053,
+              "min": 0.0020520522554939337,
+              "max": 0.0020526968608731338,
+              "l1ShareMedian": 0.0022751465984135848
+            },
+            "addAuditor": {
+              "median": 0.0009444945579115402,
+              "min": 0.0009442777347178752,
+              "max": 0.0009448075115092077,
+              "l1ShareMedian": 0.0040630589434935225
+            },
+            "registerReport": {
+              "median": 0.004624258622543067,
+              "min": 0.004623785931100591,
+              "max": 0.004624940885752803,
+              "l1ShareMedian": 0.0018091831748913766
+            },
+            "claimShipment": {
+              "median": 0.0019505897327247654,
+              "min": 0.0019503624659303347,
+              "max": 0.0019509177601836898,
+              "l1ShareMedian": 0.0020621343682668725
+            }
+          },
+          "reportPlusClaimUsd": {
+            "median": 0.006574848355267832,
+            "min": 0.006574148397030926,
+            "max": 0.006575858645936492
+          },
+          "corridorAnnualUsdEstimate": {
+            "low": 7.056118700486663,
+            "high": 39.64657195485204
+          }
+        },
+        "withSuggestedTip": {
+          "perOperationUsd": {
+            "deployAllowlist": {
+              "median": 0.019705037510676197,
+              "min": 0.019699779038590597,
+              "max": 0.01971262737102553,
+              "l1ShareMedian": 0.004723121680574377
+            },
+            "deployRegistry": {
+              "median": 0.01957083540877825,
+              "min": 0.019565452918916655,
+              "max": 0.01957860427123721,
+              "l1ShareMedian": 0.004867664968083239
+            },
+            "addVerifier": {
+              "median": 0.0024618454257410525,
+              "min": 0.0024615816063389335,
+              "max": 0.0024622262117181336,
+              "l1ShareMedian": 0.0018966747504858626
+            },
+            "addAuditor": {
+              "median": 0.0011326259618665404,
+              "min": 0.001132409138672875,
+              "max": 0.0011329389154642077,
+              "l1ShareMedian": 0.003388177004513075
+            },
+            "registerReport": {
+              "median": 0.005547437120663065,
+              "min": 0.005546964429220591,
+              "max": 0.005548119383872803,
+              "l1ShareMedian": 0.0015081074175734266
+            },
+            "claimShipment": {
+              "median": 0.002339903203529765,
+              "min": 0.0023396759367353345,
+              "max": 0.00234023123098869,
+              "l1ShareMedian": 0.0017190361615947547
+            }
+          },
+          "reportPlusClaimUsd": {
+            "median": 0.00788734032419283,
+            "min": 0.007886640365955926,
+            "max": 0.007888350614861494
+          },
+          "corridorAnnualUsdEstimate": {
+            "low": 8.4646061264039,
+            "high": 47.55970885097922
+          }
+        }
+      }
+    },
+    "optimism": {
+      "name": "OP Mainnet",
+      "chainId": 10,
+      "rpc": "https://mainnet.optimism.io",
+      "forkBlock": 157969494,
+      "executionGas": [
+        {
+          "op": "deployAllowlist",
+          "gasUsed": 1305144,
+          "sepoliaGasUsed": 1305144,
+          "nonce": 0
+        },
+        {
+          "op": "deployRegistry",
+          "gasUsed": 1296067,
+          "sepoliaGasUsed": 1296067,
+          "nonce": 1
+        },
+        {
+          "op": "addVerifier",
+          "gasUsed": 163521,
+          "sepoliaGasUsed": 163521,
+          "nonce": 2
+        },
+        {
+          "op": "addAuditor",
+          "gasUsed": 75119,
+          "sepoliaGasUsed": 75119,
+          "nonce": 3
+        },
+        {
+          "op": "registerReport",
+          "gasUsed": 368616,
+          "sepoliaGasUsed": 368616,
+          "nonce": 0
+        },
+        {
+          "op": "claimShipment",
+          "gasUsed": 155449,
+          "sepoliaGasUsed": 155449,
+          "nonce": 0
+        }
+      ],
+      "samples": [
+        {
+          "sampledAtUtc": "2026-10-09T09:23:01.017Z",
+          "block": 157969505,
+          "blockTimestampUtc": "2026-10-09T09:23:07.000Z",
+          "l2BaseFeeWei": "1019",
+          "l2BaseFeeGwei": 0.000001019,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "1001019",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "117586638",
+            "blobBaseFeeWei": "6904501",
+            "baseFeeScalar": 5227,
+            "blobBaseFeeScalar": 1014213
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6184,
+              "l2ExecutionFeeAtBaseFeeWei": "1329941736",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "56702856710",
+              "l1DataFeeUpperBoundWei": "87898583750",
+              "operatorFeeWei": "0",
+              "totalWei": "58032798446",
+              "totalWithTipWei": "1363176798446"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5970,
+              "l2ExecutionFeeAtBaseFeeWei": "1320692273",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "58040822430",
+              "l1DataFeeUpperBoundWei": "84870556069",
+              "operatorFeeWei": "0",
+              "totalWei": "59361514703",
+              "totalWithTipWei": "1355428514703"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 206,
+              "l2ExecutionFeeAtBaseFeeWei": "166627899",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "2818047836",
+              "l1DataFeeUpperBoundWei": "3381401824",
+              "operatorFeeWei": "0",
+              "totalWei": "2984675735",
+              "totalWithTipWei": "166505675735"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 142,
+              "l2ExecutionFeeAtBaseFeeWei": "76546261",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "2311029248",
+              "l1DataFeeUpperBoundWei": "2465951594",
+              "operatorFeeWei": "0",
+              "totalWei": "2387575509",
+              "totalWithTipWei": "77506575509"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 432,
+              "l2ExecutionFeeAtBaseFeeWei": "375619704",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "5071463785",
+              "l1DataFeeUpperBoundWei": "6564351851",
+              "operatorFeeWei": "0",
+              "totalWei": "5447083489",
+              "totalWithTipWei": "374063083489"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 174,
+              "l2ExecutionFeeAtBaseFeeWei": "158402531",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "2423700045",
+              "l1DataFeeUpperBoundWei": "2916634784",
+              "operatorFeeWei": "0",
+              "totalWei": "2582102576",
+              "totalWithTipWei": "158031102576"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:25:21.275Z",
+          "block": 157969575,
+          "blockTimestampUtc": "2026-10-09T09:25:27.000Z",
+          "l2BaseFeeWei": "991",
+          "l2BaseFeeGwei": 9.91e-7,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "1000991",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "116457983",
+            "blobBaseFeeWei": "6103007",
+            "baseFeeScalar": 5227,
+            "blobBaseFeeScalar": 1014213
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6184,
+              "l2ExecutionFeeAtBaseFeeWei": "1293397704",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "53647305597",
+              "l1DataFeeUpperBoundWei": "83161986143",
+              "operatorFeeWei": "0",
+              "totalWei": "54940703301",
+              "totalWithTipWei": "1360084703301"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5970,
+              "l2ExecutionFeeAtBaseFeeWei": "1284402397",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "54913172257",
+              "l1DataFeeUpperBoundWei": "80297130018",
+              "operatorFeeWei": "0",
+              "totalWei": "56197574654",
+              "totalWithTipWei": "1352264574654"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 206,
+              "l2ExecutionFeeAtBaseFeeWei": "162049311",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "2666191480",
+              "l1DataFeeUpperBoundWei": "3199187969",
+              "operatorFeeWei": "0",
+              "totalWei": "2828240791",
+              "totalWithTipWei": "166349240791"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 142,
+              "l2ExecutionFeeAtBaseFeeWei": "74442929",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "2186494641",
+              "l1DataFeeUpperBoundWei": "2333068675",
+              "operatorFeeWei": "0",
+              "totalWei": "2260937570",
+              "totalWithTipWei": "77379937570"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 432,
+              "l2ExecutionFeeAtBaseFeeWei": "365298456",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "4798177434",
+              "l1DataFeeUpperBoundWei": "6210618128",
+              "operatorFeeWei": "0",
+              "totalWei": "5163475890",
+              "totalWithTipWei": "373779475890"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 174,
+              "l2ExecutionFeeAtBaseFeeWei": "154049959",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "2293093938",
+              "l1DataFeeUpperBoundWei": "2759465866",
+              "operatorFeeWei": "0",
+              "totalWei": "2447143897",
+              "totalWithTipWei": "157896143897"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:27:40.433Z",
+          "block": 157969645,
+          "blockTimestampUtc": "2026-10-09T09:27:47.000Z",
+          "l2BaseFeeWei": "965",
+          "l2BaseFeeGwei": 9.65e-7,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "1000965",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "108017246",
+            "blobBaseFeeWei": "6503541",
+            "baseFeeScalar": 5227,
+            "blobBaseFeeScalar": 1014213
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6184,
+              "l2ExecutionFeeAtBaseFeeWei": "1259463960",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "52638005766",
+              "l1DataFeeUpperBoundWei": "81597408433",
+              "operatorFeeWei": "0",
+              "totalWei": "53897469726",
+              "totalWithTipWei": "1359041469726"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5970,
+              "l2ExecutionFeeAtBaseFeeWei": "1250704655",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "53880056896",
+              "l1DataFeeUpperBoundWei": "78786450612",
+              "operatorFeeWei": "0",
+              "totalWei": "55130761551",
+              "totalWithTipWei": "1351197761551"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 206,
+              "l2ExecutionFeeAtBaseFeeWei": "157797765",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "2616030776",
+              "l1DataFeeUpperBoundWei": "3138999673",
+              "operatorFeeWei": "0",
+              "totalWei": "2773828541",
+              "totalWithTipWei": "166294828541"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 142,
+              "l2ExecutionFeeAtBaseFeeWei": "72489835",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "2145358769",
+              "l1DataFeeUpperBoundWei": "2289175216",
+              "operatorFeeWei": "0",
+              "totalWei": "2217848604",
+              "totalWithTipWei": "77336848604"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 432,
+              "l2ExecutionFeeAtBaseFeeWei": "355714440",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "4707906364",
+              "l1DataFeeUpperBoundWei": "6093773941",
+              "operatorFeeWei": "0",
+              "totalWei": "5063620804",
+              "totalWithTipWei": "373679620804"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 174,
+              "l2ExecutionFeeAtBaseFeeWei": "150008285",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "2249952549",
+              "l1DataFeeUpperBoundWei": "2707550333",
+              "operatorFeeWei": "0",
+              "totalWei": "2399960834",
+              "totalWithTipWei": "157848960834"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:30:00.037Z",
+          "block": 157969715,
+          "blockTimestampUtc": "2026-10-09T09:30:07.000Z",
+          "l2BaseFeeWei": "940",
+          "l2BaseFeeGwei": 9.4e-7,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "1000940",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "122104093",
+            "blobBaseFeeWei": "6479266",
+            "baseFeeScalar": 5227,
+            "blobBaseFeeScalar": 1014213
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6184,
+              "l2ExecutionFeeAtBaseFeeWei": "1226835360",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "56522762043",
+              "l1DataFeeUpperBoundWei": "87619407936",
+              "operatorFeeWei": "0",
+              "totalWei": "57749597403",
+              "totalWithTipWei": "1362893597403"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5970,
+              "l2ExecutionFeeAtBaseFeeWei": "1218302980",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "57856478232",
+              "l1DataFeeUpperBoundWei": "84600997612",
+              "operatorFeeWei": "0",
+              "totalWei": "59074781212",
+              "totalWithTipWei": "1355141781212"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 206,
+              "l2ExecutionFeeAtBaseFeeWei": "153709740",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "2809097399",
+              "l1DataFeeUpperBoundWei": "3370662110",
+              "operatorFeeWei": "0",
+              "totalWei": "2962807139",
+              "totalWithTipWei": "166483807139"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 142,
+              "l2ExecutionFeeAtBaseFeeWei": "70611860",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "2303689158",
+              "l1DataFeeUpperBoundWei": "2458119454",
+              "operatorFeeWei": "0",
+              "totalWei": "2374301018",
+              "totalWithTipWei": "77493301018"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 432,
+              "l2ExecutionFeeAtBaseFeeWei": "346499040",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "5055356244",
+              "l1DataFeeUpperBoundWei": "6543502729",
+              "operatorFeeWei": "0",
+              "totalWei": "5401855284",
+              "totalWithTipWei": "374017855284"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 174,
+              "l2ExecutionFeeAtBaseFeeWei": "146122060",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "2416002101",
+              "l1DataFeeUpperBoundWei": "2907371223",
+              "operatorFeeWei": "0",
+              "totalWei": "2562124161",
+              "totalWithTipWei": "158011124161"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:32:19.400Z",
+          "block": 157969784,
+          "blockTimestampUtc": "2026-10-09T09:32:25.000Z",
+          "l2BaseFeeWei": "909",
+          "l2BaseFeeGwei": 9.09e-7,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "1000909",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "139191948",
+            "blobBaseFeeWei": "6601539",
+            "baseFeeScalar": 5227,
+            "blobBaseFeeScalar": 1014213
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6184,
+              "l2ExecutionFeeAtBaseFeeWei": "1186375896",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "61753338828",
+              "l1DataFeeUpperBoundWei": "95727646538",
+              "operatorFeeWei": "0",
+              "totalWei": "62939714724",
+              "totalWithTipWei": "1368083714724"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5970,
+              "l2ExecutionFeeAtBaseFeeWei": "1178124903",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "63210476179",
+              "l1DataFeeUpperBoundWei": "92429914638",
+              "operatorFeeWei": "0",
+              "totalWei": "64388601082",
+              "totalWithTipWei": "1360455601082"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 206,
+              "l2ExecutionFeeAtBaseFeeWei": "148640589",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "3069049303",
+              "l1DataFeeUpperBoundWei": "3682580819",
+              "operatorFeeWei": "0",
+              "totalWei": "3217689892",
+              "totalWithTipWei": "166738689892"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 142,
+              "l2ExecutionFeeAtBaseFeeWei": "68283171",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "2516870939",
+              "l1DataFeeUpperBoundWei": "2685592106",
+              "operatorFeeWei": "0",
+              "totalWei": "2585154110",
+              "totalWithTipWei": "77704154110"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 432,
+              "l2ExecutionFeeAtBaseFeeWei": "335071944",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "5523175368",
+              "l1DataFeeUpperBoundWei": "7149033886",
+              "operatorFeeWei": "0",
+              "totalWei": "5858247312",
+              "totalWithTipWei": "374474247312"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 174,
+              "l2ExecutionFeeAtBaseFeeWei": "141303141",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "2639577242",
+              "l1DataFeeUpperBoundWei": "3176417319",
+              "operatorFeeWei": "0",
+              "totalWei": "2780880383",
+              "totalWithTipWei": "158229880383"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:34:38.356Z",
+          "block": 157969853,
+          "blockTimestampUtc": "2026-10-09T09:34:43.000Z",
+          "l2BaseFeeWei": "907",
+          "l2BaseFeeGwei": 9.07e-7,
+          "maxPriorityFeePerGasWei": "1000000",
+          "ethGasPriceWei": "1000907",
+          "oracle": {
+            "version": "1.6.0",
+            "isFjord": true,
+            "isIsthmus": true,
+            "isJovian": true,
+            "l1BaseFeeWei": "104329481",
+            "blobBaseFeeWei": "5901037",
+            "baseFeeScalar": 5227,
+            "blobBaseFeeScalar": 1014213
+          },
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "unsignedTxBytes": 6184,
+              "l2ExecutionFeeAtBaseFeeWei": "1183765608",
+              "l2PriorityTipWei": "1305144000000",
+              "l1DataFeeWei": "49541349533",
+              "l1DataFeeUpperBoundWei": "76797091252",
+              "operatorFeeWei": "0",
+              "totalWei": "50725115141",
+              "totalWithTipWei": "1355869115141"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "unsignedTxBytes": 5970,
+              "l2ExecutionFeeAtBaseFeeWei": "1175532769",
+              "l2PriorityTipWei": "1296067000000",
+              "l1DataFeeWei": "50710331684",
+              "l1DataFeeUpperBoundWei": "74151500070",
+              "operatorFeeWei": "0",
+              "totalWei": "51885864453",
+              "totalWithTipWei": "1347952864453"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "unsignedTxBytes": 206,
+              "l2ExecutionFeeAtBaseFeeWei": "148313547",
+              "l2PriorityTipWei": "163521000000",
+              "l1DataFeeWei": "2462131557",
+              "l1DataFeeUpperBoundWei": "2954334567",
+              "operatorFeeWei": "0",
+              "totalWei": "2610445104",
+              "totalWithTipWei": "166131445104"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "unsignedTxBytes": 142,
+              "l2ExecutionFeeAtBaseFeeWei": "68132933",
+              "l2PriorityTipWei": "75119000000",
+              "l1DataFeeWei": "2019148847",
+              "l1DataFeeUpperBoundWei": "2154504675",
+              "operatorFeeWei": "0",
+              "totalWei": "2087281780",
+              "totalWithTipWei": "77206281780"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "unsignedTxBytes": 432,
+              "l2ExecutionFeeAtBaseFeeWei": "334334712",
+              "l2PriorityTipWei": "368616000000",
+              "l1DataFeeWei": "4430943600",
+              "l1DataFeeUpperBoundWei": "5735281578",
+              "operatorFeeWei": "0",
+              "totalWei": "4765278312",
+              "totalWithTipWei": "373381278312"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "unsignedTxBytes": 174,
+              "l2ExecutionFeeAtBaseFeeWei": "140992243",
+              "l2PriorityTipWei": "155449000000",
+              "l1DataFeeWei": "2117589449",
+              "l1DataFeeUpperBoundWei": "2548267084",
+              "operatorFeeWei": "0",
+              "totalWei": "2258581692",
+              "totalWithTipWei": "157707581692"
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "note": "USD at the median ETH price of the run. Corridor: an estimate at the median sampled fees, registrations × registerReport + claims × claimShipment (every claim priced as a first claim); not a forecast.",
+        "baseFeeOnly": {
+          "perOperationUsd": {
+            "deployAllowlist": {
+              "median": 0.0001411133300733146,
+              "min": 0.00012703826098930173,
+              "max": 0.00015762905384194816,
+              "l1ShareMedian": 0.9768730278517284
+            },
+            "deployRegistry": {
+              "median": 0.0001443466376434122,
+              "min": 0.00012994529379999357,
+              "max": 0.00016125771003680948,
+              "l1ShareMedian": 0.9775477905022183
+            },
+            "addVerifier": {
+              "median": 0.000007251680516524424,
+              "min": 0.000006537716188487279,
+              "max": 0.000008058527361569938,
+              "l1ShareMedian": 0.9436783845127421
+            },
+            "addAuditor": {
+              "median": 0.000005804350052761829,
+              "min": 0.0000052274824175121,
+              "max": 0.000006474376285018949,
+              "l1ShareMedian": 0.967648904878796
+            },
+            "registerReport": {
+              "median": 0.000013230145416034212,
+              "min": 0.00001193437744209684,
+              "max": 0.000014671658189301837,
+              "l1ShareMedian": 0.930440733347466
+            },
+            "claimShipment": {
+              "median": 0.000006272718170758904,
+              "min": 0.0000056564936256209396,
+              "max": 0.000006964561970802434,
+              "l1ShareMedian": 0.9381142700551042
+            }
+          },
+          "reportPlusClaimUsd": {
+            "median": 0.000019502863586793118,
+            "min": 0.00001759087106771778,
+            "max": 0.000021636220160104273
+          },
+          "corridorAnnualUsdEstimate": {
+            "low": 0.021472162969041947,
+            "high": 0.1262767381660817
+          }
+        },
+        "withSuggestedTip": {
+          "perOperationUsd": {
+            "deployAllowlist": {
+              "median": 0.003409774695153314,
+              "min": 0.0033956996260693013,
+              "max": 0.0034262904189219477,
+              "l1ShareMedian": 0.040458353508427074
+            },
+            "deployRegistry": {
+              "median": 0.0033902751554584117,
+              "min": 0.0033758738116149932,
+              "max": 0.003407186227851809,
+              "l1ShareMedian": 0.04165117279072686
+            },
+            "addVerifier": {
+              "median": 0.00041678103136152435,
+              "min": 0.0004160670670334872,
+              "max": 0.0004175878782065699,
+              "l1ShareMedian": 0.016450385652363692
+            },
+            "addAuditor": {
+              "median": 0.00019393575400776183,
+              "min": 0.0001933588863725121,
+              "max": 0.00019460578024001893,
+              "l1ShareMedian": 0.028992100004762024
+            },
+            "registerReport": {
+              "median": 0.000936408643536034,
+              "min": 0.0009351128755620967,
+              "max": 0.0009378501563093018,
+              "l1ShareMedian": 0.013176635281030136
+            },
+            "claimShipment": {
+              "median": 0.00039558618897575883,
+              "min": 0.0003949699644306209,
+              "max": 0.0003962780327758024,
+              "l1ShareMedian": 0.014906437439957211
+            }
+          },
+          "reportPlusClaimUsd": {
+            "median": 0.001331994832511793,
+            "min": 0.0013300828399927175,
+            "max": 0.0013341281890851043
+          },
+          "corridorAnnualUsdEstimate": {
+            "low": 1.4299595888862817,
+            "high": 8.03941363429326
+          }
+        }
+      }
+    },
+    "arbitrum": {
+      "name": "Arbitrum One",
+      "chainId": 42161,
+      "rpc": "https://arb1.arbitrum.io/rpc",
+      "forkBlock": 513154831,
+      "executionGas": [
+        {
+          "op": "deployAllowlist",
+          "gasUsed": 1305144,
+          "sepoliaGasUsed": 1305144,
+          "nonce": 0
+        },
+        {
+          "op": "deployRegistry",
+          "gasUsed": 1296067,
+          "sepoliaGasUsed": 1296067,
+          "nonce": 1
+        },
+        {
+          "op": "addVerifier",
+          "gasUsed": 163521,
+          "sepoliaGasUsed": 163521,
+          "nonce": 2
+        },
+        {
+          "op": "addAuditor",
+          "gasUsed": 75119,
+          "sepoliaGasUsed": 75119,
+          "nonce": 3
+        },
+        {
+          "op": "registerReport",
+          "gasUsed": 368616,
+          "sepoliaGasUsed": 368616,
+          "nonce": 0
+        },
+        {
+          "op": "claimShipment",
+          "gasUsed": 155449,
+          "sepoliaGasUsed": 155449,
+          "nonce": 0
+        }
+      ],
+      "samples": [
+        {
+          "sampledAtUtc": "2026-10-09T09:23:01.017Z",
+          "block": 513154921,
+          "blockTimestampUtc": "2026-10-09T09:23:17.000Z",
+          "l2BaseFeeWei": "20000000",
+          "l2BaseFeeGwei": 0.02,
+          "ethGasPriceWei": "20014000",
+          "l1BaseFeeEstimateWei": "2922914",
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "l1ComponentGas": 9576,
+              "l2ExecutionFeeAtBaseFeeWei": "26121152016000",
+              "l1DataFeeWei": "191654064000",
+              "totalWei": "26312806080000",
+              "totalWithTipWei": "26312806080000"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "l1ComponentGas": 9454,
+              "l2ExecutionFeeAtBaseFeeWei": "25939484938000",
+              "l1DataFeeWei": "189212356000",
+              "totalWei": "26128697294000",
+              "totalWithTipWei": "26128697294000"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "l1ComponentGas": 799,
+              "l2ExecutionFeeAtBaseFeeWei": "3272709294000",
+              "l1DataFeeWei": "15991186000",
+              "totalWei": "3288700480000",
+              "totalWithTipWei": "3288700480000"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "l1ComponentGas": 630,
+              "l2ExecutionFeeAtBaseFeeWei": "1503431666000",
+              "l1DataFeeWei": "12608820000",
+              "totalWei": "1516040486000",
+              "totalWithTipWei": "1516040486000"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "l1ComponentGas": 1318,
+              "l2ExecutionFeeAtBaseFeeWei": "7377480624000",
+              "l1DataFeeWei": "26378452000",
+              "totalWei": "7403859076000",
+              "totalWithTipWei": "7403859076000"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "l1ComponentGas": 713,
+              "l2ExecutionFeeAtBaseFeeWei": "3111156286000",
+              "l1DataFeeWei": "14269982000",
+              "totalWei": "3125426268000",
+              "totalWithTipWei": "3125426268000"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:25:21.275Z",
+          "block": 513155416,
+          "blockTimestampUtc": "2026-10-09T09:25:36.000Z",
+          "l2BaseFeeWei": "20186000",
+          "l2BaseFeeGwei": 0.020186,
+          "ethGasPriceWei": "20068000",
+          "l1BaseFeeEstimateWei": "2922914",
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "l1ComponentGas": 9493,
+              "l2ExecutionFeeAtBaseFeeWei": "26350857360000",
+              "l1DataFeeWei": "191663670000",
+              "totalWei": "26542521030000",
+              "totalWithTipWei": "26542521030000"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "l1ComponentGas": 9372,
+              "l2ExecutionFeeAtBaseFeeWei": "26167592730000",
+              "l1DataFeeWei": "189220680000",
+              "totalWei": "26356813410000",
+              "totalWithTipWei": "26356813410000"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "l1ComponentGas": 792,
+              "l2ExecutionFeeAtBaseFeeWei": "3301488990000",
+              "l1DataFeeWei": "15990480000",
+              "totalWei": "3317479470000",
+              "totalWithTipWei": "3317479470000"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "l1ComponentGas": 625,
+              "l2ExecutionFeeAtBaseFeeWei": "1516652610000",
+              "l1DataFeeWei": "12618750000",
+              "totalWei": "1529271360000",
+              "totalWithTipWei": "1529271360000"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "l1ComponentGas": 1307,
+              "l2ExecutionFeeAtBaseFeeWei": "7442357040000",
+              "l1DataFeeWei": "26388330000",
+              "totalWei": "7468745370000",
+              "totalWithTipWei": "7468745370000"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "l1ComponentGas": 707,
+              "l2ExecutionFeeAtBaseFeeWei": "3138515310000",
+              "l1DataFeeWei": "14274330000",
+              "totalWei": "3152789640000",
+              "totalWithTipWei": "3152789640000"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:27:40.433Z",
+          "block": 513155916,
+          "blockTimestampUtc": "2026-10-09T09:27:56.000Z",
+          "l2BaseFeeWei": "20000000",
+          "l2BaseFeeGwei": 0.02,
+          "ethGasPriceWei": "20080000",
+          "l1BaseFeeEstimateWei": "3118175",
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "l1ComponentGas": 10213,
+              "l2ExecutionFeeAtBaseFeeWei": "26128982880000",
+              "l1DataFeeWei": "204464260000",
+              "totalWei": "26333447140000",
+              "totalWithTipWei": "26333447140000"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "l1ComponentGas": 10083,
+              "l2ExecutionFeeAtBaseFeeWei": "25947261340000",
+              "l1DataFeeWei": "201861660000",
+              "totalWei": "26149123000000",
+              "totalWithTipWei": "26149123000000"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "l1ComponentGas": 852,
+              "l2ExecutionFeeAtBaseFeeWei": "3273690420000",
+              "l1DataFeeWei": "17057040000",
+              "totalWei": "3290747460000",
+              "totalWithTipWei": "3290747460000"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "l1ComponentGas": 672,
+              "l2ExecutionFeeAtBaseFeeWei": "1503882380000",
+              "l1DataFeeWei": "13453440000",
+              "totalWei": "1517335820000",
+              "totalWithTipWei": "1517335820000"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "l1ComponentGas": 1406,
+              "l2ExecutionFeeAtBaseFeeWei": "7379692320000",
+              "l1DataFeeWei": "28148120000",
+              "totalWei": "7407840440000",
+              "totalWithTipWei": "7407840440000"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "l1ComponentGas": 761,
+              "l2ExecutionFeeAtBaseFeeWei": "3112088980000",
+              "l1DataFeeWei": "15235220000",
+              "totalWei": "3127324200000",
+              "totalWithTipWei": "3127324200000"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:30:00.037Z",
+          "block": 513156404,
+          "blockTimestampUtc": "2026-10-09T09:30:15.000Z",
+          "l2BaseFeeWei": "20006000",
+          "l2BaseFeeGwei": 0.020006,
+          "ethGasPriceWei": "20058000",
+          "l1BaseFeeEstimateWei": "3118175",
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "l1ComponentGas": 10208,
+              "l2ExecutionFeeAtBaseFeeWei": "26142034320000",
+              "l1DataFeeWei": "204466240000",
+              "totalWei": "26346500560000",
+              "totalWithTipWei": "26346500560000"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "l1ComponentGas": 10078,
+              "l2ExecutionFeeAtBaseFeeWei": "25960222010000",
+              "l1DataFeeWei": "201862340000",
+              "totalWei": "26162084350000",
+              "totalWithTipWei": "26162084350000"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "l1ComponentGas": 852,
+              "l2ExecutionFeeAtBaseFeeWei": "3275325630000",
+              "l1DataFeeWei": "17065560000",
+              "totalWei": "3292391190000",
+              "totalWithTipWei": "3292391190000"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "l1ComponentGas": 672,
+              "l2ExecutionFeeAtBaseFeeWei": "1504633570000",
+              "l1DataFeeWei": "13460160000",
+              "totalWei": "1518093730000",
+              "totalWithTipWei": "1518093730000"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "l1ComponentGas": 1405,
+              "l2ExecutionFeeAtBaseFeeWei": "7383378480000",
+              "l1DataFeeWei": "28142150000",
+              "totalWei": "7411520630000",
+              "totalWithTipWei": "7411520630000"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "l1ComponentGas": 761,
+              "l2ExecutionFeeAtBaseFeeWei": "3113643470000",
+              "l1DataFeeWei": "15242830000",
+              "totalWei": "3128886300000",
+              "totalWithTipWei": "3128886300000"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:32:19.400Z",
+          "block": 513156904,
+          "blockTimestampUtc": "2026-10-09T09:32:35.000Z",
+          "l2BaseFeeWei": "20062000",
+          "l2BaseFeeGwei": 0.020062,
+          "ethGasPriceWei": "20000000",
+          "l1BaseFeeEstimateWei": "3118175",
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "l1ComponentGas": 10223,
+              "l2ExecutionFeeAtBaseFeeWei": "26102880000000",
+              "l1DataFeeWei": "204460000000",
+              "totalWei": "26307340000000",
+              "totalWithTipWei": "26307340000000"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "l1ComponentGas": 10093,
+              "l2ExecutionFeeAtBaseFeeWei": "25921340000000",
+              "l1DataFeeWei": "201860000000",
+              "totalWei": "26123200000000",
+              "totalWithTipWei": "26123200000000"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "l1ComponentGas": 853,
+              "l2ExecutionFeeAtBaseFeeWei": "3270420000000",
+              "l1DataFeeWei": "17060000000",
+              "totalWei": "3287480000000",
+              "totalWithTipWei": "3287480000000"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "l1ComponentGas": 673,
+              "l2ExecutionFeeAtBaseFeeWei": "1502380000000",
+              "l1DataFeeWei": "13460000000",
+              "totalWei": "1515840000000",
+              "totalWithTipWei": "1515840000000"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "l1ComponentGas": 1407,
+              "l2ExecutionFeeAtBaseFeeWei": "7372320000000",
+              "l1DataFeeWei": "28140000000",
+              "totalWei": "7400460000000",
+              "totalWithTipWei": "7400460000000"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "l1ComponentGas": 762,
+              "l2ExecutionFeeAtBaseFeeWei": "3108980000000",
+              "l1DataFeeWei": "15240000000",
+              "totalWei": "3124220000000",
+              "totalWithTipWei": "3124220000000"
+            }
+          ]
+        },
+        {
+          "sampledAtUtc": "2026-10-09T09:34:38.356Z",
+          "block": 513157406,
+          "blockTimestampUtc": "2026-10-09T09:34:53.000Z",
+          "l2BaseFeeWei": "20000000",
+          "l2BaseFeeGwei": 0.02,
+          "ethGasPriceWei": "20000000",
+          "l1BaseFeeEstimateWei": "2772495",
+          "ops": [
+            {
+              "op": "deployAllowlist",
+              "gasUsed": 1305144,
+              "l1ComponentGas": 9088,
+              "l2ExecutionFeeAtBaseFeeWei": "26108100576000",
+              "l1DataFeeWei": "181796352000",
+              "totalWei": "26289896928000",
+              "totalWithTipWei": "26289896928000"
+            },
+            {
+              "op": "deployRegistry",
+              "gasUsed": 1296067,
+              "l1ComponentGas": 8972,
+              "l2ExecutionFeeAtBaseFeeWei": "25926524268000",
+              "l1DataFeeWei": "179475888000",
+              "totalWei": "26106000156000",
+              "totalWithTipWei": "26106000156000"
+            },
+            {
+              "op": "addVerifier",
+              "gasUsed": 163521,
+              "l1ComponentGas": 758,
+              "l2ExecutionFeeAtBaseFeeWei": "3271074084000",
+              "l1DataFeeWei": "15163032000",
+              "totalWei": "3286237116000",
+              "totalWithTipWei": "3286237116000"
+            },
+            {
+              "op": "addAuditor",
+              "gasUsed": 75119,
+              "l1ComponentGas": 598,
+              "l2ExecutionFeeAtBaseFeeWei": "1502680476000",
+              "l1DataFeeWei": "11962392000",
+              "totalWei": "1514642868000",
+              "totalWithTipWei": "1514642868000"
+            },
+            {
+              "op": "registerReport",
+              "gasUsed": 368616,
+              "l1ComponentGas": 1251,
+              "l2ExecutionFeeAtBaseFeeWei": "7373794464000",
+              "l1DataFeeWei": "25025004000",
+              "totalWei": "7398819468000",
+              "totalWithTipWei": "7398819468000"
+            },
+            {
+              "op": "claimShipment",
+              "gasUsed": 155449,
+              "l1ComponentGas": 677,
+              "l2ExecutionFeeAtBaseFeeWei": "3109601796000",
+              "l1DataFeeWei": "13542708000",
+              "totalWei": "3123144504000",
+              "totalWithTipWei": "3123144504000"
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "note": "USD at the median ETH price of the run. Corridor: an estimate at the median sampled fees, registrations × registerReport + claims × claimShipment (every claim priced as a first claim); not a forecast.",
+        "baseFeeOnly": {
+          "perOperationUsd": {
+            "deployAllowlist": {
+              "median": 0.06592482282278145,
+              "min": 0.06584160091184495,
+              "max": 0.06647428408097834,
+              "l1ShareMedian": 0.007522170219785561
+            },
+            "deployRegistry": {
+              "median": 0.0654634628231034,
+              "min": 0.06538104156069341,
+              "max": 0.06600918956060745,
+              "l1ShareMedian": 0.007478694451727886
+            },
+            "addVerifier": {
+              "median": 0.00823893274804665,
+              "min": 0.008230200113980618,
+              "max": 0.008308444871244148,
+              "l1ShareMedian": 0.005022898257514166
+            },
+            "addAuditor": {
+              "median": 0.0037984620613400848,
+              "min": 0.0037933397575482595,
+              "max": 0.0038299760111951994,
+              "l1ShareMedian": 0.00859171479161158
+            },
+            "registerReport": {
+              "median": 0.018547543397174307,
+              "min": 0.018529936422535257,
+              "max": 0.01870506199816965,
+              "l1ShareMedian": 0.0036799397377430963
+            },
+            "claimShipment": {
+              "median": 0.00782983482291513,
+              "min": 0.007821743637320279,
+              "max": 0.007895988249949798,
+              "l1ShareMedian": 0.004718709292072335
+            }
+          },
+          "reportPlusClaimUsd": {
+            "median": 0.026377378220089436,
+            "min": 0.026351680059855536,
+            "max": 0.02660105024811945
+          },
+          "corridorAnnualUsdEstimate": {
+            "low": 28.31299817543099,
+            "high": 159.13387839669696
+          }
+        },
+        "withSuggestedTip": {
+          "perOperationUsd": {
+            "deployAllowlist": {
+              "median": 0.06592482282278145,
+              "min": 0.06584160091184495,
+              "max": 0.06647428408097834,
+              "l1ShareMedian": 0.007522170219785561
+            },
+            "deployRegistry": {
+              "median": 0.0654634628231034,
+              "min": 0.06538104156069341,
+              "max": 0.06600918956060745,
+              "l1ShareMedian": 0.007478694451727886
+            },
+            "addVerifier": {
+              "median": 0.00823893274804665,
+              "min": 0.008230200113980618,
+              "max": 0.008308444871244148,
+              "l1ShareMedian": 0.005022898257514166
+            },
+            "addAuditor": {
+              "median": 0.0037984620613400848,
+              "min": 0.0037933397575482595,
+              "max": 0.0038299760111951994,
+              "l1ShareMedian": 0.00859171479161158
+            },
+            "registerReport": {
+              "median": 0.018547543397174307,
+              "min": 0.018529936422535257,
+              "max": 0.01870506199816965,
+              "l1ShareMedian": 0.0036799397377430963
+            },
+            "claimShipment": {
+              "median": 0.00782983482291513,
+              "min": 0.007821743637320279,
+              "max": 0.007895988249949798,
+              "l1ShareMedian": 0.004718709292072335
+            }
+          },
+          "reportPlusClaimUsd": {
+            "median": 0.026377378220089436,
+            "min": 0.026351680059855536,
+            "max": 0.02660105024811945
+          },
+          "corridorAnnualUsdEstimate": {
+            "low": 28.31299817543099,
+            "high": 159.13387839669696
+          }
+        }
+      }
+    }
+  }
+}

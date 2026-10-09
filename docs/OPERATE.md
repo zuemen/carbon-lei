@@ -2,7 +2,7 @@
 
 This document says who runs which part of CarbonLEI in a deployment, and what each role sends and pays for.
 
-Each row names code in this repository or a section of these docs. Gas per operation is in [PILOT §6](PILOT.md#6-costs-test-network-and-production-chain); this page gives no money amounts.
+Each row names code in this repository or a section of these docs. Gas per operation, and its price at mainnet and estimated L2 fees, is in [PILOT §6](PILOT.md#6-costs-test-network-and-production-chain); this page gives no money amounts.
 
 ## Operating model at a glance
 
