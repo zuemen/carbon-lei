@@ -71,6 +71,39 @@ export const CODE_TEXT: Record<string, string> = {
     "The chain of authority behind the auditor is broken: their role credential, their verification body's vLEI, or its accreditation is missing, revoked or expired, or the chain does not lead to the root of trust this page is configured with.",
 };
 
+/**
+ * CODE_TEXT in Traditional Chinese (Taiwan), for the Buyer tab's verdict line and check list when the page is in
+ * 繁體中文. The codes themselves (shown next to the text) stay as they are.
+ */
+export const CODE_TEXT_ZH: Record<string, string> = {
+  PRESENTATION_MALFORMED: "證明不完整，或格式不符預期。",
+  SAID_MISMATCH: "憑證在簽發後遭到更改：其內容雜湊已與其 ID 不符。",
+  DISCLOSURE_TAMPERED: "某個已揭露的數值在供應商建立證明後遭到更改。",
+  BAD_SIGNATURE: "簽章並非來自憑證中所指名的驗證機構。",
+  "REPORT_INVALID/NOT_REGISTERED": "Sepolia 上沒有以此憑證 ID 登記的報告。",
+  "REPORT_INVALID/REVOKED": "驗證機構已撤銷此報告。",
+  "REPORT_INVALID/EXPIRED":
+    "在檢查的時間點，報告已不再有效：若此批次已為您的 EORI 申領，以申領時為準，否則以現在為準。",
+  "REPORT_INVALID/SUPERSEDED":
+    "在檢查的時間點之前，報告已由修訂後的報告取代：若此批次已為您的 EORI 申領，以申領時為準，否則以現在為準。",
+  "REPORT_INVALID/REGISTRANT_MISMATCH": "鏈上的報告是由另一個驗證機構登記的。",
+  "REPORT_INVALID/SUPPLIER_MISMATCH": "證明中的供應商與鏈上的報告不符。",
+  "REPORT_INVALID/ISSUER_MISMATCH": "鏈上的查核員或數量與已簽署的憑證不符。",
+  "REPORT_INVALID/SCOPE_MISMATCH": "設施、產品、路徑、期間或報告 ID 與鏈上的報告不同。",
+  REPORT_INVALID: "合約的回應與本頁自己的檢查結果不一致。",
+  CONTESTED: "在撤銷同步上鏈前 24 小時內登記——需人工審查。既非通過，也非失敗。",
+  SHIPMENT_MISMATCH: "此批次不是為您申領的，或申領數量不符。",
+  ANCHOR_NOT_FOUND: "查核員的簽署歷史（KERI 日誌）中沒有此報告的紀錄。",
+  AUTHORITY_INVALID:
+    "查核員背後的授權鏈已中斷：其角色憑證、其驗證機構的 vLEI 或其認證遺失、已撤銷或已過期，或此鏈未通往本頁所設定的信任根。",
+};
+
+/** The plain-language text of a verification code in the page's language, if there is one. */
+export function codeText(code: string | undefined, zh: boolean): string | undefined {
+  if (!code) return undefined;
+  return (zh ? CODE_TEXT_ZH[code] : undefined) ?? CODE_TEXT[code];
+}
+
 export function revertText(name: string, args: readonly unknown[] = []): string {
   if (name === "ExceedsVerifiedTonnage" && args.length >= 2) {
     return `This claim would exceed the tonnes covered by the verified report (${kgToT(args[0])} t left, ${kgToT(args[1])} t requested).`;

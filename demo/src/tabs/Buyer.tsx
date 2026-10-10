@@ -7,7 +7,8 @@ import fixture from "../../../fixtures/demo.json";
 import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { Badge, fmt, SourceLabel, TabHead, TxLink, type BadgeKind, type Source } from "../components.tsx";
 import { comparisonFigures, proofComparison, whatIfFigures, type DemoData } from "../data.ts";
-import { CODE_TEXT } from "../messages.ts";
+import { codeText } from "../messages.ts";
+import { useLang, type Lang } from "../i18n.ts";
 import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 import { CheckSources } from "./CheckSources.tsx";
 
@@ -33,15 +34,99 @@ const CHECKS: { n: number; text: string; source: Source }[] = [
   },
 ];
 
+/** The check names (CHECKS) in Traditional Chinese (Taiwan); check 0 is the structure check. */
+const CHECK_TEXT_ZH: Record<number, string> = {
+  1: "憑證自簽發後未被更改（其內容雜湊與其 ID 相符）",
+  2: "沒有任何已揭露欄位被更改",
+  3: "由憑證中所指名的簽發者地址簽署（該地址是否已登記，由檢查 4 判定）",
+  4: "報告已登記、對此批出貨有效，且由此驗證機構及查核員簽發",
+  5: "此批次是為您、以此數量申領的",
+  6: "查核員已將此報告記錄在其自己的簽署歷史中（KERI 金鑰事件日誌）——簽章由您的瀏覽器依匯出的事件重新檢查；未查詢見證者（witnesses）",
+  7: "查核員獲得經認證的驗證機構授權",
+  8: "報告與已簽署的憑證相符（規則式檢查，涵蓋於查核員的簽章內）——僅供參考：不一致時會將報告標示為需人工審查，不會使檢查清單判定為失敗",
+};
+
+/** The check list's result badges in Traditional Chinese; other tabs keep the English badges. */
+const BADGE_ZH: Record<BadgeKind, string> = {
+  pass: "✓ 通過",
+  fail: "✕ 未通過",
+  review: "! 需審查",
+  idle: "· 尚未執行",
+  skip: "– 未執行",
+};
+
+/** Verdict line, stamp and check list strings; the codes, check numbers and units stay as they are. */
+const VERDICT = {
+  en: {
+    checkSr: (n: number) => `Check ${n}: `,
+    counts: (passed: number, total: number, review: number, notRun: number) =>
+      `${passed} of ${total} checks passed` +
+      (review ? `, ${review} need${review === 1 ? "s" : ""} review` : "") +
+      (notRun ? `, ${notRun} not run` : ""),
+    unreadable: "the proof could not be read",
+    checkFailed: (n: number) => `check ${n} failed`,
+    rejected: (what: string) => `Rejected — ${what}`,
+    noGap: "Do not rely on this proof's value: no declared-emissions gap is shown.",
+    incompleteHead: "Not verified — checks 4–8 were not run",
+    incompleteBody: (counts: string) =>
+      ` — ${counts}. They need a live connection to Sepolia. Do not rely on this proof's value: no declared-emissions gap is shown.`,
+    reviewHead: "Needs review",
+    reviewBody: (counts: string) =>
+      ` — ${counts}. Do not rely on the verified value until a person has reviewed the report: no declared-emissions gap is shown.`,
+    gap: (q: string, gap: string) => `declared-emissions gap for this ${q} t shipment: ${gap} tCO2e (gross, illustrative)`,
+    intensity: (v: string) => `verified intensity ${v} tCO2e/t`,
+    notDisclosed: "not disclosed",
+    seeComparison: "See comparison ↓",
+    humanReview: (detail: string) => `Needs human review: ${detail}`,
+    stampVerified: "Verified",
+    stampReview: "Needs review",
+    stampNotVerified: "Not verified",
+    stampRejected: "Rejected",
+    hidden: (n: number, rejected: number) =>
+      `${n} field${n === 1 ? "" : "s"} hidden by supplier${rejected ? ` · ${rejected} disclosure${rejected === 1 ? "" : "s"} rejected` : ""}.`,
+    firstFailure: (code: string) => ` First failure: ${code}.`,
+    scope:
+      " These checks cover who signed the value, their authority (up to this demo's simulated root of trust) and the tonnage claim. They do not show that the emissions figure itself is correct, and they do not replace the verification report or the CBAM Registry.",
+    tryBreak: "Try to break it →",
+  },
+  "zh-TW": {
+    checkSr: (n: number) => `檢查 ${n}：`,
+    counts: (passed: number, total: number, review: number, notRun: number) =>
+      `${total} 項檢查中 ${passed} 項通過` + (review ? `，${review} 項需審查` : "") + (notRun ? `，${notRun} 項未執行` : ""),
+    unreadable: "無法讀取證明",
+    checkFailed: (n: number) => `檢查 ${n} 未通過`,
+    rejected: (what: string) => `已拒絕——${what}`,
+    noGap: "請勿採信此證明的數值：不顯示申報排放差距。",
+    incompleteHead: "未驗證——檢查 4–8 未執行",
+    incompleteBody: (counts: string) => `——${counts}。這些檢查需要即時連線到 Sepolia。請勿採信此證明的數值：不顯示申報排放差距。`,
+    reviewHead: "需審查",
+    reviewBody: (counts: string) => `——${counts}。在有人審查報告之前，請勿採信經驗證的數值：不顯示申報排放差距。`,
+    gap: (q: string, gap: string) => `此批 ${q} 噸出貨的申報排放差距：${gap} tCO2e（毛額，示意）`,
+    intensity: (v: string) => `經驗證強度 ${v} tCO2e/t`,
+    notDisclosed: "未揭露",
+    seeComparison: "查看比較 ↓",
+    humanReview: (detail: string) => `需人工審查：${detail}`,
+    stampVerified: "已驗證",
+    stampReview: "需審查",
+    stampNotVerified: "未驗證",
+    stampRejected: "已拒絕",
+    hidden: (n: number, rejected: number) => `供應商隱藏了 ${n} 個欄位${rejected ? ` · ${rejected} 項揭露遭拒絕` : ""}。`,
+    firstFailure: (code: string) => ` 第一個失敗：${code}。`,
+    scope:
+      " 這些檢查涵蓋誰簽署了數值、其權限（直到本示範模擬的信任根為止）以及噸數申領。它們不能證明排放數字本身正確，也不能取代驗證報告或 CBAM 登錄系統（CBAM Registry）。",
+    tryBreak: "試著破解 →",
+  },
+} satisfies Record<Lang, unknown>;
+
 /**
  * The text shown for a check: the plain-language text of its code, else its detail. CONTESTED has several
  * reasons (SECURITY §4.2); the code's text describes the revocation-sync one, so any other reason shows its detail.
  */
-function checkText(r: CheckResult): string {
+function checkText(r: CheckResult, lang: Lang = "en"): string {
   if (r.code === "CONTESTED" && !/; revoked or suspended within [\d.]+ h after$/.test(r.detail)) {
-    return `Needs human review: ${r.detail}`;
+    return VERDICT[lang].humanReview(r.detail);
   }
-  return r.code && CODE_TEXT[r.code] ? CODE_TEXT[r.code] : r.detail;
+  return codeText(r.code, lang === "zh-TW") ?? r.detail;
 }
 
 export function kindOf(c?: CheckResult): BadgeKind {
@@ -172,24 +257,26 @@ function VerifySummary({
   cmp: DemoData["comparison"] | null;
   onSeeComparison: () => void;
 }) {
+  const { lang } = useLang();
+  const zh = lang === "zh-TW";
+  const v = VERDICT[lang];
   const kinds = CHECKS.map((c) => kindOf(result.checks.find((r) => r.index === c.n)));
   const passed = kinds.filter((k) => k === "pass").length;
   const review = kinds.filter((k) => k === "review").length;
   const notRun = kinds.filter((k) => k === "skip" || k === "idle").length;
-  const counts =
-    `${passed} of ${CHECKS.length} checks passed` +
-    (review ? `, ${review} need${review === 1 ? "s" : ""} review` : "") +
-    (notRun ? `, ${notRun} not run` : "");
+  const counts = v.counts(passed, CHECKS.length, review, notRun);
 
   if (result.overall === "INVALID") {
     const first = result.checks.find((c) => c.status === "fail");
-    const what = !first || first.index === 0 ? "the proof could not be read" : `check ${first.index} failed`;
-    const why = first ? (CODE_TEXT[first.code] ?? first.detail) : "";
+    const what = !first || first.index === 0 ? v.unreadable : v.checkFailed(first.index);
+    const why = first ? (codeText(first.code, zh) ?? first.detail) : "";
     return (
       <p className="verify-summary bad">
         <span aria-hidden="true">✕ </span>
-        <strong>Rejected — {what}</strong>
-        {why ? `: ${why}` : "."} {counts}. Do not rely on this proof's value: no declared-emissions gap is shown.
+        <strong>{v.rejected(what)}</strong>
+        {zh ? (why ? `：${why}` : "。") : why ? `: ${why}` : "."} {counts}
+        {zh ? "。" : ". "}
+        {v.noGap}
       </p>
     );
   }
@@ -197,8 +284,8 @@ function VerifySummary({
     return (
       <p className="verify-summary review">
         <span aria-hidden="true">! </span>
-        <strong>Not verified — checks 4–8 were not run</strong> — {counts}. They need a live connection to Sepolia. Do
-        not rely on this proof's value: no declared-emissions gap is shown.
+        <strong>{v.incompleteHead}</strong>
+        {v.incompleteBody(counts)}
       </p>
     );
   }
@@ -206,8 +293,8 @@ function VerifySummary({
     return (
       <p className="verify-summary review">
         <span aria-hidden="true">! </span>
-        <strong>Needs review</strong> — {counts}. Do not rely on the verified value until a person has reviewed the
-        report: no declared-emissions gap is shown.
+        <strong>{v.reviewHead}</strong>
+        {v.reviewBody(counts)}
       </p>
     );
   }
@@ -217,15 +304,9 @@ function VerifySummary({
     <p className="verify-summary ok">
       <span aria-hidden="true">✓ </span>
       <strong>{counts}</strong> ·{" "}
-      {f ? (
-        <>
-          declared-emissions gap for this {fmt(f.q)} t shipment: {fmt(f.gap)} tCO2e (gross, illustrative)
-        </>
-      ) : (
-        <>verified intensity {result.disclosed.specificEmbeddedEmissions_tCO2e_per_t ?? "not disclosed"} tCO2e/t</>
-      )}{" "}
+      {f ? <>{v.gap(fmt(f.q), fmt(f.gap))}</> : <>{v.intensity(result.disclosed.specificEmbeddedEmissions_tCO2e_per_t ?? v.notDisclosed)}</>}{" "}
       <button type="button" className="link-btn" onClick={onSeeComparison}>
-        See comparison ↓
+        {v.seeComparison}
       </button>
     </p>
     {cmp && (
@@ -301,6 +382,8 @@ function ProofSummary({ text }: { text: string }) {
 }
 
 export function Buyer() {
+  const { lang } = useLang();
+  const vt = VERDICT[lang];
   const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer, demoVerify, setDemoVerify } = useApp();
   // The last verification: the text it read, that text's proof and the result. It is shown only while the text box
   // still holds that same text, so editing, loading or tampering never leaves an earlier result on screen.
@@ -429,7 +512,7 @@ export function Buyer() {
   const byIndex = new Map(result?.checks.map((c) => [c.index, c]));
   const counts = result && checked ? disclosureCounts(checked, result) : null;
   const hiddenN = counts ? counts.hidden : (result?.hidden ?? 0);
-  const hiddenText = `${hiddenN} field${hiddenN === 1 ? "" : "s"} hidden by supplier${counts?.rejected ? ` · ${counts.rejected} disclosure${counts.rejected === 1 ? "" : "s"} rejected` : ""}.`;
+  const hiddenText = vt.hidden(hiddenN, counts?.rejected ?? 0);
   const rejectedProof = !!result && !running && result.overall === "INVALID";
   const incomplete = !!result && !running && result.overall === "INCOMPLETE";
   // CONTESTED: the summary says no declared-emissions gap is shown, so the card shows none either.
@@ -603,7 +686,7 @@ export function Buyer() {
           )}
           {malformed && (
             <p className="check-detail bad" role="alert">
-              ✕ {CODE_TEXT[malformed.code] ?? malformed.code} {malformed.detail}
+              ✕ {codeText(malformed.code, lang === "zh-TW") ?? malformed.code} {malformed.detail}
             </p>
           )}
           <ol className="checks" aria-live="polite">
@@ -616,17 +699,17 @@ export function Buyer() {
                     {c.n}
                   </span>
                   <span className="check-text">
-                    <span className="sr-only">Check {c.n}: </span>
-                    {c.text}
+                    <span className="sr-only">{vt.checkSr(c.n)}</span>
+                    {lang === "zh-TW" ? CHECK_TEXT_ZH[c.n] : c.text}
                   </span>
                   <span className="check-result">
-                    <Badge kind={kind} />
+                    <Badge kind={kind}>{lang === "zh-TW" ? BADGE_ZH[kind] : undefined}</Badge>
                   </span>
                   <span className={`check-detail ${kind === "fail" ? "bad" : ""}`}>
                     <SourceLabel source={c.source} />{" "}
                     {r && r.code ? <code>{r.code}</code> : null}
                     {r && r.code ? " — " : " "}
-                    {r ? checkText(r) : ""}
+                    {r ? checkText(r, lang) : ""}
                   </span>
                 </li>
               );
@@ -643,26 +726,25 @@ export function Buyer() {
           {result && !running && (
             <div className="overall">
               {result.overall === "VALID" ? (
-                <span className="stamp green">Verified</span>
+                <span className="stamp green">{vt.stampVerified}</span>
               ) : result.overall === "CONTESTED" ? (
                 <span className="stamp" style={{ color: "var(--amber)" }}>
-                  Needs review
+                  {vt.stampReview}
                 </span>
               ) : result.overall === "INCOMPLETE" ? (
                 <span className="stamp" style={{ color: "var(--amber)" }}>
-                  Not verified
+                  {vt.stampNotVerified}
                 </span>
               ) : (
-                <span className="stamp red">Rejected</span>
+                <span className="stamp red">{vt.stampRejected}</span>
               )}
               <p>
                 {hiddenText}
-                {result.primaryCode ? ` First failure: ${result.primaryCode}.` : ""} These checks cover who signed the value, their authority (up to this demo's simulated root of trust) and
-                the tonnage claim. They do not show that the emissions figure itself is correct, and they do not replace
-                the verification report or the CBAM Registry.
+                {result.primaryCode ? vt.firstFailure(result.primaryCode) : ""}
+                {vt.scope}
               </p>
               <button className="btn btn-ghost" onClick={() => go("try-to-break-it")}>
-                Try to break it →
+                {vt.tryBreak}
               </button>
             </div>
           )}
