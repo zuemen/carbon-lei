@@ -19,6 +19,7 @@
     "contracts:test": "forge test",
     "contracts:symbolic": "FOUNDRY_PROFILE=halmos halmos --forge-build-out contracts/out-halmos --contract HalmosPropertiesTest --loop 3 --solver-timeout-assertion 60000 --solver-threads 1 --solver-max-memory 1500",
     "contracts:symbolic:quick": "npm run contracts:symbolic -- --match-test '^check_(?!P1_secondRegistration)'",
+    "contracts:symbolic:v2": "FOUNDRY_PROFILE=halmos halmos --forge-build-out contracts/out-halmos --contract HalmosCR1Test --loop 3 --solver-timeout-assertion 60000 --solver-threads 1 --solver-max-memory 1500",
     "formal:maude": "bash formal/maude/run.sh formal/maude/checks.maude",
     "formal:maude:full": "bash formal/maude/run.sh formal/maude/checks-full.maude",
     "contracts:deploy": "forge script contracts/script/Deploy.s.sol --rpc-url sepolia --broadcast --verify --verifier etherscan && node scripts/record-deployment.mjs 11155111",

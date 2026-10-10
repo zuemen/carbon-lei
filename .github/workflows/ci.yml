@@ -45,6 +45,9 @@ jobs:
       # (7 minutes on the development machine), which `npm run contracts:symbolic` runs.
       - name: Halmos, 10 of 11 checks
         run: npm run contracts:symbolic:quick
+      # §13.1: the CR1 mitigation in contracts/src/v2 (not deployed), 2 checks, about 3 s after the build.
+      - name: Halmos, CR1 mitigation (V2, not deployed)
+        run: npm run contracts:symbolic:v2
 
   maude:
     name: maude (bounded model check of the protocol model)
