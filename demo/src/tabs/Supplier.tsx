@@ -8,6 +8,7 @@ import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { fmt, TabHead, TxLink } from "../components.tsx";
 import { kgToT } from "../messages.ts";
 import { short } from "../data.ts";
+import { useLang, type Lang } from "../i18n.ts";
 // The template panel renders when opened; the importer and the spreadsheet reader load only when a file is read.
 import { TemplateImport } from "./TemplateImport.tsx";
 
@@ -40,7 +41,128 @@ const LABELS: Record<string, string> = {
   validUntil: "Valid until",
 };
 
+/** Field labels in Traditional Chinese (Taiwan). The template panel keeps the English LABELS (it is not translated). */
+const LABELS_ZH: Record<string, string> = {
+  supplierLEI: "供應商 LEI",
+  operatorId: "營運者 ID",
+  installationId: "設施 ID",
+  installationName: "設施名稱",
+  unLocode: "UN/LOCODE",
+  cnCode: "CN 代碼",
+  cbamRoute: "生產路徑代碼",
+  productionRoute: "製程路徑",
+  reportingPeriod: "報告期間",
+  verifiedTonnes: "經驗證數量（噸）",
+  specificEmbeddedEmissions_tCO2e_per_t: "排放強度（tCO2e/t）",
+  valueType: "數值類型",
+  methodologyNote: "方法學說明",
+  verificationReportId: "驗證報告 ID",
+  verifierLEI: "驗證機構 LEI",
+  accreditationNumber: "認證編號",
+  nabName: "認證機構",
+  siteVisit: "現場訪查",
+  assuranceLevel: "保證等級",
+  materialityThreshold: "重大性門檻",
+  energyMix: "能源組合",
+  supplierCost: "供應商成本",
+  idSalt: "身分鹽值",
+  batchSalt: "批次鹽值",
+  issuedAt: "簽發時間",
+  validUntil: "有效期限",
+};
+
+const TXT = {
+  en: {
+    labels: LABELS,
+    title: "Claim a shipment against the report",
+    lede: "The supplier — here a fictional screw maker in Kaohsiung — claims part of its verified tonnage for one importer, then chooses what that importer may see.",
+    tryTemplate: "Try your own Communication Template (.xlsx)",
+    tryTemplateNote: "Read in this browser, nothing uploaded; then sign it with a demo key and see which checks refuse it.",
+    report: "Report",
+    batchId: "Batch ID",
+    quantity: "Quantity (t)",
+    importer: "Importer",
+    preClaimed: "Pre-claimed in this demo; editable in local mode.",
+    ledger: "Verified tonnage ledger",
+    pctClaimed: (pct: number) => `${pct}% of the verified tonnes claimed`,
+    revoked: "Remaining 0 t — this report was revoked",
+    replaced: "Remaining 0 t — replaced by a revised report",
+    verified: (t: string) => `Verified ${t} t`,
+    claimed: (t: string) => `Claimed ${t} t`,
+    remaining: (t: string) => `Remaining ${t} t`,
+    claimedFor: (q: string, batch: string, importer: string) => `Claimed ${q} t for batch ${batch} → ${importer} — `,
+    viewTx: "view transaction",
+    hashOnly: "On-chain, the importer appears only as a hash commitment.",
+    choose: "Choose what the importer can see",
+    required: " (required)",
+    create: "Create the supplier's proof",
+    useInBuyer: "Use this proof in the Buyer tab →",
+    proofSummary: (n: number) => `Supplier's proof (JSON) — ${n} fields disclosed`,
+    passport: "Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport",
+    verifiedIntensity: "Verified intensity",
+    illustrative: "illustrative",
+    bodyLei: "Verification body LEI",
+    status: "Status",
+    valid: "✓ Valid",
+    revokedShort: "✕ Revoked",
+    replacedShort: "✕ Replaced",
+    credential: "Credential",
+    qrAlt: "QR code: scan to verify on the hosted page",
+    scan: "Scan to verify",
+    desktop: "On a desktop?",
+    openHere: "Open the same link here",
+    passportNote: (t: string, period: string) =>
+      `${t} t verified for ${period}. We do not claim conformance with ESPR or with any digital product passport specification.`,
+    templateSummary: "Start from the Commission's Communication Template (official example)",
+  },
+  "zh-TW": {
+    labels: LABELS_ZH,
+    title: "依據報告申領一批出貨",
+    lede: "供應商（此處為一家虛構的高雄螺絲製造商）為一家進口商申領其部分經驗證噸數，再選擇該進口商可以看到哪些資料。",
+    tryTemplate: "試用您自己的通報範本（Communication Template，.xlsx）",
+    tryTemplateNote: "只在此瀏覽器內讀取，不會上傳任何資料；接著以示範金鑰簽署，看看哪些檢查會拒絕它。",
+    report: "報告",
+    batchId: "批次編號",
+    quantity: "數量（噸）",
+    importer: "進口商",
+    preClaimed: "本示範已預先申領；在本機模式中可編輯。",
+    ledger: "經驗證噸數帳本",
+    pctClaimed: (pct: number) => `經驗證噸數已申領 ${pct}%`,
+    revoked: "剩餘 0 噸——此報告已被撤銷",
+    replaced: "剩餘 0 噸——已由修訂後的報告取代",
+    verified: (t: string) => `經驗證 ${t} 噸`,
+    claimed: (t: string) => `已申領 ${t} 噸`,
+    remaining: (t: string) => `剩餘 ${t} 噸`,
+    claimedFor: (q: string, batch: string, importer: string) => `已為批次 ${batch} 申領 ${q} 噸 → ${importer} —— `,
+    viewTx: "查看交易",
+    hashOnly: "在鏈上，進口商只以雜湊承諾（hash commitment）呈現。",
+    choose: "選擇進口商可以看到的內容",
+    required: "（必須揭露）",
+    create: "建立供應商的證明",
+    useInBuyer: "在買方分頁使用此證明 →",
+    proofSummary: (n: number) => `供應商的證明（JSON）—— 已揭露 ${n} 個欄位`,
+    passport: "產品護照卡（示範）—— 產品護照可引用的資料載體 · 並非 ESPR 產品護照",
+    verifiedIntensity: "經驗證強度",
+    illustrative: "示意",
+    bodyLei: "驗證機構 LEI",
+    status: "狀態",
+    valid: "✓ 有效",
+    revokedShort: "✕ 已撤銷",
+    replacedShort: "✕ 已取代",
+    credential: "憑證",
+    qrAlt: "QR 碼：掃描後在線上頁面驗證",
+    scan: "掃描以驗證",
+    desktop: "使用桌上型電腦？",
+    openHere: "在此開啟相同連結",
+    passportNote: (t: string, period: string) =>
+      `${period} 經驗證 ${t} 噸。我們不聲稱符合 ESPR 或任何數位產品護照規範。`,
+    templateSummary: "從歐盟執委會的通報範本開始（官方範例；面板內容僅有英文）",
+  },
+} satisfies Record<Lang, unknown>;
+
 export function Supplier() {
+  const { lang } = useLang();
+  const t = TXT[lang];
   const { data, reader, offline, setProofText, go } = useApp();
   const allNames = useMemo(() => Object.keys(data.credential.disclosures), [data]);
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(DEMO_DISCLOSURE));
@@ -111,59 +233,59 @@ export function Supplier() {
 
   return (
     <>
-      <TabHead title="Claim a shipment against the report" lede="The supplier — here a fictional screw maker in Kaohsiung — claims part of its verified tonnage for one importer, then chooses what that importer may see.">
+      <TabHead title={t.title} lede={t.lede}>
         <div className="btn-row own-template-entry">
           <button className="btn btn-ghost" aria-controls="template-import" aria-expanded={templateOpen} onClick={openTemplate}>
-            Try your own Communication Template (.xlsx)
+            {t.tryTemplate}
           </button>
-          <span className="fine">Read in this browser, nothing uploaded; then sign it with a demo key and see which checks refuse it.</span>
+          <span className="fine">{t.tryTemplateNote}</span>
         </div>
       </TabHead>
       <div className="grid-2">
         <section className="sheet reveal" aria-labelledby="claim-h">
           <p className="sheet-kicker" id="claim-h">
-            Report {data.report.reportId} · {data.report.installationName}
+            {t.report} {data.report.reportId} · {data.report.installationName}
           </p>
           <dl className="fields">
-            <dt>Batch ID</dt>
+            <dt>{t.batchId}</dt>
             <dd>{data.shipment.batchId}</dd>
-            <dt>Quantity (t)</dt>
+            <dt>{t.quantity}</dt>
             <dd>{data.shipment.quantityTonnes}</dd>
-            <dt>Importer</dt>
+            <dt>{t.importer}</dt>
             <dd>{data.importer.name}</dd>
           </dl>
-          <p className="fine">Pre-claimed in this demo; editable in local mode.</p>
-          <div className="tonnage" role="group" aria-label="Verified tonnage ledger">
-            <div className="tonnage-bar" role="img" aria-label={`${pct}% of the verified tonnes claimed`}>
+          <p className="fine">{t.preClaimed}</p>
+          <div className="tonnage" role="group" aria-label={t.ledger}>
+            <div className="tonnage-bar" role="img" aria-label={t.pctClaimed(pct)}>
               <div className="tonnage-fill" style={{ width: `${pct}%` }} />
             </div>
             <div className="tonnage-legend">
               {state === "revoked" ? (
-                <span>Remaining 0 t — this report was revoked</span>
+                <span>{t.revoked}</span>
               ) : state === "replaced" ? (
-                <span>Remaining 0 t — replaced by a revised report</span>
+                <span>{t.replaced}</span>
               ) : (
                 <>
-                  <span>Verified {data.report.verifiedTonnes} t</span>
-                  <span>Claimed {claimed === null ? "…" : kgToT(claimed)} t</span>
-                  <span>Remaining {remaining === null ? "…" : kgToT(remaining)} t</span>
+                  <span>{t.verified(data.report.verifiedTonnes)}</span>
+                  <span>{t.claimed(claimed === null ? "…" : kgToT(claimed))}</span>
+                  <span>{t.remaining(remaining === null ? "…" : kgToT(remaining))}</span>
                 </>
               )}
             </div>
           </div>
           {claimTx && (
             <p className="fine">
-              Claimed {data.shipment.quantityTonnes} t for batch {data.shipment.batchId} → {data.importer.name} —{" "}
-              <TxLink hash={claimTx.hash} label="view transaction" />
+              {t.claimedFor(data.shipment.quantityTonnes, data.shipment.batchId, data.importer.name)}
+              <TxLink hash={claimTx.hash} label={t.viewTx} />
               <br />
-              On-chain, the importer appears only as a hash commitment.
+              {t.hashOnly}
             </p>
           )}
         </section>
 
         <section className="sheet reveal" aria-labelledby="disc-h">
           <p className="sheet-kicker" id="disc-h">
-            Choose what the importer can see
+            {t.choose}
           </p>
           <ul className="checkbox-list">
             {allNames.map((n) => {
@@ -184,8 +306,8 @@ export function Supplier() {
                       }}
                     />
                     <span>
-                      {LABELS[n] ?? n}
-                      {required ? " (required)" : ""}
+                      {t.labels[n] ?? n}
+                      {required ? t.required : ""}
                     </span>
                   </label>
                 </li>
@@ -194,7 +316,7 @@ export function Supplier() {
           </ul>
           <div className="btn-row" style={{ marginTop: 16 }}>
             <button className="btn btn-ghost" onClick={create}>
-              Create the supplier's proof
+              {t.create}
             </button>
             {proof && (
               <button
@@ -204,13 +326,13 @@ export function Supplier() {
                   go("buyer");
                 }}
               >
-                Use this proof in the Buyer tab →
+                {t.useInBuyer}
               </button>
             )}
           </div>
           {proof && (
             <details style={{ marginTop: 12 }}>
-              <summary>Supplier's proof (JSON) — {proof.disclosures.length} fields disclosed</summary>
+              <summary>{t.proofSummary(proof.disclosures.length)}</summary>
               <pre>{JSON.stringify(proof, null, 2)}</pre>
             </details>
           )}
@@ -219,36 +341,35 @@ export function Supplier() {
 
       <section className="sheet reveal" aria-labelledby="pp-h" style={{ marginTop: 28 }}>
         <p className="sheet-kicker" id="pp-h">
-          Product passport card (demo) — a data carrier a product passport could reference · not an ESPR passport
+          {t.passport}
         </p>
         <div className="passport">
           <dl className="fields">
             <dt>CN</dt>
             <dd>{data.report.cnCode}</dd>
-            <dt>Verified intensity</dt>
+            <dt>{t.verifiedIntensity}</dt>
             <dd>
-              {data.report.intensity} tCO2e/t <span className="tag-illustrative">illustrative</span>
+              {data.report.intensity} tCO2e/t <span className="tag-illustrative">{t.illustrative}</span>
             </dd>
-            <dt>Verification body LEI</dt>
+            <dt>{t.bodyLei}</dt>
             <dd>{decodeDisclosure(data.credential.disclosures.verifierLEI).value}</dd>
-            <dt>Status</dt>
-            <dd>{state === "valid" ? "✓ Valid" : state === "revoked" ? "✕ Revoked" : state === "replaced" ? "✕ Replaced" : "…"}</dd>
-            <dt>Credential</dt>
+            <dt>{t.status}</dt>
+            <dd>{state === "valid" ? t.valid : state === "revoked" ? t.revokedShort : state === "replaced" ? t.replacedShort : "…"}</dd>
+            <dt>{t.credential}</dt>
             <dd>{short(JSON.parse(data.credential.coreJson).d, 10, 6)}</dd>
           </dl>
           <div>
-            {qr && <img src={qr} alt="QR code: scan to verify on the hosted page" />}
+            {qr && <img src={qr} alt={t.qrAlt} />}
             <p className="fine" style={{ textAlign: "center", margin: "4px 0 0" }}>
-              Scan to verify
+              {t.scan}
             </p>
             <p className="fine" style={{ textAlign: "center", margin: "2px 0 0" }}>
-              On a desktop? <a href={passportUrl.slice(passportUrl.indexOf("#"))}>Open the same link here</a>
+              {t.desktop} <a href={passportUrl.slice(passportUrl.indexOf("#"))}>{t.openHere}</a>
             </p>
           </div>
         </div>
         <p className="fine">
-          {fmt(Number(data.report.verifiedTonnes))} t verified for {data.report.reportingPeriod}. We do not claim
-          conformance with ESPR or with any digital product passport specification.
+          {t.passportNote(fmt(Number(data.report.verifiedTonnes)), data.report.reportingPeriod)}
         </p>
       </section>
 
@@ -258,7 +379,7 @@ export function Supplier() {
         className="sheet pvv"
         onToggle={(e) => setTemplateOpen((e.currentTarget as HTMLDetailsElement).open)}
       >
-        <summary>Start from the Commission's Communication Template (official example)</summary>
+        <summary>{t.templateSummary}</summary>
         {templateOpen && <TemplateImport labels={LABELS} />}
       </details>
     </>
