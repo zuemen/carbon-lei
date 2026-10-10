@@ -431,7 +431,7 @@ The impostor's credential `EBCKj9bW9XAAKgHYh1iWmTbdMRShjyPco3LlS4C7wuv6` is anch
 
 ## 10. Related standards and designs
 
-For IEEE projects still in development, we compare only against the public project description and do not claim alignment. Cardano CIP-0170 and Chainlink's cross-chain identity are discussed under Related designs in §6.
+For IEEE projects still in development, we compare only against the public project description and do not claim alignment. Cardano CIP-0170 and Chainlink's cross-chain identity are discussed under Related designs in §6. A wider comparison of existing systems and papers against CarbonLEI's three questions is in [RELATED_WORK.md](RELATED_WORK.md).
 
 | Standard | What it covers | How CarbonLEI relates to it | Source |
 |---|---|---|---|
