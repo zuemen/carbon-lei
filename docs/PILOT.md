@@ -16,6 +16,8 @@ No organisation has been contacted; this is the request we would send.
 
 The pilot also needs a qualified vLEI issuer and the body's accreditation body to issue credentials (§2); we would approach them once a verification body has agreed.
 
+**Can such a body be found now?** As of 10 October 2026, likely yes, but small. Two verification bodies have announced CBAM accreditation (EmiCert by Greece's ESYD on 23 September 2026, Bureau Veritas on 29 September 2026), and 7 EU/EEA accreditation bodies were accepting applications from verifiers outside the EU; the Commission's own list of accredited verifiers was not yet published ([ADOPTION §2](ADOPTION.md#why-these-users-first), sources [1] and [29] there). Whether any of them would take part is untested.
+
 **What each partner would do.**
 
 | Partner | Does | Weeks active (of the 12-week plan in §5) |

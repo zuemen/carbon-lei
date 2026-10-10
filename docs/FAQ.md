@@ -45,7 +45,7 @@ CarbonLEI's effect lies outside the Registry (downstream buyers, banks, product 
 We do not count a lower CBAM bill as a climate benefit. The mark-up exists to push operators to provide verified data, and CarbonLEI works in the same direction: it makes verified values checkable and single-use. A low verified value can replace the default only for the tonnes it actually covers, so real emissions do not drop out of declarations. Accurate declarations then let lower-carbon production earn a price advantage. The causal chain, with the CBAM articles it rests on and its limits: [How it connects to climate outcomes](CLIMATE_IMPACT.md#how-it-connects-to-climate-outcomes).
 
 **Q18. How many verification reports will exist in Taiwan in 2027 for importers to use?**
-We do not know. In the Commission's state of play of 29 September 2026, 24 EU/EEA national accreditation bodies had agreed to offer CBAM accreditation, but only 5 were accepting applications from verifiers outside the EU, and the first verification reports are expected in January 2027 [2]. Early volume will be small. That is why we built one corridor end to end (Taiwan fasteners into the EU) instead of claiming wide coverage.
+We do not know. In the Commission's state of play of 7 October 2026, 24 EU/EEA national accreditation bodies had agreed to offer CBAM accreditation, but only 7 were accepting applications from verifiers outside the EU (5 on 29 September); the Commission's list of accredited verifiers had not been published by 10 October 2026, and the first verification reports are expected in January 2027 [2]. Early volume will be small. That is why we built one corridor end to end (Taiwan fasteners into the EU) instead of claiming wide coverage.
 
 **Q19. If you remove the AI (or rule) layer, what does the system lose?**
 The seven verification checks do not depend on it and keep working.
@@ -100,7 +100,7 @@ The window covers the time between an off-chain event (an ECR revocation, an acc
 All pages accessed 2026-09-23 unless stated.
 
 1. European Commission, DG TAXUD, "Guidance on access request procedure – for CBAM operators, non-EU companies", v3.00, 26 January 2026, pp. 10 and 19. https://taxation-customs.ec.europa.eu/document/download/9361fade-6f19-4799-b2ef-f6a4ff681af2_en
-2. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 29 September 2026, accessed 2026-10-07. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
+2. European Commission, "CBAM verification" page (including its timeline) and "State-of-play CBAM accreditation", 7 October 2026, accessed 2026-10-10 (the 29 September 2026 version had 16 bodies ready to accept applications and 5 accepting non-EU applications). https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; https://taxation-customs.ec.europa.eu/document/download/a782dacf-ab68-44cc-986c-28fd1b4daa94_en
 3. Regulation (EU) No 910/2014 (eIDAS), consolidated text of 18 October 2024, Art. 25, 28, 32, Annex I and Annex VI, accessed 2026-10-07. https://eur-lex.europa.eu/eli/reg/2014/910/oj
 4. Commission Delegated Regulation (EU) 2025/2551, Annex II, points 2.15.2 and 2.17.3, accessed 2026-10-07. https://eur-lex.europa.eu/eli/reg_del/2025/2551/oj
 5. ETSI EN 319 412-1 V1.7.1, EN 319 412-2 V2.5.1, EN 319 122-1 V1.3.1, accessed 2026-10-07. https://www.etsi.org/standards
