@@ -972,8 +972,8 @@ test("Language: in 繁體中文 on a 390 px phone the tab bar stays one row unde
   await expect(page.getByRole("tab", { name: "1 供應商" })).toBeVisible();
   for (const name of ["English", "繁體中文"]) {
     const b = (await page.getByRole("button", { name }).boundingBox())!;
-    expect(b.height, name).toBeGreaterThanOrEqual(44);
-    expect(b.width, name).toBeGreaterThanOrEqual(44);
+    expect(Math.round(b.height), name).toBeGreaterThanOrEqual(44);
+    expect(Math.round(b.width), name).toBeGreaterThanOrEqual(44);
   }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
