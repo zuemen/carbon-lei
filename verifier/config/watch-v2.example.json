@@ -1,0 +1,17 @@
+{
+  "_note": "Config for verifier/src/watch-v2.ts (V2 monitor, docs/OPERATE.md). V2 is NOT deployed: fill in the addresses of your own (e.g. local anvil) deployment. All LEIs here are fictional.",
+  "rpc": "http://127.0.0.1:8545",
+  "allowlist": "0x0000000000000000000000000000000000000000",
+  "registry": "0x0000000000000000000000000000000000000000",
+  "fromBlock": 0,
+  "bodies": [{ "lei": "ZZZZ00EUVERIFDEMO152" }],
+  "expectedRotations": [],
+  "expectedRevocations": [],
+  "policy": {
+    "cancelUnexpectedRotations": true,
+    "suspendOnUnexpectedRotation": true,
+    "cancelUnexpectedRevocations": true,
+    "trustSignedRotations": true
+  },
+  "intervalSeconds": 15
+}

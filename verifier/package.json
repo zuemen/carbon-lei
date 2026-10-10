@@ -17,6 +17,7 @@
     "vlei:status": "node src/status.ts",
     "vlei:revoke": "node src/revoke-ecr.ts",
     "vlei:watch": "node src/watch.ts",
+    "watch:v2": "node src/watch-v2.ts --config",
     "vlei:impostor:setup": "node src/setup-impostor.ts setup",
     "vlei:impostor:export": "node src/setup-impostor.ts export",
     "vlei:impostor:anchor": "node src/setup-impostor.ts anchor",
