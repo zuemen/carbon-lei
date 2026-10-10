@@ -10,9 +10,12 @@ import "@fontsource/ibm-plex-mono/600.css";
 import "@fontsource/ibm-plex-mono/700.css";
 import "./styles.css";
 import { App } from "./App.tsx";
+import { LangProvider } from "./i18n.ts";
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <App />
+    <LangProvider>
+      <App />
+    </LangProvider>
   </StrictMode>,
 );

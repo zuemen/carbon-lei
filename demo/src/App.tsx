@@ -1,6 +1,7 @@
 import { createContext, type KeyboardEvent, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
 import { comparisonFigures, EVIDENCE_WHY, fmt, kgToT, loadDemoData, type DemoData } from "./data.ts";
+import { HTML_LANG, LANGS, type Lang, useLang, useStrings } from "./i18n.ts";
 
 // Tabs and the chain client load on demand, so the first screen needs only the page shell.
 const Buyer = lazy(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
@@ -25,6 +26,43 @@ const STEPS: { n: number; tab: TabId; long: string; short: string }[] = [
   { n: 2, tab: "buyer", long: "Buyer checks the proof", short: "Check" },
   { n: 3, tab: "try-to-break-it", long: "Try to break it", short: "Break it" },
 ];
+
+/** Tab bar, main path and first-screen explanation in Traditional Chinese (Taiwan); the English is in TABS and STEPS. */
+const ZH_TAB: Record<TabId, { label: string; short: string }> = {
+  "verification-body": { label: "驗證機構", short: "驗證機構" },
+  supplier: { label: "供應商", short: "供應商" },
+  buyer: { label: "買方（進口商）", short: "買方" },
+  "try-to-break-it": { label: "試著破解", short: "破解" },
+  "trust-chain": { label: "信任鏈", short: "信任鏈" },
+  "on-chain-proof": { label: "鏈上證明", short: "鏈上證明" },
+};
+const ZH_STEP: Record<number, { long: string; short: string }> = {
+  1: { long: "供應商申領一批出貨", short: "申領" },
+  2: { long: "買方檢查證明", short: "檢查" },
+  3: { long: "試著破解", short: "破解" },
+};
+const SHELL = {
+  en: {
+    langGroup: "Language",
+    mainPath: "Main path:",
+    goToStep: (n: number, long: string, current: boolean) => `Go to step ${n}: ${long}${current ? " (current step)" : ""}`,
+    currentStep: " (current step)",
+    pathHint: "Background reading. The demo itself is the three steps above.",
+    claim: "A carbon number is only as trustworthy as the person who signed it.",
+    context:
+      "The EU charges importers for the carbon emitted making steel, aluminium and other goods (CBAM). The charge depends on a verified emissions value: this checks who signed it and that it is not reused beyond its verified tonnes.",
+  },
+  "zh-TW": {
+    langGroup: "語言",
+    mainPath: "主要流程：",
+    goToStep: (n: number, long: string, current: boolean) => `前往步驟 ${n}：${long}${current ? "（目前步驟）" : ""}`,
+    currentStep: "（目前步驟）",
+    pathHint: "背景資料。示範本身是上方的三個步驟。",
+    claim: "一個碳排放數字有多可信，取決於簽署它的人。",
+    context:
+      "歐盟對進口商就鋼鐵、鋁及其他商品生產過程中排放的碳收費（CBAM）。費用取決於經驗證的排放值：本工具檢查是誰簽署了這個數值，並確認它不會被重複使用而超出經驗證的噸數。",
+  },
+};
 
 /** Step number of each main-path tab; on phones the tab row shows it instead of a second (main path) row. */
 const STEP_OF: Partial<Record<TabId, number>> = Object.fromEntries(STEPS.map((s) => [s.tab, s.n]));
@@ -91,7 +129,33 @@ async function probe(rpc: string, ms: number): Promise<boolean> {
   }
 }
 
+/** "English | 繁體中文" in the masthead: two toggle buttons, each labelled in its own language. */
+function LangSwitch() {
+  const { lang, setLang } = useLang();
+  const s = useStrings(SHELL);
+  const names: Record<Lang, string> = { en: "English", "zh-TW": "繁體中文" };
+  return (
+    <div className="lang-switch" role="group" aria-label={s.langGroup}>
+      {LANGS.map((l, i) => (
+        <span key={l} className="lang-item">
+          {i > 0 && (
+            <span className="lang-sep" aria-hidden="true">
+              |
+            </span>
+          )}
+          <button type="button" className="lang-btn" lang={HTML_LANG[l]} aria-pressed={lang === l} onClick={() => setLang(l)}>
+            {names[l]}
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function App() {
+  const { lang } = useLang();
+  const s = SHELL[lang];
+  const zh = lang === "zh-TW";
   const [data, setData] = useState<DemoData | null>(null);
   const [loadError, setLoadError] = useState("");
   const [tab, setTab] = useState<TabId>(tabFromHash);
@@ -262,6 +326,7 @@ export function App() {
             <a href="#on-chain-proof" onClick={(e) => (e.preventDefault(), go("on-chain-proof"))}>
               Contracts ↗
             </a>
+            <LangSwitch />
           </div>
         </header>
         <section aria-label="At a glance">
@@ -295,32 +360,36 @@ export function App() {
                 className="tab"
                 onClick={() => go(t.id)}
               >
-                <span className="long-label">{t.label}</span>
+                <span className="long-label">{zh ? ZH_TAB[t.id].label : t.label}</span>
                 <span className="short-label">
                   {STEP_OF[t.id] ? `${STEP_OF[t.id]} ` : ""}
-                  {t.short}
+                  {zh ? ZH_TAB[t.id].short : t.short}
                 </span>
               </button>
             ))}
           </div>
           <div className="pathbar">
-            <span className="pathbar-label">Main path:</span>
-            {STEPS.map((s, i) => (
-              <span key={s.n} className="step">
-                {i > 0 && <span className="step-arrow" aria-hidden="true">→</span>}
-                <button
-                  className="step-go"
-                  aria-current={stepIndex === i ? "step" : undefined}
-                  aria-label={`Go to step ${s.n}: ${s.long}${stepIndex === i ? " (current step)" : ""}`}
-                  onClick={() => go(s.tab)}
-                >
-                  <span className="long-label">{s.n} {s.long}</span>
-                  <span className="short-label">{s.n} {s.short}</span>
-                  {stepIndex === i && <span className="sr-only"> (current step)</span>}
-                </button>
-              </span>
-            ))}
-            {stepIndex < 0 && <span className="path-hint">Background reading. The demo itself is the three steps above.</span>}
+            <span className="pathbar-label">{s.mainPath}</span>
+            {STEPS.map((st, i) => {
+              const long = zh ? ZH_STEP[st.n].long : st.long;
+              const short = zh ? ZH_STEP[st.n].short : st.short;
+              return (
+                <span key={st.n} className="step">
+                  {i > 0 && <span className="step-arrow" aria-hidden="true">→</span>}
+                  <button
+                    className="step-go"
+                    aria-current={stepIndex === i ? "step" : undefined}
+                    aria-label={s.goToStep(st.n, long, stepIndex === i)}
+                    onClick={() => go(st.tab)}
+                  >
+                    <span className="long-label">{st.n} {long}</span>
+                    <span className="short-label">{st.n} {short}</span>
+                    {stepIndex === i && <span className="sr-only">{s.currentStep}</span>}
+                  </button>
+                </span>
+              );
+            })}
+            {stepIndex < 0 && <span className="path-hint">{s.pathHint}</span>}
           </div>
         </div>
       </nav>
@@ -379,14 +448,11 @@ function Lead(props: { data: DemoData; reader: ChainReader | null; offline: bool
   const cmp = data.comparison;
   const f = comparisonFigures(cmp);
   const body = data.trustChain.find((n) => n.id === "body")?.name;
+  const s = useStrings(SHELL);
   return (
     <>
-      <p className="claim">A carbon number is only as trustworthy as the person who signed it.</p>
-      <p className="context">
-        The EU charges importers for the carbon emitted making steel, aluminium and other goods (CBAM). The charge
-        depends on a verified emissions value: this checks who signed it and that it is not reused beyond its verified
-        tonnes.
-      </p>
+      <p className="claim">{s.claim}</p>
+      <p className="context">{s.context}</p>
       <ul className="answers" aria-label="What the checks answer">
         <li className="answer">
           <span className="answer-q">Who signed</span>

@@ -54,6 +54,15 @@ a:hover { color: var(--ink); }
 .wordmark { font: 700 clamp(30px, 5vw, 40px)/1 var(--serif); letter-spacing: -0.01em; margin: 0; }
 .wordmark span { color: var(--green); }
 .masthead-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font: 400 13px/1.3 var(--mono); color: var(--ink-soft); }
+.lang-switch { display: inline-flex; align-items: center; }
+.lang-item { display: inline-flex; align-items: center; }
+.lang-sep { padding: 0 2px; color: var(--ink-soft); }
+.lang-btn {
+  font: inherit; color: var(--ink-soft); background: none; border: 0; padding: 0 6px; min-height: 28px; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.lang-btn[aria-pressed="true"] { color: var(--ink); font-weight: 600; text-decoration: none; }
+.lang-btn:hover { color: var(--ink); }
 .net-chip { border: 1px solid var(--ink); padding: 3px 8px; background: var(--sheet); white-space: nowrap; }
 /* First screen, largest first: the claim, the three answers (the ledger one refuses a double claim), the button
    that verifies the demo proof, then the declared-emissions gap in body text. */
@@ -390,6 +399,7 @@ table.layer-table { width: 100%; border-collapse: collapse; font-size: 14px; bac
   .pathbar { display: none; }
   /* Touch targets of at least 44 px for the links on the judge's path; the negative margin keeps the line spacing. */
   .masthead-meta a { display: inline-flex; align-items: center; min-height: 44px; }
+  .lang-btn { min-height: 44px; min-width: 44px; }
   .ledger-try, .link-btn, a.hash, .footer a { display: inline-block; padding-block: 14px; margin-block: -14px; }
   .footer { row-gap: 20px; }
   .check { grid-template-columns: 26px minmax(0, 1fr); }
