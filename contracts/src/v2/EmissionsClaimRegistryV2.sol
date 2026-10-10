@@ -13,6 +13,13 @@ import {VerifierAllowlistV2} from "./VerifierAllowlistV2.sol";
 ///   issuing body's active address; `cancelRevocation`: the WATCHER or the body's current address;
 /// - `effectiveFrom`: the report stays valid before that time, so an honest body can keep
 ///   shipments claimed earlier valid; 0 = retroactive, as in V1.
+/// Review fix M1 (our own AI-run review, 2026-10-10, §13.1): a registration that supersedes
+/// (branch b) or takes over (branch c) invalidates earlier reports at once, so it is refused from
+/// an address bound less than `REVOKE_HOLD` ago. Cost: a new or freshly rotated body waits
+/// `REVOKE_HOLD` before it can revise or take over; new registrations (branch a) are not delayed.
+/// L4: a queued revocation keeps the `effectiveFrom` given when it was queued, so shipments
+/// claimed during the hold become invalid if it is executed; claims are not blocked while it is
+/// queued (that would hand a fresh address a 72 h claim freeze); the SDK reports it as advisory.
 /// `reports()` returns the V1 record shape; a V1 reader that sees `revokedAt != 0` treats the
 /// report as revoked at every time, which is the conservative reading.
 /// Not deployed. Tested in contracts/test/v2.
@@ -130,6 +137,13 @@ contract EmissionsClaimRegistryV2 {
         uint96 carriedClaimedKg,
         uint96 newVerifiedKg
     );
+    /// @notice Branch (c): `newReportKey` moved the report scope off `takenFromReportKey`'s report ID.
+    event ReportScopeTakenOver(
+        bytes32 indexed takenFromReportKey,
+        bytes32 indexed newReportKey,
+        bytes32 indexed reportScopeKey,
+        bytes32 issuerLeiHash
+    );
     event ReportRevoked(bytes32 indexed reportKey, address indexed verifier, uint64 revokedAt);
     event RevocationQueued(bytes32 indexed reportKey, address indexed requester, uint64 effectiveFrom, uint64 readyAt);
     event RevocationCancelled(bytes32 indexed reportKey, address indexed by);
@@ -166,6 +180,7 @@ contract EmissionsClaimRegistryV2 {
     error NoPendingRevocation(bytes32 reportKey);
     error RevocationNotReady(bytes32 reportKey, uint64 readyAt);
     error NotAllowedToCancel(address caller);
+    error CallerNotMature(address caller, uint64 matureAt);
 
     constructor(VerifierAllowlistV2 allowlist_) {
         if (address(allowlist_) == address(0)) revert InvalidInput();
@@ -183,7 +198,7 @@ contract EmissionsClaimRegistryV2 {
     ///     any current credential of the scope, without touching that credential's layer.
     function registerReport(ReportInput calldata r) external {
         uint64 nowTs = uint64(block.timestamp);
-        bytes32 callerLei = _checkCommon(r, nowTs);
+        (bytes32 callerLei, uint64 callerBoundAt) = _checkCommon(r, nowTs);
 
         if (r.supersedes != bytes32(0) && _reports[r.supersedes].registeredAt == 0) {
             revert ReportNotFound(r.supersedes);
@@ -191,6 +206,12 @@ contract EmissionsClaimRegistryV2 {
 
         ReportScope storage ps = reportScopes[r.reportScopeKey];
         _checkReportLayer(r, ps, callerLei);
+
+        // M1: revising or taking over invalidates earlier reports at once, like a revocation,
+        // so it needs a binding at least REVOKE_HOLD old.
+        if (r.supersedes != bytes32(0) && uint256(callerBoundAt) + REVOKE_HOLD > nowTs) {
+            revert CallerNotMature(msg.sender, callerBoundAt + REVOKE_HOLD);
+        }
 
         CredScope storage cs = credScopes[r.reportScopeKey][r.credScopeKey];
         bool reviseLayer;
@@ -239,6 +260,8 @@ contract EmissionsClaimRegistryV2 {
         if (reviseLayer) {
             _reports[r.supersedes].supersededBy = r.reportKey;
             emit ReportSuperseded(r.supersedes, r.reportKey, r.credScopeKey, cs.claimedKg, r.verifiedKg);
+        } else if (r.supersedes != bytes32(0)) {
+            emit ReportScopeTakenOver(r.supersedes, r.reportKey, r.reportScopeKey, callerLei);
         }
     }
 
@@ -383,7 +406,11 @@ contract EmissionsClaimRegistryV2 {
 
     // ------------------------------------------------------------- internal
 
-    function _checkCommon(ReportInput calldata r, uint64 nowTs) private view returns (bytes32 callerLei) {
+    function _checkCommon(ReportInput calldata r, uint64 nowTs)
+        private
+        view
+        returns (bytes32 callerLei, uint64 callerBoundAt)
+    {
         if (!allowlist.isVerifierActiveAt(msg.sender, nowTs)) revert NotActiveVerifier(msg.sender);
         if (!allowlist.isAuthorizedAt(r.auditorAidHash, msg.sender, nowTs)) {
             revert AuditorNotAuthorized(r.auditorAidHash, msg.sender);
@@ -398,7 +425,7 @@ contract EmissionsClaimRegistryV2 {
         if (reportIdUnboundAt[r.reportScopeKey][r.reportIdHash] != 0) {
             revert ReportIdRetired(r.reportScopeKey, r.reportIdHash);
         }
-        (callerLei,,) = allowlist.leiOfAddress(msg.sender);
+        (callerLei, callerBoundAt,) = allowlist.leiOfAddress(msg.sender);
     }
 
     /// @dev Report layer: unbound, or bound to the input ID (then only the body that holds

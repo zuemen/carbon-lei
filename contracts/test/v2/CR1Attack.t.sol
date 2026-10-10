@@ -153,9 +153,10 @@ contract CR1AttackV2Test is BaseV2 {
         assertGe(_revokedAt(keys[0]), t0 + DELAY + HOLD);
     }
 
-    /// @dev Residual risk: the owner administers WATCHER_ROLE, and role changes are not delayed
-    /// in the contract. A stolen owner key that is not behind a timelock can remove the watcher;
-    /// then only the body's own reaction during ROTATION_DELAY stops the attack.
+    /// @dev Residual risk: the owner administers WATCHER_ROLE. Granting it is delayed and
+    /// cancellable (review fix H2), but revoking it is immediate. A stolen owner key that is not
+    /// behind a timelock can remove the watcher; then only the body's own reaction during
+    /// ROTATION_DELAY stops the attack (the monitor alerts `watcher_role_missing`).
     function test_CR1_V2_residual_ownerKeyAlsoRemovesWatcher() public {
         bytes32 role = allowlist.WATCHER_ROLE();
         vm.prank(owner);

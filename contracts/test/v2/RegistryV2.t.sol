@@ -201,6 +201,7 @@ contract RegistryV2Test is BaseV2 {
     function test_executeRevocation_lapsesIfRequesterRotatedAway() public {
         vm.prank(v1);
         registry.revokeReport(k, 0);
+        vm.warp(START + DELAY); // v1 mature, so its consent counts (H1 fix); revocation still queued
         _propose(L1, v1n);
         allowlist.executeRotationSigned(L1, _sign(v1Key, allowlist.rotationDigest(L1, v1n)));
         vm.warp(block.timestamp + HOLD);
@@ -263,6 +264,7 @@ contract RegistryV2Test is BaseV2 {
 
     function test_registerClaimSupersede_unchangedFromV1() public {
         _claim(k, 1, 400_000);
+        vm.warp(block.timestamp + HOLD); // revising needs a mature binding (M1 fix); otherwise as V1
         EmissionsClaimRegistryV2.ReportInput memory r = EmissionsClaimRegistryV2.ReportInput({
             reportKey: rk(2),
             reportIdHash: rid(1),

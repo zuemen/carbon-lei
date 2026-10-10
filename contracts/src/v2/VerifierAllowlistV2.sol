@@ -14,6 +14,15 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 ///   `ROTATION_DELAY`, or at once if the body's current address consents with an EIP-712
 ///   signature over `Rotation(leiHash, newAddr, nonce)` (EOA or ERC-1271 wallet);
 /// - until then the body's current address, the WATCHER or the owner can cancel it.
+/// Review fixes (our own AI-run review, 2026-10-10, docs/SECURITY.md §13.1):
+/// - consent counts only from a mature current address (bound at least `ROTATION_DELAY` ago),
+///   so an address installed by a hostile rotation cannot wave through a second one (H1);
+/// - WATCHER_ROLE is granted only in two steps (`proposeRoleGrant`, then `executeRoleGrant`
+///   after `ROTATION_DELAY`; any current watcher or the owner can cancel); `grantRole` for it
+///   reverts, and DEFAULT_ADMIN_ROLE only ever follows ownership (H2);
+/// - a suspended body's current address cannot cancel a rotation, so the owner's rescue
+///   rotation (propose, wait, execute; the WATCHER can still cancel it) works for a body
+///   whose key was stolen (M2).
 /// Ownership is two-step (`Ownable2Step`) and cannot be renounced. The owner is meant to be
 /// a multisig behind a `TimelockController`; this contract does not enforce that.
 ///
@@ -81,6 +90,9 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     /// @notice Bumped on every executed or cancelled rotation, so a consent signature is good
     /// for one proposal only.
     mapping(bytes32 leiHash => uint256) public rotationNonce;
+    /// @notice Pending two-step role grants (only WATCHER_ROLE): when they become executable
+    /// (0 = none pending).
+    mapping(bytes32 role => mapping(address account => uint64 readyAt)) public pendingRoleGrants;
 
     event VerifierAdded(
         bytes32 indexed leiHash, address indexed verifier, uint64 accreditedUntil, bytes32 accreditationSaidHash
@@ -94,6 +106,8 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     );
     event RotationProposed(bytes32 indexed leiHash, address indexed newAddr, uint64 readyAt);
     event RotationCancelled(bytes32 indexed leiHash, address indexed newAddr, address indexed by);
+    event RoleGrantProposed(bytes32 indexed role, address indexed account, uint64 readyAt);
+    event RoleGrantCancelled(bytes32 indexed role, address indexed account, address indexed by);
 
     error InvalidInput();
     error InvalidExpiry(uint64 validUntil);
@@ -112,6 +126,11 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     error NotAllowedToCancel(address caller);
     error BadRotationSignature(bytes32 leiHash);
     error RenounceDisabled();
+    error ConsentSignerNotMature(bytes32 leiHash, address signer, uint64 matureAt);
+    error RoleGrantNeedsDelay(bytes32 role);
+    error RoleGrantAlreadyPending(bytes32 role, address account);
+    error NoPendingRoleGrant(bytes32 role, address account);
+    error RoleGrantNotReady(bytes32 role, address account, uint64 readyAt);
 
     constructor(address initialOwner, address watcher) Ownable(initialOwner) EIP712("VerifierAllowlistV2", "1") {
         if (watcher == address(0)) revert InvalidInput();
@@ -173,14 +192,17 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     }
 
     /// @notice Cancels a pending rotation. Allowed for the body's current address (the
-    /// party a hostile rotation would dispossess), the WATCHER, and the owner.
+    /// party a hostile rotation would dispossess) unless the body is suspended, the WATCHER,
+    /// and the owner. A suspended body's address cannot cancel: a stolen body key must not be
+    /// able to block the owner's rescue rotation (M2); the WATCHER still can.
     function cancelRotation(bytes32 leiHash) external {
         PendingRotation memory p = pendingRotations[leiHash];
         if (p.newAddr == address(0)) revert NoPendingRotation(leiHash);
-        if (
-            msg.sender != institutions[leiHash].currentAddress && !hasRole(WATCHER_ROLE, msg.sender)
-                && msg.sender != owner()
-        ) revert NotAllowedToCancel(msg.sender);
+        InstitutionRecord storage inst = institutions[leiHash];
+        bool bodyMayCancel = msg.sender == inst.currentAddress && !(inst.suspendedAt != 0 && inst.liftedAt == 0);
+        if (!bodyMayCancel && !hasRole(WATCHER_ROLE, msg.sender) && msg.sender != owner()) {
+            revert NotAllowedToCancel(msg.sender);
+        }
 
         delete pendingRotations[leiHash];
         rotationNonce[leiHash]++;
@@ -196,14 +218,58 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     }
 
     /// @notice Step 2 (consent path): anyone may submit, without the delay, if the body's
-    /// current address signed `Rotation(leiHash, newAddr, rotationNonce[leiHash])`.
+    /// current address signed `Rotation(leiHash, newAddr, rotationNonce[leiHash])` and that
+    /// address has been bound for at least `ROTATION_DELAY` (H1: an address installed by a
+    /// rotation the body did not ask for cannot consent to the next one while the WATCHER can
+    /// still suspend the body).
     function executeRotationSigned(bytes32 leiHash, bytes calldata oldAddrSig) external {
         PendingRotation memory p = pendingRotations[leiHash];
         if (p.newAddr == address(0)) revert NoPendingRotation(leiHash);
-        if (!SignatureChecker.isValidSignatureNow(
-                institutions[leiHash].currentAddress, rotationDigest(leiHash, p.newAddr), oldAddrSig
-            )) revert BadRotationSignature(leiHash);
+        address current = institutions[leiHash].currentAddress;
+        if (!SignatureChecker.isValidSignatureNow(current, rotationDigest(leiHash, p.newAddr), oldAddrSig)) {
+            revert BadRotationSignature(leiHash);
+        }
+        uint64 matureAt = leiOfAddress[current].boundAt + ROTATION_DELAY;
+        if (block.timestamp < matureAt) revert ConsentSignerNotMature(leiHash, current, matureAt);
         _rotate(leiHash, p.newAddr);
+    }
+
+    // ---------------------------------------------------------- role grants
+
+    /// @notice Step 1 of granting WATCHER_ROLE (the only role with a delayed grant): the
+    /// owner proposes; nothing changes until {executeRoleGrant}. Direct `grantRole` for this
+    /// role reverts, so a stolen owner key cannot give itself a watcher that lifts the real
+    /// watcher's suspensions or suspends bodies at once (H2).
+    function proposeRoleGrant(bytes32 role, address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (role != WATCHER_ROLE || account == address(0)) revert InvalidInput();
+        if (pendingRoleGrants[role][account] != 0) revert RoleGrantAlreadyPending(role, account);
+        uint64 readyAt = uint64(block.timestamp) + ROTATION_DELAY;
+        pendingRoleGrants[role][account] = readyAt;
+        emit RoleGrantProposed(role, account, readyAt);
+    }
+
+    /// @notice Step 2: anyone, once `ROTATION_DELAY` has passed since the proposal.
+    function executeRoleGrant(bytes32 role, address account) external {
+        uint64 readyAt = pendingRoleGrants[role][account];
+        if (readyAt == 0) revert NoPendingRoleGrant(role, account);
+        if (block.timestamp < readyAt) revert RoleGrantNotReady(role, account, readyAt);
+        delete pendingRoleGrants[role][account];
+        _grantRole(role, account);
+    }
+
+    /// @notice Cancels a pending role grant: any current WATCHER, or the owner.
+    function cancelRoleGrant(bytes32 role, address account) external {
+        if (pendingRoleGrants[role][account] == 0) revert NoPendingRoleGrant(role, account);
+        if (!hasRole(WATCHER_ROLE, msg.sender) && msg.sender != owner()) revert NotAllowedToCancel(msg.sender);
+        delete pendingRoleGrants[role][account];
+        emit RoleGrantCancelled(role, account, msg.sender);
+    }
+
+    /// @dev WATCHER_ROLE only through {proposeRoleGrant}/{executeRoleGrant}. Revoking stays
+    /// immediate (residual risk, docs/SECURITY.md §13.1).
+    function grantRole(bytes32 role, address account) public override {
+        if (role == WATCHER_ROLE) revert RoleGrantNeedsDelay(role);
+        super.grantRole(role, account);
     }
 
     // -------------------------------------------------------------- watcher

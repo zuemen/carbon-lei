@@ -161,6 +161,7 @@ contract AllowlistV2Test is BaseV2 {
     // ------------------------------------------------------ consent path
 
     function test_signed_currentAddressConsent_rotatesAtOnce() public {
+        vm.warp(START + DELAY); // v1 (bound at START) is mature: H1 fix
         _propose(L1, v1n);
         bytes memory sig = _sign(v1Key, allowlist.rotationDigest(L1, v1n));
         vm.prank(stranger);
@@ -218,6 +219,7 @@ contract AllowlistV2Test is BaseV2 {
         bytes32 digest = allowlist.rotationDigest(L1, v1n);
         vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.BadRotationSignature.selector, L1));
         allowlist.executeRotationSigned(L1, _sign(uint256(keccak256("other")), digest));
+        vm.warp(block.timestamp + DELAY); // the wallet's binding must be mature (H1 fix)
         allowlist.executeRotationSigned(L1, _sign(walletKey, digest));
         (address cur,,,,,,) = allowlist.institutions(L1);
         assertEq(cur, v1n);
