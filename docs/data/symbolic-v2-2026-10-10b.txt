@@ -1,0 +1,27 @@
+CarbonLEI — bounded symbolic checks of the CR1 mitigation (V2, not deployed) with Halmos (docs/SECURITY.md §13.1)
+Date: 2026-10-10 (second run, after the fixes for our own AI-run review; the first run is symbolic-v2-2026-10-10.txt)
+Source: contracts/src/v2 at 404dac3; checks in contracts/test/v2/HalmosV2.t.sol (contract HalmosCR1Test)
+
+ENVIRONMENT
+Halmos 0.3.3 (pip, isolated Python environment), forge 1.7.1, solc 0.8.28, development machine (Apple M4).
+Command: npm run contracts:symbolic:v2
+  = FOUNDRY_PROFILE=halmos halmos --forge-build-out contracts/out-halmos --contract HalmosCR1Test --loop 3 --solver-timeout-assertion 60000 --solver-threads 1 --solver-max-memory 1500
+Wall time: 4 s with a warm build cache; checks 1.52 s.
+
+WHAT EACH CHECK STATES
+check_D1_rotationDelay(dt): propose a rotation of body L1, wait any dt < 3650 days, executeRotation without a signature.
+  It succeeds exactly when dt >= ROTATION_DELAY (72 h); otherwise the body keeps its old address.
+check_H1_revocationHold(age, ef, waitAfter): rotate L1 by the delay path, then the new address calls revokeReport at
+  any age < 3650 days with any effectiveFrom, then anyone calls executeRevocation after any wait < 3650 days.
+  The report is either not revoked or revoked at or after boundAt(new address) + REVOKE_HOLD (72 h).
+check_H1b_consentNeedsMatureSigner(dt) (new, review finding H1): rotate L1 by the delay path to an ERC-1271 wallet that
+  accepts every signature (so only the maturity rule decides), propose a second rotation, wait any dt < 3650 days,
+  executeRotationSigned. It succeeds exactly when dt >= ROTATION_DELAY; otherwise the wallet stays the body's address.
+Bounded: the call sequence is fixed per check; the start state is the BaseV2 fixture. Not a proof over all call sequences.
+
+RESULT
+Running 3 tests for contracts/test/v2/HalmosV2.t.sol:HalmosCR1Test
+[PASS] check_D1_rotationDelay(uint64) (paths: 5, time: 0.15s, bounds: [])
+[PASS] check_H1_revocationHold(uint64,uint64,uint64) (paths: 12, time: 0.99s, bounds: [])
+[PASS] check_H1b_consentNeedsMatureSigner(uint64) (paths: 4, time: 0.16s, bounds: [])
+Symbolic test result: 3 passed; 0 failed; time: 1.52s
