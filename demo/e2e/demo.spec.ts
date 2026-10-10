@@ -919,3 +919,62 @@ test("Buyer: editing the proof clears the result; the figures and the record com
   await expect(page.getByText(/Accepted \(demo\)/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Download verification record/ })).toHaveCount(0);
 });
+
+test("Language: 繁體中文 translates the Supplier tab and sets html lang; the choice survives a reload; English is the default", async ({ page }) => {
+  await page.goto("./#supplier");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { name: "Claim a shipment against the report" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "繁體中文" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hant-TW");
+  await expect(page.getByRole("heading", { name: "依據報告申領一批出貨" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "繁體中文" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("tab", { name: "供應商" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".tonnage-legend")).toContainText(/剩餘 [\d.]+ 噸/);
+  await expect(page.getByText("供應商 LEI（必須揭露）")).toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hant-TW");
+  await expect(page.getByRole("heading", { name: "依據報告申領一批出貨" })).toBeVisible();
+  await page.getByRole("button", { name: "English" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { name: "Claim a shipment against the report" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Claim a shipment against the report" })).toBeVisible();
+});
+
+test("Language: ?lang=zh-TW opens in 繁體中文; the verdict line and check names are translated, codes and units are not", async ({ page }) => {
+  await page.goto("./?lang=zh-TW#buyer");
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hant-TW");
+  await expect(page.getByRole("tab", { name: "買方（進口商）" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".context")).toContainText("（CBAM）");
+  await page.getByRole("button", { name: "Verify the demo proof" }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText(/^(已驗證|需審查|未驗證|已拒絕)$/);
+  await expect(page.locator(".verify-summary")).toContainText(/8 項檢查中 \d 項通過/);
+  const checks = page.locator("ol.checks > li");
+  await expect(checks.first()).toContainText("憑證自簽發後未被更改");
+  await expect(checks.first().locator(".badge")).toHaveText(/通過|未通過|需審查|未執行/);
+  await expect(page.locator(".verify-summary")).toContainText("tCO2e");
+  // A tampered value: the headline names the failed check by number and the explanation is in Chinese.
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Tamper with one number" }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText("已拒絕");
+  await expect(page.locator(".verify-summary")).toContainText("已拒絕——檢查 2 未通過：某個已揭露的數值在供應商建立證明後遭到更改。");
+  await expect(checks.nth(1).locator("code")).toHaveText("DISCLOSURE_TAMPERED");
+});
+
+test("Language: in 繁體中文 on a 390 px phone the tab bar stays one row under 60 px and the switch buttons are at least 44 px", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./?lang=zh-TW#supplier");
+  const bar = page.locator(".tabbar");
+  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(60);
+  const tops = await page.getByRole("tab").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(tops).size, "one row").toBe(1);
+  await expect(page.getByRole("tab", { name: "1 供應商" })).toBeVisible();
+  for (const name of ["English", "繁體中文"]) {
+    const b = (await page.getByRole("button", { name }).boundingBox())!;
+    expect(b.height, name).toBeGreaterThanOrEqual(44);
+    expect(b.width, name).toBeGreaterThanOrEqual(44);
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});

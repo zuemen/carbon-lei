@@ -263,3 +263,16 @@ test.describe("without JavaScript", () => {
     expect(await meta('name="twitter:card"')).toBe("summary");
   });
 });
+
+test("A9 axe in 繁體中文: the Supplier tab with the proof created and the Buyer verdict, no violations of any impact", async ({ page }) => {
+  await page.goto("./?lang=zh-TW#supplier");
+  await connected(page);
+  await expect(page.getByRole("heading", { name: "依據報告申領一批出貨" })).toBeVisible();
+  await expect(page.locator(".tonnage-legend")).toContainText(/剩餘 [\d.]+ 噸/);
+  await page.getByRole("button", { name: "建立供應商的證明" }).click();
+  await scan(page, "Supplier in 繁體中文");
+  await page.getByRole("button", { name: "在買方分頁使用此證明 →" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible();
+  await scan(page, "Buyer verdict in 繁體中文");
+});
