@@ -425,7 +425,7 @@ Related standards and designs that we compare by scope or pattern, without claim
 |---|---|---|
 | SiGREEN / Estainium | Verifier-issued PCF credentials with selective disclosure (AnonCreds) [14] | CarbonLEI roots verifier authority in GLEIF's vLEI chain and adds an on-chain claim ledger |
 | MSC Trustgate (GLEIF vLEI Hackathon 2025) | vLEI-based organizational authority bound to document signatures [15] | CarbonLEI applies role authority to CBAM verification and adds single-use tonnage |
-| UNTP Digital Identity Anchor | Registry-issued identity anchors, accreditation anchors [10] | Similar trust pattern; CarbonLEI adds CBAM fields and an on-chain cap on claimed verified tonnes |
+| UNTP Digital Identity Anchor | Registry-issued identity anchors, accreditation anchors [10] | Similar trust pattern. UNTP's chain-of-custody pattern catches volume inflation by auditors reconciling a facility's declared quantities after the fact; CarbonLEI adds CBAM fields and refuses a claim beyond the verified tonnes when it is made ([RELATED_WORK](docs/RELATED_WORK.md)) |
 | Chainlink × GLEIF (CCID, ACE) | vLEI verified off-chain; CCID and credential record stored on-chain [13] | Same on-chain/off-chain split; CarbonLEI adds the CBAM tonnage ledger |
 | Cardano CIP-0170 | KEL anchoring of signed data [12] | CarbonLEI brings the pattern to an EVM chain and to emissions reports |
 | Energy Web Green Proofs | Book-and-claim registries where a retired unit cannot be reused [16] | CarbonLEI's tonnage ledger applies the same "use once" rule to verified CBAM reports |
