@@ -342,7 +342,7 @@ carbon-lei/
   fixtures/    fictional parties, demo credential, CESR and KEL evidence, Sepolia transactions, cross-language test vectors
   scripts/     demo scenario, one-command local demo, demo data build, deployment record
   docs/        PROBLEM_STATEMENT, JUDGING_CRITERIA, ARCHITECTURE, SECURITY, CLIMATE_IMPACT, ADOPTION, PILOT, OPERATE,
-               PACT_MAPPING, FAQ, VLEI_SETUP;
+               PACT_MAPPING, FAQ, VLEI_SETUP, RELATED_WORK, RESPONSIBLE_DESIGN;
                schemas/verdict.schema.json (output of verify --json)
   .github/workflows/   ci.yml (contracts, symbolic checks and SDK), pages.yml (demo deployment)
 ```
