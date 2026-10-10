@@ -2,27 +2,34 @@
 // docs/SECURITY.md §13.1) and reacts with the WATCHER key. V2 is tested but NOT deployed.
 //
 // The delays in V2 only help if someone reacts within them. The Maude CR1 model (formal/maude,
-// CARBONLEI-CR1) shows V2 holds if every rotation proposal the body did not ask for is cancelled within
-// ROTATION_DELAY and, when a rotation got through anyway, the body is SUSPENDED within REVOKE_HOLD
-// (cancelling queued revocations alone is not enough: the attacker can wait until its address has been
-// bound for 72 h and revoke directly). The default policy is exactly that:
+// CARBONLEI-CR1) shows the rotation/revocation part of V2 holds if every rotation proposal the body did not ask
+// for is cancelled within ROTATION_DELAY and, when a rotation got through anyway, the body is SUSPENDED within
+// REVOKE_HOLD. The model has no role grants, suspension lifts, new bodies or supersede/takeover, so the rules
+// below for those (added after our own AI-run review, 2026-10-10, §13.1) are not covered by it. Default policy:
 //
 //   RotationProposed  for a watched body, not in `expectedRotations`  -> cancelRotation
-//   VerifierAddressRotated, not expected and not body-consented       -> suspendVerifier (deadline: rotatedAt + REVOKE_HOLD)
+//   VerifierAddressRotated, not expected and not body-consented       -> taint the body; suspendVerifier
+//       "Body-consented" = executed with executeRotationSigned by an old address that was mature (bound at least
+//       ROTATION_DELAY) or itself expected, on a body not already tainted. A body stays tainted across later
+//       hops (a hostile address consenting to the next one does not clean it) until an expected rotation, so the
+//       chain from the last trusted address to the current one is judged as a whole (review finding H1).
 //   RevocationQueued  (requester bound < REVOKE_HOLD), not expected   -> cancelRevocation
+//   RoleGrantProposed (WATCHER_ROLE), account not in `expectedWatchers` -> cancelRoleGrant (H2)
+//   SuspensionLifted  of a suspension this monitor made, by another address -> suspendVerifier again (H2)
+//   RoleGranted / RoleRevoked, OwnershipTransferStarted / Transferred, VerifierAdded / AuditorAdded not in the
+//       expected lists, VerifierSuspended by someone else, ReportSuperseded, ReportScopeTakenOver -> alert only
 //
-// "Expected" is the body's out-of-band confirmation: a (leiHash or lei, newAddr) pair, or a report key,
-// that the operator adds to the config after hearing from the body. A rotation executed with
-// `executeRotationSigned` carries the body's own EIP-712 consent and is treated as confirmed
-// (`trustSignedRotations`, default true). Every poll also checks that the watcher key still holds
-// WATCHER_ROLE (the owner can drop it) and alerts if not.
+// "Expected" is the body's (or operator's) out-of-band confirmation in the config. Every poll also checks that
+// the watcher key still holds WATCHER_ROLE and alerts if not, re-checks that proposals it cancelled are still
+// gone (a reorg can undo a cancel), reads events only up to head - `confirmations` (default 12), halves the
+// getLogs block range when the RPC refuses a range, and checks registry.allowlist() == config allowlist.
 //
 // Alerts are JSON lines on stdout ({ ts, level, type, ... }); with V2_WATCH_WEBHOOK_URL set each alert is
 // also POSTed there (best effort). --dry-run only alerts and never sends a transaction. State (last block
-// read and the events already acted on) is kept in a JSON file (default verifier/.data/watch-v2-state.json),
-// and each action re-reads the chain state first, so a restart replays safely. The watcher key comes from
-// WATCHER_PRIVATE_KEY (not needed with --dry-run). Chain time (the head block's timestamp), not wall time,
-// decides deadlines.
+// read, the events already acted on, tainted bodies, cancelled proposals) is kept in a JSON file (default
+// verifier/.data/watch-v2-state.json), and each action re-reads the chain state first, so a restart replays
+// safely. The watcher key comes from WATCHER_PRIVATE_KEY (not needed with --dry-run). Chain time (the head
+// block's timestamp), not wall time, decides deadlines.
 //
 //   node verifier/src/watch-v2.ts --config <file.json> [--dry-run] [--once] [--interval 15] [--state <file>]
 import { existsSync } from "node:fs";
@@ -47,8 +54,11 @@ import { REPO_ROOT, readJson, writeJson } from "./state.ts";
 
 export const DEFAULT_V2_STATE_PATH = resolve(REPO_ROOT, "verifier/.data/watch-v2-state.json");
 const ZERO = "0x0000000000000000000000000000000000000000";
-const LOG_CHUNK = 10_000n;
+const ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const DEFAULT_LOG_CHUNK = 10_000n;
+const DEFAULT_CONFIRMATIONS = 12;
 const HEARTBEAT_POLLS = 20;
+const RANGE_ERROR = /range|limit|too many|too large|exceed|max(imum)? .*(results|blocks)|returned more than|response size/i;
 
 export interface V2Policy {
   /** cancelRotation on a proposal not in `expectedRotations` (default true). */
@@ -57,8 +67,15 @@ export interface V2Policy {
   suspendOnUnexpectedRotation: boolean;
   /** cancelRevocation on a queued revocation not in `expectedRevocations` (default true). */
   cancelUnexpectedRevocations: boolean;
-  /** A rotation executed through executeRotationSigned (the body's EIP-712 consent) counts as expected (default true). */
+  /**
+   * A rotation executed through executeRotationSigned counts as body-consented if the signing old address was
+   * mature or expected and the body was not already tainted (default true).
+   */
   trustSignedRotations: boolean;
+  /** cancelRoleGrant on a WATCHER_ROLE grant proposal for an account not in `expectedWatchers` (default true). */
+  cancelUnexpectedRoleGrants: boolean;
+  /** suspendVerifier again when a suspension this monitor made is lifted by an address other than the watcher key or `trustedLifters` (default true). */
+  resuspendOnForeignLift: boolean;
 }
 
 export interface V2MonitorConfig {
@@ -71,6 +88,20 @@ export interface V2MonitorConfig {
   bodies: Hex[];
   expectedRotations: { leiHash: Hex; newAddr: Hex }[];
   expectedRevocations: Hex[];
+  /** Accounts whose WATCHER_ROLE grant proposals are expected (H2). */
+  expectedWatchers: Hex[];
+  /** leiHashes of bodies whose onboarding is expected (others alert; onboarding is never blocked). */
+  expectedBodies: Hex[];
+  /** auditorAidHashes whose addition is expected (others alert). */
+  expectedAuditors: Hex[];
+  /** Addresses an ownership transfer to which is expected (others alert critically). */
+  expectedOwners: Hex[];
+  /** Addresses (besides the watcher key) allowed to lift a suspension this monitor made. */
+  trustedLifters: Hex[];
+  /** Events are read up to head - confirmations (reorg safety; default 12). */
+  confirmations: number;
+  /** getLogs block range; halved automatically when the RPC refuses a range (default 10,000). */
+  logChunk: bigint;
   policy: V2Policy;
   dryRun: boolean;
   statePath: string;
@@ -82,6 +113,8 @@ export const DEFAULT_POLICY: V2Policy = {
   suspendOnUnexpectedRotation: true,
   cancelUnexpectedRevocations: true,
   trustSignedRotations: true,
+  cancelUnexpectedRoleGrants: true,
+  resuspendOnForeignLift: true,
 };
 
 export interface Alert {
@@ -98,6 +131,26 @@ interface HandledEntry {
   at: string;
 }
 
+/** Per-body record: tainted by a rotation that was neither expected nor body-consented (H1). */
+interface BodyState {
+  tainted: boolean;
+  /** The hop that tainted the body (for alerts and deadlines). */
+  taint?: { id: string; oldAddr: Hex; newAddr: Hex; rotatedAt: string; reason: string };
+  /** The suspension for the current taint was sent, found in place, or alerted (policy off / dry run). */
+  suspendHandled?: boolean;
+  /** This monitor's key suspended the body and nobody trusted has lifted it since. */
+  suspendedByUs?: boolean;
+}
+
+/** A proposal this monitor cancelled; re-checked until its readyAt (a reorg can undo the cancel). */
+interface CancelledProposal {
+  kind: "rotation" | "roleGrant";
+  leiHash?: Hex;
+  role?: Hex;
+  target: Hex;
+  readyAt: string;
+}
+
 export interface V2State {
   version: 1;
   chainId: number;
@@ -107,6 +160,8 @@ export interface V2State {
   lastBlock: string;
   /** Events already acted on, by `txHash:logIndex`. */
   handled: Record<string, HandledEntry>;
+  bodies?: Record<string, BodyState>;
+  cancelled?: CancelledProposal[];
   updatedAt: string;
 }
 
@@ -120,6 +175,8 @@ export interface V2Deps {
 
 export interface PollResult {
   head: bigint;
+  /** Last block whose events were read (head - confirmations). */
+  toBlock: bigint;
   now: bigint;
   alerts: Alert[];
   txs: Hex[];
@@ -139,6 +196,7 @@ export function configFromJson(j: Record<string, unknown>, over: Partial<V2Monit
     if (typeof j[k] !== "string") throw new Error(`config: ${k} is required`);
     return j[k] as string;
   };
+  const list = (k: string) => ((j[k] as string[] | undefined) ?? []).map(lower);
   const cfg: V2MonitorConfig = {
     rpc: need("rpc"),
     allowlist: lower(need("allowlist")),
@@ -149,7 +207,14 @@ export function configFromJson(j: Record<string, unknown>, over: Partial<V2Monit
       leiHash: hashOf(e),
       newAddr: lower(e.newAddr),
     })),
-    expectedRevocations: ((j.expectedRevocations as string[] | undefined) ?? []).map(lower),
+    expectedRevocations: list("expectedRevocations"),
+    expectedWatchers: list("expectedWatchers"),
+    expectedBodies: ((j.expectedBodies as { lei?: string; leiHash?: string }[] | undefined) ?? []).map(hashOf),
+    expectedAuditors: list("expectedAuditors"),
+    expectedOwners: list("expectedOwners"),
+    trustedLifters: list("trustedLifters"),
+    confirmations: Number(j.confirmations ?? DEFAULT_CONFIRMATIONS),
+    logChunk: BigInt((j.logChunk as number | string | undefined) ?? DEFAULT_LOG_CHUNK),
     policy: { ...DEFAULT_POLICY, ...((j.policy as Partial<V2Policy> | undefined) ?? {}) },
     dryRun: Boolean(j.dryRun ?? false),
     statePath: (j.statePath as string | undefined) ?? DEFAULT_V2_STATE_PATH,
@@ -189,7 +254,7 @@ export function loadV2State(cfg: V2MonitorConfig, chainId: number): V2State {
     if (lower(s.allowlist) !== cfg.allowlist || lower(s.registry) !== cfg.registry || s.chainId !== chainId) {
       throw new Error(`${path} belongs to another deployment (${s.chainId}/${s.allowlist}); use another --state`);
     }
-    return s;
+    return { ...s, bodies: s.bodies ?? {}, cancelled: s.cancelled ?? [] };
   }
   return {
     version: 1,
@@ -198,6 +263,8 @@ export function loadV2State(cfg: V2MonitorConfig, chainId: number): V2State {
     registry: cfg.registry,
     lastBlock: String(cfg.fromBlock - 1n),
     handled: {},
+    bodies: {},
+    cancelled: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -210,9 +277,12 @@ function revertName(err: unknown): string | undefined {
   return undefined;
 }
 
+const errText = (err: unknown) => (err instanceof Error ? err.message.split("\n")[0] : String(err));
+
 /**
- * One poll: reads the new V2 events up to the head, acts on each per the policy, saves the state.
- * A failed action leaves `lastBlock` before that event's block, so the next poll retries it.
+ * One poll: re-checks cancelled proposals, reads the new V2 events up to head - confirmations, acts on each per
+ * the policy, suspends tainted bodies, saves the state. A failed action on an event leaves `lastBlock` before
+ * that event's block, so the next poll retries it; a failed suspension stays pending in the body state.
  */
 export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollResult> {
   const client = deps.client ?? (createPublicClient({ transport: http(cfg.rpc) }) as PublicClient);
@@ -228,12 +298,22 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
   const chainId = await client.getChainId();
   if (!(await isV2Allowlist(client, cfg.allowlist))) throw new Error(`${cfg.allowlist} is not a VerifierAllowlistV2 (no ROTATION_DELAY)`);
   const state = loadV2State(cfg, chainId);
+  const bodies = state.bodies!;
+  // L3: the registry must read this allowlist, or the monitor would guard the wrong trust registry.
+  const regAllowlist = await client.readContract({ address: cfg.registry, abi: registryV2Abi, functionName: "allowlist" });
+  if (lower(regAllowlist) !== cfg.allowlist) {
+    throw new Error(`registry ${cfg.registry} points to allowlist ${lower(regAllowlist)}, not the configured ${cfg.allowlist}`);
+  }
   const head = await client.getBlock({ blockTag: "latest" });
   const now = head.timestamp;
-  const [revokeHold, watcherRole] = await Promise.all([
+  const depth = BigInt(Math.max(0, Math.floor(cfg.confirmations)));
+  const toBlock = head.number - depth;
+  const [revokeHold, rotationDelay, watcherRole] = await Promise.all([
     client.readContract({ address: cfg.registry, abi: registryV2Abi, functionName: "REVOKE_HOLD" }),
+    client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "ROTATION_DELAY" }),
     client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "WATCHER_ROLE" }),
   ]);
+  const me = deps.account ? lower(deps.account.address) : undefined;
 
   if (!cfg.dryRun && !deps.account) throw new Error("not a dry run and no watcher key (WATCHER_PRIVATE_KEY)");
   if (deps.account) {
@@ -248,12 +328,13 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
   const wallet = deps.wallet ?? (deps.account ? createWalletClient({ account: deps.account, transport: http(cfg.rpc) }) : undefined);
 
   const watched = (lei: Hex) => cfg.bodies.length === 0 || cfg.bodies.includes(lower(lei));
+  const isExpectedRotation = (lei: Hex, addr: string) => cfg.expectedRotations.some((e) => e.leiHash === lower(lei) && e.newAddr === lower(addr));
   const send = async (address: Hex, abi: readonly unknown[], functionName: string, args: readonly unknown[]): Promise<{ tx?: Hex; already?: string }> => {
     try {
       await client.simulateContract({ address, abi, functionName, args, account: deps.account } as never);
     } catch (err) {
       const name = revertName(err);
-      if (name && ["NoPendingRotation", "AlreadySuspended", "NoPendingRevocation"].includes(name)) return { already: name };
+      if (name && ["NoPendingRotation", "AlreadySuspended", "NoPendingRevocation", "NoPendingRoleGrant"].includes(name)) return { already: name };
       throw err;
     }
     const hash = await wallet!.writeContract({ address, abi, functionName, args, account: deps.account!, chain: null } as never);
@@ -262,25 +343,123 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
     txs.push(hash);
     return { tx: hash };
   };
+  const institution = (leiHash: Hex) => client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "institutions", args: [leiHash] });
+  const txFrom = async (hash: Hex) => lower((await client.getTransaction({ hash })).from);
+
+  // --- L1: proposals this monitor cancelled must still be gone (a reorg can drop the cancel transaction).
+  const keep: CancelledProposal[] = [];
+  for (const c of state.cancelled!) {
+    const readyAt = BigInt(c.readyAt);
+    let pendingAgain = false;
+    try {
+      if (c.kind === "rotation") {
+        const [pAddr, pReady] = await client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "pendingRotations", args: [c.leiHash!] });
+        pendingAgain = lower(pAddr) === c.target && pReady === readyAt;
+      } else {
+        const pReady = await client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "pendingRoleGrants", args: [c.role!, c.target] });
+        pendingAgain = pReady === readyAt;
+      }
+      if (pendingAgain) {
+        const info = { kind: c.kind, leiHash: c.leiHash, role: c.role, target: c.target, readyAt, secondsLeft: readyAt > now ? readyAt - now : 0n, dryRun: cfg.dryRun };
+        alert("critical", "cancelled_proposal_reappeared", info);
+        if (cfg.dryRun) {
+          keep.push(c);
+          continue;
+        }
+        const r =
+          c.kind === "rotation"
+            ? await send(cfg.allowlist, allowlistV2Abi, "cancelRotation", [c.leiHash!])
+            : await send(cfg.allowlist, allowlistV2Abi, "cancelRoleGrant", [c.role!, c.target]);
+        alert("warn", r.tx ? "proposal_cancelled_again" : "proposal_already_gone", { ...info, cancelTx: r.tx, revert: r.already });
+        keep.push(c);
+      } else if (now < readyAt) {
+        keep.push(c); // keep checking until it could have executed
+      }
+    } catch (err) {
+      failures++;
+      alert("critical", "action_failed", { kind: c.kind, target: c.target, error: errText(err) });
+      keep.push(c);
+    }
+  }
+  state.cancelled = keep;
+
+  // --- tainted bodies (H1): suspend unless the chain ends at an expected address.
+  const suspendFailed = new Set<string>();
+  const trySuspend = async (leiHash: Hex, extra: Record<string, unknown> = {}) => {
+    const b = bodies[leiHash];
+    if (!b?.tainted || b.suspendHandled || suspendFailed.has(leiHash)) return;
+    const t = b.taint!;
+    const deadline = BigInt(t.rotatedAt) + revokeHold;
+    const info = { leiHash, taintedBy: t, suspendDeadline: deadline, late: now >= deadline, dryRun: cfg.dryRun, ...extra };
+    try {
+      const [currentAddress, , , , , suspendedAt, liftedAt] = await institution(leiHash);
+      if (suspendedAt !== 0n && liftedAt === 0n) {
+        alert("info", "body_already_suspended", info);
+        b.suspendHandled = true;
+        return;
+      }
+      if (isExpectedRotation(leiHash, currentAddress)) {
+        alert("info", "tainted_chain_ends_at_expected_address", { ...info, currentAddress });
+        bodies[leiHash] = { tainted: false };
+        return;
+      }
+      if (!cfg.policy.suspendOnUnexpectedRotation) {
+        alert("critical", "body_left_active_by_policy", info);
+        b.suspendHandled = true;
+        return;
+      }
+      if (cfg.dryRun) {
+        alert("critical", "would_suspend_body", info);
+        b.suspendHandled = true;
+        return;
+      }
+      const r = await send(cfg.allowlist, allowlistV2Abi, "suspendVerifier", [leiHash]);
+      alert("critical", r.tx ? "body_suspended" : "body_already_suspended", { ...info, suspendTx: r.tx, revert: r.already });
+      b.suspendHandled = true;
+      if (r.tx) b.suspendedByUs = true;
+    } catch (err) {
+      failures++;
+      suspendFailed.add(leiHash);
+      alert("critical", "action_failed", { ...info, action: "suspendVerifier", error: errText(err) });
+    }
+  };
+
+  const alEvents = new Set([
+    "RotationProposed",
+    "VerifierAddressRotated",
+    "RoleGrantProposed",
+    "RoleGranted",
+    "RoleRevoked",
+    "SuspensionLifted",
+    "VerifierSuspended",
+    "VerifierAdded",
+    "AuditorAdded",
+    "OwnershipTransferStarted",
+    "OwnershipTransferred",
+  ]);
+  const regEvents = new Set(["RevocationQueued", "ReportSuperseded", "ReportScopeTakenOver"]);
 
   const from = BigInt(state.lastBlock) + 1n;
   let retryFrom: bigint | undefined;
-  for (let start = from; start <= head.number; start += LOG_CHUNK) {
-    const end = start + LOG_CHUNK - 1n < head.number ? start + LOG_CHUNK - 1n : head.number;
-    const [alLogs, regLogs] = await Promise.all([
-      client.getLogs({
-        address: cfg.allowlist,
-        events: allowlistV2Abi.filter((x) => x.type === "event" && (x.name === "RotationProposed" || x.name === "VerifierAddressRotated")),
-        fromBlock: start,
-        toBlock: end,
-      }),
-      client.getLogs({
-        address: cfg.registry,
-        events: registryV2Abi.filter((x) => x.type === "event" && x.name === "RevocationQueued"),
-        fromBlock: start,
-        toBlock: end,
-      }),
-    ]);
+  let chunk = cfg.logChunk > 0n ? cfg.logChunk : DEFAULT_LOG_CHUNK;
+  for (let start = from; start <= toBlock; ) {
+    const end = start + chunk - 1n < toBlock ? start + chunk - 1n : toBlock;
+    let alLogs, regLogs;
+    try {
+      [alLogs, regLogs] = await Promise.all([
+        client.getLogs({ address: cfg.allowlist, events: allowlistV2Abi.filter((x) => x.type === "event" && alEvents.has(x.name)), fromBlock: start, toBlock: end }),
+        client.getLogs({ address: cfg.registry, events: registryV2Abi.filter((x) => x.type === "event" && regEvents.has(x.name)), fromBlock: start, toBlock: end }),
+      ]);
+    } catch (err) {
+      // L2: providers cap the block range; halve and retry the same start.
+      if (chunk > 1n && RANGE_ERROR.test(err instanceof Error ? err.message : String(err))) {
+        chunk = chunk / 2n;
+        alert("info", "log_chunk_reduced", { fromBlock: start, newChunk: chunk, error: errText(err) });
+        continue;
+      }
+      throw err;
+    }
+    start = end + 1n;
     const logs = [...alLogs, ...regLogs].sort((a, b) =>
       a.blockNumber === b.blockNumber ? (a.logIndex ?? 0) - (b.logIndex ?? 0) : a.blockNumber! < b.blockNumber! ? -1 : 1,
     );
@@ -295,12 +474,12 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
       try {
         const a = lg.args as Record<string, unknown>;
         if (lg.eventName === "RotationProposed") {
-          const leiHash = a.leiHash as Hex;
+          const leiHash = lower(a.leiHash as string);
           const newAddr = lower(a.newAddr as string);
           const readyAt = a.readyAt as bigint;
           if (!watched(leiHash)) continue;
           const info = { ...base, leiHash, newAddr, readyAt, secondsLeft: readyAt > now ? readyAt - now : 0n };
-          if (cfg.expectedRotations.some((e) => e.leiHash === lower(leiHash) && e.newAddr === newAddr)) {
+          if (isExpectedRotation(leiHash, newAddr)) {
             alert("info", "rotation_proposed_expected", info);
             done("expected");
             continue;
@@ -324,19 +503,25 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
           }
           const r = await send(cfg.allowlist, allowlistV2Abi, "cancelRotation", [leiHash]);
           alert(r.tx ? "warn" : "info", r.tx ? "rotation_cancelled" : "rotation_already_gone", { ...info, cancelTx: r.tx, revert: r.already });
+          if (r.tx) state.cancelled!.push({ kind: "rotation", leiHash, target: newAddr, readyAt: String(readyAt) });
           done(r.tx ? "cancelled" : "already", r.tx);
         } else if (lg.eventName === "VerifierAddressRotated") {
-          const leiHash = a.leiHash as Hex;
+          const leiHash = lower(a.leiHash as string);
+          const oldAddr = lower(a.oldAddr as string);
           const newAddr = lower(a.newAddr as string);
           const rotatedAt = a.rotatedAt as bigint;
           if (!watched(leiHash)) continue;
           const deadline = rotatedAt + revokeHold;
-          const info = { ...base, leiHash, oldAddr: a.oldAddr, newAddr, rotatedAt, suspendDeadline: deadline, late: now >= deadline };
-          if (cfg.expectedRotations.some((e) => e.leiHash === lower(leiHash) && e.newAddr === newAddr)) {
+          const info = { ...base, leiHash, oldAddr, newAddr, rotatedAt, suspendDeadline: deadline, late: now >= deadline };
+          const body = (bodies[leiHash] ??= { tainted: false });
+          if (isExpectedRotation(leiHash, newAddr)) {
             alert("info", "rotation_executed_expected", info);
+            if (body.tainted) alert("info", "taint_cleared_by_expected_rotation", info);
+            bodies[leiHash] = { tainted: false, suspendedByUs: body.suspendedByUs };
             done("expected");
             continue;
           }
+          let reason = "executed after the delay without the body's consent";
           if (cfg.policy.trustSignedRotations) {
             const tx = await client.getTransaction({ hash: lg.transactionHash! });
             let fn: string | undefined;
@@ -346,37 +531,31 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
               fn = undefined; // called through another contract (multisig, timelock): not provably consented
             }
             if (fn === "executeRotationSigned" && lower(tx.to ?? "") === cfg.allowlist) {
-              alert("info", "rotation_executed_with_body_consent", info);
-              done("consented");
-              continue;
+              const [, signerBoundAt] = await client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "leiOfAddress", args: [oldAddr] });
+              const mature = signerBoundAt + rotationDelay <= rotatedAt;
+              const signerExpected = isExpectedRotation(leiHash, oldAddr);
+              if (!body.tainted && (mature || signerExpected)) {
+                alert("info", "rotation_executed_with_body_consent", { ...info, signerBoundAt, signerMature: mature });
+                done("consented");
+                continue;
+              }
+              reason = body.tainted
+                ? "signed by an address installed by an earlier unexpected rotation"
+                : "signed by an address bound less than ROTATION_DELAY ago";
             }
           }
-          alert("critical", "rotation_executed_unexpected", info);
-          const inst = await client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "institutions", args: [leiHash] });
-          const [currentAddress, , , , , suspendedAt, liftedAt] = inst;
-          if (suspendedAt !== 0n && liftedAt === 0n) {
-            alert("info", "body_already_suspended", info);
-            done("already_suspended");
-            continue;
-          }
-          if (lower(currentAddress) !== newAddr) {
-            alert("warn", "rotation_superseded", { ...info, currentAddress });
-            done("superseded");
-            continue;
-          }
-          if (!cfg.policy.suspendOnUnexpectedRotation) {
-            alert("critical", "body_left_active_by_policy", info);
-            done("policy_off");
-            continue;
-          }
-          if (cfg.dryRun) {
-            alert("critical", "would_suspend_body", info);
-            done("dry_run_alerted");
-            continue;
-          }
-          const r = await send(cfg.allowlist, allowlistV2Abi, "suspendVerifier", [leiHash]);
-          alert("critical", r.tx ? "body_suspended" : "body_already_suspended", { ...info, suspendTx: r.tx, revert: r.already });
-          done(r.tx ? "suspended" : "already_suspended", r.tx);
+          const [currentAddress] = await institution(leiHash);
+          const superseded = lower(currentAddress) !== newAddr;
+          alert("critical", "rotation_executed_unexpected", { ...info, reason, ...(superseded ? { superseded, currentAddress } : {}) });
+          bodies[leiHash] = {
+            tainted: true,
+            taint: { id, oldAddr, newAddr, rotatedAt: String(rotatedAt), reason },
+            suspendHandled: false,
+            suspendedByUs: body.suspendedByUs,
+          };
+          done("tainted");
+          // A later hop in this batch may still end the chain at an expected address; judge it then.
+          if (!superseded) await trySuspend(leiHash);
         } else if (lg.eventName === "RevocationQueued") {
           const reportKey = lower(a.reportKey as string);
           const requester = lower(a.requester as string);
@@ -408,18 +587,149 @@ export async function pollV2(cfg: V2MonitorConfig, deps: V2Deps): Promise<PollRe
           const r = await send(cfg.registry, registryV2Abi, "cancelRevocation", [reportKey]);
           alert(r.tx ? "warn" : "info", r.tx ? "revocation_cancelled" : "revocation_already_gone", { ...info, cancelTx: r.tx, revert: r.already });
           done(r.tx ? "cancelled" : "already", r.tx);
+        } else if (lg.eventName === "RoleGrantProposed") {
+          const role = lower(a.role as string);
+          const account = lower(a.account as string);
+          const readyAt = a.readyAt as bigint;
+          const info = { ...base, role, account, readyAt, secondsLeft: readyAt > now ? readyAt - now : 0n };
+          if (role !== lower(watcherRole) || cfg.expectedWatchers.includes(account)) {
+            alert("info", "role_grant_proposed_expected", info);
+            done("expected");
+            continue;
+          }
+          alert("critical", "role_grant_proposed_unexpected", info);
+          const pReady = await client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "pendingRoleGrants", args: [role, account] });
+          if (pReady !== readyAt) {
+            alert("info", "role_grant_no_longer_pending", info);
+            done("not_pending");
+            continue;
+          }
+          if (!cfg.policy.cancelUnexpectedRoleGrants) {
+            alert("critical", "role_grant_left_pending_by_policy", info);
+            done("policy_off");
+            continue;
+          }
+          if (cfg.dryRun) {
+            alert("critical", "would_cancel_role_grant", info);
+            done("dry_run_alerted");
+            continue;
+          }
+          const r = await send(cfg.allowlist, allowlistV2Abi, "cancelRoleGrant", [role, account]);
+          alert(r.tx ? "warn" : "info", r.tx ? "role_grant_cancelled" : "role_grant_already_gone", { ...info, cancelTx: r.tx, revert: r.already });
+          if (r.tx) state.cancelled!.push({ kind: "roleGrant", role, target: account, readyAt: String(readyAt) });
+          done(r.tx ? "cancelled" : "already", r.tx);
+        } else if (lg.eventName === "RoleGranted" || lg.eventName === "RoleRevoked") {
+          const role = lower(a.role as string);
+          const account = lower(a.account as string);
+          const info = { ...base, role, account, sender: a.sender };
+          const isWatcher = role === lower(watcherRole);
+          if (lg.eventName === "RoleGranted") {
+            if (isWatcher) {
+              const ok = account === me || cfg.expectedWatchers.includes(account);
+              alert(ok ? "info" : "critical", ok ? "watcher_granted_expected" : "watcher_granted_unexpected", info);
+            } else if (role === ADMIN_ROLE) {
+              // The admin role only ever follows ownership; an unexpected owner is alerted on OwnershipTransferStarted too.
+              const ok = cfg.expectedOwners.includes(account) || account === lower(await client.readContract({ address: cfg.allowlist, abi: allowlistV2Abi, functionName: "owner" }));
+              alert(ok ? "info" : "critical", ok ? "admin_role_moved_with_ownership" : "admin_granted_unexpected", info);
+            } else {
+              alert("warn", "role_granted", info);
+            }
+          } else if (isWatcher) {
+            alert("critical", account === me ? "watcher_role_revoked_from_this_key" : "watcher_role_revoked", info);
+          } else if (role !== ADMIN_ROLE) {
+            alert("warn", "role_revoked", info);
+          }
+          done("alerted");
+        } else if (lg.eventName === "OwnershipTransferStarted" || lg.eventName === "OwnershipTransferred") {
+          const prev = lower(a.previousOwner as string);
+          const next = lower(a.newOwner as string);
+          if (prev === ZERO) {
+            done("constructor");
+            continue;
+          }
+          const info = { ...base, previousOwner: prev, newOwner: next };
+          const ok = cfg.expectedOwners.includes(next) || (lg.eventName === "OwnershipTransferStarted" && next === ZERO);
+          const type = lg.eventName === "OwnershipTransferStarted" ? "ownership_transfer_started" : "ownership_transferred";
+          alert(ok ? "info" : "critical", ok ? `${type}_expected` : `${type}_unexpected`, info);
+          done("alerted");
+        } else if (lg.eventName === "VerifierSuspended") {
+          const leiHash = lower(a.leiHash as string);
+          if (!watched(leiHash)) continue;
+          if (me && (await txFrom(lg.transactionHash!)) === me) {
+            done("own");
+            continue;
+          }
+          alert("warn", "body_suspended_by_other", { ...base, leiHash });
+          done("alerted");
+        } else if (lg.eventName === "SuspensionLifted") {
+          const leiHash = lower(a.leiHash as string);
+          if (!watched(leiHash)) continue;
+          const by = await txFrom(lg.transactionHash!);
+          const body = bodies[leiHash];
+          const info = { ...base, leiHash, by };
+          if (by === me || cfg.trustedLifters.includes(by)) {
+            // The operator lifted it on purpose: clear the taint and the record of our suspension.
+            alert("info", "suspension_lifted_by_trusted_key", info);
+            bodies[leiHash] = { tainted: false };
+            done("trusted");
+            continue;
+          }
+          if (!body?.suspendedByUs) {
+            alert("warn", "suspension_lifted", info);
+            done("alerted");
+            continue;
+          }
+          alert("critical", "suspension_lifted_by_other", info);
+          const [, , , , , suspendedAt, liftedAt] = await institution(leiHash);
+          if (suspendedAt !== 0n && liftedAt === 0n) {
+            alert("info", "body_already_suspended", info);
+            done("already_suspended");
+            continue;
+          }
+          if (!cfg.policy.resuspendOnForeignLift) {
+            alert("critical", "body_left_active_by_policy", info);
+            done("policy_off");
+            continue;
+          }
+          if (cfg.dryRun) {
+            alert("critical", "would_resuspend_body", info);
+            done("dry_run_alerted");
+            continue;
+          }
+          const r = await send(cfg.allowlist, allowlistV2Abi, "suspendVerifier", [leiHash]);
+          alert("critical", r.tx ? "body_resuspended" : "body_already_suspended", { ...info, suspendTx: r.tx, revert: r.already });
+          done(r.tx ? "resuspended" : "already_suspended", r.tx);
+        } else if (lg.eventName === "VerifierAdded") {
+          const leiHash = lower(a.leiHash as string);
+          const ok = cfg.expectedBodies.includes(leiHash);
+          alert(ok ? "info" : "warn", ok ? "body_added_expected" : "body_added_unexpected", { ...base, leiHash, verifier: a.verifier });
+          done("alerted");
+        } else if (lg.eventName === "AuditorAdded") {
+          const auditorAidHash = lower(a.auditorAidHash as string);
+          const ok = cfg.expectedAuditors.includes(auditorAidHash);
+          alert(ok ? "info" : "warn", ok ? "auditor_added_expected" : "auditor_added_unexpected", { ...base, auditorAidHash, leiHash: a.leiHash });
+          done("alerted");
+        } else if (lg.eventName === "ReportSuperseded") {
+          alert("warn", "report_superseded", { ...base, oldReportKey: a.oldReportKey, newReportKey: a.newReportKey, credScopeKey: a.credScopeKey });
+          done("alerted");
+        } else if (lg.eventName === "ReportScopeTakenOver") {
+          alert("warn", "report_scope_taken_over", { ...base, takenFromReportKey: a.takenFromReportKey, newReportKey: a.newReportKey, reportScopeKey: a.reportScopeKey, issuerLeiHash: a.issuerLeiHash });
+          done("alerted");
         }
       } catch (err) {
         failures++;
-        alert("critical", "action_failed", { ...base, error: err instanceof Error ? err.message.split("\n")[0] : String(err) });
+        alert("critical", "action_failed", { ...base, error: errText(err) });
         if (retryFrom === undefined || lg.blockNumber! < retryFrom) retryFrom = lg.blockNumber!;
       }
     }
   }
-  state.lastBlock = String(retryFrom !== undefined ? retryFrom - 1n : head.number);
+  // Bodies still tainted and not yet suspended (chain superseded within the batch, or an earlier failure).
+  for (const lei of Object.keys(bodies)) await trySuspend(lei as Hex);
+
+  if (toBlock >= from) state.lastBlock = String(retryFrom !== undefined ? retryFrom - 1n : toBlock);
   state.updatedAt = new Date().toISOString();
   writeJson(statePathOf(cfg), state);
-  return { head: head.number, now, alerts, txs, failures };
+  return { head: head.number, toBlock, now, alerts, txs, failures };
 }
 
 function usage(msg: string): never {
@@ -461,6 +771,9 @@ async function main(): Promise<number> {
     bodies: cfg.bodies.length ? cfg.bodies : "all",
     expectedRotations: cfg.expectedRotations.length,
     expectedRevocations: cfg.expectedRevocations.length,
+    expectedWatchers: cfg.expectedWatchers.length,
+    expectedBodies: cfg.expectedBodies.length,
+    confirmations: cfg.confirmations,
     policy: cfg.policy,
     dryRun: cfg.dryRun,
     watcher: account?.address ?? null,

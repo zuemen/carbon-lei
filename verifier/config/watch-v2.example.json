@@ -1,17 +1,26 @@
 {
-  "_note": "Config for verifier/src/watch-v2.ts (V2 monitor, docs/OPERATE.md). V2 is NOT deployed: fill in the addresses of your own (e.g. local anvil) deployment. All LEIs here are fictional.",
+  "_note": "Config for verifier/src/watch-v2.ts (V2 monitor, docs/OPERATE.md). V2 is NOT deployed: fill in the addresses of your own (e.g. local anvil) deployment. All LEIs here are fictional. expectedWatchers / expectedBodies / expectedAuditors / expectedOwners / trustedLifters are the operator's out-of-band confirmations (lower-case addresses or hashes).",
   "rpc": "http://127.0.0.1:8545",
   "allowlist": "0x0000000000000000000000000000000000000000",
   "registry": "0x0000000000000000000000000000000000000000",
   "fromBlock": 0,
+  "confirmations": 12,
+  "logChunk": 10000,
   "bodies": [{ "lei": "ZZZZ00EUVERIFDEMO152" }],
   "expectedRotations": [],
   "expectedRevocations": [],
+  "expectedWatchers": [],
+  "expectedBodies": [],
+  "expectedAuditors": [],
+  "expectedOwners": [],
+  "trustedLifters": [],
   "policy": {
     "cancelUnexpectedRotations": true,
     "suspendOnUnexpectedRotation": true,
     "cancelUnexpectedRevocations": true,
-    "trustSignedRotations": true
+    "trustSignedRotations": true,
+    "cancelUnexpectedRoleGrants": true,
+    "resuspendOnForeignLift": true
   },
   "intervalSeconds": 15
 }

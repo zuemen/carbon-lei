@@ -12,6 +12,12 @@ import type { Hex } from "./credential.ts";
 export const allowlistV2Abi = parseAbi([
   "function ROTATION_DELAY() view returns (uint64)",
   "function WATCHER_ROLE() view returns (bytes32)",
+  "function DEFAULT_ADMIN_ROLE() view returns (bytes32)",
+  "function pendingRoleGrants(bytes32 role, address account) view returns (uint64)",
+  "function proposeRoleGrant(bytes32 role, address account)",
+  "function executeRoleGrant(bytes32 role, address account)",
+  "function cancelRoleGrant(bytes32 role, address account)",
+  "function liftSuspension(bytes32 leiHash)",
   "function hasRole(bytes32 role, address account) view returns (bool)",
   "function owner() view returns (address)",
   "function pendingRotations(bytes32 leiHash) view returns (address newAddr, uint64 readyAt)",
@@ -27,16 +33,30 @@ export const allowlistV2Abi = parseAbi([
   "event RotationCancelled(bytes32 indexed leiHash, address indexed newAddr, address indexed by)",
   "event VerifierAddressRotated(bytes32 indexed leiHash, address indexed oldAddr, address indexed newAddr, uint64 rotatedAt)",
   "event VerifierSuspended(bytes32 indexed leiHash, uint64 suspendedAt)",
+  "event SuspensionLifted(bytes32 indexed leiHash, uint64 liftedAt)",
+  "event VerifierAdded(bytes32 indexed leiHash, address indexed verifier, uint64 accreditedUntil, bytes32 accreditationSaidHash)",
+  "event AuditorAdded(bytes32 indexed auditorAidHash, bytes32 indexed leiHash, bytes32 ecrSaidHash)",
+  "event RoleGrantProposed(bytes32 indexed role, address indexed account, uint64 readyAt)",
+  "event RoleGrantCancelled(bytes32 indexed role, address indexed account, address indexed by)",
+  "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)",
+  "event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)",
+  "event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner)",
+  "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)",
   "error NoPendingRotation(bytes32 leiHash)",
   "error RotationNotReady(bytes32 leiHash, uint64 readyAt)",
   "error NotAllowedToCancel(address caller)",
   "error AlreadySuspended(bytes32 leiHash)",
   "error AccessControlUnauthorizedAccount(address account, bytes32 neededRole)",
+  "error ConsentSignerNotMature(bytes32 leiHash, address signer, uint64 matureAt)",
+  "error RoleGrantNeedsDelay(bytes32 role)",
+  "error NoPendingRoleGrant(bytes32 role, address account)",
+  "error NotSuspended(bytes32 leiHash)",
 ]);
 
 /** V2-only parts of `EmissionsClaimRegistryV2`. */
 export const registryV2Abi = parseAbi([
   "function REVOKE_HOLD() view returns (uint64)",
+  "function allowlist() view returns (address)",
   "function pendingRevocations(bytes32 reportKey) view returns (address requester, uint64 effectiveFrom, uint64 readyAt)",
   "function revocationEffectiveFrom(bytes32 reportKey) view returns (uint64)",
   "function revokeReport(bytes32 reportKey, uint64 effectiveFrom)",
@@ -45,6 +65,8 @@ export const registryV2Abi = parseAbi([
   "event RevocationQueued(bytes32 indexed reportKey, address indexed requester, uint64 effectiveFrom, uint64 readyAt)",
   "event RevocationCancelled(bytes32 indexed reportKey, address indexed by)",
   "event ReportRevoked(bytes32 indexed reportKey, address indexed verifier, uint64 revokedAt)",
+  "event ReportSuperseded(bytes32 indexed oldReportKey, bytes32 indexed newReportKey, bytes32 indexed credScopeKey, uint96 carriedClaimedKg, uint96 newVerifiedKg)",
+  "event ReportScopeTakenOver(bytes32 indexed takenFromReportKey, bytes32 indexed newReportKey, bytes32 indexed reportScopeKey, bytes32 issuerLeiHash)",
   "error NoPendingRevocation(bytes32 reportKey)",
   "error RevocationNotReady(bytes32 reportKey, uint64 readyAt)",
   "error NotActiveVerifier(address verifier)",
@@ -52,6 +74,7 @@ export const registryV2Abi = parseAbi([
   "error AlreadyRevoked(bytes32 key)",
   "error RevocationPending(bytes32 reportKey, uint64 readyAt)",
   "error NotAllowedToCancel(address caller)",
+  "error CallerNotMature(address caller, uint64 matureAt)",
 ]);
 
 export interface PendingRotation {
@@ -144,7 +167,11 @@ export async function v2Advisory(
   if (rev) {
     notes.push(
       `revocation by ${rev.requester} is queued (effective from ${rev.effectiveFrom}); ` +
-        (q.now >= rev.readyAt ? `executable now (ready since ${rev.readyAt})` : `executable at ${rev.readyAt}`),
+        (q.now >= rev.readyAt ? `executable now (ready since ${rev.readyAt})` : `executable at ${rev.readyAt}`) +
+        // L4 (docs/SECURITY.md §13.1): effectiveFrom was fixed when the revocation was queued.
+        (rev.effectiveFrom === 0n
+          ? "; every shipment of this report, including one claimed now, becomes invalid if it is executed"
+          : `; a shipment claimed at or after ${rev.effectiveFrom}, including one claimed now, becomes invalid if it is executed`),
     );
   }
   return {
