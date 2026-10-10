@@ -114,7 +114,7 @@ All companies, people and LEIs in this repository are fictional. All emissions v
 - **CN**: Combined Nomenclature, the EU goods classification; CN 7318 is screws, bolts and nuts.
 - **EIP-712**: the Ethereum standard for signing typed data; the verification body's wallet signs the credential with it, and verifier check 3 recovers the signer.
 - **EBSI**: European Blockchain Services Infrastructure, operated by the Europeum EDIC for participating EU Member States (the Commission stopped providing EBSI services from February 2026); its trusted-issuer model (Root TAO → TAO → Trusted Issuer) has the same shape as CarbonLEI's accreditation chain ([FAQ Q24](docs/FAQ.md)).
-- **EUDI Wallet / EAA**: the European Digital Identity Wallet and the electronic attestation of attributes under eIDAS 2, Regulation (EU) 2024/1183; the European Business Wallet (COM(2025) 838) is still a proposal ([FAQ Q24](docs/FAQ.md)).
+- **EUDI Wallet / EAA**: the European Digital Identity Wallet and the electronic attestation of attributes under eIDAS 2, Regulation (EU) 2024/1183; the European Business Wallet (COM(2025) 838) is still a proposal: the Council adopted its negotiating position on 9 June 2026 and Parliament's ITRE committee its report on 10 September 2026, and interinstitutional negotiations are open ([Legislative Train](https://www.europarl.europa.eu/legislative-train/theme-a-new-plan-for-europe-s-sustainable-prosperity-and-competitiveness/file-european-business-wallet), updated 20 September 2026; [FAQ Q24](docs/FAQ.md)).
 - **Watcher (ours)**: the process that mirrors KERI revocations on-chain with the watcher key; not a KERI watcher, which observes key event logs to detect duplicity.
 
 </details>

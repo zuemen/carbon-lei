@@ -76,7 +76,7 @@ Why not a signed database: no single verification body's or importer's database 
 | `demo/` | React 19, Vite 8, GitHub Pages | Verification body, Supplier, Buyer, Try to break it, Trust chain and On-chain proof tabs. |
 | `fixtures/` | JSON, CESR | Fictional companies and LEIs (`demo.json`), the vLEI identifiers (`vlei.json`), exported vLEI and KEL evidence (`evidence/`), the demo credentials and the recorded Sepolia transactions (`sepolia-tx.json`). |
 
-Pinned versions: KERIA `weboftrust/keria:0.4.0`, witnesses `weboftrust/keri:1.2.13` and schema server `gleif/vlei:1.0.3` in `verifier/docker-compose.yaml`; `signify-ts` 0.4.0 in `verifier/package.json`; Node.js 22.20.0 in `.nvmrc`.
+Pinned versions: KERIA `weboftrust/keria:0.4.0`, witnesses `weboftrust/keri:1.2.13` and schema server `gleif/vlei:1.0.3` in `verifier/docker-compose.yaml`; `signify-ts` 0.4.0 in `verifier/package.json`; Node.js 22.20.0 in `.nvmrc`. Newer KERI releases exist (keri 1.3.6, KERIA 0.4.1, checked 2026-10-10) and were not tested; specification and version status: [VLEI_SETUP §11](VLEI_SETUP.md#11-specifications-and-versions-this-setup-relates-to).
 
 ---
 

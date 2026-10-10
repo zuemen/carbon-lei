@@ -249,3 +249,31 @@ The hosted page serves a copy in `demo/public/evidence/`, which `scripts/build-d
 - **`npm run demo:local` rewrites `demo/public/demo-data.json`** with local data. `npm run demo:data:sepolia` rebuilds the Sepolia version.
 - **`anvil did not start (is Foundry on PATH?)`**, or the port answers with another chain ID: `demo:local` only reuses an anvil chain (chain ID 31337) on its port.
 - **A local credential names another auditor and is already registered on the local chain.** The scenario stops with a message to stop `anvil` and delete `fixtures/local-*.json` to start over.
+
+---
+
+## 11. Specifications and versions this setup relates to
+
+Checked on 2026-10-10. The stack above is pinned and was not re-run against newer releases.
+
+| Item | Status | Relevance here | Source |
+|---|---|---|---|
+| vLEI standard | ISO 17442-3:2024, *Verifiable LEIs (vLEIs)*, published October 2024 | The credential format of the LE vLEI and ECR used in the demo chain | [1] |
+| KERI, ACDC and CESR specifications | Version 1.1 of all three released by the Trust over IP Foundation on 21 January 2026 | The protocols under KERIA, signify-ts and the checks 6 and 7 in `sdk/kel.ts` and `sdk/vlei.ts` | [2] |
+| did:webs | Listed by Trust over IP as "Public Review" (15 December 2023), not a ratified specification | Not used | [2] |
+| GLEIF vLEI Ecosystem Governance Framework | Version 4.0; Primary Document v1.2 and the Engagement Context Role Credential Framework v1.5, both dated 25 March 2026. The ECR framework lets a legal entity issue and revoke ECRs itself, or a QVI do it as a service | The demo's verification body issues the ECR to its lead auditor directly, with an `le` edge to its own LE vLEI. The CBAM accreditation credential is our own schema, not part of the framework ([ADOPTION](ADOPTION.md)) | [3] |
+| Qualified vLEI Issuers | GLEIF's list showed 8 vLEI Issuers on 2026-10-10 | A pilot body would obtain its LE vLEI from one of them | [4] |
+| Post-quantum signatures in CESR | The CESR specification's code table defines no post-quantum signature codes; it says codes for post-quantum operations will be added once NIST approves them (NIST published FIPS 204 in 2024). keripy `main` (version string `2.1.0-dev1`, last commit 2026-10-08) has no such codes in `coring.py` | All KERI signatures in the demo are Ed25519; see [SECURITY §10](SECURITY.md#10-post-quantum-note) | [5], [6] |
+| Newer releases than the pinned ones | keri 1.3.6 on PyPI (the witnesses run 1.2.13); KERIA image tag 0.4.1 (we run 0.4.0); signify-ts 0.4.0 is still the latest npm release | Upgrading may change agent behaviour; re-run §4 to §9 and compare `fixtures/` before relying on a new version | [7], [8], [9] |
+
+Sources:
+
+1. ISO TC 68, "ISO 17442-3 Verifiable LEIs (vLEIs) Has Been Published", 4 October 2024. https://committee.iso.org/sites/tc68/home/news/content-left-area/news-and-updates/iso-17442-3-verifiable-leis-vlei.html
+2. Trust over IP Foundation, Deliverables (KERI, ACDC and CESR v1.1, 21 January 2026; DID:WEBS Method specification, Public Review). https://www.trustoverip.org/our-work/deliverables/
+3. GLEIF, vLEI Ecosystem Governance Framework (change history and documents). https://www.gleif.org/en/organizational-identity/become-a-vlei-issuer-qvi/vlei-ecosystem-governance-framework
+4. GLEIF, Get a vLEI (list of vLEI Issuers). https://www.gleif.org/en/organizational-identity/get-an-lei-vlei/get-a-vlei
+5. Trust over IP, CESR specification (compact code table section). https://trustoverip.github.io/kswg-cesr-specification/
+6. WebOfTrust/keripy, `src/keri/core/coring.py` and `src/keri/__init__.py` on `main`. https://github.com/WebOfTrust/keripy
+7. PyPI, keri. https://pypi.org/project/keri/
+8. Docker Hub, weboftrust/keria tags. https://hub.docker.com/r/weboftrust/keria/tags
+9. npm registry, signify-ts. https://registry.npmjs.org/signify-ts
