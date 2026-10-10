@@ -4,11 +4,11 @@ A rewriting-logic model of the CarbonLEI protocol, checked with Maude's breadth-
 
 | File | Content |
 |---|---|
-| `carbonlei.maude` | The model (module `CARBONLEI`), the properties as state predicates, the instances, the mutants, and the LTL propositions (module `CARBONLEI-LTL`) |
-| `checks.maude` | 50 commands with their expected outcome, under 2 minutes |
+| `carbonlei.maude` | The protocol model (module `CARBONLEI`), the properties as state predicates, the instances, the mutants, and the LTL propositions (module `CARBONLEI-LTL`); and a separate model of CR1, owner-key compromise against the V1 and V2 rotation and revocation rules (module `CARBONLEI-CR1`, [below](#cr1-model-owner-key-compromise-v1-and-v2)) |
+| `checks.maude` | 61 commands with their expected outcome (50 for the protocol model, 11 for the CR1 model), under 2 minutes |
 | `checks-full.maude` | One larger instance (122,823 states, about 4.5 minutes, about 310 MB) |
 | `run.sh` | Runs each command in its own Maude process under a memory watchdog and compares each result with its expectation |
-| [`docs/data/maude-2026-10-09b.txt`](../../docs/data/maude-2026-10-09b.txt) | Full output of both files for the current model ([`maude-2026-10-09.txt`](../../docs/data/maude-2026-10-09.txt): the first version, nine properties and 10 mutant runs) |
+| [`docs/data/maude-2026-10-10-v2.txt`](../../docs/data/maude-2026-10-10-v2.txt) | Full output of both files for the current model, with the CR1 model ([`maude-2026-10-09b.txt`](../../docs/data/maude-2026-10-09b.txt): before the CR1 model, eleven properties and 26 mutant runs; [`maude-2026-10-09.txt`](../../docs/data/maude-2026-10-09.txt): the first version, nine properties and 10 mutant runs) |
 
 ## Running it
 
@@ -20,7 +20,7 @@ MAUDE=/path/to/maude npm run formal:maude:full         # checks-full.maude
 MAUDE=/path/to/maude npm run formal:maude -- revInst   # only the lines containing "revInst"
 ```
 
-CI (job `maude` in `.github/workflows/ci.yml`) downloads the Linux release, checks its SHA-256 and runs `checks.maude` on every push (the 50 commands take about 105 s there, with the same state counts as on macOS; 102 s on the development machine).
+CI (job `maude` in `.github/workflows/ci.yml`) downloads the Linux release, checks its SHA-256 and runs `checks.maude` on every push (the 50 commands of sections A–F took about 105 s there, with the same state counts as on macOS, before section G was added; section G's 11 commands take under 20 ms of CPU each. All 61 take 109 s on the development machine).
 
 `run.sh` exits non-zero if any result differs from the expectation written on its line, or if the watchdog stops Maude: it kills Maude above 3 GB of resident memory (`MAUDE_MAX_RSS_MB`), and on macOS also when the system-wide free memory reported by `memory_pressure` is below 15 % (`MAUDE_MIN_FREE_PCT`) while Maude holds more than 256 MB (`MAUDE_FREE_CHECK_MIN_RSS_MB`). Only one Maude process runs at a time.
 
@@ -71,7 +71,7 @@ Every guard of `registerReport` and `claimShipment` (and `revokeReport`, which t
 |---|---|---|---|
 | `NotActiveVerifier`: body suspended and not lifted | `activeNow` | `regInactiveBad`, `authBad` | `noSuspGuard` |
 | `NotActiveVerifier`: accreditation expired | `activeNow` | `regInactiveBad` (the verifier's check 7 also rejects it, so `authBad` does not fail) | `noExpiryGuard` |
-| `NotActiveVerifier`: address not bound or rotated away | not modelled (address rotation) | — | — |
+| `NotActiveVerifier`: address not bound or rotated away | not in the protocol model; in the CR1 model for `revokeReport` and `executeRevocation` (`activeAddr`) | `cr1Bad` (CR1 model, V2) | `noLapse` |
 | `AuditorNotAuthorized`: auditor revoked on the allowlist | `audAuthNow` | `regAfterRevBad` (check 7 also rejects it, so `authBad` does not fail) | `noAuthGuard` |
 | `AuditorNotAuthorized`: auditor not listed under the body | `aud(A, B)` | — (every credential names its own body's auditor, so the instances never exercise it) | — |
 | `ReportExists` | `not isReg(R, S)` | — (each credential has one path to registration in the instances) | — |
@@ -86,7 +86,8 @@ Every guard of `registerReport` and `claimShipment` (and `revokeReport`, which t
 | `ReportInvalid` in `claimShipment` (superseded, revoked, expired, scope moved) | only the slot's latest credential is claimable; revocation and expiry not modelled | — | — |
 | `BatchAlreadyClaimed` | a batch is consumed by its claim | — (claiming one batch twice only adds to `claimedKg`) | — |
 | `NotSupplier`, `ZeroQuantity` (claim) | not modelled (one supplier, batches of 1 t) | — | — |
-| `revokeReport`: `NotActiveVerifier`, `NotReportIssuer` (only the issuing body, while active, with no exception for an inactive issuer) | not modelled (report revocation) | — | — |
+| `revokeReport`: `NotActiveVerifier`, `NotReportIssuer` (only the issuing body, while active, with no exception for an inactive issuer) | not in the protocol model; in the CR1 model only the attacker revokes, through the body's current address | `cr1Bad` (CR1 model) | — |
+| V2 only: `REVOKE_HOLD` in `revokeReport`; `ROTATION_DELAY` in `executeRotation` | CR1 model (`revoke-queue`, `exec-rotation`) | `cr1Bad` | `noHold` (the hold); the rotation delay has no mutant |
 
 The verifier's check 7 tests of the allowlist (`auditorRevokedAt < registeredAt`) and of `accreditedUntil` have no mutant: in the model the contract guards above already exclude those registrations, so removing either check alone changes no verdict.
 
@@ -96,7 +97,7 @@ The verifier's check 7 tests of the allowlist (`auditorRevokedAt < registeredAt`
 - **Time is discrete.** Events in the same tick are interleaved in every order, which models the order of transactions within one block (CR6). The window and the watcher bound are equal (`delta`). The window is a closed interval, `[registeredAt, registeredAt + delta]`, and the argument behind `keriBad` (sync ≤ KERI time + δ ≤ `registeredAt` + δ) does not depend on the size of a tick. The boundary in seconds (24 h against 24 h + 1 s) is not represented; the SDK tests C02 and V25 in `sdk/test/tamper-matrix.test.ts` cover it.
 - **Identifiers are abstract.** Two bodies, two auditors, two credentials, three anonymous batches of 1 t (symmetric, so not named), two importers; `verifiedKg` is 1 or 2 t. Salts, commitments, EORIs and batch keys are not modelled; check 5's binding is "same credential, importer and quantity".
 - **One ledger slot per product.** The two-level key is one label; the report-scope takeover (branch (c)), report-ID retirement and frozen slots are not modelled.
-- **Not modelled at all:** report revocation and the revoking-address and rotation rules of CR1 and CR9; address rotation; credential expiry (`validUntil`); the revision-chain rules of CR3; more than one suspension per body (CR5); KEL rotation, forks and witnesses (T11, T12); RPC behaviour (T20, T21); privacy (P5); checks 1–3, 6 and 8.
+- **Not modelled at all** in the protocol model: report revocation and the revoking-address and rotation rules of CR1 and CR9; address rotation (the separate [CR1 model](#cr1-model-owner-key-compromise-v1-and-v2) covers rotation and revocation, but not the verifier's CR1 and CR9 rules); credential expiry (`validUntil`); the revision-chain rules of CR3; more than one suspension per body (CR5); KEL rotation, forks and witnesses (T11, T12); RPC behaviour (T20, T21); privacy (P5); checks 1–3, 6 and 8.
 
 ## Instances
 
@@ -130,7 +131,7 @@ Each property is a predicate on states that is true in a bad state; "holds" mean
 | `supersededBad` | A superseded credential presented alone is INVALID | T4 (a) |
 | `keriBad` | Under A-Watch: a credential registered after its auditor's ECR was revoked in KERI is never VALID once the watcher's deadline (KERI time + `delta`) has passed | A-Watch, T2, T18 |
 
-`safetyBad` is the disjunction of all eleven. `p1Bad`, `regAfterRevBad`, `regInactiveBad` and `foreignReviseBad` are on-chain properties close to one guard each; the others combine the contract and the verifier.
+`safetyBad` is the disjunction of all eleven. A twelfth property, `cr1Bad`, is checked on the separate [CR1 model](#cr1-model-owner-key-compromise-v1-and-v2). `p1Bad`, `regAfterRevBad`, `regInactiveBad` and `foreignReviseBad` are on-chain properties close to one guard each; the others combine the contract and the verifier.
 
 **LTL** (module `CARBONLEI-LTL`, propositions written with the same `s…` helpers):
 
@@ -144,7 +145,7 @@ Each property is a predicate on states that is true in a bad state; "holds" mean
 
 ## Mutants
 
-15 mutants, each removing or weakening one guard of the contract or one check of the verifier, in 26 runs (`checks.maude`, section E). Each run searches for a state that breaks the named property; each finds one. We wrote them, so they show that the properties can fail, not that the model covers every guard: the [guard table](#contract-guards-and-the-properties-that-cover-them) lists what no property covers. The three marked "red team" come from our own red-team review of the first version (an AI reviewer we ran, not an outside party), where two of them survived and the third was caught in one instance only.
+15 mutants of the protocol model, each removing or weakening one guard of the contract or one check of the verifier, in 26 runs (`checks.maude`, section E), and 2 mutants of the V2 contracts in the CR1 model, in 2 runs (section G): 17 mutants in 28 runs. Each run searches for a state that breaks the named property; each finds one. We wrote them, so they show that the properties can fail, not that the model covers every guard: the [guard table](#contract-guards-and-the-properties-that-cover-them) lists what no property covers. The three marked "red team" come from our own red-team review of the first version (an AI reviewer we ran, not an outside party), where two of them survived and the third was caught in one instance only.
 
 | # | Mutant | What it removes or changes | Caught by (instance: property, states) |
 |---|---|---|---|
@@ -163,12 +164,43 @@ Each property is a predicate on states that is true in a bad state; "holds" mean
 | 13 | `winRightOpen` (red team) | 4l window opened on the right (`e < registeredAt + delta` instead of `≤`) | `keriInst(up, 4)`: `windowBad`, 145; `keriBad`, 426. `suspInst(3)`: `windowBad`, 68; `safetyBad`, 68. `revInst(4)`: `windowBad`, 28 |
 | 14 | `noEvidenceRev` | the anchored revocation in the evidence (check 7) | `keriInst(up, 4)`: `evidenceBad`, 39 |
 | 15 | `noSupersede` | supersession (4d) | `revInst(4)`: `supersededBad`, 32 |
+| 16 | `noHold` (V2, CR1 model) | `REVOKE_HOLD`: a revocation by a freshly bound address is applied at once | `cr1Inst(v2, bNone, wOnRotation, false, 7)`: `cr1Bad`, 65 |
+| 17 | `noLapse` (V2, CR1 model) | `executeRevocation` does not check that the requester is still the body's active address | `cr1Inst(v2, bNone, wOnRotation, false, 7)`: `cr1Bad`, 343 |
 
 `noCap` of the first version removed two guards at once; it is now `noClaimCap` and `noOverClaimed`.
 
+## CR1 model: owner-key compromise, V1 and V2
+
+Module `CARBONLEI-CR1` in `carbonlei.maude`, checked in section G of `checks.maude`. It is a separate, smaller model: the protocol model and its 50 commands are unchanged, with the same state counts. It covers what CR1 (SECURITY §4.2, T10) and the V2 mitigation (SECURITY §13.1, `contracts/src/v2/`) are about, and nothing else.
+
+- **State.** One body b1 with one report r1 registered honestly before tick 0; the body's current address and the tick it was bound (`institutions[b].currentAddress`, `leiOfAddress[addr].boundAt`); suspension; pending rotations and queued revocations; revocations with the revoking address.
+- **Attacker.** Holds the allowlist owner key and one fresh EVM key `tk`. It does not hold the body's key `hk` and cannot forge the body's EIP-712 consent (cryptography is perfect), so the consent path `executeRotationSigned` is closed to it and is not modelled. V1: `rotateVerifierAddress` to `tk` at once. V2: `proposeRotation` (again after each cancellation), `executeRotation` once `readyAt` has passed. Then `revokeReport` through `tk` while it is the body's active address: in V1 at once; in V2 at once only if `tk` was bound at least `REVOKE_HOLD` ago, otherwise queued, and `executeRevocation` after `REVOKE_HOLD` only while the requester is still the body's active address (not suspended, not rotated away). With `dropOK` the owner key can also revoke the WATCHER role.
+- **Defenders.** The body's current address or the WATCHER cancels a pending rotation; the WATCHER cancels a queued revocation and suspends the body. These actions are enabled at every tick.
+- **Time.** One tick stands for 24 hours; `ROTATION_DELAY` and `REVOKE_HOLD` are 72 hours, 3 ticks. Ticks 0 to 7. Every action can happen at any tick, in any order within a tick.
+- **Monitoring, an explicit assumption.** Stated as a constraint on time, like A-Watch in the protocol model: the clock may not reach a deadline while the obligation is unmet. The actions that meet the obligation are enabled whenever it is pending, so the constraint cannot stop time by itself (the two non-vacuity searches below reach the last tick). `bWatch`: the body or the watcher cancels a pending rotation before `readyAt`. `wOnRotation`: while the watcher holds its role, it suspends the body within `REVOKE_HOLD` of a rotation (`VerifierAddressRotated`). `wOnQueued`: the same, but only within `REVOKE_HOLD` of the first `RevocationQueued`. `bNone`, `wNone`: no obligation; the body and the watcher may still act at any time, or never.
+- **Not modelled here.** The honest owner, registration, claims, the verifier and its CR1 and CR9 rules, `effectiveFrom`, more than one report or body, a lifted suspension, the timelock owner, accreditation expiry.
+
+**Property** `cr1Bad`, written with its own `s…` helpers: a report is revoked by an address its issuing body did not control. `cr1BadBefore(k)`: the same, at a tick before `k`.
+
+| Command (`cr1Inst(contract, body monitoring, watcher monitoring, dropOK, last tick)`) | Expected | Result | States | What it shows |
+|---|---|---|---|---|
+| `cr1Bad`, `cr1Inst(v1, bWatch, wOnRotation, false, 7)` | found | found | 5 | V1: rotation and revocation in one block (`v1-rotate`, `revoke-now` at tick 0), so no monitoring helps |
+| `cr1Bad`, `cr1Inst(v2, bWatch, wNone, true, 7)` | none | no solution | 232 | V2: if the body or the watcher cancels each proposal within `ROTATION_DELAY`, no report is revoked by the attacker, even though the owner key can drop the watcher's role |
+| `cr1Bad`, `cr1Inst(v2, bNone, wOnRotation, false, 7)` | none | no solution | 512 | V2: the body misses the rotation, and the watcher, which keeps its role, suspends the body within `REVOKE_HOLD` of the rotation: no report is revoked by the attacker |
+| `cr1Bad`, `cr1Inst(v2, bNone, wNone, true, 7)` | found | found | 365 | V2 without monitoring: the attack completes. Path: `propose` at tick 0, three ticks, `exec-rotation` at tick 3, three ticks, `revoke-now` at tick 6 |
+| `cr1BadBefore(6)`, same instance | none | no solution | 1,272 | ... but not before tick 6, i.e. 144 hours after the first event |
+| `cr1Bad`, `cr1Inst(v2, bNone, wOnQueued, false, 7)` | found | found | 211 | A watcher that reacts only to `RevocationQueued` does not stop it: the attacker never queues; it waits `REVOKE_HOLD` after the rotation, when its address is no longer freshly bound, and revokes at once (same path as above) |
+| `cr1Bad`, `cr1Inst(v2, bNone, wOnRotation, true, 7)` | found | found | 473 | If the owner key first drops the watcher's role (`drop-watcher` at tick 0), only the body's own cancellation is left |
+| Non-vacuity: `cancelWitness`, `cr1Inst(v2, bWatch, wNone, true, 7)` | found | found | 191 | A proposal was cancelled, nothing rotated, and time reached tick 7 |
+| Non-vacuity: `suspendWitness`, `cr1Inst(v2, bNone, wOnRotation, false, 7)` | found | found | 343 | The rotation went through, the attacker's revocation is queued, the body is suspended, and time reached tick 7 |
+| Mutant `noHold`, `cr1Bad`, `cr1Inst(v2, bNone, wOnRotation, false, 7)` | found | found | 65 | Without the hold, the attacker revokes in the block of the rotation (tick 3) |
+| Mutant `noLapse`, `cr1Bad`, same instance | found | found | 343 | Without the requester check, the queued revocation executes at tick 6 although the watcher suspended the body at tick 3 |
+
+Each command takes under 20 ms of CPU. These results match §13.1: V1 falls in one block; V2 holds within the bound under a monitoring assumption; without monitoring the attack completes after both delays, 144 hours after the first event. They also make one point of §13.1 more precise: when the body misses the rotation, cancelling the attacker's queued revocations is not enough, and neither is reacting only to `RevocationQueued`, because an address bound for `REVOKE_HOLD` revokes at once. The watcher has to suspend the body (as `test_CR1_V2_rotationMissed_watcherCancelsHeldRevocations` does after cancelling) within `REVOKE_HOLD` of the rotation. This is a bounded check of an abstract model with perfect cryptography, not a proof about the V2 code; the V2 code is covered by its Foundry and Halmos tests (SECURITY §13.1).
+
 ## Results (10 October 2026 revision)
 
-Maude 3.5.1 on the development machine (Apple M4, 16 GB). Times are Maude's CPU time; peak memory is sampled by `run.sh` every 0.5 s. Full output: [`docs/data/maude-2026-10-09b.txt`](../../docs/data/maude-2026-10-09b.txt). The state counts are the same as in the first version: the new ghosts are written once per registration and add no states.
+Maude 3.5.1 on the development machine (Apple M4, 16 GB). Times are Maude's CPU time; peak memory is sampled by `run.sh` every 0.5 s. Full output: [`docs/data/maude-2026-10-09b.txt`](../../docs/data/maude-2026-10-09b.txt) for the times below. The state counts are the same as in the first version: the new ghosts are written once per registration and add no states. The run of 10 October 2026 with the CR1 model ([`docs/data/maude-2026-10-10-v2.txt`](../../docs/data/maude-2026-10-10-v2.txt)) gives the same state counts and outcomes for every command below, with times within about 5 % (`fullInst(up, 1)`: 245.9 s, 309 MB); the CR1 results are in the [section above](#cr1-model-owner-key-compromise-v1-and-v2).
 
 | Check | Expected | Result | States | Time | Memory |
 |---|---|---|---|---|---|
@@ -185,7 +217,7 @@ Maude 3.5.1 on the development machine (Apple M4, 16 GB). Times are Maude's CPU 
 | LTL: eventual sync (`up`, and `late` as a sanity check); the sanity formulas above | true | true | — | 0.4–4.0 s each | ≤ 39 MB |
 | LTL: eventual sync with the watcher `down` | counterexample | counterexample | — | < 1 ms | — |
 
-All 51 results (50 in `checks.maude`, 1 in `checks-full.maude`) match their expectation. `checks.maude` takes 102 s wall time in total.
+All 51 results (50 in `checks.maude`, 1 in `checks-full.maude`) match their expectation. `checks.maude` took 102 s wall time in total; with the 11 commands of the CR1 model (section G), all 62 results (61 in `checks.maude`) match their expectation, and `checks.maude` takes 109 s.
 
 ### Sanity counterexample: the watcher stopped
 
@@ -208,4 +240,4 @@ The model found no violation that is not already described in SECURITY §4 and �
 
 ## Not covered
 
-Everything listed under [Abstractions](#abstractions) as not modelled, and in particular: the code itself (the model is a hand-written abstraction, so a bug in `sdk/verify.ts` or the contracts that the abstraction does not mirror is not found; the Halmos checks of SECURITY §9.2 and the tests cover the code); instances larger than the bounds above (more bodies, credentials, batches, importers or ticks); `delta` other than 1 and 2, and a window different from the watcher bound; any adversary who holds a key other than the impostor body's (stolen body key, auditor key, watcher key or rotated owner key, T10, T11, T13, CR1); every property of exported vLEI evidence beyond "ECR revoked at time k"; an importer that gives no EORI (the model always runs check 5, so `replayBad` assumes every importer gives its EORI; the code then skips the binding and can return VALID with the warning `SHIPMENT_NOT_BOUND`); report revocation, so the `revokeReport` rule that only the issuing body, while active, may revoke its report; the report layer (`PeriodAlreadyCovered`, `ReportIdRetired`, its own `NotReportIssuer`) and the takeover of branch (c); and the guards marked "—" in the [guard table](#contract-guards-and-the-properties-that-cover-them). The LTL formula for eventual sync rules out only a watcher that never syncs: the bound `delta` is an assumption built into the `tick` rule (A-Watch), not a checked result. The 15 mutants were written by us (three of them from our own red-team review); they show that each property can fail, not that every guard is covered.
+Everything listed under [Abstractions](#abstractions) as not modelled, and in particular: the code itself (the model is a hand-written abstraction, so a bug in `sdk/verify.ts` or the contracts that the abstraction does not mirror is not found; the Halmos checks of SECURITY §9.2 and the tests cover the code); instances larger than the bounds above (more bodies, credentials, batches, importers or ticks); `delta` other than 1 and 2, and a window different from the watcher bound; in the protocol model, any adversary who holds a key other than the impostor body's (stolen body key, auditor key, watcher key or rotated owner key, T10, T11, T13; the CR1 model covers a stolen owner key that rotates and revokes, but not a stolen long-held body key, CR1a); every property of exported vLEI evidence beyond "ECR revoked at time k"; an importer that gives no EORI (the model always runs check 5, so `replayBad` assumes every importer gives its EORI; the code then skips the binding and can return VALID with the warning `SHIPMENT_NOT_BOUND`); report revocation in the protocol model (the CR1 model has it only for the attacker); the report layer (`PeriodAlreadyCovered`, `ReportIdRetired`, its own `NotReportIssuer`) and the takeover of branch (c); and the guards marked "—" in the [guard table](#contract-guards-and-the-properties-that-cover-them). The LTL formula for eventual sync rules out only a watcher that never syncs: the bound `delta` is an assumption built into the `tick` rule (A-Watch), not a checked result. The 17 mutants were written by us (three of them from our own red-team review); they show that each property can fail, not that every guard is covered.
