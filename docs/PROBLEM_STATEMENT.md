@@ -16,9 +16,9 @@ From 2026, an EU importer of steel screws pays for their embedded emissions, dec
 
 ## Why now
 
-- **Verifiers are only now being accredited.** On 29 September 2026, 24 EU/EEA accreditation bodies had agreed to offer CBAM accreditation and 5 were accepting applications from verifiers outside the EU; on 7 October 2026 the list of accredited verifiers was not yet published [5]. Reports for 2026 imports are needed for the first declaration, due 30 September 2027 [1].
+- **Verifiers are only now being accredited.** On 7 October 2026, 24 EU/EEA accreditation bodies had agreed to offer CBAM accreditation and 7 were accepting applications from verifiers outside the EU; on 10 October 2026 the Commission's list of accredited verifiers was not yet published, though two bodies had announced their own accreditation [5]. Reports for 2026 imports are needed for the first declaration, due 30 September 2027 [1].
 - **The corridor is large.** Taiwan supplied 20.3% of extra-EU imports of CN 7318 by weight in 2025 [6].
-- **The scope is moving.** After the Council (12 June 2026) and Parliament (15 September 2026, per cbamguide.com) positions, the downstream extension heads into trilogue negotiations between Parliament and Council; not yet agreed. It would apply from 1 January 2028 at the earliest [7]; CN 7318 is already in scope.
+- **The scope is moving.** After the Council (12 June 2026) and Parliament (15 September 2026) positions, the downstream extension heads into trilogue negotiations between Parliament and Council; not yet agreed. It would apply from 1 January 2028 at the earliest [7]; CN 7318 is already in scope.
 
 ## What CarbonLEI does, and what it does not
 
@@ -51,9 +51,9 @@ Accessed 2026-10-07 unless stated.
 2. Commission Implementing Regulation (EU) 2025/2621, Annex I (Taiwan), as replaced by Implementing Regulation (EU) 2026/1740. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202601740
 3. Commission Implementing Regulation (EU) 2025/2546, Annex. https://eur-lex.europa.eu/eli/reg_impl/2025/2546/oj
 4. Commission Delegated Regulation (EU) 2025/2551, Annex II, point 2.17.3. https://eur-lex.europa.eu/eli/reg_del/2025/2551/oj
-5. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 29 September 2026. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en
+5. European Commission, "CBAM verification" page and "State-of-play CBAM accreditation", 7 October 2026, accessed 2026-10-10. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en ; announcements: https://emicert.com/cbam-accreditation-announcement/ ; https://group.bureauveritas.com/newsroom/bureau-veritas-receives-accreditation-cbam-verification-services
 6. Eurostat Comext DS-045409, CN 7318, 2025; share computed by the team. https://ec.europa.eu/eurostat/api/comext/dissemination/statistics/1.0/data/DS-045409?format=JSON&freq=A&reporter=EU&partner=TW&product=7318&flow=1&time=2025
-7. COM(2025) 989. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A52025PC0989 ; EPRS, 7 September 2026. https://eprs.europarl.europa.eu/contents/publications/EPRS/2026/09/EPRS_ATA(2026)791461.html ; secondary: https://cbamguide.com/news/2026-09-15-ep-plenary-adopts-cbam-downstream-mandate-464-50/
+7. COM(2025) 989. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A52025PC0989 ; EPRS, 7 September 2026. https://eprs.europarl.europa.eu/contents/publications/EPRS/2026/09/EPRS_ATA(2026)791461.html ; European Parliament press release, 15 September 2026: https://www.europarl.europa.eu/news/en/press-room/20260911IPR47450/strengthening-the-eu-carbon-border-adjustment-mechanism-and-closing-loopholes
 8. Regulation (EU) 2023/956, as amended, Art 19. http://data.europa.eu/eli/reg/2023/956/oj
 9. European Commission, "CBAM Registry" page, section "Accredited verifiers", step 2, accessed 2026-09-24. https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-registry_en
 10. Commission Implementing Regulation (EU) 2025/2547, recital 17. http://data.europa.eu/eli/reg_impl/2025/2547/oj
