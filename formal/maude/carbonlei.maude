@@ -623,3 +623,231 @@ mod CARBONLEI-LTL is
   eq { S } |= contestedP(R) = verdictCred(R, noRev, S) == CONTESTED .
   eq { S } |= safeP = not safetyBad(S) .
 endm
+
+*** ================================================================================================
+*** CR1: owner-key compromise, address rotation and report revocation (SECURITY §4.2 CR1, T10, §13.1)
+***
+*** A separate model, so the modules above and the commands that use them are unchanged. It keeps
+*** only what CR1 is about: one body b1 with one honestly registered report r1, the body's address
+*** and when it was bound, report revocation, and the rotation rules of the deployed contracts (V1:
+*** rotateVerifierAddress takes effect at once) or of contracts/src/v2 (V2: proposeRotation, then
+*** executeRotation after ROTATION_DELAY; revokeReport by an address bound less than REVOKE_HOLD ago
+*** is queued, executeRevocation after REVOKE_HOLD only while the requester is still the body's
+*** active address; cancelRotation by the body's current address or the WATCHER; cancelRevocation
+*** by the WATCHER; suspendVerifier by the WATCHER).
+***
+*** The attacker holds the allowlist owner key and one fresh EVM key tk, never bound before. It does
+*** not hold the body's key hk and cannot forge the body's EIP-712 consent, so the consent path
+*** executeRotationSigned is closed to it and is not modelled. The honest owner, registration,
+*** claims and the verifier are left out. One tick stands for 24 hours; both delays are 72 hours, 3
+*** ticks. Every action can happen at any tick, in any order within a tick.
+***
+*** Monitoring is an assumption, stated as a constraint on time like A-Watch above: the clock may not
+*** reach a deadline while the obligation is unmet. The actions that meet it (cancel, suspend) are
+*** enabled whenever the obligation is pending, so the constraint never stops time by itself.
+***   bmode(bWatch):    the body (or the watcher) cancels a pending rotation before readyAt.
+***   wmon(wOnRotation): while the watcher holds its role, it suspends the body within REVOKE_HOLD
+***                     of a rotation (VerifierAddressRotated).
+***   wmon(wOnQueued):  the same, but only within REVOKE_HOLD of the first RevocationQueued.
+***   bNone, wNone:     no obligation; the body and the watcher may still act at any time, or never.
+*** With dropOK the owner key may also revoke the watcher's role (role changes are not delayed in
+*** the contract unless the owner is a timelock); without it, it may not.
+
+mod CARBONLEI-CR1 is
+  protecting CARBONLEI-DATA .
+  sorts Addr Holder Ver BMode WMon CrMutant CrFact CrConf CrSys .
+  subsort CrFact < CrConf .
+  *** hk: the body's own key, bound at tick 0; tk: the attacker's fresh key
+  ops hk tk : -> Addr [ctor] .
+  ops bodyKey thiefKey : -> Holder [ctor] .
+  ops v1 v2 : -> Ver [ctor] .
+  ops bWatch bNone : -> BMode [ctor] .
+  ops wOnRotation wOnQueued wNone : -> WMon [ctor] .
+  *** V2 mutants: noHold applies a revocation by a freshly bound address at once (REVOKE_HOLD
+  *** removed); noLapse executes a queued revocation without checking that the requester is still
+  *** the body's active address
+  ops noHold noLapse : -> CrMutant [ctor] .
+  op empty : -> CrConf [ctor] .
+  op __ : CrConf CrConf -> CrConf [ctor assoc comm id: empty] .
+  op {_} : CrConf -> CrSys [ctor] .
+
+  op clock : Nat -> CrFact [ctor] .
+  op tmax : Nat -> CrFact [ctor] .
+  op ver : Ver -> CrFact [ctor] .
+  op bmode : BMode -> CrFact [ctor] .
+  op wmon : WMon -> CrFact [ctor] .
+  op mut : CrMutant -> CrFact [ctor] .
+  *** the owner key may revoke the watcher's role
+  op dropOK : -> CrFact [ctor] .
+  *** the WATCHER role is held by the watcher
+  op watcher : -> CrFact [ctor] .
+  *** who holds an EVM key (specification side only; the rules use attackerKey)
+  op key : Addr Holder -> CrFact [ctor] .
+  *** an address the attacker can sign with
+  op attackerKey : Addr -> CrFact [ctor] .
+  *** an address never bound to any body (the attacker's key, before the rotation)
+  op fresh : Addr -> CrFact [ctor] .
+  *** institutions[b].currentAddress and leiOfAddress[addr].boundAt
+  op cur : Body Addr Nat -> CrFact [ctor] .
+  *** a registered report and its issuing body
+  op rep : Report Body -> CrFact [ctor] .
+  op susp : Body -> CrFact [ctor] .
+  *** pendingRotations[b] = (newAddr, readyAt)
+  op prop : Body Addr Nat -> CrFact [ctor] .
+  *** pendingRevocations[r] = (requester, readyAt)
+  op queued : Report Addr Nat -> CrFact [ctor] .
+  *** ReportRevoked(r, by, at)
+  op revoked : Report Addr Nat -> CrFact [ctor] .
+  *** events the monitors react to: VerifierAddressRotated (time), the first RevocationQueued (time)
+  op rotated : Body Nat -> CrFact [ctor] .
+  op firstQ : Body Nat -> CrFact [ctor] .
+  *** ghost: a rotation proposal of this body was cancelled at least once
+  op rcancel : Body Bool -> CrFact [ctor] .
+
+  vars N M T K : Nat . var B : Body . vars A A' : Addr . var R : Report . vars S ST : CrConf .
+  var V : Ver . var BM : BMode . var WM : WMon . var F : Bool . var Mu : CrMutant . var H : Holder .
+
+  *** delays in ticks
+  op delay : -> Nat .
+  eq delay = 3 .
+  op hold : -> Nat .
+  eq hold = 3 .
+
+  *** ------------------------------------------------------------ state queries (rules)
+  op mutant : CrMutant CrConf -> Bool .
+  eq mutant(Mu, mut(Mu) S) = true .
+  eq mutant(Mu, S) = false [owise] .
+  op isV1 : CrConf -> Bool .
+  eq isV1(ver(v1) S) = true .
+  eq isV1(S) = false [owise] .
+  op isSusp : Body CrConf -> Bool .
+  eq isSusp(B, susp(B) S) = true .
+  eq isSusp(B, S) = false [owise] .
+  op hasProp : Body CrConf -> Bool .
+  eq hasProp(B, prop(B, A, T) S) = true .
+  eq hasProp(B, S) = false [owise] .
+  op isRevoked : Report CrConf -> Bool .
+  eq isRevoked(R, revoked(R, A, T) S) = true .
+  eq isRevoked(R, S) = false [owise] .
+  op hasQueued : Report CrConf -> Bool .
+  eq hasQueued(R, queued(R, A, T) S) = true .
+  eq hasQueued(R, S) = false [owise] .
+  op attackerHolds : Addr CrConf -> Bool .
+  eq attackerHolds(A, attackerKey(A) S) = true .
+  eq attackerHolds(A, S) = false [owise] .
+  op hasWatcher : CrConf -> Bool .
+  eq hasWatcher(watcher S) = true .
+  eq hasWatcher(S) = false [owise] .
+  *** isVerifierActiveAt(addr, now) and leiOfAddress(addr) == issuer: A is b's current address and
+  *** b is not suspended (accreditation expiry is not modelled here)
+  op activeAddr : Addr Body CrConf -> Bool .
+  eq activeAddr(A, B, cur(B, A, T) S) = not isSusp(B, S) .
+  eq activeAddr(A, B, S) = false [owise] .
+  op clearQ : Report CrConf -> CrConf .
+  eq clearQ(R, queued(R, A, T) S) = S .
+  eq clearQ(R, S) = S [owise] .
+  op markQ : Body Nat CrConf -> CrConf .
+  eq markQ(B, N, firstQ(B, T) S) = firstQ(B, T) S .
+  eq markQ(B, N, S) = S firstQ(B, N) [owise] .
+
+  *** ------------------------------------------------------------ rules
+  *** V1: rotateVerifierAddress with the stolen owner key, effective at once
+  rl [v1-rotate] : { ver(v1) cur(B, A, T) fresh(A') clock(N) S }
+    => { ver(v1) cur(B, A', N) clock(N) S rotated(B, N) } .
+
+  *** V2: proposeRotation with the stolen owner key (one pending proposal per body; again after a
+  *** cancellation)
+  crl [propose] : { ver(v2) cur(B, A, T) fresh(A') clock(N) S }
+    => { ver(v2) cur(B, A, T) fresh(A') clock(N) S prop(B, A', N + delay) }
+    if not hasProp(B, S) .
+  *** executeRotation: anyone, once readyAt has passed; the new address must still be unbound
+  crl [exec-rotation] : { prop(B, A', T) cur(B, A, K) fresh(A') clock(N) S }
+    => { cur(B, A', N) clock(N) S rotated(B, N) }
+    if N >= T .
+  *** cancelRotation by the body's current address (if the body still holds it) or the WATCHER
+  crl [cancel-rotation] : { prop(B, A', T) cur(B, A, K) rcancel(B, F) S }
+    => { cur(B, A, K) rcancel(B, true) S }
+    if not attackerHolds(A, S) or hasWatcher(S) .
+
+  *** revokeReport by an address the attacker holds, while it is the issuing body's active address.
+  *** V1: applied at once. V2: applied at once if the address was bound at least REVOKE_HOLD ago,
+  *** replacing a queued one; otherwise queued (RevocationQueued).
+  crl [revoke-now] : { rep(R, B) cur(B, A, T) clock(N) S }
+    => { rep(R, B) cur(B, A, T) clock(N) clearQ(R, S) revoked(R, A, N) }
+    if attackerHolds(A, S) /\ not isRevoked(R, S) /\ not isSusp(B, S)
+       /\ (isV1(S) or T + hold <= N or mutant(noHold, S)) .
+  crl [revoke-queue] : { ver(v2) rep(R, B) cur(B, A, T) clock(N) S }
+    => { ver(v2) rep(R, B) cur(B, A, T) clock(N) markQ(B, N, S) queued(R, A, N + hold) }
+    if attackerHolds(A, S) /\ not isRevoked(R, S) /\ not isSusp(B, S) /\ not hasQueued(R, S)
+       /\ N < T + hold /\ not mutant(noHold, S) .
+  *** executeRevocation: anyone, REVOKE_HOLD after the request, if the requester is still the body's
+  *** active address
+  crl [exec-revocation] : { queued(R, A, T) rep(R, B) clock(N) S }
+    => { rep(R, B) clock(N) S revoked(R, A, N) }
+    if N >= T /\ not isRevoked(R, S) /\ (activeAddr(A, B, S) or mutant(noLapse, S)) .
+  *** cancelRevocation by the WATCHER (the body's current address may cancel too, but after a hostile
+  *** rotation that is the attacker's)
+  rl [cancel-revocation] : { queued(R, A, T) watcher S } => { watcher S } .
+  *** suspendVerifier by the WATCHER (not lifted within the bound)
+  crl [suspend] : { watcher cur(B, A, T) S } => { watcher cur(B, A, T) S susp(B) }
+    if not isSusp(B, S) .
+  *** the owner key revokes the WATCHER role
+  rl [drop-watcher] : { dropOK watcher S } => { S } .
+
+  *** time advances, not past a deadline whose monitoring obligation is unmet
+  crl [tick] : { clock(N) tmax(M) S } => { clock(s N) tmax(M) S }
+    if N < M /\ bodyOK(s N, S, S) /\ watchOK(s N, S, S) .
+  op bodyOK : Nat CrConf CrConf -> Bool .
+  eq bodyOK(N, prop(B, A, T) S, bmode(bWatch) ST) = T > N and bodyOK(N, S, bmode(bWatch) ST) .
+  eq bodyOK(N, S, ST) = true [owise] .
+  op watchOK : Nat CrConf CrConf -> Bool .
+  eq watchOK(N, rotated(B, K) S, wmon(wOnRotation) watcher ST) =
+     (N < K + hold or isSusp(B, ST)) and watchOK(N, S, wmon(wOnRotation) watcher ST) .
+  eq watchOK(N, firstQ(B, K) S, wmon(wOnQueued) watcher ST) =
+     (N < K + hold or isSusp(B, ST)) and watchOK(N, S, wmon(wOnQueued) watcher ST) .
+  eq watchOK(N, S, ST) = true [owise] .
+
+  *** ------------------------------------------------------------ specification side
+  *** written with their own helpers (prefixed s), from SECURITY §4.2 CR1 and §13.1
+  op sIssuer : Report CrConf -> Body .
+  eq sIssuer(R, rep(R, B) S) = B .
+  op sHolder : Addr CrConf -> Holder .
+  eq sHolder(A, key(A, H) S) = H .
+  *** CR1: a report is revoked by an address its issuing body did not control
+  op cr1Bad : CrConf -> Bool .
+  eq cr1Bad(ST) = cr1BadL(ST, ST) .
+  op cr1BadL : CrConf CrConf -> Bool .
+  eq cr1BadL(revoked(R, A, N) S, ST) = sHolder(A, ST) =/= bodyKey or cr1BadL(S, ST) .
+  eq cr1BadL(S, ST) = false [owise] .
+  *** the same, at a tick before K
+  op cr1BadBefore : Nat CrConf -> Bool .
+  eq cr1BadBefore(K, ST) = cr1BeforeL(K, ST, ST) .
+  op cr1BeforeL : Nat CrConf CrConf -> Bool .
+  eq cr1BeforeL(K, revoked(R, A, N) S, ST) =
+     (sHolder(A, ST) =/= bodyKey and N < K) or cr1BeforeL(K, S, ST) .
+  eq cr1BeforeL(K, S, ST) = false [owise] .
+  *** non-vacuity: a proposal was cancelled, nothing rotated, and time reached the bound
+  op cancelWitness : CrConf -> Bool .
+  ceq cancelWitness(rcancel(B, true) clock(M) tmax(M) S) = true
+    if not sRotated(B, S) .
+  eq cancelWitness(S) = false [owise] .
+  op sRotated : Body CrConf -> Bool .
+  eq sRotated(B, rotated(B, K) S) = true .
+  eq sRotated(B, S) = false [owise] .
+  *** non-vacuity: the rotation went through, the attacker's revocation is queued, the body is
+  *** suspended, and time reached the bound
+  op suspendWitness : CrConf -> Bool .
+  eq suspendWitness(rotated(B, K) susp(B) queued(R, A, T) clock(M) tmax(M) S) = true .
+  eq suspendWitness(S) = false [owise] .
+
+  *** ------------------------------------------------------------ instance
+  *** cr1Inst(contract version, body monitoring, watcher monitoring, owner key may drop the watcher,
+  *** last tick)
+  op cr1Inst : Ver BMode WMon Bool Nat -> CrSys .
+  eq cr1Inst(V, BM, WM, F, M) =
+     { clock(0) tmax(M) ver(V) bmode(BM) wmon(WM) watcher (if F then dropOK else empty fi)
+       key(hk, bodyKey) key(tk, thiefKey) attackerKey(tk) fresh(tk)
+       cur(b1, hk, 0) rep(r1, b1) rcancel(b1, false) } .
+  op _+mut_ : CrSys CrMutant -> CrSys .
+  eq { S } +mut Mu = { S mut(Mu) } .
+endm

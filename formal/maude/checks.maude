@@ -66,3 +66,31 @@ true : red modelCheck(suspInst(2), [] (contestedP(r1) -> [] ~ validP(r1))) .
 true : red modelCheck(keriInst(up, 3), [] (chainRevokedP(a1) -> [] chainRevokedP(a1))) .
 true : red modelCheck(keriInst(up, 3), [] safeP) .
 true : red modelCheck(revInst(3), [] safeP) .
+*** --- G. CR1: owner-key compromise, rotation and revocation (module CARBONLEI-CR1, a separate model;
+*** cr1Inst(contract, body monitoring, watcher monitoring, owner key may drop the watcher, last tick)).
+*** One property, cr1Bad: no report is revoked by an address its body did not control.
+select CARBONLEI-CR1 .
+*** V1 (deployed): rotation and revocation in one block, even with both monitors; expected: a solution
+found : search [1] cr1Inst(v1, bWatch, wOnRotation, false, 7) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+*** V2 under a monitoring assumption; expected: No solution. (1) the body or the watcher cancels a
+*** pending rotation within ROTATION_DELAY, even if the owner key drops the watcher's role; (2) the
+*** body misses the rotation, and the watcher, which keeps its role, suspends the body within
+*** REVOKE_HOLD of the rotation
+none : search cr1Inst(v2, bWatch, wNone, true, 7) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+none : search cr1Inst(v2, bNone, wOnRotation, false, 7) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+*** V2 without monitoring: the attack completes (a solution), but not before tick 6 = 144 h (No solution)
+found : search [1] cr1Inst(v2, bNone, wNone, true, 7) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+none : search cr1Inst(v2, bNone, wNone, true, 7) =>* { S:CrConf } such that cr1BadBefore(6, S:CrConf) .
+*** V2, weaker monitoring; expected: a solution each. A watcher that reacts only to RevocationQueued
+*** (the attacker waits REVOKE_HOLD after the rotation and revokes at once); a watcher whose role
+*** the owner key removes first
+found : search [1] cr1Inst(v2, bNone, wOnQueued, false, 7) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+found : search [1] cr1Inst(v2, bNone, wOnRotation, true, 7) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+*** Non-vacuity of the two V2 results above: a proposal cancelled and time at the bound; the rotation
+*** done, a revocation queued, the body suspended and time at the bound; expected: a solution each
+found : search [1] cr1Inst(v2, bWatch, wNone, true, 7) =>* { S:CrConf } such that cancelWitness(S:CrConf) .
+found : search [1] cr1Inst(v2, bNone, wOnRotation, false, 7) =>* { S:CrConf } such that suspendWitness(S:CrConf) .
+*** V2 mutants (2 mutants, 2 runs): REVOKE_HOLD removed; executeRevocation without the requester
+*** check; expected: a solution each
+found : search [1] cr1Inst(v2, bNone, wOnRotation, false, 7) +mut noHold =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+found : search [1] cr1Inst(v2, bNone, wOnRotation, false, 7) +mut noLapse =>* { S:CrConf } such that cr1Bad(S:CrConf) .
