@@ -40,6 +40,12 @@ fmod CARBONLEI-DATA is
   *** (README "Mutants" lists them with the check that catches each)
   ops noClaimCap noOverClaimed noCovered noAuthGuard noSuspGuard noExpiryGuard noIssuerGuard : -> Mutant [ctor] .
   ops noCheck5 noRoot noScope noContested winLeftOpen winRightOpen noEvidenceRev noSupersede : -> Mutant [ctor] .
+  *** added 11 October 2026, one for each of the two explicit properties notReportIssuerBad and
+  *** regSuspendedBad: suspSameTick weakens the suspension test of isInstitutionActiveAt by one,
+  *** t <= suspendedAt counts as active, so a body may register in the tick of its suspension;
+  *** issuerIgnoresLift lets another body revise while the original issuer was ever suspended,
+  *** ignoring a lift: the suspendedAt test without the liftedAt test
+  ops suspSameTick issuerIgnoresLift : -> Mutant [ctor] .
 endfm
 
 mod CARBONLEI is
@@ -103,6 +109,9 @@ mod CARBONLEI is
   *** gRev(r, r revised a credential of another body while that body was active)
   op gReg : Report Bool -> Fact [ctor] .
   op gRev : Report Bool -> Fact [ctor] .
+  *** gSusp(r, the body was suspended and not lifted at that moment): suspension only, without
+  *** accreditation expiry, for the explicit property regSuspendedBad
+  op gSusp : Report Bool -> Fact [ctor] .
 
   vars S ST : Conf . vars N M K T T' E Q Q0 Q' V C D TR T2 : Nat .
   vars B B' : Body . vars A A' : Auditor . vars R R' R0 : Report . var O : OptReport .
@@ -134,12 +143,17 @@ mod CARBONLEI is
   op hasLift : Body Conf -> Bool .
   eq hasLift(B, lifted(B, N) S) = true .
   eq hasLift(B, S) = false [owise] .
+  *** the body was suspended in tick N (used only by the mutant suspSameTick)
+  op suspIn : Body Nat Conf -> Bool .
+  eq suspIn(B, N, susp(B, E) S) = E == N .
+  eq suspIn(B, N, S) = false [owise] .
 
   *** contract view at the current time: isInstitutionActiveAt(now), latest suspension interval
   op activeNow : Body Nat Conf -> Bool .
   eq activeNow(B, N, body(B, Rt, T) S) =
      (N <= T or mutant(noExpiryGuard, S))
-     and (not hasSusp(B, S) or hasLift(B, S) or mutant(noSuspGuard, S)) .
+     and (not hasSusp(B, S) or hasLift(B, S) or mutant(noSuspGuard, S)
+          or (mutant(suspSameTick, S) and suspIn(B, N, S))) .
   eq activeNow(B, N, S) = false [owise] .
   *** isAuthorizedAt(now): the auditor is listed under the body and not revoked on the allowlist
   op audAuthNow : Auditor Body Conf -> Bool .
@@ -196,7 +210,7 @@ mod CARBONLEI is
     { cred(R, B, A, V, P, noRep) canReg(R, L) clock(N) S }
     => { cred(R, B, A, V, P, noRep) canReg(R, L) clock(N) S
          reg(R, N, L, sKeriRevokedNow(A, S), sChainRevokedNow(A, S)) slot(L, R, 0)
-         gReg(R, sInactiveAt(B, N, S)) }
+         gReg(R, sInactiveAt(B, N, S)) gSusp(R, sSuspendedUnlifted(B, S)) }
     if not isReg(R, S) /\ activeNow(B, N, S) /\ audAuthNow(A, B, S)
        /\ (not hasSlot(L, S) or mutant(noCovered, S)) .
 
@@ -207,11 +221,12 @@ mod CARBONLEI is
     { cred(R, B, A, V, P, R') slot(L, R', C) clock(N) S }
     => { cred(R, B, A, V, P, R') slot(L, R, C) clock(N) S
          reg(R, N, L, sKeriRevokedNow(A, S), sChainRevokedNow(A, S)) supBy(R', R, N)
-         gReg(R, sInactiveAt(B, N, S))
+         gReg(R, sInactiveAt(B, N, S)) gSusp(R, sSuspendedUnlifted(B, S))
          gRev(R, sBody(R', S) =/= B and not sInactiveAt(sBody(R', S), N, S)) }
     if not isReg(R, S) /\ activeNow(B, N, S) /\ audAuthNow(A, B, S)
        /\ (V >= C or mutant(noOverClaimed, S))
-       /\ (bodyOf(R', S) == B or not activeNow(bodyOf(R', S), N, S) or mutant(noIssuerGuard, S)) .
+       /\ (bodyOf(R', S) == B or not activeNow(bodyOf(R', S), N, S) or mutant(noIssuerGuard, S)
+           or (mutant(issuerIgnoresLift, S) and hasSusp(bodyOf(R', S), S))) .
 
   *** claimShipment by the supplier, against a slot's latest credential, declared to any importer
   crl [claim] :
@@ -441,11 +456,19 @@ mod CARBONLEI is
   eq regInactiveBad(gReg(R, true) S) = true .
   eq regInactiveBad(S) = false [owise] .
 
-  *** FOREIGN-REVISION (NotReportIssuer, T19 (d)): a credential superseded by a revision that another
-  *** body registered while the first body was active
-  op foreignReviseBad : Conf -> Bool .
-  eq foreignReviseBad(gRev(R, true) S) = true .
-  eq foreignReviseBad(S) = false [owise] .
+  *** REG-SUSPENDED (P3, T3; contract: NotActiveVerifier for a suspended body): a registration by a
+  *** body that was suspended and not lifted at the registration block. Suspension only: expiry is
+  *** in regInactiveBad. Written from the ghost gSusp, which sSuspendedUnlifted computes, not activeNow
+  op regSuspendedBad : Conf -> Bool .
+  eq regSuspendedBad(gSusp(R, true) S) = true .
+  eq regSuspendedBad(S) = false [owise] .
+
+  *** NOT-REPORT-ISSUER (NotReportIssuer in _checkIssuerOrInactive, T19 (d)): a credential superseded
+  *** by a revision that another body registered while the first body was active (not suspended, or
+  *** suspension lifted, and within its accreditation). Called foreignReviseBad until 10 October 2026
+  op notReportIssuerBad : Conf -> Bool .
+  eq notReportIssuerBad(gRev(R, true) S) = true .
+  eq notReportIssuerBad(S) = false [owise] .
 
   *** EVIDENCE: a credential whose proof carries an anchored ECR revocation dated before its
   *** registration is not INVALID
@@ -534,7 +557,7 @@ mod CARBONLEI is
     if I =/= I' .
   eq twoImporters(S) = false [owise] .
   *** a credential registered by b1 after its suspension was lifted, and accepted by an importer
-  *** (regInactiveBad and authBad do not forbid registration after a lift)
+  *** (regInactiveBad, regSuspendedBad and authBad do not forbid registration after a lift)
   op regAfterLift : Conf -> Bool .
   ceq regAfterLift(susp(b1, E) lifted(b1, K) reg(R, N, L, F1, F2) claimed(R0, I0, Q0, T, ac(R, I, Q) ; AS) S) = true
     if E < N .
@@ -543,7 +566,7 @@ mod CARBONLEI is
   *** every safety property expected to hold (under A-Watch for keriBad)
   op safetyBad : Conf -> Bool .
   eq safetyBad(ST) = p1Bad(ST) or ledgerBad(ST) or replayBad(ST) or authBad(ST) or regAfterRevBad(ST)
-                     or regInactiveBad(ST) or foreignReviseBad(ST)
+                     or regInactiveBad(ST) or regSuspendedBad(ST) or notReportIssuerBad(ST)
                      or evidenceBad(ST) or windowBad(ST) or supersededBad(ST) or keriBad(ST) .
 
   *** ------------------------------------------------------------ instances
@@ -604,7 +627,13 @@ mod CARBONLEI is
   eq { S } +mut Mu = { S mut(Mu) } .
 endm
 
-*** LTL: propositions over the same states
+*** LTL: propositions over the same states.
+*** Only eventual sync, [] (keriRevokedP -> <> chainRevokedP) with the watcher up against down, is
+*** evidence. The other formulas checked on this module are SANITY CHECKS, NOT SECURITY CLAIMS:
+*** P6, [] (chainRevokedP -> [] chainRevokedP), and CONTESTED never VALID again,
+*** [] (contestedP -> [] ~ validP), hold by construction: no rule removes a revocation or a
+*** suspension, and registeredAt never changes. Eventual sync with the watcher late holds because
+*** the formula does not check delta; [] safeP repeats the searches of section A.
 mod CARBONLEI-LTL is
   protecting CARBONLEI .
   including MODEL-CHECKER .

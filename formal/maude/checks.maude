@@ -2,13 +2,19 @@
 *** Each line is "<expected> : <command>": none = no solution, found = a solution, true = the LTL
 *** formula holds, counterexample = it does not. run.sh fails if any result differs. Results: README.md.
 select CARBONLEI .
-*** --- A. Safety: every property expected to hold (safetyBad, eleven properties), expected: No solution
+*** --- A. Safety: every property expected to hold (safetyBad, twelve properties), expected: No solution
 none : search keriInst(up, 4) =>* { S:Conf } such that safetyBad(S:Conf) .
 none : search (keriInst(up, 4) withDelta 2) =>* { S:Conf } such that safetyBad(S:Conf) .
 none : search suspInst(3) =>* { S:Conf } such that safetyBad(S:Conf) .
 none : search (suspInst(3) withDelta 2) =>* { S:Conf } such that safetyBad(S:Conf) .
 none : search revInst(4) =>* { S:Conf } such that safetyBad(S:Conf) .
 none : search dupInst(4) =>* { S:Conf } such that safetyBad(S:Conf) .
+*** Two of the twelve also searched on their own, on the instances where they can be exercised:
+*** registration during suspension is rejected (regSuspendedBad); no revision by another body while
+*** the issuer is active (notReportIssuerBad, NotReportIssuer). Non-vacuity: regAfterLift, revWitness (B)
+none : search suspInst(3) =>* { S:Conf } such that regSuspendedBad(S:Conf) .
+none : search revInst(4) =>* { S:Conf } such that regSuspendedBad(S:Conf) .
+none : search revInst(4) =>* { S:Conf } such that notReportIssuerBad(S:Conf) .
 *** --- B. Non-vacuity: the safe instances do reach the interesting states, expected: a solution
 found : search [1] revInst(4) =>* { S:Conf } such that revWitness(S:Conf) .
 found : search [1] keriInst(up, 4) =>* { S:Conf } such that contestedAfterKeri(S:Conf) .
@@ -22,7 +28,7 @@ found : search [1] keriInst(up, 4) =>* { S:Conf } such that keriRace(S:Conf) .
 found : search [1] dupInst(4) =>* { S:Conf } such that onchainSumBad(S:Conf) .
 found : search [1] keriInst(up, 4) =>* { S:Conf } such that viewsBad(S:Conf) .
 found : search [1] keriInst(up, 4) =>* { S:Conf } such that impostorRegistered(S:Conf) .
-*** --- E. Mutants: 15 mutants, each removing or weakening one guard or check, 26 runs; expected: a solution each
+*** --- E. Mutants: 17 mutants, each removing or weakening one guard or check, 32 runs; expected: a solution each
 *** contract, claim and ledger guards
 found : search [1] dupInst(4) +mut noClaimCap =>* { S:Conf } such that p1Bad(S:Conf) .
 found : search [1] revInst(4) +mut noOverClaimed =>* { S:Conf } such that p1Bad(S:Conf) .
@@ -34,8 +40,14 @@ found : search [1] suspInst(3) +mut noSuspGuard =>* { S:Conf } such that authBad
 found : search [1] revInst(4) +mut noSuspGuard =>* { S:Conf } such that regInactiveBad(S:Conf) .
 found : search [1] suspInst(3) +mut noSuspGuard =>* { S:Conf } such that safetyBad(S:Conf) .
 found : search [1] revInst(4) +mut noExpiryGuard =>* { S:Conf } such that regInactiveBad(S:Conf) .
-found : search [1] revInst(4) +mut noIssuerGuard =>* { S:Conf } such that foreignReviseBad(S:Conf) .
+found : search [1] revInst(4) +mut noIssuerGuard =>* { S:Conf } such that notReportIssuerBad(S:Conf) .
 found : search [1] revInst(4) +mut noIssuerGuard =>* { S:Conf } such that safetyBad(S:Conf) .
+*** contract, for the two explicit properties (added 11 October): the suspension test off by one
+*** tick, and the issuer test ignoring a lift
+found : search [1] suspInst(3) +mut noSuspGuard =>* { S:Conf } such that regSuspendedBad(S:Conf) .
+found : search [1] suspInst(3) +mut suspSameTick =>* { S:Conf } such that regSuspendedBad(S:Conf) .
+found : search [1] revInst(4) +mut suspSameTick =>* { S:Conf } such that regSuspendedBad(S:Conf) .
+found : search [1] revInst(4) +mut issuerIgnoresLift =>* { S:Conf } such that notReportIssuerBad(S:Conf) .
 *** verifier checks
 found : search [1] keriInst(up, 4) +mut noCheck5 =>* { S:Conf } such that replayBad(S:Conf) .
 found : search [1] keriInst(up, 4) +mut noCheck5 =>* { S:Conf } such that ledgerBad(S:Conf) .
@@ -43,8 +55,10 @@ found : search [1] keriInst(up, 4) +mut noRoot =>* { S:Conf } such that authBad(
 found : search [1] dupInst(4) +mut noScope =>* { S:Conf } such that ledgerBad(S:Conf) .
 found : search [1] keriInst(up, 4) +mut noContested =>* { S:Conf } such that windowBad(S:Conf) .
 found : search [1] suspInst(3) +mut noContested =>* { S:Conf } such that windowBad(S:Conf) .
+found : search [1] revInst(4) +mut noContested =>* { S:Conf } such that windowBad(S:Conf) .
 found : search [1] keriInst(up, 4) +mut winLeftOpen =>* { S:Conf } such that windowBad(S:Conf) .
 found : search [1] suspInst(3) +mut winLeftOpen =>* { S:Conf } such that windowBad(S:Conf) .
+found : search [1] revInst(4) +mut winLeftOpen =>* { S:Conf } such that windowBad(S:Conf) .
 found : search [1] keriInst(up, 4) +mut winRightOpen =>* { S:Conf } such that windowBad(S:Conf) .
 found : search [1] suspInst(3) +mut winRightOpen =>* { S:Conf } such that windowBad(S:Conf) .
 found : search [1] revInst(4) +mut winRightOpen =>* { S:Conf } such that windowBad(S:Conf) .
@@ -53,11 +67,11 @@ found : search [1] suspInst(3) +mut winRightOpen =>* { S:Conf } such that safety
 found : search [1] keriInst(up, 4) +mut noEvidenceRev =>* { S:Conf } such that evidenceBad(S:Conf) .
 found : search [1] revInst(4) +mut noSupersede =>* { S:Conf } such that supersededBad(S:Conf) .
 select CARBONLEI-LTL .
-*** --- F. LTL. Evidence: eventual sync with the watcher up (true) and down (counterexample). Sanity
-*** checks, which hold by construction of the model (no rule removes a revocation or a suspension, and
-*** registeredAt never changes) and are not evidence about the code: eventual sync with the watcher
-*** late (true: the formula does not check the bound delta), CONTESTED never VALID again, P6, and
-*** [] safeP (the same as the searches of A).
+*** --- F. LTL. Evidence: eventual sync with the watcher up (true) and down (counterexample). The rest
+*** are SANITY CHECKS, NOT SECURITY CLAIMS: they hold by construction of the model (no rule removes a
+*** revocation or a suspension, and registeredAt never changes) and are not evidence about the code:
+*** eventual sync with the watcher late (true: the formula does not check the bound delta), CONTESTED
+*** never VALID again (sanity), P6 (sanity), and [] safeP (the same as the searches of A).
 true : red modelCheck(keriInst(up, 3), [] (keriRevokedP(a1) -> <> chainRevokedP(a1))) .
 counterexample : red modelCheck(keriInst(down, 3), [] (keriRevokedP(a1) -> <> chainRevokedP(a1))) .
 true : red modelCheck(keriInst(late, 3), [] (keriRevokedP(a1) -> <> chainRevokedP(a1))) .
