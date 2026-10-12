@@ -1,0 +1,2039 @@
+{
+  "script": "scripts/bench-window-rpc.ts",
+  "measuredAt": "2026-10-12T01:57:07.368Z",
+  "label": "arbitrum-sepolia",
+  "conditions": {
+    "note": "Public testnet RPCs, single run per endpoint, from one client machine; latency varies with the node, the network and load. Read-only: no deployment, no transaction, no key.",
+    "sdkConstants": {
+      "LOG_CHUNK": 10000,
+      "LOG_PARALLEL": 4,
+      "SEARCH_TOLERANCE": 512
+    },
+    "windowHours": 24,
+    "deployDaysBeforeHead": 3
+  },
+  "runs": [
+    {
+      "url": "https://sepolia-rollup.arbitrum.io/rpc",
+      "chainId": 421614,
+      "head": {
+        "number": 318264001,
+        "timestamp": 1791770204,
+        "iso": "2026-10-12T01:56:44.000Z"
+      },
+      "avgBlockTimeSecLast10k": 0.2513,
+      "window": {
+        "fromTime": 1791680204,
+        "toTime": 1791766604,
+        "hours": 24,
+        "endsSecBeforeHead": 3600
+      },
+      "deploymentBlockAssumed": 317232564,
+      "blockRange": {
+        "fromBlock": 317910455,
+        "toBlock": 318249772,
+        "blocks": 339318,
+        "narrowed": true
+      },
+      "blockSearchOnly": {
+        "requestsByMethod": {
+          "eth_getBlockByNumber": 9
+        },
+        "requestsTotal": 9,
+        "getLogsRequests": 0,
+        "getLogsRejected": 0,
+        "logsReturned": 0,
+        "blocksSearched": 0,
+        "wallMs": 0,
+        "errors": []
+      },
+      "realistic": {
+        "description": "SDK ChainReader.bodyEventsInTimes (block search + chunked eth_getLogs), two addresses with no logs on this chain, topic filters as the verifier sends them",
+        "addresses": [
+          "0xF7AD0cbe867eb9CE4847Af3717C2d27f6434Ea5C",
+          "0xEA52a50d3753bACD835DCd47892754b65a90ca19"
+        ],
+        "eventsReturned": 0,
+        "requestsByMethod": {
+          "eth_getBlockByNumber": 9,
+          "eth_getLogs": 34
+        },
+        "requestsTotal": 43,
+        "getLogsRequests": 34,
+        "getLogsRejected": 0,
+        "logsReturned": 0,
+        "blocksSearched": 339318,
+        "wallMs": 3998,
+        "errors": [],
+        "requests": [
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 395.8,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 317.1,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 319.1,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 321.9,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 328.5,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 317,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 321.4,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 322.3,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 327.3,
+            "ok": true
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 323.5,
+            "ok": true,
+            "fromBlock": 317920455,
+            "toBlock": 317930454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 325.1,
+            "ok": true,
+            "fromBlock": 317930455,
+            "toBlock": 317940454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 326.2,
+            "ok": true,
+            "fromBlock": 317940455,
+            "toBlock": 317950454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 332.8,
+            "ok": true,
+            "fromBlock": 317910455,
+            "toBlock": 317920454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 315.5,
+            "ok": true,
+            "fromBlock": 317950455,
+            "toBlock": 317960454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 315.2,
+            "ok": true,
+            "fromBlock": 317970455,
+            "toBlock": 317980454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 325.1,
+            "ok": true,
+            "fromBlock": 317960455,
+            "toBlock": 317970454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 329.3,
+            "ok": true,
+            "fromBlock": 317980455,
+            "toBlock": 317990454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 359.2,
+            "ok": true,
+            "fromBlock": 317990455,
+            "toBlock": 318000454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 357.9,
+            "ok": true,
+            "fromBlock": 318000455,
+            "toBlock": 318010454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 350.2,
+            "ok": true,
+            "fromBlock": 318010455,
+            "toBlock": 318020454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 339.7,
+            "ok": true,
+            "fromBlock": 318020455,
+            "toBlock": 318030454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 359.2,
+            "ok": true,
+            "fromBlock": 318060455,
+            "toBlock": 318070454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 361.3,
+            "ok": true,
+            "fromBlock": 318050455,
+            "toBlock": 318060454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 363.2,
+            "ok": true,
+            "fromBlock": 318040455,
+            "toBlock": 318050454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 365.2,
+            "ok": true,
+            "fromBlock": 318030455,
+            "toBlock": 318040454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 307.2,
+            "ok": true,
+            "fromBlock": 318080455,
+            "toBlock": 318090454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 309.3,
+            "ok": true,
+            "fromBlock": 318100455,
+            "toBlock": 318110454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 316.9,
+            "ok": true,
+            "fromBlock": 318090455,
+            "toBlock": 318100454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 329.1,
+            "ok": true,
+            "fromBlock": 318070455,
+            "toBlock": 318080454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 315.3,
+            "ok": true,
+            "fromBlock": 318120455,
+            "toBlock": 318130454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 322.4,
+            "ok": true,
+            "fromBlock": 318110455,
+            "toBlock": 318120454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 318.2,
+            "ok": true,
+            "fromBlock": 318130455,
+            "toBlock": 318140454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 344.6,
+            "ok": true,
+            "fromBlock": 318140455,
+            "toBlock": 318150454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 317.1,
+            "ok": true,
+            "fromBlock": 318150455,
+            "toBlock": 318160454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 315.6,
+            "ok": true,
+            "fromBlock": 318160455,
+            "toBlock": 318170454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 317.8,
+            "ok": true,
+            "fromBlock": 318170455,
+            "toBlock": 318180454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 329.2,
+            "ok": true,
+            "fromBlock": 318180455,
+            "toBlock": 318190454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 310.3,
+            "ok": true,
+            "fromBlock": 318200455,
+            "toBlock": 318210454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 316.2,
+            "ok": true,
+            "fromBlock": 318190455,
+            "toBlock": 318200454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 311.9,
+            "ok": true,
+            "fromBlock": 318210455,
+            "toBlock": 318220454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 331.3,
+            "ok": true,
+            "fromBlock": 318220455,
+            "toBlock": 318230454,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 320.8,
+            "ok": true,
+            "fromBlock": 318240455,
+            "toBlock": 318249772,
+            "blocks": 9318,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 324.8,
+            "ok": true,
+            "fromBlock": 318230455,
+            "toBlock": 318240454,
+            "blocks": 10000,
+            "logs": 0
+          }
+        ]
+      },
+      "stress": {
+        "description": "same block range and chunking (LOG_CHUNK, LOG_PARALLEL), eth_getLogs on a busy address with no topic filter; not an SDK path",
+        "address": "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
+        "chunks": 34,
+        "chunksRejected": 0,
+        "reportOnlyHalvingsOfFirstRejectedChunk": 0,
+        "requestsByMethod": {
+          "eth_getLogs": 34
+        },
+        "requestsTotal": 34,
+        "getLogsRequests": 34,
+        "getLogsRejected": 0,
+        "logsReturned": 473,
+        "blocksSearched": 339318,
+        "wallMs": 3040,
+        "errors": [],
+        "requests": [
+          {
+            "method": "eth_getLogs",
+            "ms": 325.9,
+            "ok": true,
+            "fromBlock": 317930455,
+            "toBlock": 317940454,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 329.2,
+            "ok": true,
+            "fromBlock": 317920455,
+            "toBlock": 317930454,
+            "blocks": 10000,
+            "logs": 18
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 333.5,
+            "ok": true,
+            "fromBlock": 317910455,
+            "toBlock": 317920454,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 336.9,
+            "ok": true,
+            "fromBlock": 317940455,
+            "toBlock": 317950454,
+            "blocks": 10000,
+            "logs": 12
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 324.1,
+            "ok": true,
+            "fromBlock": 317950455,
+            "toBlock": 317960454,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 324.3,
+            "ok": true,
+            "fromBlock": 317960455,
+            "toBlock": 317970454,
+            "blocks": 10000,
+            "logs": 19
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 317.5,
+            "ok": true,
+            "fromBlock": 317980455,
+            "toBlock": 317990454,
+            "blocks": 10000,
+            "logs": 19
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 335.4,
+            "ok": true,
+            "fromBlock": 317970455,
+            "toBlock": 317980454,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 365.1,
+            "ok": true,
+            "fromBlock": 318010455,
+            "toBlock": 318020454,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 371.8,
+            "ok": true,
+            "fromBlock": 318000455,
+            "toBlock": 318010454,
+            "blocks": 10000,
+            "logs": 15
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 375.9,
+            "ok": true,
+            "fromBlock": 317990455,
+            "toBlock": 318000454,
+            "blocks": 10000,
+            "logs": 10
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 358.5,
+            "ok": true,
+            "fromBlock": 318020455,
+            "toBlock": 318030454,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 410,
+            "ok": true,
+            "fromBlock": 318030455,
+            "toBlock": 318040454,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 407.2,
+            "ok": true,
+            "fromBlock": 318050455,
+            "toBlock": 318060454,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 407.8,
+            "ok": true,
+            "fromBlock": 318060455,
+            "toBlock": 318070454,
+            "blocks": 10000,
+            "logs": 20
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 410.4,
+            "ok": true,
+            "fromBlock": 318040455,
+            "toBlock": 318050454,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 311.1,
+            "ok": true,
+            "fromBlock": 318070455,
+            "toBlock": 318080454,
+            "blocks": 10000,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 315.1,
+            "ok": true,
+            "fromBlock": 318090455,
+            "toBlock": 318100454,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 317.8,
+            "ok": true,
+            "fromBlock": 318100455,
+            "toBlock": 318110454,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 335,
+            "ok": true,
+            "fromBlock": 318080455,
+            "toBlock": 318090454,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 314.4,
+            "ok": true,
+            "fromBlock": 318110455,
+            "toBlock": 318120454,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 314.9,
+            "ok": true,
+            "fromBlock": 318120455,
+            "toBlock": 318130454,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 318.3,
+            "ok": true,
+            "fromBlock": 318130455,
+            "toBlock": 318140454,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 337.3,
+            "ok": true,
+            "fromBlock": 318140455,
+            "toBlock": 318150454,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 316.6,
+            "ok": true,
+            "fromBlock": 318150455,
+            "toBlock": 318160454,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 313.6,
+            "ok": true,
+            "fromBlock": 318160455,
+            "toBlock": 318170454,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 316.8,
+            "ok": true,
+            "fromBlock": 318170455,
+            "toBlock": 318180454,
+            "blocks": 10000,
+            "logs": 10
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 347.5,
+            "ok": true,
+            "fromBlock": 318180455,
+            "toBlock": 318190454,
+            "blocks": 10000,
+            "logs": 84
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 328.2,
+            "ok": true,
+            "fromBlock": 318200455,
+            "toBlock": 318210454,
+            "blocks": 10000,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 336.4,
+            "ok": true,
+            "fromBlock": 318190455,
+            "toBlock": 318200454,
+            "blocks": 10000,
+            "logs": 57
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 329.9,
+            "ok": true,
+            "fromBlock": 318210455,
+            "toBlock": 318220454,
+            "blocks": 10000,
+            "logs": 23
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 331.3,
+            "ok": true,
+            "fromBlock": 318220455,
+            "toBlock": 318230454,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 318.8,
+            "ok": true,
+            "fromBlock": 318240455,
+            "toBlock": 318249772,
+            "blocks": 9318,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 332.6,
+            "ok": true,
+            "fromBlock": 318230455,
+            "toBlock": 318240454,
+            "blocks": 10000,
+            "logs": 16
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://arbitrum-sepolia-rpc.publicnode.com",
+      "chainId": 421614,
+      "head": {
+        "number": 318264043,
+        "timestamp": 1791770214,
+        "iso": "2026-10-12T01:56:54.000Z"
+      },
+      "avgBlockTimeSecLast10k": 0.2513,
+      "window": {
+        "fromTime": 1791680214,
+        "toTime": 1791766614,
+        "hours": 24,
+        "endsSecBeforeHead": 3600
+      },
+      "deploymentBlockAssumed": 317232606,
+      "blockRange": {
+        "fromBlock": 317910495,
+        "toBlock": 318249816,
+        "blocks": 339322,
+        "narrowed": true
+      },
+      "blockSearchOnly": {
+        "requestsByMethod": {
+          "eth_getBlockByNumber": 9
+        },
+        "requestsTotal": 9,
+        "getLogsRequests": 0,
+        "getLogsRejected": 0,
+        "logsReturned": 0,
+        "blocksSearched": 0,
+        "wallMs": 0,
+        "errors": []
+      },
+      "realistic": {
+        "description": "SDK ChainReader.bodyEventsInTimes (block search + chunked eth_getLogs), two addresses with no logs on this chain, topic filters as the verifier sends them",
+        "addresses": [
+          "0xF7AD0cbe867eb9CE4847Af3717C2d27f6434Ea5C",
+          "0xEA52a50d3753bACD835DCd47892754b65a90ca19"
+        ],
+        "eventsReturned": 0,
+        "requestsByMethod": {
+          "eth_getBlockByNumber": 9,
+          "eth_getLogs": 34
+        },
+        "requestsTotal": 43,
+        "getLogsRequests": 34,
+        "getLogsRejected": 0,
+        "logsReturned": 0,
+        "blocksSearched": 339322,
+        "wallMs": 3028,
+        "errors": [],
+        "requests": [
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 251.7,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 242,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 241.8,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 248.6,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 265.6,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 238,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 244.2,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 254,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 311,
+            "ok": true
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 243,
+            "ok": true,
+            "fromBlock": 317920495,
+            "toBlock": 317930494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 250.4,
+            "ok": true,
+            "fromBlock": 317930495,
+            "toBlock": 317940494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 253.9,
+            "ok": true,
+            "fromBlock": 317910495,
+            "toBlock": 317920494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 269,
+            "ok": true,
+            "fromBlock": 317940495,
+            "toBlock": 317950494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 247.3,
+            "ok": true,
+            "fromBlock": 317960495,
+            "toBlock": 317970494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 254.3,
+            "ok": true,
+            "fromBlock": 317970495,
+            "toBlock": 317980494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 248.2,
+            "ok": true,
+            "fromBlock": 317980495,
+            "toBlock": 317990494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 371.6,
+            "ok": true,
+            "fromBlock": 317950495,
+            "toBlock": 317960494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 241.3,
+            "ok": true,
+            "fromBlock": 318000495,
+            "toBlock": 318010494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 256.6,
+            "ok": true,
+            "fromBlock": 317990495,
+            "toBlock": 318000494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 249.6,
+            "ok": true,
+            "fromBlock": 318010495,
+            "toBlock": 318020494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 241.6,
+            "ok": true,
+            "fromBlock": 318020495,
+            "toBlock": 318030494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 231.1,
+            "ok": true,
+            "fromBlock": 318030495,
+            "toBlock": 318040494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 238.6,
+            "ok": true,
+            "fromBlock": 318040495,
+            "toBlock": 318050494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 257,
+            "ok": true,
+            "fromBlock": 318050495,
+            "toBlock": 318060494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 242.5,
+            "ok": true,
+            "fromBlock": 318060495,
+            "toBlock": 318070494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 242.5,
+            "ok": true,
+            "fromBlock": 318070495,
+            "toBlock": 318080494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 242.1,
+            "ok": true,
+            "fromBlock": 318080495,
+            "toBlock": 318090494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 237.5,
+            "ok": true,
+            "fromBlock": 318090495,
+            "toBlock": 318100494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 259.8,
+            "ok": true,
+            "fromBlock": 318100495,
+            "toBlock": 318110494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 240.6,
+            "ok": true,
+            "fromBlock": 318110495,
+            "toBlock": 318120494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 241.1,
+            "ok": true,
+            "fromBlock": 318120495,
+            "toBlock": 318130494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 242,
+            "ok": true,
+            "fromBlock": 318130495,
+            "toBlock": 318140494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 248.7,
+            "ok": true,
+            "fromBlock": 318140495,
+            "toBlock": 318150494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 244,
+            "ok": true,
+            "fromBlock": 318160495,
+            "toBlock": 318170494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 259.2,
+            "ok": true,
+            "fromBlock": 318150495,
+            "toBlock": 318160494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 245.8,
+            "ok": true,
+            "fromBlock": 318170495,
+            "toBlock": 318180494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 282.9,
+            "ok": true,
+            "fromBlock": 318180495,
+            "toBlock": 318190494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 243.4,
+            "ok": true,
+            "fromBlock": 318200495,
+            "toBlock": 318210494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 246.4,
+            "ok": true,
+            "fromBlock": 318190495,
+            "toBlock": 318200494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 275.3,
+            "ok": true,
+            "fromBlock": 318210495,
+            "toBlock": 318220494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 251.1,
+            "ok": true,
+            "fromBlock": 318220495,
+            "toBlock": 318230494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 247.3,
+            "ok": true,
+            "fromBlock": 318230495,
+            "toBlock": 318240494,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 253,
+            "ok": true,
+            "fromBlock": 318240495,
+            "toBlock": 318249816,
+            "blocks": 9322,
+            "logs": 0
+          }
+        ]
+      },
+      "stress": {
+        "description": "same block range and chunking (LOG_CHUNK, LOG_PARALLEL), eth_getLogs on a busy address with no topic filter; not an SDK path",
+        "address": "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
+        "chunks": 34,
+        "chunksRejected": 0,
+        "reportOnlyHalvingsOfFirstRejectedChunk": 0,
+        "requestsByMethod": {
+          "eth_getLogs": 34
+        },
+        "requestsTotal": 34,
+        "getLogsRequests": 34,
+        "getLogsRejected": 0,
+        "logsReturned": 473,
+        "blocksSearched": 339322,
+        "wallMs": 2383,
+        "errors": [],
+        "requests": [
+          {
+            "method": "eth_getLogs",
+            "ms": 238.8,
+            "ok": true,
+            "fromBlock": 317910495,
+            "toBlock": 317920494,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 255.5,
+            "ok": true,
+            "fromBlock": 317930495,
+            "toBlock": 317940494,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 256.4,
+            "ok": true,
+            "fromBlock": 317940495,
+            "toBlock": 317950494,
+            "blocks": 10000,
+            "logs": 12
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 268.3,
+            "ok": true,
+            "fromBlock": 317920495,
+            "toBlock": 317930494,
+            "blocks": 10000,
+            "logs": 18
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 248.8,
+            "ok": true,
+            "fromBlock": 317950495,
+            "toBlock": 317960494,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 253.8,
+            "ok": true,
+            "fromBlock": 317970495,
+            "toBlock": 317980494,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 262.6,
+            "ok": true,
+            "fromBlock": 317960495,
+            "toBlock": 317970494,
+            "blocks": 10000,
+            "logs": 19
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 256.5,
+            "ok": true,
+            "fromBlock": 317980495,
+            "toBlock": 317990494,
+            "blocks": 10000,
+            "logs": 19
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 261.5,
+            "ok": true,
+            "fromBlock": 317990495,
+            "toBlock": 318000494,
+            "blocks": 10000,
+            "logs": 10
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 260.4,
+            "ok": true,
+            "fromBlock": 318020495,
+            "toBlock": 318030494,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 269.1,
+            "ok": true,
+            "fromBlock": 318010495,
+            "toBlock": 318020494,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 286.9,
+            "ok": true,
+            "fromBlock": 318000495,
+            "toBlock": 318010494,
+            "blocks": 10000,
+            "logs": 15
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 252.8,
+            "ok": true,
+            "fromBlock": 318030495,
+            "toBlock": 318040494,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 259,
+            "ok": true,
+            "fromBlock": 318040495,
+            "toBlock": 318050494,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 260.7,
+            "ok": true,
+            "fromBlock": 318050495,
+            "toBlock": 318060494,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 290,
+            "ok": true,
+            "fromBlock": 318060495,
+            "toBlock": 318070494,
+            "blocks": 10000,
+            "logs": 20
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 248.1,
+            "ok": true,
+            "fromBlock": 318090495,
+            "toBlock": 318100494,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 255,
+            "ok": true,
+            "fromBlock": 318080495,
+            "toBlock": 318090494,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 306.5,
+            "ok": true,
+            "fromBlock": 318070495,
+            "toBlock": 318080494,
+            "blocks": 10000,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 293.1,
+            "ok": true,
+            "fromBlock": 318100495,
+            "toBlock": 318110494,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 274.1,
+            "ok": true,
+            "fromBlock": 318110495,
+            "toBlock": 318120494,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 264.9,
+            "ok": true,
+            "fromBlock": 318130495,
+            "toBlock": 318140494,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 290.1,
+            "ok": true,
+            "fromBlock": 318120495,
+            "toBlock": 318130494,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 294.4,
+            "ok": true,
+            "fromBlock": 318140495,
+            "toBlock": 318150494,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 265.2,
+            "ok": true,
+            "fromBlock": 318160495,
+            "toBlock": 318170494,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 269.7,
+            "ok": true,
+            "fromBlock": 318150495,
+            "toBlock": 318160494,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 257.6,
+            "ok": true,
+            "fromBlock": 318170495,
+            "toBlock": 318180494,
+            "blocks": 10000,
+            "logs": 10
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 303.6,
+            "ok": true,
+            "fromBlock": 318180495,
+            "toBlock": 318190494,
+            "blocks": 10000,
+            "logs": 84
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 276.5,
+            "ok": true,
+            "fromBlock": 318200495,
+            "toBlock": 318210494,
+            "blocks": 10000,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 297.6,
+            "ok": true,
+            "fromBlock": 318210495,
+            "toBlock": 318220494,
+            "blocks": 10000,
+            "logs": 23
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 313,
+            "ok": true,
+            "fromBlock": 318190495,
+            "toBlock": 318200494,
+            "blocks": 10000,
+            "logs": 57
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 256.2,
+            "ok": true,
+            "fromBlock": 318220495,
+            "toBlock": 318230494,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 255,
+            "ok": true,
+            "fromBlock": 318230495,
+            "toBlock": 318240494,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 238.1,
+            "ok": true,
+            "fromBlock": 318240495,
+            "toBlock": 318249816,
+            "blocks": 9322,
+            "logs": 7
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://arbitrum-sepolia.gateway.tenderly.co",
+      "chainId": 421614,
+      "head": {
+        "number": 318264071,
+        "timestamp": 1791770221,
+        "iso": "2026-10-12T01:57:01.000Z"
+      },
+      "avgBlockTimeSecLast10k": 0.2512,
+      "window": {
+        "fromTime": 1791680221,
+        "toTime": 1791766621,
+        "hours": 24,
+        "endsSecBeforeHead": 3600
+      },
+      "deploymentBlockAssumed": 317232224,
+      "blockRange": {
+        "fromBlock": 317910520,
+        "toBlock": 318249844,
+        "blocks": 339325,
+        "narrowed": true
+      },
+      "blockSearchOnly": {
+        "requestsByMethod": {
+          "eth_getBlockByNumber": 9
+        },
+        "requestsTotal": 9,
+        "getLogsRequests": 0,
+        "getLogsRejected": 0,
+        "logsReturned": 0,
+        "blocksSearched": 0,
+        "wallMs": 0,
+        "errors": []
+      },
+      "realistic": {
+        "description": "SDK ChainReader.bodyEventsInTimes (block search + chunked eth_getLogs), two addresses with no logs on this chain, topic filters as the verifier sends them",
+        "addresses": [
+          "0xF7AD0cbe867eb9CE4847Af3717C2d27f6434Ea5C",
+          "0xEA52a50d3753bACD835DCd47892754b65a90ca19"
+        ],
+        "eventsReturned": -1,
+        "error": "rate limit exceeded",
+        "requestsByMethod": {
+          "eth_getBlockByNumber": 9,
+          "eth_getLogs": 13
+        },
+        "requestsTotal": 22,
+        "getLogsRequests": 13,
+        "getLogsRejected": 4,
+        "logsReturned": 0,
+        "blocksSearched": 90000,
+        "wallMs": 1547,
+        "errors": [
+          "rate limit exceeded"
+        ],
+        "requests": [
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 227,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 228,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 234.4,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 236.8,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 240.3,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 224.5,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 228.7,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 226.3,
+            "ok": true
+          },
+          {
+            "method": "eth_getBlockByNumber",
+            "ms": 232.4,
+            "ok": true
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 344.6,
+            "ok": true,
+            "fromBlock": 317910520,
+            "toBlock": 317920519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 347,
+            "ok": true,
+            "fromBlock": 317930520,
+            "toBlock": 317940519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 348.8,
+            "ok": true,
+            "fromBlock": 317920520,
+            "toBlock": 317930519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 350.8,
+            "ok": true,
+            "fromBlock": 317940520,
+            "toBlock": 317950519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 297.7,
+            "ok": true,
+            "fromBlock": 317960520,
+            "toBlock": 317970519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 298.4,
+            "ok": true,
+            "fromBlock": 317970520,
+            "toBlock": 317980519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 311.4,
+            "ok": true,
+            "fromBlock": 317950520,
+            "toBlock": 317960519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 307.7,
+            "ok": true,
+            "fromBlock": 317980520,
+            "toBlock": 317990519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 201.6,
+            "ok": false,
+            "fromBlock": 318000520,
+            "toBlock": 318010519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 211.2,
+            "ok": false,
+            "fromBlock": 317990520,
+            "toBlock": 318000519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 206.2,
+            "ok": false,
+            "fromBlock": 318020520,
+            "toBlock": 318030519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 310.1,
+            "ok": true,
+            "fromBlock": 318010520,
+            "toBlock": 318020519,
+            "blocks": 10000,
+            "logs": 0
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 202.2,
+            "ok": false,
+            "fromBlock": 318030520,
+            "toBlock": 318040519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          }
+        ]
+      },
+      "stress": {
+        "description": "same block range and chunking (LOG_CHUNK, LOG_PARALLEL), eth_getLogs on a busy address with no topic filter; not an SDK path",
+        "address": "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
+        "chunks": 34,
+        "chunksRejected": 14,
+        "reportOnlyHalvingsOfFirstRejectedChunk": 1,
+        "reportOnlyAcceptedRangeBlocks": 5000,
+        "requestsByMethod": {
+          "eth_getLogs": 35
+        },
+        "requestsTotal": 35,
+        "getLogsRequests": 35,
+        "getLogsRejected": 14,
+        "logsReturned": 283,
+        "blocksSearched": 204325,
+        "wallMs": 2436,
+        "errors": [
+          "rate limit exceeded"
+        ],
+        "requests": [
+          {
+            "method": "eth_getLogs",
+            "ms": 206.4,
+            "ok": false,
+            "fromBlock": 317910520,
+            "toBlock": 317920519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 208,
+            "ok": false,
+            "fromBlock": 317920520,
+            "toBlock": 317930519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 216.9,
+            "ok": false,
+            "fromBlock": 317930520,
+            "toBlock": 317940519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 312.2,
+            "ok": true,
+            "fromBlock": 317940520,
+            "toBlock": 317950519,
+            "blocks": 10000,
+            "logs": 12
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 281.4,
+            "ok": true,
+            "fromBlock": 317960520,
+            "toBlock": 317970519,
+            "blocks": 10000,
+            "logs": 19
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 290.1,
+            "ok": true,
+            "fromBlock": 317950520,
+            "toBlock": 317960519,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 298.6,
+            "ok": true,
+            "fromBlock": 317970520,
+            "toBlock": 317980519,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 292.8,
+            "ok": true,
+            "fromBlock": 317980520,
+            "toBlock": 317990519,
+            "blocks": 10000,
+            "logs": 19
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 291.9,
+            "ok": true,
+            "fromBlock": 318000520,
+            "toBlock": 318010519,
+            "blocks": 10000,
+            "logs": 15
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 276.7,
+            "ok": true,
+            "fromBlock": 318010520,
+            "toBlock": 318020519,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 333.8,
+            "ok": true,
+            "fromBlock": 317990520,
+            "toBlock": 318000519,
+            "blocks": 10000,
+            "logs": 10
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 286.9,
+            "ok": true,
+            "fromBlock": 318020520,
+            "toBlock": 318030519,
+            "blocks": 10000,
+            "logs": 9
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 209.8,
+            "ok": false,
+            "fromBlock": 318030520,
+            "toBlock": 318040519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 208.3,
+            "ok": false,
+            "fromBlock": 318040520,
+            "toBlock": 318050519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 203.4,
+            "ok": false,
+            "fromBlock": 318060520,
+            "toBlock": 318070519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 299.7,
+            "ok": true,
+            "fromBlock": 318050520,
+            "toBlock": 318060519,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 208.1,
+            "ok": false,
+            "fromBlock": 318080520,
+            "toBlock": 318090519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 216,
+            "ok": false,
+            "fromBlock": 318090520,
+            "toBlock": 318100519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 200.9,
+            "ok": false,
+            "fromBlock": 318100520,
+            "toBlock": 318110519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 344.7,
+            "ok": true,
+            "fromBlock": 318070520,
+            "toBlock": 318080519,
+            "blocks": 10000,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 214.1,
+            "ok": false,
+            "fromBlock": 318110520,
+            "toBlock": 318120519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 269.2,
+            "ok": true,
+            "fromBlock": 318130520,
+            "toBlock": 318140519,
+            "blocks": 10000,
+            "logs": 3
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 286.4,
+            "ok": true,
+            "fromBlock": 318120520,
+            "toBlock": 318130519,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 283.1,
+            "ok": true,
+            "fromBlock": 318140520,
+            "toBlock": 318150519,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 388.1,
+            "ok": true,
+            "fromBlock": 318150520,
+            "toBlock": 318160519,
+            "blocks": 10000,
+            "logs": 13
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 349.2,
+            "ok": true,
+            "fromBlock": 318160520,
+            "toBlock": 318170519,
+            "blocks": 10000,
+            "logs": 6
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 388.3,
+            "ok": true,
+            "fromBlock": 318170520,
+            "toBlock": 318180519,
+            "blocks": 10000,
+            "logs": 10
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 364.6,
+            "ok": true,
+            "fromBlock": 318180520,
+            "toBlock": 318190519,
+            "blocks": 10000,
+            "logs": 84
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 209,
+            "ok": false,
+            "fromBlock": 318190520,
+            "toBlock": 318200519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 202.1,
+            "ok": false,
+            "fromBlock": 318200520,
+            "toBlock": 318210519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 202,
+            "ok": false,
+            "fromBlock": 318220520,
+            "toBlock": 318230519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 213.2,
+            "ok": false,
+            "fromBlock": 318210520,
+            "toBlock": 318220519,
+            "blocks": 10000,
+            "error": "rate limit exceeded"
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 348.1,
+            "ok": true,
+            "fromBlock": 318230520,
+            "toBlock": 318240519,
+            "blocks": 10000,
+            "logs": 16
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 290.5,
+            "ok": true,
+            "fromBlock": 318240520,
+            "toBlock": 318249844,
+            "blocks": 9325,
+            "logs": 7
+          },
+          {
+            "method": "eth_getLogs",
+            "ms": 273.8,
+            "ok": true,
+            "fromBlock": 317910520,
+            "toBlock": 317915519,
+            "blocks": 5000,
+            "logs": 3
+          }
+        ]
+      }
+    }
+  ]
+}

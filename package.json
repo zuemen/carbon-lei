@@ -32,6 +32,7 @@
     "bench:verify": "node scripts/bench-verify.ts",
     "bench:l2fees": "node scripts/l2-fee-estimate.ts",
     "bench:scale": "node scripts/bench-scale.ts",
+    "bench:window": "node scripts/bench-window-rpc.ts",
     "vlei:up": "npm run vlei:up -w verifier",
     "vlei:setup": "npm run vlei:setup -w verifier",
     "demo:local": "node scripts/demo-local.ts",
