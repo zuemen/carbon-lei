@@ -1,0 +1,51 @@
+name: daily-check
+
+# Once a day, the reviewer commands and the hosted demo page are checked against the live Sepolia
+# chain through the public RPC nodes in sdk/chain.ts (SEPOLIA_RPCS). A failing step fails the run;
+# the result is shown only on the Actions tab (no notification is sent to any outside service).
+# No secrets are used.
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # 03:17 UTC every day
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: reviewer commands and hosted demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEMO_URL: https://zuemen.github.io/carbon-lei/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: verify:demo (checks 0-8 on the demo proof, must be VALID)
+        run: npm run verify:demo
+      - name: audit:onchain (every row of the On-chain proof table)
+        run: npm run audit:onchain
+      - name: Install Chromium for Playwright
+        working-directory: demo
+        run: npx playwright install --with-deps chromium
+      - name: Playwright e2e against the hosted page
+        working-directory: demo
+        run: npx playwright test --workers=1
+      - name: Keep the Playwright traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: demo/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
