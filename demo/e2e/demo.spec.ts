@@ -581,6 +581,16 @@ test("Desktop: a button scrolled into view is not under the sticky tab bar (atta
   await page.goto("./#try-to-break-it");
   const btn = page.getByRole("button", { name: "Verify the impostor's proof" });
   await expect(btn).toBeVisible();
+  await expect(page.getByText(/Connecting to Sepolia/)).toHaveCount(0, { timeout: 60_000 });
+  // The bar can grow once the chain data arrives (slow RPC on CI): measure after --tabbar-h has caught up.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const h = Math.ceil(document.querySelector(".tabbar")!.getBoundingClientRect().height);
+        return getComputedStyle(document.documentElement).getPropertyValue("--tabbar-h").trim() === `${h}px`;
+      }),
+    )
+    .toBe(true);
   for (const block of ["start", "nearest"] as const) {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await btn.evaluate((el, b) => el.scrollIntoView({ block: b }), block);
