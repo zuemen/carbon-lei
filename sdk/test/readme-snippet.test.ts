@@ -5,7 +5,7 @@
 // Refresh the recording with: RPC_RECORD=sdk/test/fixtures/sepolia-demo-rpc.json node --import ./sdk/test/helpers/rpc-replay.ts verify.mjs
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
@@ -25,7 +25,7 @@ describe("README SDK example", () => {
   it("runs as written and prints a VALID verdict for the demo proof", async () => {
     const code = readmeSnippet(readFileSync(`${root}README.md`, "utf8"));
     expect(code.split("\n").filter((l) => l.trim()).length).toBeLessThanOrEqual(10);
-    const { stdout } = await run(process.execPath, ["--import", preload, "--input-type=module", "-e", code], {
+    const { stdout } = await run(process.execPath, ["--import", pathToFileURL(preload).href, "--input-type=module", "-e", code], {
       cwd: root,
       env: { ...process.env, RPC_REPLAY: recording, RPC_RECORD: "" },
     });

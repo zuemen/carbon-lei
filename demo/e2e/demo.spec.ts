@@ -1,5 +1,6 @@
 // End-to-end checks of the demo page (handbook E1–E11, plan U3).
 import { expect, test, type Page } from "@playwright/test";
+import { fileURLToPath } from "node:url";
 import ExcelJS from "exceljs";
 import { reportKeyOf } from "../../sdk/commitment.ts";
 import { decodeDisclosure } from "../../sdk/disclosure.ts";
@@ -776,7 +777,7 @@ test("Supplier: the Communication Template panel reads the Commission's example 
   expect(overflow).toBeLessThanOrEqual(0);
   // Long unbroken strings (file name, installation and product names) wrap at 390 px instead of widening the page.
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile(new URL("../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx", import.meta.url).pathname);
+  await wb.xlsx.readFile(fileURLToPath(new URL("../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx", import.meta.url)));
   const sc = wb.getWorksheet("Summary_Communication")!;
   const long = "X".repeat(160);
   for (const ref of ["G12", "H26", "H27"]) sc.getCell(ref).value = { formula: "X", result: long } as ExcelJS.CellFormulaValue;
@@ -809,7 +810,7 @@ test("Supplier: own template entry at the top; the Commission's example signed w
   await expect(panel.locator("summary")).toBeFocused();
   await expect(panel.locator("summary")).toHaveText("Start from the Commission's Communication Template (official example)");
   await panel.locator('input[type="file"]').setInputFiles(
-    new URL("../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx", import.meta.url).pathname,
+    fileURLToPath(new URL("../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx", import.meta.url)),
   );
   await expect(panel.getByTestId("template-summary")).toContainText("CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx");
   await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
