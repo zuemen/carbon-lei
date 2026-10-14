@@ -1,0 +1,415 @@
+# Counterexample paths of the CR1 model (module CARBONLEI-CR1), 14 October 2026, Maude 3.5.1, macOS arm64. For each search of section G that finds a solution: the search, then the rule labels on the path to the first solution (show path labels). For finding C1 (docs/SECURITY.md 13.1) also the full path with every state (show path).
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bWatch, wNone, gNone, true, 10) =>* {
+    S} such that cr1Bad(S) = true .
+
+Solution 1 (state 6241)
+states: 6242  rewrites: 220468 in 89ms cpu (90ms real) (2470672
+    rewrites/second)
+S --> twatch hsusp clock(6) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(tk,
+    thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false) cur(b1, tk, 3)
+    revoked(r1, tk, 6)
+propose
+suspend
+drop-watcher
+propose-grant
+tick
+tick
+tick
+exec-rotation
+exec-grant
+lift
+tick
+tick
+tick
+revoke-now
+state 0, CrSys: {dropOK watcher clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)}
+===[ crl [propose] : {S clock(N) ver(v2) fresh(A') cur(B, A, T)} => {ver(v2) (
+    fresh(A') clock(N) S prop(B, A', delay + N)) cur(B, A, T)} if not hasProp(
+    B, S) = true . ]===>
+state 1, CrSys: {dropOK watcher clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)
+    prop(b1, tk, 3)}
+===[ crl [suspend] : {watcher S cur(B, A, T)} => {watcher (susp(B) markH(S))
+    cur(B, A, T)} if not isSusp(B, S) = true . ]===>
+state 7, CrSys: {dropOK watcher hsusp clock(0) tmax(10) ver(v2) bmode(bWatch)
+    wmon(wNone) gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) susp(b1)
+    key(hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1,
+    hk, 0) prop(b1, tk, 3)}
+===[ rl [drop-watcher] : {dropOK watcher S} => {S} . ]===>
+state 26, CrSys: {hsusp clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)
+    prop(b1, tk, 3)}
+===[ crl [propose-grant] : {S clock(N) ver(v2)} => {ver(v2) clock(N) S gprop(
+    delay + N)} if not hasGProp(S) = true /\ not thiefWatcher(S) = true /\ not
+    mutant(grantNow, S) = true . ]===>
+state 71, CrSys: {hsusp clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(
+    hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk,
+    0) prop(b1, tk, 3)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 160, CrSys: {hsusp clock(1) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(
+    hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk,
+    0) prop(b1, tk, 3)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 311, CrSys: {hsusp clock(2) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(
+    hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk,
+    0) prop(b1, tk, 3)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 541, CrSys: {hsusp clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(
+    hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk,
+    0) prop(b1, tk, 3)}
+===[ crl [exec-rotation] : {S clock(N) fresh(A') cur(B, A, K) prop(B, A', T)}
+    => {(clock(N) S rotated(B, N)) cur(B, A', N)} if N >= T = true . ]===>
+state 872, CrSys: {hsusp clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gprop(3) gcancel(false) attackerKey(tk) susp(b1) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3)}
+===[ crl [exec-grant] : {S clock(N) gprop(T)} => {clock(N) twatch S} if N >= T
+    = true . ]===>
+state 1330, CrSys: {twatch hsusp clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) attackerKey(tk) susp(b1) key(hk, bodyKey)
+    key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false) cur(b1, tk,
+    3)}
+===[ crl [lift] : {S ver(v2) susp(B)} => {ver(v2) markL(B, S)} if thiefWatcher(
+    S) or mutant(liftByOwner, S) = true . ]===>
+state 1943, CrSys: {twatch hsusp clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 2738, CrSys: {twatch hsusp clock(4) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 3729, CrSys: {twatch hsusp clock(5) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 4914, CrSys: {twatch hsusp clock(6) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3)}
+===[ crl [revoke-now] : {S clock(N) rep(R, B) cur(B, A, T)} => {((clock(N)
+    clearQ(R, S) revoked(R, A, N)) cur(B, A, T)) rep(R, B)} if attackerHolds(A,
+    S) = true /\ not isRevoked(R, S) = true /\ not isSusp(B, S) = true /\ isV1(
+    S) or hold + T <= N or mutant(noHold, S) = true . ]===>
+state 6241, CrSys: {twatch hsusp clock(6) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3) revoked(r1, tk, 6)}
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bWatch, wNone, gNone, true, 10) =>* {
+    S} such that cr1BadThiefSusp(S) = true .
+
+Solution 1 (state 8081)
+states: 8082  rewrites: 297481 in 119ms cpu (120ms real) (2495771
+    rewrites/second)
+S --> twatch clock(7) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(gNone)
+    gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(tk,
+    thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)
+    revoked(r1, tk, 7)
+drop-watcher
+propose-grant
+tick
+propose
+tick
+tick
+exec-grant
+thief-suspend
+tick
+exec-rotation
+lift
+tick
+tick
+tick
+revoke-now
+state 0, CrSys: {dropOK watcher clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(
+    wNone) gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)}
+===[ rl [drop-watcher] : {dropOK watcher S} => {S} . ]===>
+state 3, CrSys: {clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey) key(tk,
+    thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)}
+===[ crl [propose-grant] : {S clock(N) ver(v2)} => {ver(v2) clock(N) S gprop(
+    delay + N)} if not hasGProp(S) = true /\ not thiefWatcher(S) = true /\ not
+    mutant(grantNow, S) = true . ]===>
+state 14, CrSys: {clock(0) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey)
+    key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 42, CrSys: {clock(1) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey)
+    key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)}
+===[ crl [propose] : {S clock(N) ver(v2) fresh(A') cur(B, A, T)} => {ver(v2) (
+    fresh(A') clock(N) S prop(B, A', delay + N)) cur(B, A, T)} if not hasProp(
+    B, S) = true . ]===>
+state 101, CrSys: {clock(1) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey)
+    key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0) prop(b1,
+    tk, 4)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 205, CrSys: {clock(2) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey)
+    key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0) prop(b1,
+    tk, 4)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 374, CrSys: {clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(wNone) gmon(
+    gNone) gprop(3) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey)
+    key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0) prop(b1,
+    tk, 4)}
+===[ crl [exec-grant] : {S clock(N) gprop(T)} => {clock(N) twatch S} if N >= T
+    = true . ]===>
+state 631, CrSys: {twatch clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0) prop(b1, tk,
+    4)}
+===[ crl [thief-suspend] : {twatch S cur(B, A, T)} => {twatch (S susp(B)) cur(
+    B, A, T)} if not isSusp(B, S) = true . ]===>
+state 1000, CrSys: {twatch clock(3) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)
+    prop(b1, tk, 4)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 1512, CrSys: {twatch clock(4) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) attackerKey(tk) fresh(tk) susp(b1) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rcancel(b1, false) cur(b1, hk, 0)
+    prop(b1, tk, 4)}
+===[ crl [exec-rotation] : {S clock(N) fresh(A') cur(B, A, K) prop(B, A', T)}
+    => {(clock(N) S rotated(B, N)) cur(B, A', N)} if N >= T = true . ]===>
+state 2190, CrSys: {twatch clock(4) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) attackerKey(tk) susp(b1) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)}
+===[ crl [lift] : {S ver(v2) susp(B)} => {ver(v2) markL(B, S)} if thiefWatcher(
+    S) or mutant(liftByOwner, S) = true . ]===>
+state 3056, CrSys: {twatch clock(4) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 4127, CrSys: {twatch clock(5) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 5387, CrSys: {twatch clock(6) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)}
+===[ crl [tick] : {S clock(N) tmax(M)} => {clock(s N) S tmax(M)} if N < M =
+    true /\ bodyOK(s N, S, S) = true /\ watchOK(s N, S, S) = true . ]===>
+state 6755, CrSys: {twatch clock(7) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)}
+===[ crl [revoke-now] : {S clock(N) rep(R, B) cur(B, A, T)} => {((clock(N)
+    clearQ(R, S) revoked(R, A, N)) cur(B, A, T)) rep(R, B)} if attackerHolds(A,
+    S) = true /\ not isRevoked(R, S) = true /\ not isSusp(B, S) = true /\ isV1(
+    S) or hold + T <= N or mutant(noHold, S) = true . ]===>
+state 8081, CrSys: {twatch clock(7) tmax(10) ver(v2) bmode(bWatch) wmon(wNone)
+    gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 4) rcancel(b1, false) cur(b1, tk, 4)
+    revoked(r1, tk, 7)}
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gNone, false, 10)
+    =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 7363)
+states: 7364  rewrites: 242465 in 101ms cpu (102ms real) (2383159
+    rewrites/second)
+S --> watcher twatch hsusp clock(6) tmax(10) ver(v2) bmode(bNone) wmon(
+    wOnRotation) gmon(gNone) gcancel(false) lifted(b1) attackerKey(tk) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false)
+    cur(b1, tk, 3) revoked(r1, tk, 6)
+propose
+suspend
+propose-grant
+tick
+tick
+tick
+exec-rotation
+exec-grant
+tick
+tick
+tick
+lift
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wNone, gNone, true, 10) =>* {
+    S} such that cr1Bad(S) = true .
+
+Solution 1 (state 2139)
+states: 2140  rewrites: 48892 in 25ms cpu (25ms real) (1913356 rewrites/second)
+S --> dropOK watcher clock(6) tmax(10) ver(v2) bmode(bNone) wmon(wNone) gmon(
+    gNone) gcancel(false) attackerKey(tk) key(hk, bodyKey) key(tk, thiefKey)
+    rep(r1, b1) rotated(b1, 3) rcancel(b1, false) cur(b1, tk, 3) revoked(r1,
+    tk, 6)
+propose
+tick
+tick
+tick
+exec-rotation
+tick
+tick
+tick
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnQueued, gCancel, false, 10)
+    =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 901)
+states: 902  rewrites: 27908 in 12ms cpu (12ms real) (2322956 rewrites/second)
+S --> watcher clock(6) tmax(10) ver(v2) bmode(bNone) wmon(wOnQueued) gmon(
+    gCancel) gcancel(false) attackerKey(tk) key(hk, bodyKey) key(tk, thiefKey)
+    rep(r1, b1) rotated(b1, 3) rcancel(b1, false) cur(b1, tk, 3) revoked(r1,
+    tk, 6)
+propose
+tick
+tick
+tick
+exec-rotation
+tick
+tick
+tick
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gCancel, true,
+    10) =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 2517)
+states: 2518  rewrites: 68181 in 30ms cpu (30ms real) (2244272 rewrites/second)
+S --> clock(6) tmax(10) ver(v2) bmode(bNone) wmon(wOnRotation) gmon(gCancel)
+    gcancel(false) attackerKey(tk) key(hk, bodyKey) key(tk, thiefKey) rep(r1,
+    b1) rotated(b1, 3) rcancel(b1, false) cur(b1, tk, 3) revoked(r1, tk, 6)
+propose
+drop-watcher
+tick
+tick
+tick
+exec-rotation
+tick
+tick
+tick
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gCancel, false,
+    10) +mut noHold =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 217)
+states: 218  rewrites: 5220 in 2ms cpu (2ms real) (2001533 rewrites/second)
+S --> watcher clock(3) tmax(10) ver(v2) bmode(bNone) wmon(wOnRotation) gmon(
+    gCancel) mut(noHold) gcancel(false) attackerKey(tk) key(hk, bodyKey) key(
+    tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1, false) cur(b1, tk, 3)
+    revoked(r1, tk, 3)
+propose
+tick
+tick
+tick
+exec-rotation
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gCancel, false,
+    10) +mut noLapse =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 1894)
+states: 1895  rewrites: 67764 in 27ms cpu (28ms real) (2445117 rewrites/second)
+S --> watcher hsusp clock(6) tmax(10) ver(v2) bmode(bNone) wmon(wOnRotation)
+    gmon(gCancel) mut(noLapse) gcancel(false) attackerKey(tk) susp(b1) key(hk,
+    bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) firstQ(b1, 3)
+    rcancel(b1, false) cur(b1, tk, 3) revoked(r1, tk, 6)
+propose
+tick
+tick
+tick
+exec-rotation
+revoke-queue
+suspend
+tick
+tick
+tick
+exec-revocation
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gCancel, false,
+    10) +mut grantNow =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 1497)
+states: 1498  rewrites: 55163 in 24ms cpu (25ms real) (2208817 rewrites/second)
+S --> watcher twatch hsusp clock(6) tmax(10) ver(v2) bmode(bNone) wmon(
+    wOnRotation) gmon(gCancel) mut(grantNow) gcancel(false) lifted(b1)
+    attackerKey(tk) key(hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1,
+    3) rcancel(b1, false) cur(b1, tk, 3) revoked(r1, tk, 6)
+propose
+suspend
+grant-now
+tick
+tick
+tick
+exec-rotation
+tick
+tick
+tick
+lift
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gCancel, false,
+    10) +mut noGrantCancel =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 5010)
+states: 5011  rewrites: 188899 in 76ms cpu (77ms real) (2472273
+    rewrites/second)
+S --> watcher twatch hsusp clock(6) tmax(10) ver(v2) bmode(bNone) wmon(
+    wOnRotation) gmon(gCancel) mut(noGrantCancel) gcancel(false) lifted(b1)
+    attackerKey(tk) key(hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1,
+    3) rcancel(b1, false) cur(b1, tk, 3) revoked(r1, tk, 6)
+propose
+suspend
+propose-grant
+tick
+tick
+tick
+exec-rotation
+exec-grant
+tick
+tick
+tick
+lift
+revoke-now
+==========================================
+search [1] in CARBONLEI-CR1 : cr1Inst(v2, bNone, wOnRotation, gCancel, false,
+    10) +mut liftByOwner =>* {S} such that cr1Bad(S) = true .
+
+Solution 1 (state 2719)
+states: 2720  rewrites: 93842 in 41ms cpu (42ms real) (2239398 rewrites/second)
+S --> watcher hsusp clock(6) tmax(10) ver(v2) bmode(bNone) wmon(wOnRotation)
+    gmon(gCancel) mut(liftByOwner) gcancel(false) lifted(b1) attackerKey(tk)
+    key(hk, bodyKey) key(tk, thiefKey) rep(r1, b1) rotated(b1, 3) rcancel(b1,
+    false) cur(b1, tk, 3) revoked(r1, tk, 6)
+propose
+suspend
+tick
+tick
+tick
+exec-rotation
+tick
+tick
+tick
+lift
+revoke-now

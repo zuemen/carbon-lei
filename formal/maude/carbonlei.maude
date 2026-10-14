@@ -663,7 +663,12 @@ endm
 *** executeRotation after ROTATION_DELAY; revokeReport by an address bound less than REVOKE_HOLD ago
 *** is queued, executeRevocation after REVOKE_HOLD only while the requester is still the body's
 *** active address; cancelRotation by the body's current address or the WATCHER; cancelRevocation
-*** by the WATCHER; suspendVerifier by the WATCHER).
+*** by the WATCHER; suspendVerifier by the WATCHER). Since 14 October it also covers the two
+*** paths of review finding H2: the two-step WATCHER grant (proposeRoleGrant, executeRoleGrant after
+*** ROTATION_DELAY, cancelRoleGrant by any current WATCHER or the owner; grantRole for WATCHER_ROLE
+*** reverts with RoleGrantNeedsDelay) and liftSuspension (onlyRole(WATCHER_ROLE), no delay; the
+*** owner cannot lift unless it holds the role), and the M2 rule of cancelRotation (a suspended
+*** body's current address cannot cancel).
 ***
 *** The attacker holds the allowlist owner key and one fresh EVM key tk, never bound before. It does
 *** not hold the body's key hk and cannot forge the body's EIP-712 consent, so the consent path
@@ -678,13 +683,22 @@ endm
 ***   wmon(wOnRotation): while the watcher holds its role, it suspends the body within REVOKE_HOLD
 ***                     of a rotation (VerifierAddressRotated).
 ***   wmon(wOnQueued):  the same, but only within REVOKE_HOLD of the first RevocationQueued.
-***   bNone, wNone:     no obligation; the body and the watcher may still act at any time, or never.
-*** With dropOK the owner key may also revoke the watcher's role (role changes are not delayed in
-*** the contract unless the owner is a timelock); without it, it may not.
+***   gmon(gCancel):    while the watcher holds its role, it cancels a pending WATCHER grant before
+***                     its readyAt (watch-v2.ts: RoleGrantProposed -> cancelRoleGrant).
+***   bNone, wNone, gNone: no obligation; the body and the watcher may still act at any time, or never.
+*** The body's obligation applies only while it can cancel (cancelRotation: not suspended); while
+*** it cannot and the watcher has lost its role, nobody honest can cancel, and time may pass.
+*** With dropOK the owner key may also revoke the watcher's role (revokeRole is not delayed in the
+*** contract unless the owner is a timelock); without it, it may not.
+*** The attacker's WATCHER grant goes to an account it controls (tw; not an address of the body, so
+*** not tracked as an Addr). With the role it may suspend the body (which closes the body's own
+*** cancel path, M2) and lift suspensions; liftSuspension and executeRevocation can be in one block,
+*** so the monitor's re-suspension after a foreign lift (watch-v2.ts) comes too late to matter here.
+*** Role grants are modelled for V2 only: V1 falls without them.
 
 mod CARBONLEI-CR1 is
   protecting CARBONLEI-DATA .
-  sorts Addr Holder Ver BMode WMon CrMutant CrFact CrConf CrSys .
+  sorts Addr Holder Ver BMode WMon GMon CrMutant CrFact CrConf CrSys .
   subsort CrFact < CrConf .
   *** hk: the body's own key, bound at tick 0; tk: the attacker's fresh key
   ops hk tk : -> Addr [ctor] .
@@ -692,10 +706,15 @@ mod CARBONLEI-CR1 is
   ops v1 v2 : -> Ver [ctor] .
   ops bWatch bNone : -> BMode [ctor] .
   ops wOnRotation wOnQueued wNone : -> WMon [ctor] .
+  ops gCancel gNone : -> GMon [ctor] .
   *** V2 mutants: noHold applies a revocation by a freshly bound address at once (REVOKE_HOLD
   *** removed); noLapse executes a queued revocation without checking that the requester is still
   *** the body's active address
-  ops noHold noLapse : -> CrMutant [ctor] .
+  *** H2 mutants (14 October): grantNow grants WATCHER_ROLE at once (grantRole not overridden, no
+  *** RoleGrantNeedsDelay); noGrantCancel lets only the owner cancel a pending grant (the WATCHER
+  *** cannot); liftByOwner lets the owner key lift a suspension without the role (liftSuspension
+  *** without onlyRole(WATCHER_ROLE))
+  ops noHold noLapse grantNow noGrantCancel liftByOwner : -> CrMutant [ctor] .
   op empty : -> CrConf [ctor] .
   op __ : CrConf CrConf -> CrConf [ctor assoc comm id: empty] .
   op {_} : CrConf -> CrSys [ctor] .
@@ -705,11 +724,21 @@ mod CARBONLEI-CR1 is
   op ver : Ver -> CrFact [ctor] .
   op bmode : BMode -> CrFact [ctor] .
   op wmon : WMon -> CrFact [ctor] .
+  op gmon : GMon -> CrFact [ctor] .
   op mut : CrMutant -> CrFact [ctor] .
   *** the owner key may revoke the watcher's role
   op dropOK : -> CrFact [ctor] .
   *** the WATCHER role is held by the watcher
   op watcher : -> CrFact [ctor] .
+  *** pendingRoleGrants[WATCHER_ROLE][tw] = readyAt, for the attacker's account tw
+  op gprop : Nat -> CrFact [ctor] .
+  *** the attacker's account tw holds WATCHER_ROLE
+  op twatch : -> CrFact [ctor] .
+  *** ghosts: a WATCHER grant to tw was cancelled at least once; a suspension was lifted
+  op gcancel : Bool -> CrFact [ctor] .
+  op lifted : Body -> CrFact [ctor] .
+  *** ghost: the honest watcher suspended a body at least once
+  op hsusp : -> CrFact [ctor] .
   *** who holds an EVM key (specification side only; the rules use attackerKey)
   op key : Addr Holder -> CrFact [ctor] .
   *** an address the attacker can sign with
@@ -734,7 +763,8 @@ mod CARBONLEI-CR1 is
   op rcancel : Body Bool -> CrFact [ctor] .
 
   vars N M T K : Nat . var B : Body . vars A A' : Addr . var R : Report . vars S ST : CrConf .
-  var V : Ver . var BM : BMode . var WM : WMon . var F : Bool . var Mu : CrMutant . var H : Holder .
+  var V : Ver . var BM : BMode . var WM : WMon . var GM : GMon . var F : Bool . var Mu : CrMutant .
+  var H : Holder .
 
   *** delays in ticks
   op delay : -> Nat .
@@ -764,6 +794,12 @@ mod CARBONLEI-CR1 is
   op attackerHolds : Addr CrConf -> Bool .
   eq attackerHolds(A, attackerKey(A) S) = true .
   eq attackerHolds(A, S) = false [owise] .
+  op hasGProp : CrConf -> Bool .
+  eq hasGProp(gprop(T) S) = true .
+  eq hasGProp(S) = false [owise] .
+  op thiefWatcher : CrConf -> Bool .
+  eq thiefWatcher(twatch S) = true .
+  eq thiefWatcher(S) = false [owise] .
   op hasWatcher : CrConf -> Bool .
   eq hasWatcher(watcher S) = true .
   eq hasWatcher(S) = false [owise] .
@@ -775,6 +811,12 @@ mod CARBONLEI-CR1 is
   op clearQ : Report CrConf -> CrConf .
   eq clearQ(R, queued(R, A, T) S) = S .
   eq clearQ(R, S) = S [owise] .
+  op markH : CrConf -> CrConf .
+  eq markH(hsusp S) = hsusp S .
+  eq markH(S) = S hsusp [owise] .
+  op markL : Body CrConf -> CrConf .
+  eq markL(B, lifted(B) S) = lifted(B) S .
+  eq markL(B, S) = S lifted(B) [owise] .
   op markQ : Body Nat CrConf -> CrConf .
   eq markQ(B, N, firstQ(B, T) S) = firstQ(B, T) S .
   eq markQ(B, N, S) = S firstQ(B, N) [owise] .
@@ -793,10 +835,11 @@ mod CARBONLEI-CR1 is
   crl [exec-rotation] : { prop(B, A', T) cur(B, A, K) fresh(A') clock(N) S }
     => { cur(B, A', N) clock(N) S rotated(B, N) }
     if N >= T .
-  *** cancelRotation by the body's current address (if the body still holds it) or the WATCHER
+  *** cancelRotation by the body's current address (if the body still holds it and is not
+  *** suspended: bodyMayCancel, M2) or the WATCHER (the honest one; the attacker's tw never cancels)
   crl [cancel-rotation] : { prop(B, A', T) cur(B, A, K) rcancel(B, F) S }
     => { cur(B, A, K) rcancel(B, true) S }
-    if not attackerHolds(A, S) or hasWatcher(S) .
+    if (not attackerHolds(A, S) and not isSusp(B, S)) or hasWatcher(S) .
 
   *** revokeReport by an address the attacker holds, while it is the issuing body's active address.
   *** V1: applied at once. V2: applied at once if the address was bound at least REVOKE_HOLD ago,
@@ -818,22 +861,46 @@ mod CARBONLEI-CR1 is
   *** rotation that is the attacker's)
   rl [cancel-revocation] : { queued(R, A, T) watcher S } => { watcher S } .
   *** suspendVerifier by the WATCHER (not lifted within the bound)
-  crl [suspend] : { watcher cur(B, A, T) S } => { watcher cur(B, A, T) S susp(B) }
+  crl [suspend] : { watcher cur(B, A, T) S } => { watcher cur(B, A, T) markH(S) susp(B) }
     if not isSusp(B, S) .
   *** the owner key revokes the WATCHER role
   rl [drop-watcher] : { dropOK watcher S } => { S } .
+
+  *** H2 paths (V2). proposeRoleGrant(WATCHER_ROLE, tw) with the stolen owner key, which holds
+  *** DEFAULT_ADMIN_ROLE because it follows ownership; again after a cancellation
+  crl [propose-grant] : { ver(v2) clock(N) S } => { ver(v2) clock(N) S gprop(N + delay) }
+    if not hasGProp(S) /\ not thiefWatcher(S) /\ not mutant(grantNow, S) .
+  *** executeRoleGrant: anyone, once readyAt has passed
+  crl [exec-grant] : { gprop(T) clock(N) S } => { clock(N) S twatch }
+    if N >= T .
+  *** cancelRoleGrant by a current WATCHER (the honest one) or the owner (the attacker, who does not)
+  crl [cancel-grant] : { gprop(T) watcher gcancel(F) S } => { watcher gcancel(true) S }
+    if not mutant(noGrantCancel, S) .
+  *** mutant grantNow: grantRole(WATCHER_ROLE, tw) succeeds at once
+  crl [grant-now] : { ver(v2) S } => { ver(v2) S twatch }
+    if mutant(grantNow, S) /\ not thiefWatcher(S) .
+  *** suspendVerifier by tw: closes the body's cancel path (M2)
+  crl [thief-suspend] : { twatch cur(B, A, T) S } => { twatch cur(B, A, T) S susp(B) }
+    if not isSusp(B, S) .
+  *** liftSuspension by tw (onlyRole(WATCHER_ROLE), no delay), or by the owner key under liftByOwner
+  crl [lift] : { ver(v2) susp(B) S } => { ver(v2) markL(B, S) }
+    if thiefWatcher(S) or mutant(liftByOwner, S) .
 
   *** time advances, not past a deadline whose monitoring obligation is unmet
   crl [tick] : { clock(N) tmax(M) S } => { clock(s N) tmax(M) S }
     if N < M /\ bodyOK(s N, S, S) /\ watchOK(s N, S, S) .
   op bodyOK : Nat CrConf CrConf -> Bool .
-  eq bodyOK(N, prop(B, A, T) S, bmode(bWatch) ST) = T > N and bodyOK(N, S, bmode(bWatch) ST) .
+  eq bodyOK(N, prop(B, A, T) S, bmode(bWatch) ST) =
+     (T > N or (isSusp(B, ST) and not hasWatcher(ST))) and bodyOK(N, S, bmode(bWatch) ST) .
   eq bodyOK(N, S, ST) = true [owise] .
   op watchOK : Nat CrConf CrConf -> Bool .
   eq watchOK(N, rotated(B, K) S, wmon(wOnRotation) watcher ST) =
      (N < K + hold or isSusp(B, ST)) and watchOK(N, S, wmon(wOnRotation) watcher ST) .
   eq watchOK(N, firstQ(B, K) S, wmon(wOnQueued) watcher ST) =
      (N < K + hold or isSusp(B, ST)) and watchOK(N, S, wmon(wOnQueued) watcher ST) .
+  *** (the watcher cancels if it can: under the mutant noGrantCancel it cannot, and time may pass)
+  eq watchOK(N, gprop(T) S, gmon(gCancel) watcher ST) =
+     (T > N or mutant(noGrantCancel, ST)) and watchOK(N, S, gmon(gCancel) watcher ST) .
   eq watchOK(N, S, ST) = true [owise] .
 
   *** ------------------------------------------------------------ specification side
@@ -869,14 +936,25 @@ mod CARBONLEI-CR1 is
   eq suspendWitness(rotated(B, K) susp(B) queued(R, A, T) clock(M) tmax(M) S) = true .
   eq suspendWitness(S) = false [owise] .
 
+  *** cr1Bad on a path where the honest watcher never suspended (only the attacker's tw did)
+  op cr1BadThiefSusp : CrConf -> Bool .
+  eq cr1BadThiefSusp(hsusp S) = false .
+  eq cr1BadThiefSusp(S) = cr1Bad(S) [owise] .
+  *** non-vacuity (H2): a WATCHER grant to the attacker was cancelled, tw never got the role, and
+  *** time reached the bound
+  op grantCancelWitness : CrConf -> Bool .
+  ceq grantCancelWitness(gcancel(true) clock(M) tmax(M) S) = true
+    if not thiefWatcher(S) .
+  eq grantCancelWitness(S) = false [owise] .
+
   *** ------------------------------------------------------------ instance
-  *** cr1Inst(contract version, body monitoring, watcher monitoring, owner key may drop the watcher,
-  *** last tick)
-  op cr1Inst : Ver BMode WMon Bool Nat -> CrSys .
-  eq cr1Inst(V, BM, WM, F, M) =
-     { clock(0) tmax(M) ver(V) bmode(BM) wmon(WM) watcher (if F then dropOK else empty fi)
+  *** cr1Inst(contract version, body monitoring, watcher monitoring of rotations and revocations,
+  *** watcher monitoring of WATCHER grants, owner key may drop the watcher, last tick)
+  op cr1Inst : Ver BMode WMon GMon Bool Nat -> CrSys .
+  eq cr1Inst(V, BM, WM, GM, F, M) =
+     { clock(0) tmax(M) ver(V) bmode(BM) wmon(WM) gmon(GM) watcher (if F then dropOK else empty fi)
        key(hk, bodyKey) key(tk, thiefKey) attackerKey(tk) fresh(tk)
-       cur(b1, hk, 0) rep(r1, b1) rcancel(b1, false) } .
+       cur(b1, hk, 0) rep(r1, b1) rcancel(b1, false) gcancel(false) } .
   op _+mut_ : CrSys CrMutant -> CrSys .
   eq { S } +mut Mu = { S mut(Mu) } .
 endm

@@ -4,8 +4,11 @@
 // The delays in V2 only help if someone reacts within them. The Maude CR1 model (formal/maude,
 // CARBONLEI-CR1) shows the rotation/revocation part of V2 holds if every rotation proposal the body did not ask
 // for is cancelled within ROTATION_DELAY and, when a rotation got through anyway, the body is SUSPENDED within
-// REVOKE_HOLD. The model has no role grants, suspension lifts, new bodies or supersede/takeover, so the rules
-// below for those (added after our own AI-run review, 2026-10-10, §13.1) are not covered by it. Default policy:
+// REVOKE_HOLD. Since 14 October the model also has WATCHER grants and lifts: the watcher must also cancel
+// unexpected grant proposals (re-suspending after a foreign lift comes too late, as the lift and the revocation
+// can share a block), and if the owner key revokes this monitor's role first, the body alone cannot stop the
+// attack (SECURITY §13.1, finding C1). It has no new bodies or supersede/takeover, so the rules below for
+// those (added after our own AI-run review, 2026-10-10, §13.1) are not covered by it. Default policy:
 //
 //   RotationProposed  for a watched body, not in `expectedRotations`  -> cancelRotation
 //   VerifierAddressRotated, not expected and not body-consented       -> taint the body; suspendVerifier

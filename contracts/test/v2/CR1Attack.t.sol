@@ -172,6 +172,56 @@ contract CR1AttackV2Test is BaseV2 {
         assertFalse(registry.isValid(keys[0]));
     }
 
+    /// @dev Found by the Maude CR1 model on 14 October (formal/maude, section G; our own
+    /// AI-run review, not an external audit). The residual above says that once the owner key
+    /// has removed the watcher, "only the body itself can stop the rotation". It cannot: the
+    /// same key proposes WATCHER_ROLE for an address of its own, which nobody left can cancel
+    /// (cancelRoleGrant: a current watcher or the owner), uses it to suspend the body, and a
+    /// suspended body's current address cannot cancel a rotation (M2). The thief's watcher
+    /// then lifts the suspension and the thief's address revokes. Total: 3 x 72 hours.
+    function test_CR1_V2_residual_ownerKeyRemovesWatcher_selfGrantedWatcherBlocksBodyCancel() public {
+        uint256 t = START + 365 days; // literal time: via-IR caches block.timestamp
+        bytes32 role = allowlist.WATCHER_ROLE();
+        address tw = makeAddr("thief-watcher");
+        vm.startPrank(owner);
+        allowlist.revokeRole(role, watcher);
+        allowlist.proposeRoleGrant(role, tw);
+        vm.stopPrank();
+        // The removed watcher can no longer cancel the grant; the body has no cancel right on it.
+        vm.prank(watcher);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NotAllowedToCancel.selector, watcher));
+        allowlist.cancelRoleGrant(role, tw);
+        vm.prank(v1);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NotAllowedToCancel.selector, v1));
+        allowlist.cancelRoleGrant(role, tw);
+        t += DELAY;
+        vm.warp(t);
+        allowlist.executeRoleGrant(role, tw);
+        // Suspend first, then propose, so the body never holds a cancel right on the proposal.
+        vm.prank(tw);
+        allowlist.suspendVerifier(L1);
+        _propose(L1, thief);
+        vm.prank(v1);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NotAllowedToCancel.selector, v1));
+        allowlist.cancelRotation(L1);
+        t += DELAY;
+        vm.warp(t);
+        allowlist.executeRotation(L1);
+        vm.prank(tw);
+        allowlist.liftSuspension(L1);
+        for (uint256 i = 0; i < 3; i++) {
+            vm.prank(thief);
+            registry.revokeReport(keys[i], 0);
+        }
+        t += HOLD;
+        vm.warp(t);
+        for (uint256 i = 0; i < 3; i++) {
+            registry.executeRevocation(keys[i]);
+            assertFalse(registry.isValid(keys[i]));
+        }
+        assertEq(t - (START + 365 days), uint256(DELAY) * 2 + HOLD);
+    }
+
     /// @dev Residual risk outside CR1's scope (CR1a, T13): a stolen key that the body itself
     /// has held for longer than REVOKE_HOLD revokes at once, as in V1.
     function test_CR1a_V2_residual_longHeldBodyKey_revokesAtOnce() public {
