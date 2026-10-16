@@ -1,6 +1,7 @@
 // Full verification of a supplier's proof (presentation), shared by the hosted page and the CLI.
 // Checks: 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment,
-// 6 KEL anchor, 7 authority chain, 8 report reconciliation (advisory), and 9 precursors (sdk/precursor.ts) only for a
+// 6 KEL anchor, 7 authority chain, 8 report reconciliation (advisory; its sub-rules on the report dates, site visit and
+// accreditation, sdk/verification-rules.ts, fail it only when the signed report breaks them), and 9 precursors (sdk/precursor.ts) only for a
 // credential that commits to a precursor statement or a proof that carries precursor evidence, and 10 carbon price
 // paid (sdk/carbonprice.ts, draft CBAM Art 9 rules) only for a proof that carries carbon price evidence.
 // All steps run even after a failure, so the result shows every failing check;
@@ -31,6 +32,7 @@ import {
   type Hex,
 } from "./credential.ts";
 import { extractShapeProblem } from "./consistency.ts";
+import type { SubRule } from "./verification-rules.ts";
 import { decodeDisclosure, disclosureDigest, type CredentialCore, type Presentation } from "./disclosure.ts";
 import { recoverIssuer } from "./eip712.ts";
 import { isSalt } from "./encoding.ts";
@@ -46,6 +48,8 @@ export interface CheckResult {
   status: CheckStatus;
   code: string;
   detail: string;
+  /** Sub-rules of the check, shown under it (check 8: sdk/verification-rules.ts). */
+  rules?: SubRule[];
 }
 
 export interface OnchainView {

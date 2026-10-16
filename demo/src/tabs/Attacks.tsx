@@ -9,6 +9,7 @@ import { useLang, type Lang } from "../i18n.ts";
 import { CHECKS, kindOf, tamperedProof } from "./Buyer.tsx";
 import type { DryOutcome } from "./LayerCard.tsx";
 import { PrecursorAttack, usePrecursorData } from "./Precursor.tsx";
+import { ReportDateAttack } from "./VerifierRules.tsx";
 
 // The "What if one layer were missing?" card loads after the attack cards.
 const LayerCard = lazy(() => import("./LayerCard.tsx"));
@@ -337,7 +338,7 @@ export function Attacks() {
     <>
       <TabHead
         title="Try to break it"
-        lede={`${["Three", "Four", "Five"][(a4 ? 1 : 0) + (precursorData ? 1 : 0)]} attacks. Each one says how it is checked: in your browser, as a dry run against the live contract, or as a real transaction recorded on Sepolia${precursorData ? "; card 5 was run on a local chain, not on Sepolia" : ""}.`}
+        lede={`${["Four", "Five", "Six"][(a4 ? 1 : 0) + (precursorData ? 1 : 0)]} attacks. Each one says how it is checked: in your browser, as a dry run against the live contract, or as a real transaction recorded on Sepolia${precursorData ? "; card 5 was run on a local chain, not on Sepolia" : ""}.`}
       />
       {waiting && (
         <p className="conn" role="status">
@@ -447,6 +448,7 @@ export function Attacks() {
 
         {a4 && <Attack4Card a4={a4} waiting={waiting} />}
         <PrecursorAttack />
+        <ReportDateAttack />
       </section>
       <Suspense fallback={<p aria-live="polite">Loading…</p>}>
         <LayerCard a2b={a2bLive} />

@@ -3,6 +3,7 @@
 // it does not change any check or result. Schema: docs/schemas/verdict.schema.json.
 import type { ChainReader } from "./chain.ts";
 import { vleiCheckers } from "./checkers.ts";
+import type { AccreditationRegistry } from "./verification-rules.ts";
 import type { Presentation } from "./disclosure.ts";
 import { disclosureCounts } from "./summary.ts";
 import { DEMO_TRUST_ANCHOR } from "./vlei.ts";
@@ -38,6 +39,8 @@ export interface VerdictCheck {
   status: "pass" | "fail" | "warn" | "skipped";
   code: string;
   detail: string;
+  /** Check 8's sub-rules (sdk/verification-rules.ts), when they ran. */
+  rules?: { rule: string; status: "pass" | "fail" | "warn" | "note"; code: string; detail: string }[];
 }
 
 export interface Verdict {
@@ -77,7 +80,7 @@ export type VerdictPrecursorLine = Omit<PrecursorLineResult, "verification"> & {
 export type VerdictPrecursors = Omit<PrecursorReport, "lines"> & { lines: VerdictPrecursorLine[] };
 
 const toVerdictChecks = (cs: VerificationResult["checks"]): VerdictCheck[] =>
-  cs.map((c) => ({ id: c.index, name: c.name, status: c.status, code: c.code, detail: c.detail }));
+  cs.map((c) => ({ id: c.index, name: c.name, status: c.status, code: c.code, detail: c.detail, ...(c.rules ? { rules: c.rules } : {}) }));
 
 function toVerdictPrecursors(p: PrecursorReport): VerdictPrecursors {
   return {
@@ -114,6 +117,8 @@ export interface VerdictOptions extends Omit<VerifyOptions, "checkers"> {
   precursorTrustAnchor?: string;
   /** Root of trust for the carbon price certifier (check 10; default: `precursorTrustAnchor`, then `trustAnchor`). */
   carbonPriceTrustAnchor?: string;
+  /** The allowlist operator's accreditation records: check 8's provenance sub-rules (sdk/verification-rules.ts). */
+  accreditationRegistry?: AccreditationRegistry;
 }
 
 const num = (x: bigint | undefined) => (x === undefined ? null : Number(x));
@@ -187,7 +192,7 @@ export async function verdictFor(proof: Presentation, reader: ChainReader, opts:
       return typeof v === "function" ? v.bind(target) : v;
     },
   });
-  const { checkers, loadBundle, trustAnchor, precursorTrustAnchor, carbonPriceTrustAnchor, ...rest } = opts;
+  const { checkers, loadBundle, trustAnchor, precursorTrustAnchor, carbonPriceTrustAnchor, accreditationRegistry, ...rest } = opts;
   const r = await verifyPresentation(proof, watched, {
     ...rest,
     checkers:
@@ -197,6 +202,7 @@ export async function verdictFor(proof: Presentation, reader: ChainReader, opts:
         ...(trustAnchor ? { trustAnchor } : {}),
         ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}),
         ...(carbonPriceTrustAnchor ? { carbonPriceTrustAnchor } : {}),
+        ...(accreditationRegistry ? { accreditationRegistry } : {}),
       }),
   });
   return toVerdict(proof, r, { chainId, block, trustAnchor: checkers ? (trustAnchor ?? null) : (trustAnchor ?? DEMO_TRUST_ANCHOR) });

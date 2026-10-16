@@ -93,6 +93,25 @@ Here "operator" means the trust-registry operator, which holds the allowlist own
 - **Unplanned.** The only route is a new deployment ([SECURITY §5, redeployment procedure](SECURITY.md#5-smart-contract-assurance)): new addresses and a new EIP-712 domain, so every credential in use is signed again, and reports with claimed shipments stay on the old contracts, because moving them would start a second tonnage ledger. The contracts do not link reports across deployments (`supersedes` names a report in the same registry only). Without the old watcher key the old deployment cannot be closed to new registrations either, because that step suspends every body on the old allowlist; its bodies can keep registering there until their `accreditedUntil`.
 - **The chain itself.** Records last only as long as the chain they are on. Sepolia is a test network; the same question applies to whichever production chain is chosen.
 
+## Accreditation records: what the allowlist operator records
+
+The on-chain allowlist entry holds hashes only (the body's LE and accreditation credential SAIDs, `accreditedUntil`). Next to it the trust-registry operator keeps one off-chain record per listed body, so that a buyer can see who accredited the body and check 8 can compare it with each report ([SECURITY §4.5](SECURITY.md#45-check-8-sub-rules-on-the-verification-report)). Format: [`fixtures/accreditation-registry.json`](../fixtures/accreditation-registry.json) (`carbonlei-accreditation-record/1`, read by `carbonlei verify --accreditation-registry <file>` and the hosted page). The fields follow the registration data a verifier gives the CBAM Registry under Art 10a(2) of the CBAM Registry Act, as summarised in §10.2 of the Commission's guidance of 24 August 2026:
+
+| Field | What the operator records, and from where |
+|---|---|
+| `verifierLEI`, `verifierName`, `countryOfEstablishment` | The body's LEI (the same as in its LE vLEI), name and country of establishment |
+| `accreditationNumber` | The unique accreditation identification on the NAB's certificate |
+| `nab.name`, `nab.country`, `nab.lei`, `nab.registerUrl` | The national accreditation body and its Member State; the NAB's public register entry where the operator confirmed the accreditation |
+| `standards` | EN ISO/IEC 17029:2019 with EN ISO 14065, as stated on the certificate |
+| `activityGroups`, `cnScope` | The CBAM activity groups of Annex I to Delegated Regulation (EU) 2025/2551 (for example VIII, iron or steel products) and the CN codes the accreditation credential lists |
+| `validFrom`, `validUntil` | The certificate's effective and expiry dates (at most five years, Art 51 AVR-DA); `validUntil` equal to the on-chain `accreditedUntil` |
+| `administrativeMeasures` | Each suspension, withdrawal or scope reduction with the date it took effect and, when lifted, the date it ended; the operator adds it the day it learns of it, as it sends `suspendVerifier` |
+| `accreditationSaidHash` | `hashString` of the accreditation credential's SAID, the value in the allowlist entry |
+| `certificateSha256` | The SHA-256 of the certificate copy the operator holds (optional) |
+| `commissionList` | Whether the Commission's list of accredited CBAM verifiers is published, the date the operator last checked, and the page; until it is, check 8 shows a note with that date (unpublished on 16 October 2026) |
+
+The record is the operator's statement, not the NAB's: check 8 turns any difference into a warning for review, never a pass. The operator re-checks each record against the NAB's register when it lists a body, at every change the NAB notifies, and before `validUntil`, and re-checks the Commission page until the list is published.
+
 ## Importer workbench: planning a year's declaration
 
 An importer with many suppliers does not verify one proof at a time. The workbench verifies all of a year's proofs against one block, then plans the CBAM declaration from the verdicts: per line, the supplier's verified value or the default with the year's mark-up (and why), totals, the 50 t de minimis status, the quarterly holding, the certificates and their gross €, and a CSV worksheet. Code: [`sdk/portfolio.ts`](../sdk/portfolio.ts) (pure, no chain), [`sdk/batch.ts`](../sdk/batch.ts) and two CLI commands; the hosted page's **Importer workbench** tab runs the same `buildPortfolio` on a six-line illustrative portfolio. It is a planning aid: it does not submit anything, it is not the CBAM Registry's XML format, and it sends no transaction.

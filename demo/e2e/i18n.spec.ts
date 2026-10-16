@@ -148,10 +148,13 @@ test("L5 繁體中文 Trust chain headings and Try to break it results", async (
   await expect(page.getByRole("region", { name: "冒名者" }).getByText("不在鏈中")).toBeVisible();
   await expect(page.getByRole("region", { name: "誰寫入允許清單" })).toBeVisible();
   expect(await leftoverEnglish(page.locator(".tab-head"), names)).toEqual([]);
+  const legit = page.locator("section.verifier-legitimacy");
+  await expect(legit.locator(".sheet-kicker")).toHaveText("驗證機構的正當性");
+  expect(await leftoverEnglish(legit, names)).toEqual([]);
 
   await page.goto("./?lang=zh-TW#try-to-break-it");
   await connected(page);
-  for (const name of ["Change one disclosed number", "Claim the same batch again", /^Claim [\d.]+ t more$/, "Verify the impostor's proof"]) {
+  for (const name of ["Change one disclosed number", "Claim the same batch again", /^Claim [\d.]+ t more$/, "Verify the impostor's proof", /^Date the report /]) {
     await page.getByRole("button", { name }).click();
   }
   // The attack cards' results (the "What if one layer were missing?" card below them stays in English).
@@ -160,6 +163,7 @@ test("L5 繁體中文 Trust chain headings and Try to break it results", async (
   await expect(results.filter({ hasText: "已退回：BatchAlreadyClaimed——此批次已被申領。" })).toHaveCount(1);
   await expect(results.filter({ hasText: /已退回：ExceedsVerifiedTonnage——這筆申領會超出經查證報告所涵蓋的噸數（剩餘 [\d.]+ t，申請 [\d.]+ t）。/ })).toHaveCount(1);
   await expect(results.filter({ hasText: "檢查 7 未通過：" })).toHaveCount(1);
+  await expect(results.filter({ hasText: "檢查 8 未通過：" })).toHaveCount(1);
   await expect(results.locator(".stamp").first()).toHaveText("已拒絕");
   for (let i = 0; i < (await results.count()); i++) {
     expect(await leftoverEnglish(results.nth(i), names), `attack result ${i + 1}`).toEqual([]);

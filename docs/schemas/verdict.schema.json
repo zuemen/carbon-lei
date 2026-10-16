@@ -28,7 +28,22 @@
         "name": { "type": "string" },
         "status": { "enum": ["pass", "fail", "warn", "skipped"] },
         "code": { "type": "string", "description": "Failure or warning code, for example DISCLOSURE_TAMPERED; empty on pass." },
-        "detail": { "type": "string" }
+        "detail": { "type": "string" },
+        "rules": {
+          "type": "array",
+          "description": "Check 8 sub-rules on the verification report (sdk/verification-rules.ts, rule set carbonlei-verification-rules/1): report dates, site visit, accreditation at the report date and, with an accreditation registry, the verifier's provenance. A sub-rule fails only when the report extract is the one the auditor signed; note is information only.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule", "status", "code", "detail"],
+            "properties": {
+              "rule": { "type": "string" },
+              "status": { "enum": ["pass", "fail", "warn", "note"] },
+              "code": { "type": "string" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
       }
     },
     "verdict": {

@@ -57,7 +57,7 @@ test("P3 Try to break it, card 5: the same wire rod cannot back a second screw m
   await expect(card.getByText(/on the local anvil chain when the demo data was built — not on Sepolia/)).toBeVisible();
   await expect(card.getByText(/Reverted: ExceedsVerifiedTonnage \(437\.5 t left, 500 t requested\)/)).toBeVisible();
   await expect(card.getByText(/PRECURSOR_INVALID\/CREDENTIAL/)).toBeVisible();
-  await expect(page.getByText(/Five attacks\./)).toBeVisible();
+  await expect(page.getByText(/Six attacks\./)).toBeVisible();
 });
 
 test("P4 axe: no violations in the precursor sections, after the re-check, in English and Traditional Chinese", async ({ page }) => {

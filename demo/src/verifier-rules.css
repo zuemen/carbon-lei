@@ -1,0 +1,25 @@
+/* Check 8 sub-rules, Verifier legitimacy panel and attack card 6: demo/src/tabs/VerifierRules.tsx */
+.subrules { grid-column: 2 / 4; margin: 4px 0 0; }
+.subrules ul { list-style: none; margin: 0; padding: 0; border-left: 2px solid #cfc5b2; }
+.subrules-head { margin: 6px 0 4px; font: 600 13px/1.4 var(--sans); color: var(--ink); }
+.subrule { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 0 6px; padding: 4px 0 4px 8px; font-size: 13.5px; line-height: 1.45; }
+.subrule-mark { font: 700 13px/1.45 var(--mono); text-align: center; }
+.subrule.pass .subrule-mark { color: var(--green); }
+.subrule.fail .subrule-mark, .subrule.fail .subrule-label { color: var(--red); }
+.subrule.warn .subrule-mark { color: var(--amber); }
+.subrule.note .subrule-mark { color: var(--ink-soft); }
+.subrule-label { font-weight: 600; }
+.subrule-code, .subrule-detail { grid-column: 2; font: 400 12.5px/1.45 var(--mono); color: var(--ink-soft); overflow-wrap: anywhere; }
+.subrule-code { color: var(--ink); }
+.verifier-legitimacy { margin-top: 18px; }
+.vl-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 8px 0 12px; font-size: 14px; }
+.vl-grid dt { font-weight: 600; }
+.vl-grid dd { margin: 0; overflow-wrap: anywhere; }
+.vl-advisory { border: 2px solid var(--amber); background: var(--amber-wash); color: var(--ink); padding: 10px 12px; margin: 12px 0; font-size: 14px; line-height: 1.5; }
+.verifier-legitimacy a { color: var(--focus); display: inline-block; min-height: 24px; padding: 3px 0; overflow-wrap: anywhere; }
+.attack-result .subrules { grid-column: auto; }
+@media (max-width: 700px) {
+  .subrules { grid-column: 2; }
+  .vl-grid { grid-template-columns: minmax(0, 1fr); }
+  .vl-grid dd { margin-bottom: 6px; }
+}

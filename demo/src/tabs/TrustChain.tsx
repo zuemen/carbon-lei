@@ -5,6 +5,7 @@ import { EVIDENCE_WHY, TabHead } from "../components.tsx";
 import { short } from "../data.ts";
 import { PactVsVlei } from "./PactVsVlei.tsx";
 import { PrecursorTrustChain } from "./Precursor.tsx";
+import { VerifierLegitimacy } from "./VerifierRules.tsx";
 import { useStrings } from "../i18n.ts";
 
 /** The tab head and section headings in English and Traditional Chinese; the body text stays in English. */
@@ -145,6 +146,7 @@ export function TrustChain() {
           </section>
         </div>
       </div>
+      <VerifierLegitimacy />
       <PrecursorTrustChain />
       <PactVsVlei />
     </>
