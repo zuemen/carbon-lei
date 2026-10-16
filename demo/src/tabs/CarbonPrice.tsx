@@ -252,7 +252,7 @@ export function CarbonPriceSection() {
       <h3>{t.title(nf(perT), d.refPriceEur)}</h3>
       <p className="fine">{t.lede}</p>
 
-      <div className="pc-scroll">
+      <div className="pc-scroll" tabIndex={0} role="region" aria-label={t.tableCaption}>
         <table className="pc-table cp-table">
           <caption className="sr-only">{t.tableCaption}</caption>
           <thead>
@@ -308,7 +308,7 @@ export function CarbonPriceSection() {
       <p className="fine">{t.refNote}</p>
 
       <h4 className="cp-h4">{t.sensTitle}</h4>
-      <div className="pc-scroll">
+      <div className="pc-scroll" tabIndex={0} role="region" aria-label={t.sensCaption}>
         <table className="pc-table">
           <caption className="sr-only">{t.sensCaption}</caption>
           <thead>
