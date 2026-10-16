@@ -528,17 +528,18 @@ export type ProofEvidence = Pick<Presentation, "anchorEvidence" | "authorityEvid
 /**
  * One selective-disclosure proof per batch, with each buyer's fields (`fieldsFor`), via `present`. By default only
  * batches the book marks claimed; `only` narrows that further (e.g. to the batches `reconcile` found READY).
+ * `includePlanned` also builds planned batches (the demo's preview): their proofs fail check 5 until the claim is sent.
  */
 export function buildSharePack(
   cred: SignedCredential,
   book: AllocationBook,
-  opts: { evidence?: ProofEvidence; only?: (b: BookBatch) => boolean } = {},
+  opts: { evidence?: ProofEvidence; only?: (b: BookBatch) => boolean; includePlanned?: boolean } = {},
 ): { proofs: SharePackProof[]; skipped: { batchId: string; reason: string }[] } {
   const proofs: SharePackProof[] = [];
   const skipped: { batchId: string; reason: string }[] = [];
   const ev = opts.evidence ?? {};
   for (const b of book.batches) {
-    if (b.status !== "claimed") {
+    if (b.status !== "claimed" && !opts.includePlanned) {
       skipped.push({ batchId: b.batchId, reason: "planned: send the claim first" });
       continue;
     }

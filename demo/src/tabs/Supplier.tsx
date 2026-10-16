@@ -11,6 +11,7 @@ import { short } from "../data.ts";
 import { useLang, type Lang } from "../i18n.ts";
 // The template panel renders when opened; the importer and the spreadsheet reader load only when a file is read.
 import { TemplateImport } from "./TemplateImport.tsx";
+import { Allocations } from "./Allocations.tsx";
 
 const LABELS: Record<string, string> = {
   supplierLEI: "Supplier LEI",
@@ -338,6 +339,8 @@ export function Supplier() {
           )}
         </section>
       </div>
+
+      <Allocations />
 
       <section className="sheet reveal" aria-labelledby="pp-h" style={{ marginTop: 28 }}>
         <p className="sheet-kicker" id="pp-h">
