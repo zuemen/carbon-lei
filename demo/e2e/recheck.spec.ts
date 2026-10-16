@@ -43,7 +43,7 @@ test("R1 re-check: line 1 re-verified live and unchanged; the illustrative audit
   // Illustrative outcomes, each labelled.
   const fnw = item(page, "FNW-2026-014");
   await expect(fnw).toContainText("Action needed");
-  await expect(fnw).toContainText("Auditor revoked after acceptance → use the default");
+  await expect(fnw).toContainText("Auditor revoked within 24 h of registration → review; default meanwhile");
   await expect(fnw).toContainText("(illustrative)");
   await expect(fnw.locator(".rc-action")).toContainText("Declare this line on the default value");
   await expect(item(page, "HFC-2026-009")).toContainText("Became final: the CONTESTED window closed with no event");
@@ -76,7 +76,7 @@ test("R2 re-check a11y: keyboard, axe with results shown (English and 繁體中�
   await page.getByRole("button", { name: "重新檢查已接受的行" }).click();
   await expect(page.locator(".wb-recheck-status")).toContainText(/第 1 行已於區塊 \d+ 即時重新驗證/, { timeout: 60_000 });
   await expect(item(page, "FNW-2026-014")).toContainText("需處理");
-  await expect(item(page, "FNW-2026-014")).toContainText("接受後稽核員遭撤銷 → 改用預設值");
+  await expect(item(page, "FNW-2026-014")).toContainText("登記後 24 小時內查核員遭撤銷 → 人工複核，期間用預設值");
   await expect(item(page, "FNW-2026-014")).toContainText("示意");
   await expect(item(page, "BATCH-DEMO-2026-0001")).toContainText("無變更");
   await expect(rows(page).filter({ hasText: "FNW-2026-014" }).locator(".wb-reason")).toContainText(
