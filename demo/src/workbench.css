@@ -8,6 +8,8 @@
 .wb-check { align-items: flex-start; padding-top: 10px; }
 .wb-radio input, .wb-check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--green); }
 .wb-ledger td { overflow-wrap: anywhere; }
+/* The "illustrative" tag under a line's ID: its own line, never broken inside the word. */
+.wb-ledger .wb-illus { display: block; white-space: nowrap; overflow-wrap: normal; }
 .wb-ledger .wb-n { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border: 1.5px solid var(--ink); font: 700 12px/1 var(--mono); margin-right: 4px; }
 .wb-ledger .wb-default .wb-basis { color: var(--amber); }
 .wb-ledger .wb-actual .wb-basis { color: var(--green); }

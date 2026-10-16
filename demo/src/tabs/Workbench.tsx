@@ -361,7 +361,7 @@ function Row({ l, n, lang }: { l: ShipmentLine; n: number; lang: Lang }) {
     <tr role="row" className={`wb-row wb-${l.basis}`}>
       <td role="cell" data-label={cols[0]}>
         <span className="wb-n">{n}</span> {l.id}
-        {n > 1 && <span className="wb-illus fine"> · {s.illustrative.toLowerCase()}</span>}
+        {n > 1 && <span className="wb-illus fine">{s.illustrative.toLowerCase()}</span>}
       </td>
       <td role="cell" data-label={cols[1]}>{l.supplier}</td>
       <td role="cell" data-label={cols[2]}>
