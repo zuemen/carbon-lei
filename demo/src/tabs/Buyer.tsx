@@ -12,6 +12,7 @@ import { useLang, type Lang } from "../i18n.ts";
 import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 import { CheckSources } from "./CheckSources.tsx";
 import { PrecursorBuyer } from "./Precursor.tsx";
+import { CarbonPriceSection } from "./CarbonPrice.tsx";
 
 // The printable importer's file: loaded only when the importer asks for it.
 const ImporterFile = lazy(() => import("./ImporterFile.tsx"));
@@ -875,6 +876,8 @@ export function Buyer() {
       </section>
 
       <PrecursorBuyer />
+
+      <CarbonPriceSection />
 
       <CheckSources checks={CHECKS} />
     </>
