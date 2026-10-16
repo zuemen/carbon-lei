@@ -26,6 +26,26 @@ CarbonLEI asks three questions of a verified CBAM emissions value: **(1) who sig
 | Endoh, JAIT 17(6), 2026 | A VC framework for PCF sharing: a certified-provider scheme so downstream companies can check that data came from certified upstream companies, and watermarked data that can be tracked and revoked | Yes | Certification of the provider; per-person role at signing time: not stated in the abstract | Not stated in the abstract | [21] |
 | Man et al., "Emission Impossible" (arXiv 2506.16347, 2025) | Zero-knowledge proofs that an emissions calculation was done correctly, without revealing the inputs | The prover | Not its focus | Not its focus | [22] |
 
+## Commercial CBAM tools and the Commission's O3CI portal (feature scan, 2026-10-16)
+
+What vendors advertise on their public pages, read on 2026-10-16. "—" means we did not find it on the cited page, not that the product lacks it. Vendor claims were not tested.
+
+| Tool | Supplier data requests | Registry export | Default vs actual, cost | Other | Source |
+|---|---|---|---|---|---|
+| CarbonChain | Outreach at scale; a Supplier Catalogue where producers upload once and approve buyers' requests to share | "one-click XML" | Benchmarking; cost against the EUA price | Risk ratings | [23], [24] |
+| SAP (Sustainability Footprint Management with Green Ledger, announced 25 June 2026) | Through its data exchange; Excel ingest | "reports ready for submission" (announced as coming) | Certificate requirement and cost | Customs and CN data from SAP GTS; CBAM liability booked in the ledger | [25] |
+| CBAMBOO | Requests and validation | Registry-compatible XML | Default value explorer; cost per purchase order | Monthly shipment upload | [24] |
+| kolum | Standardised invitations | Registry export | Yes | Certificate management | [24] |
+| Dubrink | Two-sided exchange | PDF and XML | Yes | Audit trail; the only published price list we found | [24] |
+| Greenly | Yes | XML | — | CBAM module since February 2025 | [24] |
+| Sphera | Supplier engagement with consulting | Exportable | — | Documented calculation | [26] |
+| Climatiq | — | — | API returning EU default and benchmark factors for a CN code (preview) | API only | [27] |
+| EU O3CI portal (official) | Operators "upload and share … instead of submitting it to each declarant separately" | Fills CBAM reports in the Registry | — | Free; verifier confirmation inside the Registry | [1] |
+
+**What none of them showed.** A check software can run of *who* signed a verification and whether that person was authorised when it was registered; a signer's revocation reaching relying parties; and a cap on the same verified tonnes across importers. These are CarbonLEI's three questions.
+
+**What all of them have and CarbonLEI lacked until 16 October 2026.** Portfolio planning, alerts, supplier-side sharing, an API, precursors and the carbon price paid. We built prototypes of each on the same checks: the Importer workbench (`verify-batch`, `portfolio`), `recheck` and the REST API (`serve`), the supplier portal (`allocate`, `present-batch`), precursors (check 9) and the carbon price paid on draft rules (check 10); see the [README](../README.md). Registry XML export and ERP connectors are still not built.
+
 ## What is new here, and what is not
 
 **Not new.** Each building block exists elsewhere: role credentials chained to GLEIF (vLEI, used for document signing by GLEIF and MSC Trustgate), KEL anchoring of signed data (CIP-0170), on-chain identity records next to off-chain credential checks (Chainlink ACE), "use once" ledgers for environmental units (Green Proofs, Guardian tokens, CAD Trust for credits), and auditor-based volume reconciliation (UNTP). Selective disclosure of verified footprints was shown by SiGREEN.
@@ -66,3 +86,8 @@ Opened on 2026-10-10 unless stated.
 20. "Trustworthy Supply Chain Exchange for Product Carbon Footprint", IEEE AIBThings 2023. https://www.estainium.eco/files/media/public/downloads/sigreen-tsx-ieeeaibthings-2023.pdf
 21. N. Endoh, "A Verifiable Credential Framework for Traceable and Scalable Data Sharing: Application to Product Carbon Footprint", *Journal of Advances in Information Technology* 17(6), 2026 (abstract read). https://www.jait.us/articles/2026/JAIT-V17N6-1211.pdf
 22. J. Man, S. Jaffer, P. Ferris, M. Kleppmann, A. Madhavapeddy, "Emission Impossible: privacy-preserving carbon emissions claims", arXiv:2506.16347, 2025. https://arxiv.org/abs/2506.16347
+23. CarbonChain, "Introducing the CarbonChain CBAM Supplier Catalogue" (blog), accessed 2026-10-16. https://www.carbonchain.com/blog/introducing-carbonchain-cbam-supplier-catalogue
+24. CBAM Guide, "Best CBAM software" (vendor comparison, with links to vendor pages), accessed 2026-10-16. https://cbamguide.com/software/best-cbam-software/
+25. SAP News, "SAP introduces CBAM declarants solution", 25 June 2026, accessed 2026-10-16. https://news.sap.com/2026/06/sap-introduces-cbam-declarants-solution/
+26. Sphera, "Comprehensive compliance for the EU CBAM", accessed 2026-10-16 (the page still gave the pre-Omnibus 31 May deadline). https://sphera.com/solutions/supply-chain-risk-management/supplier-engagement-solution/comprehensive-compliance-for-the-eu-cbam/
+27. Climatiq, API reference, CBAM estimate (`/cbam/v1-preview1/estimate`), accessed 2026-10-16. https://www.climatiq.io/docs/api-reference/cbam
