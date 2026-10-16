@@ -313,7 +313,7 @@ export function PrecursorTrustChain() {
     { name: e.millBody.name, role: t.nodes.body(e.millBody.cnScope.join(", "), e.millBody.accreditationNumber), meta: `LEI ${e.millBody.lei} · LE ${short(e.millBody.leSaid, 8, 6)}` },
     { name: e.millAuditor.name, role: t.nodes.auditor, meta: `AID ${short(e.millAuditor.aid, 8, 6)} · ECR ${short(e.millAuditor.ecrSaid, 8, 6)}` },
     { name: e.mill.name, role: t.nodes.mill(e.mill.installation.id), meta: `LEI ${e.mill.lei} · credential ${short(d.mill.credSAID, 8, 6)}` },
-    { name: e.screwMaker.name, role: `${t.nodes.screw(claimed)} ${e.screwBody.name}`, meta: `LEI ${e.screwBody.lei}` },
+    { name: e.screwMaker.name, role: `${t.nodes.screw(claimed)} ${e.screwBody.name}`, meta: `LEI ${e.screwMaker.lei}` },
   ];
   return (
     <section className="sheet reveal" aria-labelledby="precursor-trust-h" id="precursor-trust" style={{ marginTop: 28 }}>

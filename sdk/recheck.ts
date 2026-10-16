@@ -652,13 +652,25 @@ export async function postWebhook(url: string, payload: unknown, fetchImpl: type
  */
 export function applyRecheck(batch: BatchDocument, recheck: RecheckDocument): BatchDocument {
   if (recheck?.kind !== "carbonlei-recheck" || !Array.isArray(recheck.results)) throw new Error("not a carbonlei recheck results file");
-  const results = batch.results.map((r) => {
+  const results = batch.results.map((r, i) => {
     if (!r.verdict?.credSAID) return r;
-    const hit = recheck.results.find(
-      (x) => x.credSAID === r.verdict!.credSAID && (!x.batchId || !r.proofShipment?.batchId || x.batchId === r.proofShipment.batchId),
-    );
+    // A re-check of this very line (made from this results file: source "<file>#<line>", same id) may replace its
+    // verdict either way. A match on the credential ID alone is not proof of the same line: a tampered copy of a
+    // proof carries the same credSAID and batch id as the original, so such a match may only make the line worse,
+    // never lift it to the original's verdict.
+    const id = r.line?.id ?? r.proofShipment?.batchId ?? r.proof ?? `line-${i + 1}`;
+    const exact = recheck.results.find((x) => x.source.endsWith(`#${i + 1}`) && x.id === id && x.credSAID === r.verdict!.credSAID);
+    const loose = exact
+      ? undefined
+      : recheck.results.filter(
+          (x) => x.credSAID === r.verdict!.credSAID && (!x.batchId || !r.proofShipment?.batchId || x.batchId === r.proofShipment.batchId),
+        );
+    const hit = exact ?? (loose && loose.length === 1 ? loose[0] : undefined);
     if (!hit) return r;
-    const out: BatchResult = { ...r, ...(hit.verdict ? { verdict: hit.verdict } : {}) };
+    const rank: Record<string, number> = { VALID: 0, CONTESTED: 1, INCOMPLETE: 2, INVALID: 3 };
+    const worse = (v: Verdict | null) => !!v && (rank[v.overall] ?? 3) > (rank[r.verdict!.overall] ?? 3);
+    const replace = hit.verdict && (exact || worse(hit.verdict));
+    const out: BatchResult = { ...r, ...(replace ? { verdict: hit.verdict! } : {}) };
     if (hit.severity === "action" || hit.severity === "error") {
       out.recheck = { change: hit.change, severity: hit.severity, checkedAt: recheck.checkedAt, pinnedBlock: recheck.pinnedBlock };
     }
