@@ -50,6 +50,8 @@ export interface BatchResult {
   error: string | null;
   /** The proof's own shipment fields (batch, quantity, date), as presented; trusted only when check 5 passed. */
   proofShipment: { batchId: string; quantityTonnes: string; shipmentDate: string } | null;
+  /** Set by `applyRecheck` (sdk/recheck.ts) when a later re-check found the line needs action: planned on the default. */
+  recheck?: { change: string; severity: string; checkedAt: string; pinnedBlock: number | null };
 }
 
 export interface BatchDocument {
@@ -202,6 +204,7 @@ export function shipmentsFromBatch(doc: BatchDocument): ShipmentInput[] {
       id,
       verdict: v,
       ...(r.error ? { verifyError: r.error } : {}),
+      ...(r.recheck ? { downgradedBy: `${r.recheck.change} (re-check of ${r.recheck.checkedAt.slice(0, 10)}, block ${r.recheck.pinnedBlock ?? "—"})` } : {}),
       quantityTonnes: pick("quantityTonnes", ps?.quantityTonnes),
       cnCode: pick("cnCode", d.cnCode),
       country: pick("country", d.unLocode?.slice(0, 2)),

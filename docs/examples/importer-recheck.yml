@@ -1,0 +1,67 @@
+# Example GitHub Actions workflow for an importer: re-check every accepted CarbonLEI verification once a day and
+# get an alert when a line needs action (report revoked or superseded, auditor revoked within the 24 h window,
+# claim gone). Copy it into YOUR OWN repository as .github/workflows/importer-recheck.yml. It is an example and is
+# not run by the CarbonLEI repository itself. See docs/OPERATE.md › Importer re-check.
+#
+# Your repository holds the records you accepted, for example records/*.json: the files the Buyer tab's
+# "Download verification record (JSON)" saves (they carry the proof), and/or `carbonlei verify-batch --out` results
+# with the proof files next to them (or in the folder given by --proofs).
+#
+# Secrets (Settings › Secrets and variables › Actions):
+#   CARBONLEI_RPC_URL               optional: your own Sepolia RPC URL(s), comma-separated; else the public nodes
+#   CARBONLEI_RECHECK_WEBHOOK_URL   optional: where the changed lines are POSTed (JSON, no EORI); the URL is never printed
+#
+# Exit codes of `carbonlei recheck`: 0 nothing needs action; 1 at least one line needs action; 3 a record could not
+# be re-checked or the webhook could not be delivered. A non-zero exit fails the job, so GitHub also e-mails you.
+name: importer-recheck
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out your records
+        uses: actions/checkout@v4
+
+      - name: Check out CarbonLEI
+        uses: actions/checkout@v4
+        with:
+          repository: zuemen/carbon-lei
+          # Pin a commit you have reviewed rather than a moving branch.
+          ref: main
+          path: carbon-lei
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install the SDK
+        working-directory: carbon-lei
+        run: npm ci --workspace sdk
+
+      - name: Re-check accepted values
+        env:
+          CARBONLEI_RPC_URL: ${{ secrets.CARBONLEI_RPC_URL }}
+          CARBONLEI_RECHECK_WEBHOOK_URL: ${{ secrets.CARBONLEI_RECHECK_WEBHOOK_URL }}
+        run: |
+          set -o pipefail
+          node carbon-lei/sdk/cli.ts recheck records --out recheck.json | tee recheck.txt
+
+      - name: Keep the result with your records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carbonlei-recheck-${{ github.run_id }}
+          path: |
+            recheck.json
+            recheck.txt
+          # Artifacts expire (90 days by default): also copy recheck.json into your document system of record.
+          retention-days: 90

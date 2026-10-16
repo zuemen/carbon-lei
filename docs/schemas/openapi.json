@@ -1,0 +1,259 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CarbonLEI verification API",
+    "version": "0.1.0",
+    "summary": "Verify CBAM embedded-emissions proofs, plan a declaration year and re-check accepted values, over the CarbonLEI SDK.",
+    "description": "Served by `carbonlei serve` (sdk/server.ts), node:http only. The same SDK calls as the CLI: a verdict here equals `carbonlei verify --json`.\n\nSECURITY: this API has NO authentication and NO TLS. It binds 127.0.0.1 by default. Expose it only behind your own API gateway or reverse proxy, which must add authentication, TLS and rate limits. It never sends a transaction and holds no key.\n\nLimits (defaults, configurable): request body 1,000,000 bytes (413), Content-Type application/json only (415), 60 s per request (504), 4 POST requests at once (503 with Retry-After), 50 lines per verify-batch, 500 records per re-check. A request body that repeats a JSON key is refused (400).\n\nLogs: one JSON line per request on stderr with method, path, status, duration, body size and outcome; never the body, the EORI, the client address or the query string. URLs in error messages are cut to their origin so an RPC API key is never logged or returned.\n\nNot a CBAM declaration, not the CBAM Registry and not connected to it.",
+    "license": { "name": "MIT", "identifier": "MIT" }
+  },
+  "servers": [{ "url": "http://127.0.0.1:8787", "description": "Default bind address of `carbonlei serve`" }],
+  "security": [],
+  "paths": {
+    "/v1/verify": {
+      "post": {
+        "operationId": "verify",
+        "summary": "Verify one proof (checks 0-8)",
+        "description": "Runs the nine checks on the proof against the chain head. Pass your EORI to bind the shipment to you (check 5); only then is the report judged at the shipment's claim time. Every verdict, VALID or not, is answered 200; the header X-CarbonLEI-Exit carries the CLI exit code (0 VALID, 1 INVALID, 2 CONTESTED, 4 INCOMPLETE). A verification that could not run (RPC failure) is answered 502 with the verdict error object and exit code 3.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerifyRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The verdict.",
+            "headers": { "X-CarbonLEI-Exit": { "$ref": "#/components/headers/Exit" } },
+            "content": { "application/json": { "schema": { "$ref": "verdict.schema.json" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "415": { "$ref": "#/components/responses/WrongType" },
+          "502": {
+            "description": "The verification could not run (for example every RPC node failed).",
+            "headers": { "X-CarbonLEI-Exit": { "$ref": "#/components/headers/Exit" } },
+            "content": { "application/json": { "schema": { "$ref": "verdict.schema.json" } } }
+          },
+          "503": { "$ref": "#/components/responses/Busy" },
+          "504": { "$ref": "#/components/responses/Timeout" }
+        }
+      }
+    },
+    "/v1/verify-batch": {
+      "post": {
+        "operationId": "verifyBatch",
+        "summary": "Verify many proofs at one pinned block",
+        "description": "Like `carbonlei verify-batch` with the proofs inline: every proof is read at the same block. A line with `proof: null` has no supplier proof (planned on defaults). At most 50 lines.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerifyBatchRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "The verify-batch results document (the input of /v1/portfolio).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BatchDocument" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "415": { "$ref": "#/components/responses/WrongType" },
+          "502": { "$ref": "#/components/responses/Upstream" },
+          "503": { "$ref": "#/components/responses/Busy" },
+          "504": { "$ref": "#/components/responses/Timeout" }
+        }
+      }
+    },
+    "/v1/portfolio": {
+      "post": {
+        "operationId": "portfolio",
+        "summary": "Declaration plan for a year from verify-batch results",
+        "description": "Pure computation, no chain read: the verified value only for a VALID proof bound by check 5, else the default with the year's mark-up; totals, 50 t de minimis, quarterly holding, certificates, gross EUR. With `recheck`, a line a later re-check says needs action is planned on the default. A worksheet, not a CBAM declaration.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortfolioRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "The plan.", "content": { "application/json": { "schema": { "$ref": "portfolio.schema.json" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "415": { "$ref": "#/components/responses/WrongType" },
+          "422": { "description": "The input cannot be planned (for example a line without a known default value); the message names the line.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "503": { "$ref": "#/components/responses/Busy" },
+          "504": { "$ref": "#/components/responses/Timeout" }
+        }
+      }
+    },
+    "/v1/recheck": {
+      "post": {
+        "operationId": "recheck",
+        "summary": "Re-check values accepted earlier",
+        "description": "Re-verifies each accepted record at one pinned block and says what changed since acceptance (revoked, superseded, CONTESTED, claim gone, CONTESTED window closed) and what to do. X-CarbonLEI-Exit: 3 if a record could not be re-checked, else 1 if any needs action, else 0.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecheckRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The re-check.",
+            "headers": { "X-CarbonLEI-Exit": { "$ref": "#/components/headers/Exit" } },
+            "content": { "application/json": { "schema": { "$ref": "recheck.schema.json" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "413": { "$ref": "#/components/responses/TooLarge" },
+          "415": { "$ref": "#/components/responses/WrongType" },
+          "502": { "$ref": "#/components/responses/Upstream" },
+          "503": { "$ref": "#/components/responses/Busy" },
+          "504": { "$ref": "#/components/responses/Timeout" }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Chain head, chain ID, RPC node hosts and limits",
+        "responses": {
+          "200": { "description": "The RPC nodes answer.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } } },
+          "503": { "description": "No RPC node answered.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapi",
+        "summary": "This document",
+        "responses": { "200": { "description": "OpenAPI 3.1 description.", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "Exit": { "description": "Exit code the CLI would return for this result.", "schema": { "type": "string", "pattern": "^[0-4]$" } }
+    },
+    "responses": {
+      "BadRequest": { "description": "Malformed request (not JSON, repeated key, missing field).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "TooLarge": { "description": "Body larger than the limit, or too many lines or records.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "WrongType": { "description": "Content-Type is not application/json.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Upstream": { "description": "The RPC nodes could not be read.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Busy": {
+        "description": "Too many requests running at once.",
+        "headers": { "Retry-After": { "schema": { "type": "string" } } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "Timeout": { "description": "The request took longer than the per-request timeout.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": { "error": { "type": "string" }, "tool": { "type": "object" } }
+      },
+      "Proof": {
+        "type": "object",
+        "description": "A supplier's proof as `carbonlei present` writes it (fixtures/sepolia-demo-proof.json). Evidence bundles it refers to are read only from the server's evidence folder.",
+        "required": ["core", "signature"],
+        "properties": {
+          "core": { "type": "string" },
+          "signature": { "type": "string" },
+          "disclosures": { "type": "array", "items": { "type": "string" } },
+          "shipment": { "type": "object" },
+          "reportExtract": { "type": "object" },
+          "anchorEvidence": {},
+          "authorityEvidence": {}
+        }
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "required": ["proof"],
+        "properties": {
+          "proof": { "$ref": "#/components/schemas/Proof" },
+          "eori": { "type": "string", "description": "Your EORI, to bind the shipment to you (check 5). Never logged." }
+        }
+      },
+      "VerifyBatchRequest": {
+        "type": "object",
+        "required": ["shipments"],
+        "properties": {
+          "eori": { "type": "string" },
+          "shipments": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "required": ["proof"],
+              "properties": {
+                "proof": { "oneOf": [{ "$ref": "#/components/schemas/Proof" }, { "type": "null" }] },
+                "id": { "type": "string" },
+                "quantityTonnes": { "type": "string" },
+                "cnCode": { "type": "string" },
+                "country": { "type": "string" },
+                "importDate": { "type": "string" },
+                "supplier": { "type": "string" },
+                "installation": { "type": "string" },
+                "defaultValue": { "type": "string" },
+                "sefaActual": { "type": "string" },
+                "note": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "BatchDocument": {
+        "type": "object",
+        "description": "verify-batch results (sdk/batch.ts BatchDocument, format 1).",
+        "required": ["format", "kind", "pinnedBlock", "chainId", "eori", "verifiedAt", "counts", "results", "tool"],
+        "properties": {
+          "format": { "const": 1 },
+          "kind": { "const": "carbonlei-batch" },
+          "pinnedBlock": { "type": ["integer", "null"] },
+          "chainId": { "type": ["integer", "null"] },
+          "eori": { "type": ["string", "null"] },
+          "verifiedAt": { "type": "string" },
+          "counts": { "type": "object" },
+          "results": { "type": "array", "items": { "type": "object" } },
+          "tool": { "type": "object" }
+        }
+      },
+      "PortfolioRequest": {
+        "type": "object",
+        "required": ["results", "year"],
+        "properties": {
+          "results": { "$ref": "#/components/schemas/BatchDocument" },
+          "year": { "type": "integer", "minimum": 2026 },
+          "priceEur": { "type": "string", "description": "EUR per certificate, every quarter." },
+          "defaults": { "type": "object", "additionalProperties": { "type": "string" } },
+          "benchmarks": { "type": "object", "additionalProperties": { "type": "string" } },
+          "recheck": { "$ref": "recheck.schema.json" }
+        }
+      },
+      "RecheckRequest": {
+        "type": "object",
+        "required": ["records"],
+        "properties": {
+          "records": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "description": "Each item is one of: a Buyer-tab verification record (kind \"CarbonLEI verification record (demo)\", with `proof`); `{ proof, verdict, eori?, acceptedAt?, id? }` (the verdict /v1/verify returned when you accepted it); or a verify-batch results document whose results carry `proofObject`. Without a proof, only the report's on-chain status is read (ledger-only).",
+            "items": { "type": "object" }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": ["status", "chainId", "head", "rpc", "auth", "limits"],
+        "properties": {
+          "status": { "const": "ok" },
+          "chainId": { "type": "integer" },
+          "registry": { "type": "string" },
+          "head": {
+            "type": "object",
+            "properties": { "number": { "type": "integer" }, "timestamp": { "type": "integer" }, "ageSec": { "type": "integer" } }
+          },
+          "rpc": {
+            "type": "object",
+            "properties": { "nodes": { "type": ["integer", "null"] }, "hosts": { "type": "array", "items": { "type": "string" } } }
+          },
+          "auth": { "type": "string" },
+          "limits": { "type": "object" },
+          "tool": { "type": "object" }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-// carbonlei CLI: issue, present, verify, verify-batch, portfolio, export-pact, import-template.
+// carbonlei CLI: issue, present, verify, verify-batch, portfolio, recheck, serve, export-pact, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
 import { readFileSync, statSync, writeFileSync } from "node:fs";
@@ -31,6 +31,8 @@ import {
   type BatchResult,
 } from "./batch.ts";
 import { buildPortfolio, worksheetCsv } from "./portfolio.ts";
+import { applyRecheck, loadRecords, postWebhook, printRecheck, recheckExitCode, recheckRecords, webhookPayload, type RecheckDocument } from "./recheck.ts";
+import { createApiServer, DEFAULTS as SERVE_DEFAULTS, isLoopback } from "./server.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
@@ -73,6 +75,21 @@ const USAGE = `carbonlei <command> [options]
                                                     mark-up; totals, 50 t de minimis, quarterly holding, certificates,
                                                     gross EUR; --benchmarks deducts the free-allocation adjustment
                                                     (docs/OPERATE.md). The CSV is a worksheet, not the Registry XML
+               [--recheck <recheck.json>]           a line a later re-check says needs action is planned on the default
+  recheck      <records-folder | record.json | results.json> [--json] [--out <recheck.json>] [--webhook <URL>]
+               [--proofs <folder>] [--window <hours>] [--concurrency <1-4>] [--rpc <url>] [--deployment <file>]
+               [--trust-anchor <AID>] [--max-head-age <s>]
+                                                    re-verifies values you accepted earlier (Buyer-tab records,
+                                                    verify-batch results) at one pinned block and says what changed:
+                                                    revoked, superseded, CONTESTED, claim gone, window closed.
+                                                    Exit 3 if a record could not be re-checked, else 1 if any needs
+                                                    action, else 0. --webhook (or CARBONLEI_RECHECK_WEBHOOK_URL) POSTs
+                                                    the changed lines only, without EORI; schema docs/schemas/recheck.schema.json
+  serve        [--port 8787] [--host 127.0.0.1] [--cors-origin <origin>] [--evidence-dir <dir>] [--max-body <bytes>]
+               [--timeout <s>] [--max-concurrent <n>] [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
+                                                    REST API (docs/schemas/openapi.json): POST /v1/verify, /v1/verify-batch,
+                                                    /v1/portfolio, /v1/recheck; GET /v1/health. NO authentication: keep it
+                                                    on 127.0.0.1 or behind your own gateway (docs/OPERATE.md)
   export-pact  --proof <proof.json> --eori <EORI> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
                [--max-head-age <s>] [--out <pact.json>]   runs checks 0-8 (with check 5 for your EORI) first
@@ -207,6 +224,17 @@ async function main(argv: string[]) {
       csv: { type: "string" },
       defaults: { type: "string" },
       benchmarks: { type: "string" },
+      recheck: { type: "string" },
+      webhook: { type: "string" },
+      proofs: { type: "string" },
+      window: { type: "string" },
+      port: { type: "string" },
+      host: { type: "string" },
+      "cors-origin": { type: "string" },
+      "evidence-dir": { type: "string" },
+      "max-body": { type: "string" },
+      timeout: { type: "string" },
+      "max-concurrent": { type: "string" },
     },
   });
 
@@ -347,7 +375,8 @@ async function main(argv: string[]) {
       const file = positionals[0];
       if (!file || values.year === undefined) throw new Error("usage: carbonlei portfolio <results.json> --year <YYYY> [--price <EUR>] [--csv <file>]");
       if (!/^\d{4}$/.test(values.year as string)) throw new Error(`--year must be a four-digit year, got ${values.year}`);
-      const doc = readJson(file) as BatchDocument;
+      let doc = readJson(file) as BatchDocument;
+      if (values.recheck) doc = applyRecheck(doc, readJson(values.recheck as string) as RecheckDocument);
       const bm = values.benchmarks ? readMap(values.benchmarks as string, "--benchmarks") : undefined;
       const { cbamFactor, cscf, ...benchmarks } = bm ?? {};
       const summary = buildPortfolio(shipmentsFromBatch(doc), {
@@ -361,6 +390,72 @@ async function main(argv: string[]) {
       if (values.json) process.stdout.write(json(summary) + "\n");
       else if (!values.out) console.log(printPortfolio(summary) + (values.csv ? `\n\nWorksheet written to ${values.csv}` : ""));
       return 0;
+    }
+    case "recheck": {
+      const target = positionals[0];
+      if (!target) throw new Error("usage: carbonlei recheck <records-folder | record.json | results.json> [--json] [--webhook <URL>]");
+      const { records, skipped } = loadRecords(target, { proofsDir: values.proofs as string | undefined });
+      if (!records.length) throw new Error(`no accepted record to re-check in ${target}${skipped.length ? `: ${skipped.join("; ")}` : ""}`);
+      const windowHours = values.window === undefined ? undefined : Number(values.window);
+      if (windowHours !== undefined && (!Number.isFinite(windowHours) || windowHours < 0)) throw new Error(`--window must be a number of hours ≥ 0, got ${values.window}`);
+      const doc = await recheckRecords(records, reader(values), {
+        trustAnchor: values["trust-anchor"] as string | undefined,
+        maxHeadAgeSec: maxHeadAge(values),
+        loadBundleFor: (r) => (r.proofPath ? bundleLoader(r.proofPath) : undefined),
+        ...(windowHours !== undefined ? { windowHours } : {}),
+        concurrency: values.concurrency === undefined ? DEFAULT_CONCURRENCY : Number(values.concurrency),
+        within: withinDeadline,
+      });
+      if (values.out) write(values.out, doc);
+      if (values.json) process.stdout.write(json(doc) + "\n");
+      else console.log(printRecheck(doc, skipped));
+      let code = recheckExitCode(doc);
+      // The webhook URL may carry a secret token: it is never printed, only whether the POST went through.
+      const hook = (values.webhook as string | undefined) ?? process.env.CARBONLEI_RECHECK_WEBHOOK_URL;
+      const payload = hook ? webhookPayload(doc) : null;
+      if (hook && payload) {
+        const sent = await postWebhook(hook, payload);
+        console.error(sent.ok ? `webhook: sent ${(payload.changes as unknown[]).length} change(s) (${sent.detail})` : `webhook: NOT delivered (${sent.detail})`);
+        if (!sent.ok) code = EXIT.ERROR;
+      } else if (hook) console.error("webhook: nothing changed, nothing sent");
+      return code;
+    }
+    case "serve": {
+      const host = (values.host as string | undefined) ?? SERVE_DEFAULTS.host;
+      const port = Number(values.port ?? SERVE_DEFAULTS.port);
+      if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`--port must be 0-65535, got ${values.port}`);
+      const posInt = (k: string, scale = 1) => {
+        const v = values[k as keyof typeof values] as string | undefined;
+        if (v === undefined) return undefined;
+        const n = Number(v);
+        if (!Number.isFinite(n) || n <= 0) throw new Error(`--${k} must be a positive number, got ${v}`);
+        return Math.round(n * scale);
+      };
+      const { urls } = rpcUrlsFrom(values.rpc as string | undefined, process.env.CARBONLEI_RPC_URL);
+      const server = createApiServer({
+        reader: reader(values),
+        rpcUrls: urls,
+        evidenceDir: (values["evidence-dir"] as string | undefined) ?? fileURLToPath(new URL("../demo/public/", import.meta.url)),
+        trustAnchor: values["trust-anchor"] as string | undefined,
+        maxHeadAgeSec: maxHeadAge(values),
+        corsOrigin: values["cors-origin"] as string | undefined,
+        maxBodyBytes: posInt("max-body"),
+        timeoutMs: posInt("timeout", 1000),
+        maxConcurrent: posInt("max-concurrent"),
+      });
+      await new Promise<void>((ok, fail) => server.once("error", fail).listen(port, host, () => ok()));
+      const addr = server.address();
+      const bound = typeof addr === "object" && addr ? addr.port : port;
+      process.stderr.write(
+        JSON.stringify({ ts: new Date().toISOString(), level: "info", msg: "listening", url: `http://${host.includes(":") ? `[${host}]` : host}:${bound}`, auth: "none", cors: values["cors-origin"] ? "one origin" : "off" }) + "\n",
+      );
+      if (!isLoopback(host)) {
+        console.error(`WARNING: listening on ${host}, not a loopback address. This API has no authentication and no TLS: put it behind your own gateway.`);
+      }
+      const stop = () => server.close(() => process.exit(0));
+      process.once("SIGINT", stop);
+      process.once("SIGTERM", stop);
+      return new Promise<number>(() => undefined);
     }
     case "export-pact": {
       const proofText = readFileSync(values.proof as string, "utf8");
@@ -413,7 +508,7 @@ async function main(argv: string[]) {
 const args = process.argv.slice(2);
 // `verify --json`: any error (unreadable proof, RPC failure, bad option) prints an error object on
 // stdout and exits 3, so a caller can tell it from INVALID. Every other run that throws exits 1, as before.
-const jsonVerify = (args[0] === "verify" || args[0] === "verify-batch") && args.includes("--json");
+const jsonVerify = (args[0] === "verify" || args[0] === "verify-batch" || args[0] === "recheck") && args.includes("--json");
 main(args).then(
   (code) => process.exit(code),
   (err) => {
