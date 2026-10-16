@@ -1,4 +1,5 @@
-// carbonlei CLI: issue, present, verify, verify-batch, portfolio, recheck, serve, export-pact, import-template.
+// carbonlei CLI: issue, present, present-batch, allocate, verify, verify-batch, portfolio, recheck, serve, export-pact,
+// import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
 import { readFileSync, statSync, writeFileSync } from "node:fs";
@@ -38,6 +39,8 @@ import { vleiCheckers } from "./checkers.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import type { PrecursorReport } from "./precursor.ts";
 import { dirname, resolve } from "node:path";
+import { allocationExitCode, buildSharePack, printAllocation, readAllocationSnapshot, reconcile, reportRefOf } from "./allocation.ts";
+import { evidenceFrom, loadBook, writeSharePack } from "./allocation-files.ts";
 import {
   draftCredentialFields,
   MAX_TEMPLATE_BYTES,
@@ -53,6 +56,21 @@ const USAGE = `carbonlei <command> [options]
                [--out <credential.json>]            signs with VERIFIER_PRIVATE_KEY (EIP-712)
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
                --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>]
+  present-batch <book.json> --out <dir> [--credential <credential.json>] [--evidence-from <proof.json>] [--check]
+               [--json] [--rpc <url>] [--deployment <file>]
+                                                    one proof per claimed batch of the allocation book, each with
+                                                    its buyer's fields, and share-pack.json (no EORI, no salt).
+                                                    --check reconciles with the registry first and writes only the
+                                                    batches whose claim matches. Exit 0 if a proof was written, 1 if
+                                                    none, 3 if --check could not read the registry
+  allocate     <book.json> [--credential <credential.json>] [--json] [--out <report.json>] [--no-events]
+               [--from-block <n>] [--rpc <url>] [--deployment <file>]
+                                                    reconciles the supplier's allocation book with the registry at
+                                                    one pinned block: per-importer tonnes, remaining tonnes, missing
+                                                    or mismatched claims, planned batches the contract would refuse,
+                                                    on-chain claims not in the book, and the share-pack plan.
+                                                    Exit 0 if nothing needs action, 1 if something does, 3 if the
+                                                    reconciliation could not run
   verify       --proof <proof.json> [--rpc <url>] [--deployment <file>]
                                                     RPC: --rpc, else CARBONLEI_RPC_URL (comma-separated URLs), else
                                                     the public Sepolia nodes; each request times out after 8 s
@@ -253,6 +271,10 @@ async function main(argv: string[]) {
       "max-body": { type: "string" },
       timeout: { type: "string" },
       "max-concurrent": { type: "string" },
+      "no-events": { type: "boolean", default: false },
+      "from-block": { type: "string" },
+      "evidence-from": { type: "string" },
+      check: { type: "boolean", default: false },
     },
   });
 
@@ -295,6 +317,52 @@ async function main(argv: string[]) {
         : undefined;
       write(values.out, present(cred, fields, shipment));
       return 0;
+    }
+    case "allocate": {
+      const target = positionals[0];
+      if (!target) throw new Error("usage: carbonlei allocate <book.json> [--credential <credential.json>] [--json]");
+      // Exit 3 for any failure (bad book, unreadable credential, RPC), so a script can tell it from "needs action" (1).
+      try {
+        const { book, cred } = loadBook(target, values.credential as string | undefined);
+        const ref = reportRefOf(cred);
+        const fromBlock = values["from-block"] === undefined ? undefined : BigInt(values["from-block"] as string);
+        const snap = await withinDeadline(readAllocationSnapshot(reader(values), book, ref, { events: !values["no-events"], fromBlock }));
+        const report = reconcile(book, ref, snap);
+        if (values.out) write(values.out as string, report);
+        if (values.json) process.stdout.write(json(report) + "\n");
+        else console.log(printAllocation(report));
+        return allocationExitCode(report);
+      } catch (err) {
+        console.error(`error: ${(err as Error).message}`);
+        if (values.json) process.stdout.write(json({ error: (err as Error).message }) + "\n");
+        return EXIT.ERROR;
+      }
+    }
+    case "present-batch": {
+      const target = positionals[0];
+      if (!target || !values.out) throw new Error("usage: carbonlei present-batch <book.json> --out <dir> [--credential <credential.json>]");
+      const { book, cred } = loadBook(target, values.credential as string | undefined);
+      const evidence = values["evidence-from"] ? evidenceFrom(values["evidence-from"] as string, cred) : undefined;
+      let ready: Set<string> | undefined;
+      if (values.check) {
+        try {
+          const ref = reportRefOf(cred);
+          const snap = await withinDeadline(readAllocationSnapshot(reader(values), book, ref, { events: false }));
+          ready = new Set(reconcile(book, ref, snap).sharePack.flatMap((s) => s.proofs.filter((p) => p.ready).map((p) => p.batchId)));
+        } catch (err) {
+          console.error(`error: could not reconcile with the registry: ${(err as Error).message}`);
+          return EXIT.ERROR;
+        }
+      }
+      const pack = buildSharePack(cred, book, { ...(evidence ? { evidence } : {}), ...(ready ? { only: (b) => ready!.has(b.batchId) } : {}) });
+      const manifest = writeSharePack(values.out as string, book, cred, pack);
+      if (values.json) process.stdout.write(json(manifest) + "\n");
+      else {
+        for (const p of manifest.proofs) console.log(`wrote ${p.file}  (${p.importer}, batch ${p.batchId}, ${p.fields.length} fields)`);
+        for (const k of manifest.skipped) console.log(`skipped ${k.batchId} — ${k.reason}`);
+        console.log(`${manifest.proofs.length} proof(s) and share-pack.json in ${values.out}${evidence ? "" : "; no evidence attached (--evidence-from <proof.json> adds the anchor and authority evidence checks 6-8 read)"}`);
+      }
+      return manifest.proofs.length ? 0 : 1;
     }
     case "verify": {
       const proofText = readFileSync(values.proof as string, "utf8");

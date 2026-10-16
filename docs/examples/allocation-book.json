@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "credential": "../../fixtures/sepolia-credential.json",
+  "defaultFields": [
+    "supplierLEI", "installationId", "unLocode", "cnCode", "cbamRoute", "reportingPeriod", "verifiedTonnes",
+    "specificEmbeddedEmissions_tCO2e_per_t", "valueType", "methodologyNote", "verificationReportId", "verifierLEI",
+    "accreditationNumber", "nabName", "siteVisit", "assuranceLevel", "materialityThreshold", "idSalt", "batchSalt",
+    "issuedAt", "validUntil"
+  ],
+  "importers": [
+    { "id": "demo-imports", "name": "Demo Imports B.V. (fictional)", "eori": "NLDEMO000000001" },
+    { "id": "demo-schrauben", "name": "Demo Schrauben Import GmbH (fictional)", "eori": "DEDEMO000000002" },
+    {
+      "id": "demo-nordic",
+      "name": "Demo Nordic Fasteners AB (fictional)",
+      "eori": "SEDEMO000000003",
+      "fields": [
+        "supplierLEI", "installationId", "cnCode", "cbamRoute", "reportingPeriod", "verifiedTonnes",
+        "specificEmbeddedEmissions_tCO2e_per_t", "methodologyNote", "verificationReportId", "idSalt", "batchSalt"
+      ]
+    }
+  ],
+  "batches": [
+    {
+      "batchId": "BATCH-DEMO-2026-0001",
+      "importer": "demo-imports",
+      "importerSalt": "0x16964453c944e5940e92bfe3c22f024a5b3c52a9779c423c20da90533da30767",
+      "quantityTonnes": "200",
+      "shipmentDate": "2026-10-10",
+      "status": "claimed"
+    },
+    {
+      "batchId": "BATCH-DEMO-2026-0002",
+      "importer": "demo-schrauben",
+      "importerSalt": "0x12a6f9558d55756b90cf0defa3a9e4da11631b848dd712b04d1064868cbada3a",
+      "quantityTonnes": "400",
+      "shipmentDate": "2026-11-05",
+      "status": "planned"
+    },
+    {
+      "batchId": "BATCH-DEMO-2026-0003",
+      "importer": "demo-nordic",
+      "importerSalt": "0x7f1c2d9a4b6e8f0a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f7a",
+      "quantityTonnes": "80",
+      "shipmentDate": "2026-11-20",
+      "status": "planned"
+    }
+  ]
+}
