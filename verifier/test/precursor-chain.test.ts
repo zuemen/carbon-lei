@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { hashString } from "../../sdk/commitment.ts";
-import { DEMO_TRUST_ANCHOR, parseCesr, verifyAnchor, verifyAuthority, type AnchorEvidence } from "../../sdk/vlei.ts";
+import { DEMO_TRUST_ANCHOR, PRECURSOR_DEMO_TRUST_ANCHOR, parseCesr, verifyAnchor, verifyAuthority, type AnchorEvidence } from "../../sdk/vlei.ts";
 import { BODY_KEYS, precursorChainInput, syntheticPrecursorChain } from "../src/precursor-chain.ts";
 
 const json = (rel: string) => JSON.parse(readFileSync(new URL(rel, import.meta.url), "utf8"));
@@ -36,6 +36,8 @@ const expectFor = (k: (typeof BODY_KEYS)[number], trustAnchor: string, cnCode: s
 describe("precursor demo: synthetic two-body vLEI chain", () => {
   it("is deterministic and names the fictional mill body and the demo screw body", () => {
     expect(syntheticPrecursorChain(input).trustAnchor).toBe(chain.trustAnchor);
+    // the constant the hosted page pins for the precursor sections
+    expect(chain.trustAnchor).toBe(PRECURSOR_DEMO_TRUST_ANCHOR);
     expect(chain.bodies.mill.lei).toBe(demo.entities.precursorChain.body.lei);
     expect(chain.bodies.screw.lei).toBe(demo.entities.verifier.lei);
     expect(input.bodies.mill.cnScope).toEqual(["7213"]);

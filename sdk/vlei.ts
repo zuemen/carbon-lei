@@ -73,6 +73,12 @@ export const AUDITOR_ROLE = "CBAM Lead Auditor";
 /** Root of trust of the demo: the simulated GLEIF root (GEDA) of the local KERI stack (fixtures/vlei.json).
  * A production verifier pins GLEIF's root AID here instead. */
 export const DEMO_TRUST_ANCHOR = "EGR6VINAm0lwO9RuEFJCQFtJ3Kn3CCB3YT58ZayE_JBB";
+/**
+ * Root of the local precursor demo only (check 9): the synthetic test root of verifier/src/precursor-chain.ts
+ * (deterministic test keys, no KERI agents), which both tiers of that demo chain to. Not a GLEIF root and not the
+ * demo root above; the hosted page pins it for the precursor sections instead of reading it from the data file.
+ */
+export const PRECURSOR_DEMO_TRUST_ANCHOR = "EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn";
 
 export interface Message {
   raw: string;

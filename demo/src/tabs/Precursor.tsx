@@ -10,6 +10,7 @@ import type { CheckResult, Overall } from "../../../sdk/verify.ts";
 import { Badge, type BadgeKind } from "../components.tsx";
 import { short } from "../data.ts";
 import { useLang, useStrings } from "../i18n.ts";
+import { PRECURSOR_DEMO_TRUST_ANCHOR } from "../../../sdk/vlei.ts";
 
 export interface PrecursorData {
   version: 1;
@@ -185,7 +186,8 @@ export function PrecursorBuyer() {
       const { verifyOffline } = await import("../../../sdk/verify.ts");
       const off = await verifyOffline(d.good.proof, { registry: d.deployment.registry, chainId: d.chainId });
       const core = JSON.parse(d.good.proof.core) as { precursorDigest?: string };
-      setItems(await checkPrecursorsOffline(core, off.disclosed, d.good.proof.precursorEvidence, { trustAnchor: d.trustAnchor, deployment: { registry: d.deployment.registry, chainId: d.chainId } }));
+      // The root is pinned in the page code (sdk/vlei.ts), never taken from the data file.
+      setItems(await checkPrecursorsOffline(core, off.disclosed, d.good.proof.precursorEvidence, { trustAnchor: PRECURSOR_DEMO_TRUST_ANCHOR, deployment: { registry: d.deployment.registry, chainId: d.chainId } }));
     } finally {
       setBusy(false);
     }
@@ -306,7 +308,7 @@ export function PrecursorTrustChain() {
   const e = d.entities;
   const claimed = d.verification.precursors.lines[0]?.claimedTonnes ?? "—";
   const nodes: { name: string; role: string; meta?: string }[] = [
-    { name: e.root.name, role: t.nodes.root, meta: `AID ${short(d.trustAnchor, 8, 6)}` },
+    { name: e.root.name, role: t.nodes.root, meta: `AID ${short(PRECURSOR_DEMO_TRUST_ANCHOR, 8, 6)}` },
     { name: e.qvi.name, role: t.nodes.qvi, meta: `LEI ${e.qvi.lei}` },
     { name: e.millBody.name, role: t.nodes.body(e.millBody.cnScope.join(", "), e.millBody.accreditationNumber), meta: `LEI ${e.millBody.lei} · LE ${short(e.millBody.leSaid, 8, 6)}` },
     { name: e.millAuditor.name, role: t.nodes.auditor, meta: `AID ${short(e.millAuditor.aid, 8, 6)} · ECR ${short(e.millAuditor.ecrSaid, 8, 6)}` },
