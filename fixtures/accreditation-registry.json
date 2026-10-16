@@ -1,0 +1,30 @@
+{
+  "note": "The trust-registry (allowlist) operator's off-chain record of each verification body it lists: the registration data of Art 10a(2) of the CBAM Registry Act as summarised in §10.2 of the Commission's Guidance on CBAM verification and accreditation (24 August 2026), plus the accreditation standard. It is linked to the on-chain allowlist entry by the body's LEI and the hash of its accreditation credential's SAID. All organisations, numbers and dates of the demo records are fictional; the Commission list status is real as of checkedAt.",
+  "schema": "carbonlei-accreditation-record/1",
+  "operator": "Demo trust-registry operator (fictional)",
+  "commissionList": {
+    "published": false,
+    "checkedAt": "2026-10-16",
+    "source": "https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en (\"The list of accredited CBAM verifiers will be published on this page\")"
+  },
+  "records": [
+    {
+      "verifierLEI": "ZZZZ00EUVERIFDEMO152",
+      "verifierName": "Demo Verification GmbH (fictional)",
+      "countryOfEstablishment": "DE",
+      "accreditationNumber": "DEMO-ACC-CBAM-0001",
+      "nab": {
+        "name": "Demo Accreditation Body (fictional)",
+        "country": "DE",
+        "lei": "ZZZZ00NABACCRDEMO119"
+      },
+      "standards": ["EN ISO/IEC 17029:2019", "EN ISO 14065"],
+      "activityGroups": ["VIII"],
+      "cnScope": ["7318"],
+      "validFrom": "2026-10-05",
+      "validUntil": "2030-12-31",
+      "administrativeMeasures": [],
+      "accreditationSaidHash": "0xc4a3e94de9763528f5e374981a8c72b5270a155a024d9a590a380d303cd10228"
+    }
+  ]
+}

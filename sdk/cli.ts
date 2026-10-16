@@ -36,6 +36,7 @@ import { loadRecords } from "./recheck-files.ts";
 import { applyRecheck, postWebhook, printRecheck, recheckExitCode, recheckRecords, webhookPayload, type RecheckDocument } from "./recheck.ts";
 import { createApiServer, DEFAULTS as SERVE_DEFAULTS, isLoopback } from "./server.ts";
 import { vleiCheckers } from "./checkers.ts";
+import type { AccreditationRegistry } from "./verification-rules.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import type { PrecursorReport } from "./precursor.ts";
 import { art9Text, carbonPriceLines } from "./carbonprice.ts";
@@ -81,6 +82,9 @@ const USAGE = `carbonlei <command> [options]
                [--precursor-trust-anchor <AID>]     root of trust for check 7 of the precursor tiers (check 9;
                                                     default: --trust-anchor)
                [--max-head-age <s>]                 refuse an RPC whose latest block is older (default 300 on Sepolia)
+               [--accreditation-registry <file>]    the allowlist operator's accreditation records (e.g.
+                                                    fixtures/accreditation-registry.json): check 8 adds the
+                                                    verifier's provenance sub-rules
                [--json]                             print the verdict as JSON (docs/schemas/verdict.schema.json);
                                                     exit 0 VALID, 1 INVALID, 2 CONTESTED, 3 error, 4 INCOMPLETE
                [--expect-invalid <CODE>]            exit 0 only if the proof is INVALID with a check failing on CODE
@@ -255,6 +259,7 @@ async function main(argv: string[]) {
       "expect-invalid": { type: "string" },
       "trust-anchor": { type: "string" },
       "precursor-trust-anchor": { type: "string" },
+      "accreditation-registry": { type: "string" },
       "max-head-age": { type: "string" },
       json: { type: "boolean", default: false },
       concurrency: { type: "string" },
@@ -377,6 +382,9 @@ async function main(argv: string[]) {
       const precursorTrustAnchor = values["precursor-trust-anchor"] as string | undefined;
       const expected = values["expect-invalid"] as string | undefined;
       const maxHeadAgeSec = maxHeadAge(values);
+      const accreditationRegistry = values["accreditation-registry"]
+        ? (JSON.parse(readFileSync(values["accreditation-registry"] as string, "utf8")) as AccreditationRegistry)
+        : undefined;
       if (values.json) {
         // Machine-readable verdict on stdout only; a run that throws exits 3 (see the handler at the end).
         const v = await withinDeadline(verdictFor(proof, reader(values), {
@@ -386,6 +394,7 @@ async function main(argv: string[]) {
           precursorTrustAnchor,
           maxHeadAgeSec,
           proofText,
+          ...(accreditationRegistry ? { accreditationRegistry } : {}),
         }));
         process.stdout.write(json(v) + "\n");
         if (expected) return v.overall === "INVALID" && v.checks.some((c) => c.status === "fail" && c.code === expected) ? 0 : 1;
@@ -393,13 +402,22 @@ async function main(argv: string[]) {
       }
       const r = await withinDeadline(verifyPresentation(proof, reader(values), {
         importerEORI: values.eori as string | undefined,
-        checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}), ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}) }),
+        checkers: vleiCheckers({
+          loadBundle,
+          ...(trustAnchor ? { trustAnchor } : {}),
+          ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}),
+          ...(accreditationRegistry ? { accreditationRegistry } : {}),
+        }),
         maxHeadAgeSec,
         proofText,
       }));
       for (const c of r.checks) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
+        for (const s of c.rules ?? []) {
+          const m = { pass: "pass", fail: "FAIL", warn: "warn", note: "note" }[s.status];
+          console.log(`        ${m}  ${s.rule}${s.code ? `  [${s.code}]` : ""} — ${s.detail}`);
+        }
       }
       if (r.precursors) for (const l of precursorLines(r.precursors)) console.log(l);
       if (r.carbonPrice) for (const l of carbonPriceLines(r.carbonPrice)) console.log(l);

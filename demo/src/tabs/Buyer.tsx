@@ -11,6 +11,7 @@ import { codeText } from "../messages.ts";
 import { useLang, type Lang } from "../i18n.ts";
 import { evidenceCheckers, prefetchEvidence } from "../evidence.ts";
 import { CheckSources } from "./CheckSources.tsx";
+import { SubRules } from "./VerifierRules.tsx";
 import { PrecursorBuyer } from "./Precursor.tsx";
 import { CarbonPriceSection } from "./CarbonPrice.tsx";
 
@@ -31,7 +32,7 @@ const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 7, text: "The auditor is authorised by an accredited verification body", source: "evidence" },
   {
     n: 8,
-    text: "The report matches the signed credential (rule-based check, covered by the auditor's signature) — advisory: a mismatch flags the report for human review, it does not fail the check list",
+    text: "The report matches the signed credential (rule-based check, covered by the auditor's signature) — advisory: a mismatch flags the report for human review; it fails only when the signed report itself breaks a CBAM rule (dated too early, accreditation expired, no physical first-year site visit)",
     source: "advisory",
   },
 ];
@@ -45,7 +46,7 @@ const CHECK_TEXT_ZH: Record<number, string> = {
   5: "此批次是為您、以此數量申領的",
   6: "查核員已將此報告記錄在其自己的簽署歷史中（KERI 金鑰事件日誌）——簽章由您的瀏覽器依匯出的事件重新檢查；未查詢見證者（witnesses）",
   7: "查核員獲得經認證的驗證機構授權",
-  8: "報告與已簽署的憑證相符（規則式檢查，涵蓋於查核員的簽章內）——僅供參考：不一致時會將報告標示為需人工審查，不會使檢查清單判定為失敗",
+  8: "報告與已簽署的憑證相符（規則式檢查，涵蓋於查核員的簽章內）——僅供參考：不一致時會將報告標示為需人工審查；只有當已簽署的報告本身違反 CBAM 規則（日期過早、認證已過期、首年未實地查訪）時才判定為未通過",
 };
 
 /** The check list's result badges in Traditional Chinese; other tabs keep the English badges. */
@@ -674,7 +675,7 @@ export function Buyer() {
             <span>◉ live · Sepolia = contract state read from Sepolia now</span>
             <span>◎ live · your browser = recomputed on this page (check 3 takes only the chain ID from the Sepolia node)</span>
             <span>▤ exported evidence = from a local KERI run ({data.exportDate})</span>
-            <span>≡ rule-based · advisory = can flag, never fails</span>
+            <span>≡ rule-based · advisory = can flag; fails only on a CBAM rule the signed report breaks</span>
           </div>
           {error && (
             <p className="check-detail bad" role="alert">
@@ -715,6 +716,7 @@ export function Buyer() {
                     {r && r.code ? " — " : " "}
                     {r ? checkText(r, lang) : ""}
                   </span>
+                  {r?.rules && r.rules.length > 0 && !running && <SubRules rules={r.rules} />}
                 </li>
               );
             })}

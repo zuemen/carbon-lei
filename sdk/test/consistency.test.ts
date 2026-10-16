@@ -46,10 +46,17 @@ describe("check 8: reconciliation", () => {
       return checkReconciliation(e, cl, reconcile(e, cl).reconciliation).code;
     };
     expect(one({ accreditationScope: ["CN 7208"] })).toBe("CONSISTENCY_WARNING/CN_NOT_IN_SCOPE");
-    expect(one({ siteVisit: "virtual" }, { siteVisit: "virtual" })).toBe("CONSISTENCY_WARNING/FIRST_YEAR_NOT_PHYSICAL");
+    // A virtual first-year visit in the signed report is also a breach of IR 2025/2546 Art 2-3: the check 8
+    // sub-rule fails (sdk/verification-rules.ts); the reconciliation finding stays in the signed output.
+    expect(one({ siteVisit: "virtual" }, { siteVisit: "virtual" })).toBe("VERIFICATION_RULE/FIRST_PERIOD_NO_PHYSICAL_VISIT");
+    expect(reconcile({ ...extract, siteVisit: "virtual" }, { ...claims, siteVisit: "virtual" }).findings.find((f) => !f.ok)?.code).toBe(
+      "CONSISTENCY_WARNING/FIRST_YEAR_NOT_PHYSICAL",
+    );
     expect(one({ assuranceLevel: "limited" }, { assuranceLevel: "limited" })).toBe("CONSISTENCY_WARNING/ASSURANCE_NOT_REASONABLE");
     expect(one({ materialityThreshold: "10%" }, { materialityThreshold: "10%" })).toBe("CONSISTENCY_WARNING/MATERIALITY_NOT_5");
-    expect(one({ signedAt: "2026-10-20" })).toBe("CONSISTENCY_WARNING/PERIOD_ORDER"); // before the period ended
+    // Dated before the period ended: the signed reconciliation flags PERIOD_ORDER, and the sub-rule fails check 8.
+    expect(reconcile({ ...extract, signedAt: "2026-10-20" }, claims).findings.find((f) => !f.ok)?.code).toBe("CONSISTENCY_WARNING/PERIOD_ORDER");
+    expect(one({ signedAt: "2026-10-20" })).toBe("VERIFICATION_RULE/REPORT_BEFORE_FIRST_ISSUE_DATE");
   });
 
   it("skips when the needed fields are not disclosed or the credential has no proof", () => {
