@@ -4,7 +4,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 async function axe(page: Page, label: string) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  // A cancelled animation rejects its finished promise (AbortError): treat it as settled.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   await page.evaluate(() => window.scrollTo(0, 0));
   const { violations } = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
@@ -66,6 +67,8 @@ test("V3 Trust chain: Verifier legitimacy panel — accreditation provenance, ev
 
 test("V4 Try to break it, card 6: a report dated before verifiers could issue is rejected by check 8", async ({ page }) => {
   await page.goto("./#try-to-break-it");
+  // Let the page connect first, so the other cards do not re-render under the axe scan.
+  await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
   const card = page.locator("#attack-6");
   await expect(card.getByRole("heading", { name: "6 · A verification report dated before verifiers could issue" })).toBeVisible();
   await card.getByRole("button", { name: "Date the report 2026-12-15" }).click();
