@@ -23,6 +23,12 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 /// - a suspended body's current address cannot cancel a rotation, so the owner's rescue
 ///   rotation (propose, wait, execute; the WATCHER can still cancel it) works for a body
 ///   whose key was stolen (M2).
+/// Prototype fix for finding C1 (branch c1-fix-prototype, not merged; docs/SECURITY.md §13.1):
+/// - WATCHER_ROLE is also revoked only in two steps (`proposeRoleRevoke`, then
+///   `executeRoleRevoke` after `ROTATION_DELAY`); any current watcher other than the one being
+///   revoked, or the owner, can cancel; `revokeRole` for it reverts; and the last watcher cannot
+///   be revoked at all (`LastWatcher`). `renounceRole` by a watcher stays immediate, so a
+///   watcher whose key is stolen can step down at once.
 /// Ownership is two-step (`Ownable2Step`) and cannot be renounced. The owner is meant to be
 /// a multisig behind a `TimelockController`; this contract does not enforce that.
 ///
@@ -93,6 +99,11 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     /// @notice Pending two-step role grants (only WATCHER_ROLE): when they become executable
     /// (0 = none pending).
     mapping(bytes32 role => mapping(address account => uint64 readyAt)) public pendingRoleGrants;
+    /// @notice Pending two-step role revocations (only WATCHER_ROLE): when they become
+    /// executable (0 = none pending). C1 prototype.
+    mapping(bytes32 role => mapping(address account => uint64 readyAt)) public pendingRoleRevokes;
+    /// @notice Number of accounts holding WATCHER_ROLE. C1 prototype.
+    uint256 public watcherCount;
 
     event VerifierAdded(
         bytes32 indexed leiHash, address indexed verifier, uint64 accreditedUntil, bytes32 accreditationSaidHash
@@ -108,6 +119,8 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     event RotationCancelled(bytes32 indexed leiHash, address indexed newAddr, address indexed by);
     event RoleGrantProposed(bytes32 indexed role, address indexed account, uint64 readyAt);
     event RoleGrantCancelled(bytes32 indexed role, address indexed account, address indexed by);
+    event RoleRevokeProposed(bytes32 indexed role, address indexed account, uint64 readyAt);
+    event RoleRevokeCancelled(bytes32 indexed role, address indexed account, address indexed by);
 
     error InvalidInput();
     error InvalidExpiry(uint64 validUntil);
@@ -131,6 +144,11 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
     error RoleGrantAlreadyPending(bytes32 role, address account);
     error NoPendingRoleGrant(bytes32 role, address account);
     error RoleGrantNotReady(bytes32 role, address account, uint64 readyAt);
+    error RoleRevokeNeedsDelay(bytes32 role);
+    error RoleRevokeAlreadyPending(bytes32 role, address account);
+    error NoPendingRoleRevoke(bytes32 role, address account);
+    error RoleRevokeNotReady(bytes32 role, address account, uint64 readyAt);
+    error LastWatcher(address account);
 
     constructor(address initialOwner, address watcher) Ownable(initialOwner) EIP712("VerifierAllowlistV2", "1") {
         if (watcher == address(0)) revert InvalidInput();
@@ -265,11 +283,56 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
         emit RoleGrantCancelled(role, account, msg.sender);
     }
 
-    /// @dev WATCHER_ROLE only through {proposeRoleGrant}/{executeRoleGrant}. Revoking stays
-    /// immediate (residual risk, docs/SECURITY.md §13.1).
+    /// @dev WATCHER_ROLE only through {proposeRoleGrant}/{executeRoleGrant}.
     function grantRole(bytes32 role, address account) public override {
         if (role == WATCHER_ROLE) revert RoleGrantNeedsDelay(role);
         super.grantRole(role, account);
+    }
+
+    // ----------------------------------------------- role revocations (C1)
+
+    /// @notice Step 1 of revoking WATCHER_ROLE (C1 prototype): the owner proposes; the account
+    /// keeps the role until {executeRoleRevoke}. Before this, `revokeRole` was immediate, so a
+    /// stolen owner key removed the honest watcher, granted WATCHER to itself with nobody left to
+    /// cancel, and suspended the body to strip its cancel right (finding C1).
+    function proposeRoleRevoke(bytes32 role, address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (role != WATCHER_ROLE || !hasRole(role, account)) revert InvalidInput();
+        if (pendingRoleRevokes[role][account] != 0) revert RoleRevokeAlreadyPending(role, account);
+        uint64 readyAt = uint64(block.timestamp) + ROTATION_DELAY;
+        pendingRoleRevokes[role][account] = readyAt;
+        emit RoleRevokeProposed(role, account, readyAt);
+    }
+
+    /// @notice Step 2: anyone, once `ROTATION_DELAY` has passed, and only if another account
+    /// still holds WATCHER_ROLE: the last watcher cannot be revoked (it can renounce). So a
+    /// stolen owner key must first get a watcher of its own through {proposeRoleGrant}, which
+    /// the honest watcher can cancel.
+    function executeRoleRevoke(bytes32 role, address account) external {
+        uint64 readyAt = pendingRoleRevokes[role][account];
+        if (readyAt == 0) revert NoPendingRoleRevoke(role, account);
+        if (block.timestamp < readyAt) revert RoleRevokeNotReady(role, account, readyAt);
+        if (watcherCount <= 1 && hasRole(role, account)) revert LastWatcher(account);
+        delete pendingRoleRevokes[role][account];
+        _revokeRole(role, account);
+    }
+
+    /// @notice Cancels a pending role revocation: any current WATCHER other than the account
+    /// being revoked, or the owner. The account itself cannot: a stolen watcher key must not be
+    /// able to keep its role against the owner (the last watcher is protected by `LastWatcher`
+    /// instead).
+    function cancelRoleRevoke(bytes32 role, address account) external {
+        if (pendingRoleRevokes[role][account] == 0) revert NoPendingRoleRevoke(role, account);
+        bool otherWatcher = msg.sender != account && hasRole(WATCHER_ROLE, msg.sender);
+        if (!otherWatcher && msg.sender != owner()) revert NotAllowedToCancel(msg.sender);
+        delete pendingRoleRevokes[role][account];
+        emit RoleRevokeCancelled(role, account, msg.sender);
+    }
+
+    /// @dev WATCHER_ROLE only through {proposeRoleRevoke}/{executeRoleRevoke}. `renounceRole`
+    /// is not overridden: a watcher steps down at once.
+    function revokeRole(bytes32 role, address account) public override {
+        if (role == WATCHER_ROLE) revert RoleRevokeNeedsDelay(role);
+        super.revokeRole(role, account);
     }
 
     // -------------------------------------------------------------- watcher
@@ -370,7 +433,18 @@ contract VerifierAllowlistV2 is Ownable2Step, AccessControl, EIP712 {
 
     function _grantRole(bytes32 role, address account) internal override returns (bool) {
         if (role == DEFAULT_ADMIN_ROLE && account != owner()) revert InvalidInput();
-        return super._grantRole(role, account);
+        bool granted = super._grantRole(role, account);
+        if (granted && role == WATCHER_ROLE) watcherCount++;
+        return granted;
+    }
+
+    function _revokeRole(bytes32 role, address account) internal override returns (bool) {
+        bool revoked = super._revokeRole(role, account);
+        if (revoked && role == WATCHER_ROLE) {
+            watcherCount--;
+            delete pendingRoleRevokes[role][account]; // a renounce also clears a pending revocation
+        }
+        return revoked;
     }
 
     /// @dev Called by Ownable2Step only on `acceptOwnership` (and in the constructor), so the

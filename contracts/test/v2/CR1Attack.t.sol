@@ -153,51 +153,101 @@ contract CR1AttackV2Test is BaseV2 {
         assertGe(_revokedAt(keys[0]), t0 + DELAY + HOLD);
     }
 
-    /// @dev Residual risk: the owner administers WATCHER_ROLE. Granting it is delayed and
-    /// cancellable (review fix H2), but revoking it is immediate. A stolen owner key that is not
-    /// behind a timelock can remove the watcher; then only the body's own reaction during
-    /// ROTATION_DELAY stops the attack (the monitor alerts `watcher_role_missing`).
-    function test_CR1_V2_residual_ownerKeyAlsoRemovesWatcher() public {
+    /// @dev Was a residual risk until the C1 prototype fix (branch c1-fix-prototype): the owner
+    /// key revoked WATCHER_ROLE at once (`allowlist.revokeRole(role, watcher)` succeeded, and the
+    /// watcher's `cancelRevocation` then reverted `NotAllowedToCancel`). Now `revokeRole` for that
+    /// role reverts, and a proposed revocation of the only watcher can never execute.
+    function test_CR1_V2_ownerKeyCannotRemoveWatcher() public {
         bytes32 role = allowlist.WATCHER_ROLE();
         vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.RoleRevokeNeedsDelay.selector, role));
         allowlist.revokeRole(role, watcher);
-        _rotateDelayed(L1, thief);
+        vm.prank(owner);
+        allowlist.proposeRoleRevoke(role, watcher);
+        _rotateDelayed(L1, thief); // the revocation is ready in the same block as the rotation
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.LastWatcher.selector, watcher));
+        allowlist.executeRoleRevoke(role, watcher);
         vm.prank(thief);
         registry.revokeReport(keys[0], 0);
         vm.prank(watcher);
-        vm.expectRevert(abi.encodeWithSelector(EmissionsClaimRegistryV2.NotAllowedToCancel.selector, watcher));
-        registry.cancelRevocation(keys[0]);
+        registry.cancelRevocation(keys[0]); // still a watcher
+        vm.prank(watcher);
+        allowlist.suspendVerifier(L1);
         vm.warp(block.timestamp + HOLD);
+        vm.expectRevert(abi.encodeWithSelector(EmissionsClaimRegistryV2.NoPendingRevocation.selector, keys[0]));
         registry.executeRevocation(keys[0]);
-        assertFalse(registry.isValid(keys[0]));
+        assertTrue(_allValid());
     }
 
-    /// @dev Found by the Maude CR1 model on 14 October (formal/maude, section G; our own
-    /// AI-run review, not an external audit). The residual above says that once the owner key
-    /// has removed the watcher, "only the body itself can stop the rotation". It cannot: the
-    /// same key proposes WATCHER_ROLE for an address of its own, which nobody left can cancel
-    /// (cancelRoleGrant: a current watcher or the owner), uses it to suspend the body, and a
-    /// suspended body's current address cannot cancel a rotation (M2). The thief's watcher
-    /// then lifts the suspension and the thief's address revokes. Total: 3 x 72 hours.
-    function test_CR1_V2_residual_ownerKeyRemovesWatcher_selfGrantedWatcherBlocksBodyCancel() public {
+    /// @dev Finding C1, found by the Maude CR1 model on 14 October (formal/maude, section G; our
+    /// own AI-run review, not an external audit), now stopped by the C1 prototype fix.
+    /// The original PoC (kept in git history, commit a5699b4, under the name
+    /// `test_CR1_V2_residual_ownerKeyRemovesWatcher_selfGrantedWatcherBlocksBodyCancel`) ran:
+    /// owner key `revokeRole(WATCHER_ROLE, watcher)` and `proposeRoleGrant(WATCHER_ROLE, tw)` at
+    /// t0 (nobody left could cancel the grant); `executeRoleGrant`, tw `suspendVerifier(L1)` and
+    /// `proposeRotation(L1, thief)` at t0 + 72 h (the suspended body's `cancelRotation` reverted,
+    /// M2); `executeRotation`, tw `liftSuspension`, thief `revokeReport` x3 at t0 + 144 h;
+    /// `executeRevocation` x3 at t0 + 216 h: all three reports revoked.
+    /// Now: the first step reverts; the delayed revocation of the only watcher reverts
+    /// `LastWatcher`; the watcher, still in office, cancels the grant (the watcher cannot cancel
+    /// its own revocation, which is harmless here), and the body cancels the rotation.
+    function test_CR1_V2_C1_selfGrantedWatcherPath_blocked() public {
         uint256 t = START + 365 days; // literal time: via-IR caches block.timestamp
         bytes32 role = allowlist.WATCHER_ROLE();
         address tw = makeAddr("thief-watcher");
-        vm.startPrank(owner);
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.RoleRevokeNeedsDelay.selector, role));
         allowlist.revokeRole(role, watcher);
+        vm.startPrank(owner);
+        allowlist.proposeRoleRevoke(role, watcher);
         allowlist.proposeRoleGrant(role, tw);
         vm.stopPrank();
-        // The removed watcher can no longer cancel the grant; the body has no cancel right on it.
         vm.prank(watcher);
         vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NotAllowedToCancel.selector, watcher));
-        allowlist.cancelRoleGrant(role, tw);
-        vm.prank(v1);
-        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NotAllowedToCancel.selector, v1));
-        allowlist.cancelRoleGrant(role, tw);
+        allowlist.cancelRoleRevoke(role, watcher);
+        vm.prank(watcher);
+        allowlist.cancelRoleGrant(role, tw); // the monitor's RoleGrantProposed rule (H2)
         t += DELAY;
         vm.warp(t);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NoPendingRoleGrant.selector, role, tw));
         allowlist.executeRoleGrant(role, tw);
-        // Suspend first, then propose, so the body never holds a cancel right on the proposal.
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.LastWatcher.selector, watcher));
+        allowlist.executeRoleRevoke(role, watcher);
+        // Without a watcher of its own, the attacker cannot suspend the body; the body cancels.
+        vm.prank(tw);
+        vm.expectRevert();
+        allowlist.suspendVerifier(L1);
+        _propose(L1, thief);
+        vm.prank(v1);
+        allowlist.cancelRotation(L1);
+        t += DELAY;
+        vm.warp(t);
+        vm.expectRevert(abi.encodeWithSelector(VerifierAllowlistV2.NoPendingRotation.selector, L1));
+        allowlist.executeRotation(L1);
+        assertTrue(allowlist.hasRole(role, watcher));
+        assertFalse(allowlist.hasRole(role, tw));
+        assertTrue(_allValid());
+    }
+
+    /// @dev Residual risk after the C1 prototype fix: if the honest watcher ignores both a
+    /// `RoleGrantProposed` for a stranger and a `RoleRevokeProposed` for itself for 72 hours,
+    /// the owner key gets a watcher of its own, the honest watcher is no longer the last one,
+    /// its revocation executes, and C1 completes in the same 216 hours as before. The fix moves
+    /// the requirement from "the body watches its rotation" (which C1 showed is not enough) to
+    /// "the watcher cancels unexpected WATCHER grants", which the H2 fix already relies on.
+    function test_CR1_V2_C1_residual_watcherIgnoresGrant_completes() public {
+        uint256 t = START + 365 days;
+        bytes32 role = allowlist.WATCHER_ROLE();
+        address tw = makeAddr("thief-watcher");
+        vm.startPrank(owner);
+        allowlist.proposeRoleGrant(role, tw);
+        allowlist.proposeRoleRevoke(role, watcher);
+        vm.stopPrank();
+        t += DELAY;
+        vm.warp(t);
+        allowlist.executeRoleGrant(role, tw); // grant first, then the honest watcher is not the last
+        allowlist.executeRoleRevoke(role, watcher);
+        assertFalse(allowlist.hasRole(role, watcher));
         vm.prank(tw);
         allowlist.suspendVerifier(L1);
         _propose(L1, thief);
@@ -279,13 +329,13 @@ contract CR1TimelockOwnerTest is BaseV2 {
         bytes32 role = allowlist.WATCHER_ROLE();
         vm.prank(owner);
         vm.expectRevert();
-        allowlist.revokeRole(role, watcher);
+        allowlist.proposeRoleRevoke(role, watcher);
     }
 
     /// @dev A stolen proposer key schedules removing the watcher and a hostile rotation; both
     /// are visible for TL_DELAY and the guardian cancels them.
     function test_timelockOwner_stolenProposer_guardianCancels() public {
-        bytes memory rmWatcher = abi.encodeCall(allowlist.revokeRole, (allowlist.WATCHER_ROLE(), watcher));
+        bytes memory rmWatcher = abi.encodeCall(allowlist.proposeRoleRevoke, (allowlist.WATCHER_ROLE(), watcher));
         bytes memory rotate = abi.encodeCall(allowlist.proposeRotation, (L1, thief));
         bytes32 id1 = _tlSchedule(rmWatcher, "rm");
         bytes32 id2 = _tlSchedule(rotate, "rot");

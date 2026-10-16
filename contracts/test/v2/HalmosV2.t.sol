@@ -78,4 +78,33 @@ contract HalmosCR1Test is BaseV2 {
         (address cur,,,,,,) = allowlist.institutions(L1);
         assert(cur == (ok ? v1n : address(w)));
     }
+    /// @dev C1 prototype fix: the owner proposes revoking the watcher, with or without a second
+    /// watcher granted first; anyone tries `executeRoleRevoke` after any `dt`, and the revoked
+    /// watcher tries to cancel. The watcher loses the role exactly when `dt >= ROTATION_DELAY`
+    /// and another watcher exists; there is always at least one watcher; the target never
+    /// cancels its own revocation.
+    function check_C1_watcherRevokeDelay(uint64 dt, bool second) public {
+        vm.assume(dt < 3650 days);
+        bytes32 role = allowlist.WATCHER_ROLE();
+        address w2 = address(0xA00003);
+        uint64 t0 = START + 1 hours;
+        if (second) {
+            vm.prank(owner);
+            allowlist.proposeRoleGrant(role, w2);
+            t0 += DELAY;
+            vm.warp(t0);
+            allowlist.executeRoleGrant(role, w2);
+        }
+        vm.prank(owner);
+        allowlist.proposeRoleRevoke(role, watcher);
+        vm.prank(watcher);
+        try allowlist.cancelRoleRevoke(role, watcher) {
+            assert(false);
+        } catch {}
+        vm.warp(t0 + dt);
+        try allowlist.executeRoleRevoke(role, watcher) {} catch {}
+        bool gone = !allowlist.hasRole(role, watcher);
+        assert(gone == (dt >= DELAY && second));
+        assert(allowlist.watcherCount() >= 1);
+    }
 }
