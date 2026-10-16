@@ -115,6 +115,8 @@ test("A3 keyboard only: the evidence note, the tabs, the comparison panel and th
   await expect(trust).toHaveAttribute("tabindex", "-1");
   await tabTo(page, page.getByRole("tab", { name: "Buyer" }));
   await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Importer workbench" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await expect(trust).toBeFocused();
   await expect(trust).toHaveAttribute("aria-selected", "true");
