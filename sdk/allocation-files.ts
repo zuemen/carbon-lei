@@ -1,6 +1,6 @@
 // File side of the supplier portal (sdk/allocation.ts): reads the allocation book and its credential, writes a share
 // pack (one proof file per batch and a manifest). Node only; the demo uses sdk/allocation.ts directly.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseBook, type AllocationBook, type ProofEvidence, type SharePackProof } from "./allocation.ts";
 import type { Presentation } from "./disclosure.ts";
@@ -40,7 +40,10 @@ export interface SharePackManifest {
   skipped: { batchId: string; reason: string }[];
 }
 
-/** Writes each proof to `<dir>/<file>` and `<dir>/share-pack.json`; returns the manifest. */
+/**
+ * Writes each proof to `<dir>/<file>` and `<dir>/share-pack.json`; returns the manifest. Refuses (before writing
+ * anything) a pack that names one file twice or a proof file that already exists: a proof is never overwritten.
+ */
 export function writeSharePack(
   dir: string,
   book: AllocationBook,
@@ -48,15 +51,23 @@ export function writeSharePack(
   pack: { proofs: SharePackProof[]; skipped: { batchId: string; reason: string }[] },
   now = new Date(),
 ): SharePackManifest {
+  const seen = new Set<string>();
+  if (existsSync(resolve(dir, "share-pack.json"))) throw new Error(`share pack: ${resolve(dir, "share-pack.json")} already exists; write the pack to a new folder (nothing written)`);
+  for (const p of pack.proofs) {
+    if (seen.has(p.file)) throw new Error(`share pack: the file name ${p.file} is used twice; nothing written`);
+    seen.add(p.file);
+    if (existsSync(resolve(dir, p.file))) throw new Error(`share pack: ${resolve(dir, p.file)} already exists; write the pack to a new folder (nothing written)`);
+  }
   mkdirSync(dir, { recursive: true });
   const names = new Map(book.importers.map((i) => [i.id, i.name]));
-  for (const p of pack.proofs) writeFileSync(resolve(dir, p.file), JSON.stringify(p.proof, null, 2) + "\n");
+  // "wx": fail rather than overwrite, should a file appear between the check above and the write.
+  for (const p of pack.proofs) writeFileSync(resolve(dir, p.file), JSON.stringify(p.proof, null, 2) + "\n", { flag: "wx" });
   const manifest: SharePackManifest = {
     credSAID: cred.core.d,
     createdAt: now.toISOString(),
     proofs: pack.proofs.map((p) => ({ importer: p.importer, ...(names.get(p.importer) ? { importerName: names.get(p.importer) } : {}), batchId: p.batchId, file: p.file, fields: p.fields })),
     skipped: pack.skipped,
   };
-  writeFileSync(resolve(dir, "share-pack.json"), JSON.stringify(manifest, null, 2) + "\n");
+  writeFileSync(resolve(dir, "share-pack.json"), JSON.stringify(manifest, null, 2) + "\n", { flag: "wx" });
   return manifest;
 }

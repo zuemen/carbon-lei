@@ -147,6 +147,7 @@
       "properties": { "Q1": { "$ref": "#/$defs/eur" }, "Q2": { "$ref": "#/$defs/eur" }, "Q3": { "$ref": "#/$defs/eur" }, "Q4": { "$ref": "#/$defs/eur" } }
     },
     "rounding": { "type": "array", "items": { "type": "string" } },
-    "notes": { "type": "array", "items": { "type": "string" } }
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "verdictSource": { "type": "string", "description": "Where the verdicts came from: the input file of `carbonlei portfolio` (not re-verified), verify-batch results bound by this API server, or caller-supplied verdicts the server did not verify (POST /v1/portfolio with trustCallerVerdicts). Also the first note." }
   }
 }

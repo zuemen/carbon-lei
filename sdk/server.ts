@@ -3,7 +3,7 @@
 //
 //   POST /v1/verify        { proof, eori? }                         → verdict (docs/schemas/verdict.schema.json)
 //   POST /v1/verify-batch  { eori?, shipments: [{ proof, id, … }] } → verify-batch results, one pinned block
-//   POST /v1/portfolio     { results, year, priceEur?, defaults?, benchmarks?, recheck? } → declaration plan
+//   POST /v1/portfolio     { results, year, priceEur?, defaults?, benchmarks?, recheck?, trustCallerVerdicts? } → plan
 //   POST /v1/recheck       { records: [...] }                        → re-check (docs/schemas/recheck.schema.json)
 //   GET  /v1/health        chain head, chain ID, RPC node hosts, limits
 //   GET  /openapi.json     the OpenAPI 3.1 description (also at GET / and GET /v1/openapi.json)
@@ -13,7 +13,16 @@
 // transaction and holds no key. Limits: request body size, JSON content type, a per-request timeout, a cap on
 // concurrent verifications, and a cap on lines per batch. Logs are one JSON line per request on stderr, without
 // the request body, the EORI, the client address or the query string (docs/SECURITY.md › HTTP API).
-import { randomBytes } from "node:crypto";
+//
+// Verdicts are bound to this server: the documents it computes from proofs (/v1/verify-batch and /v1/recheck output)
+// carry `binding`, an HMAC-SHA256 over their canonical JSON with a key only the server holds (CARBONLEI_API_HMAC_KEY,
+// else 32 random bytes per process). /v1/portfolio plans from verdicts it did not compute only when the caller sets
+// `trustCallerVerdicts: true`, and the plan then says "computed from caller-supplied verdicts, not verified".
+// We chose the HMAC over re-verifying in /v1/portfolio: it keeps the endpoint a pure computation with no chain read
+// (it plans hundreds of lines within one request), and re-verifying would need every proof and evidence bundle again.
+// The request body is read before a concurrency slot is taken, within `bodyTimeoutMs` (default 10 s): a client that
+// trickles its body holds a connection for at most that long and never a verification slot (review of 17 Oct 2026).
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync, realpathSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -25,6 +34,7 @@ import type { Presentation } from "./disclosure.ts";
 import { buildPortfolio } from "./portfolio.ts";
 import { applyRecheck, MAX_RECORDS, recheckExitCode, recheckRecords, recordsFromJson, type RecheckDocument } from "./recheck.ts";
 import { duplicateKey } from "./said.ts";
+import { sha256Hex } from "./encoding.ts";
 import { exitCodeOf, TOOL, verdictError, verdictFor } from "./verdict.ts";
 import type { EvidenceCheckers } from "./verify.ts";
 
@@ -33,8 +43,12 @@ export const DEFAULTS = {
   host: "127.0.0.1",
   /** Largest request body, bytes (a demo proof with its evidence references is about 20 kB). */
   maxBodyBytes: 1_000_000,
-  /** Longest a request may take before the server answers 504. */
+  /** Longest a request may take before the server answers 504 (from the end of the body upload). */
   timeoutMs: 60_000,
+  /** Longest the upload of a request body may take before the server answers 408 and closes the connection. */
+  bodyTimeoutMs: 10_000,
+  /** Request bodies being uploaded at once; more are answered 503 (they hold no verification slot). */
+  maxUploads: 32,
   /** Verifications (POST requests) running at once; more are answered 503 with Retry-After. */
   maxConcurrent: 4,
   /** Lines per /v1/verify-batch request. */
@@ -56,7 +70,14 @@ export interface ServeOptions {
   maxHeadAgeSec?: number;
   maxBodyBytes?: number;
   timeoutMs?: number;
+  bodyTimeoutMs?: number;
+  maxUploads?: number;
   maxConcurrent?: number;
+  /**
+   * Key of the HMAC that binds this server's verify-batch and recheck output (default: CARBONLEI_API_HMAC_KEY, else
+   * 32 random bytes per process, so bound results stop being accepted when the server restarts). At least 32 bytes.
+   */
+  hmacKey?: string | Uint8Array;
   maxBatch?: number;
   /** Exactly one origin allowed for CORS; off (no CORS headers) when not set. */
   corsOrigin?: string;
@@ -111,7 +132,8 @@ export function sandboxedLoader(dir: string, maxBytes: number = DEFAULTS.maxBund
   };
 }
 
-function readBody(req: IncomingMessage, limit: number): Promise<string> {
+/** Reads the whole body within `deadlineMs`; a slower upload is answered 408 and its connection closed. */
+function readBody(req: IncomingMessage, limit: number, deadlineMs: number): Promise<string> {
   return new Promise((resolveBody, reject) => {
     const declared = Number(req.headers["content-length"]);
     if (Number.isFinite(declared) && declared > limit) {
@@ -122,20 +144,49 @@ function readBody(req: IncomingMessage, limit: number): Promise<string> {
     const chunks: Buffer[] = [];
     let size = 0;
     let done = false;
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      reject(new HttpError(408, `the request body did not arrive within ${deadlineMs / 1000} s`, { connection: "close" }));
+    }, deadlineMs);
+    const finish = () => clearTimeout(timer);
     req.on("data", (c: Buffer) => {
       if (done) return;
       size += c.length;
       if (size > limit) {
         done = true;
+        finish();
         reject(new HttpError(413, `request body larger than ${limit} bytes`));
         req.resume();
         return;
       }
       chunks.push(c);
     });
-    req.on("end", () => !done && ((done = true), resolveBody(Buffer.concat(chunks).toString("utf8"))));
-    req.on("error", (e) => !done && ((done = true), reject(e)));
+    req.on("end", () => !done && ((done = true), finish(), resolveBody(Buffer.concat(chunks).toString("utf8"))));
+    req.on("error", (e) => !done && ((done = true), finish(), reject(e)));
+    req.on("close", () => !done && ((done = true), finish(), reject(new HttpError(400, "the client closed the connection before the body ended"))));
   });
+}
+
+/** JSON with object keys sorted at every level: the bytes the HMAC binding is computed over. */
+export function canonicalJson(x: unknown): string {
+  if (x === null || typeof x !== "object") return JSON.stringify(x) ?? "null";
+  if (Array.isArray(x)) return `[${x.map((v) => (v === undefined ? "null" : canonicalJson(v))).join(",")}]`;
+  const o = x as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .filter((k) => o[k] !== undefined)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${canonicalJson(o[k])}`)
+    .join(",")}}`;
+}
+
+/** The HMAC key: the option, else CARBONLEI_API_HMAC_KEY, else 32 random bytes for this process. */
+function hmacKeyOf(k: string | Uint8Array | undefined): Uint8Array {
+  const v = k ?? process.env.CARBONLEI_API_HMAC_KEY;
+  if (v === undefined || v === "") return randomBytes(32);
+  const bytes = typeof v === "string" ? Buffer.from(v, "utf8") : v;
+  if (bytes.length < 32) throw new Error("the API HMAC key (CARBONLEI_API_HMAC_KEY) must be at least 32 bytes");
+  return bytes;
 }
 
 function parseJsonBody(text: string): Record<string, unknown> {
@@ -179,7 +230,25 @@ export function createApiServer(opts: ServeOptions): Server {
   const timeoutMs = opts.timeoutMs ?? DEFAULTS.timeoutMs;
   const maxConcurrent = opts.maxConcurrent ?? DEFAULTS.maxConcurrent;
   const maxBatch = opts.maxBatch ?? DEFAULTS.maxBatch;
+  const bodyTimeoutMs = opts.bodyTimeoutMs ?? DEFAULTS.bodyTimeoutMs;
+  const maxUploads = opts.maxUploads ?? DEFAULTS.maxUploads;
   const log = opts.log ?? ((e: Record<string, unknown>) => process.stderr.write(json(e) + "\n"));
+  const hmacKey = hmacKeyOf(opts.hmacKey);
+  const macOf = (doc: Record<string, unknown>) => {
+    const { binding: _drop, ...rest } = doc;
+    return createHmac("sha256", hmacKey).update(canonicalJson(JSON.parse(json(rest)))).digest("hex");
+  };
+  /** The document with `binding` set: what /v1/verify-batch and /v1/recheck return. */
+  const bind = <T extends object>(doc: T): T & { binding: { alg: "HMAC-SHA256"; mac: string } } => ({
+    ...doc,
+    binding: { alg: "HMAC-SHA256", mac: macOf(doc as Record<string, unknown>) },
+  });
+  /** Whether a document carries this server's binding, unchanged since it was returned. */
+  const isBound = (doc: unknown): boolean => {
+    const b = (doc as { binding?: { alg?: unknown; mac?: unknown } })?.binding;
+    if (!b || b.alg !== "HMAC-SHA256" || typeof b.mac !== "string" || !/^[0-9a-f]{64}$/.test(b.mac)) return false;
+    return timingSafeEqual(Buffer.from(b.mac, "hex"), Buffer.from(macOf(doc as Record<string, unknown>), "hex"));
+  };
   const loadBundle = opts.evidenceDir ? sandboxedLoader(opts.evidenceDir) : undefined;
   const verdictOpts = {
     ...(opts.checkers ? { checkers: opts.checkers } : {}),
@@ -188,6 +257,7 @@ export function createApiServer(opts: ServeOptions): Server {
     ...(opts.maxHeadAgeSec !== undefined ? { maxHeadAgeSec: opts.maxHeadAgeSec } : {}),
   };
   let active = 0;
+  let uploading = 0;
 
   const routes: Record<string, (body: Record<string, unknown>, ctx: Record<string, unknown>) => Promise<{ status: number; body: unknown; exit?: number }>> = {
     "/v1/verify": async (body, ctx) => {
@@ -221,30 +291,47 @@ export function createApiServer(opts: ServeOptions): Server {
         const name = line.id ?? `shipments[${i}]`;
         if (proof === null || proof === undefined) return { proof: null, line: { ...line, proof: null }, verdict: null, error: null, proofShipment: null };
         if (!isProof(proof)) throw new HttpError(400, `shipments[${i}].proof must be a proof object or null`);
+        const proofText = JSON.stringify(proof);
+        const proofSha256 = sha256Hex(proofText);
         try {
-          const v = await verdictFor(proof, pinned, { ...verdictOpts, importerEORI: eori, proofText: JSON.stringify(proof) });
+          const v = await verdictFor(proof, pinned, { ...verdictOpts, importerEORI: eori, proofText });
           chainId ??= v.chain.chainId ?? undefined;
-          return { proof: name, line, verdict: v, error: null, proofShipment: proofShipmentOf(proof) };
+          return { proof: name, line, verdict: v, error: null, proofShipment: proofShipmentOf(proof), proofSha256 };
         } catch (e) {
-          return { proof: name, line, verdict: null, error: redact((e as Error).message), proofShipment: proofShipmentOf(proof) };
+          return { proof: name, line, verdict: null, error: redact((e as Error).message), proofShipment: proofShipmentOf(proof), proofSha256 };
         }
       });
       const doc = batchDocument(results, { pinnedBlock: head.number, chainId, eori });
       ctx.outcome = doc.counts;
-      return { status: 200, body: doc };
+      return { status: 200, body: bind(doc) };
     },
     "/v1/portfolio": async (body, ctx) => {
       const year = body.year;
       if (typeof year !== "number" || !Number.isInteger(year)) throw new HttpError(400, '"year" must be an integer, for example 2026');
       let doc = body.results as BatchDocument;
       if ((doc as { kind?: unknown })?.kind !== "carbonlei-batch") throw new HttpError(400, '"results" must be a verify-batch results document');
-      const recheck = body.recheck as RecheckDocument | undefined;
+      const recheck = body.recheck as RecheckDocument | undefined | null;
+      const trust = body.trustCallerVerdicts;
+      if (trust !== undefined && typeof trust !== "boolean") throw new HttpError(400, '"trustCallerVerdicts" must be true or false');
+      // Verdicts are planned only when this server computed them, unless the caller opts in explicitly.
+      const bound = isBound(doc) && (recheck === undefined || recheck === null || isBound(recheck));
+      if (!bound && trust !== true) {
+        throw new HttpError(
+          422,
+          `"results"${recheck ? ' or "recheck"' : ""} is not bound by this server (HMAC): pass the output of this server's /v1/verify-batch (and /v1/recheck) unchanged, ` +
+            'or set "trustCallerVerdicts": true to plan from verdicts you supply (the plan then says they were not verified)',
+        );
+      }
+      ctx.verdicts = bound ? "bound" : "caller-supplied";
       const bm = optMap(body, "benchmarks");
       const { cbamFactor, cscf, ...benchmarks } = bm ?? {};
       try {
         if (recheck !== undefined && recheck !== null) doc = applyRecheck(doc, recheck);
         const summary = buildPortfolio(shipmentsFromBatch(doc), {
           year,
+          verdictSource: bound
+            ? "verified by this server (verify-batch results bound with this server's HMAC key)"
+            : "computed from caller-supplied verdicts, not verified by this server (trustCallerVerdicts)",
           ...(optString(body, "priceEur") !== undefined ? { priceEur: optString(body, "priceEur") } : {}),
           ...(optMap(body, "defaults") ? { defaults: optMap(body, "defaults") } : {}),
           ...(bm ? { freeAllocation: { benchmarks, ...(cbamFactor ? { cbamFactor } : {}), ...(cscf ? { cscf } : {}) } } : {}),
@@ -275,7 +362,7 @@ export function createApiServer(opts: ServeOptions): Server {
       }
       for (const r of doc.results) if (r.error) r.error = redact(r.error), (r.reasons = r.reasons.map(redact));
       ctx.outcome = doc.counts;
-      return { status: 200, body: skipped.length ? { ...doc, skipped } : doc, exit: recheckExitCode(doc) };
+      return { status: 200, body: bind(skipped.length ? { ...doc, skipped } : doc), exit: recheckExitCode(doc) };
     },
   };
 
@@ -291,7 +378,8 @@ export function createApiServer(opts: ServeOptions): Server {
           head: { number: Number(head.number), timestamp: Number(head.timestamp), ageSec: Math.max(0, Math.round(Date.now() / 1000 - Number(head.timestamp))) },
           rpc: { nodes: opts.rpcUrls?.length ?? null, hosts: (opts.rpcUrls ?? []).map((u) => { try { return new URL(u).host; } catch { return "<invalid>"; } }) },
           auth: "none: run behind your own gateway (authentication, TLS, rate limits)",
-          limits: { maxBodyBytes: maxBody, timeoutMs, maxConcurrent, maxBatch, maxRecords: MAX_RECORDS, active },
+          limits: { maxBodyBytes: maxBody, timeoutMs, bodyTimeoutMs, maxConcurrent, maxUploads, maxBatch, maxRecords: MAX_RECORDS, active, uploading },
+          verdictBinding: "HMAC-SHA256: /v1/portfolio plans only verify-batch and recheck output of this server, unless trustCallerVerdicts is set",
           tool: { ...TOOL },
         },
       };
@@ -329,6 +417,7 @@ export function createApiServer(opts: ServeOptions): Server {
         ms: Date.now() - started,
         bytesIn,
         ...(ctx.eori ? { eori: ctx.eori } : {}),
+        ...(ctx.verdicts ? { verdicts: ctx.verdicts } : {}),
         ...(ctx.outcome !== undefined ? { outcome: ctx.outcome } : {}),
         ...(status >= 400 && typeof (body as { error?: unknown })?.error === "string" ? { error: (body as { error: string }).error.slice(0, 300) } : {}),
       });
@@ -348,15 +437,23 @@ export function createApiServer(opts: ServeOptions): Server {
       if (req.method !== "POST") throw new HttpError(405, "use POST", { allow: "POST" });
       const type = String(req.headers["content-type"] ?? "").toLowerCase();
       if (!/^application\/json(\s*;|$)/.test(type)) throw new HttpError(415, "Content-Type must be application/json");
+      // The body is read first, within its own deadline and without a verification slot: a client that trickles its
+      // body cannot hold the slots (review of 17 October 2026, finding 8). Uploads in progress have their own cap.
+      if (uploading >= maxUploads) throw new HttpError(503, `busy: ${maxUploads} uploads in progress; retry shortly`, { "retry-after": "5" });
+      uploading++;
+      let text: string;
+      try {
+        text = await readBody(req, maxBody, bodyTimeoutMs);
+      } finally {
+        uploading--;
+      }
+      bytesIn = Buffer.byteLength(text);
+      const parsed = parseJsonBody(text);
       if (active >= maxConcurrent) throw new HttpError(503, `busy: ${maxConcurrent} requests are running; retry shortly`, { "retry-after": "5" });
       active++;
       // The slot is held until the work really ends, even after a 504: a verification cannot be cancelled midway.
       let timer: NodeJS.Timeout | undefined;
-      const work = (async () => {
-        const text = await readBody(req, maxBody);
-        bytesIn = Buffer.byteLength(text);
-        return route(parseJsonBody(text), ctx);
-      })().finally(() => active--);
+      const work = (async () => route(parsed, ctx))().finally(() => active--);
       const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new HttpError(504, `the request took longer than ${timeoutMs / 1000} s`)), timeoutMs);
       });
@@ -372,9 +469,10 @@ export function createApiServer(opts: ServeOptions): Server {
       else send(500, { error: redact((e as Error)?.message ?? String(e)), tool: { ...TOOL } });
     }
   });
-  // Slow-client limits of node:http (headers and whole request), on top of the per-request timeout.
+  // Slow-client limits of node:http (headers and whole request), on top of the body deadline and the per-request
+  // timeout (node's requestTimeout counts until the request has been received, not until the answer).
   server.headersTimeout = 10_000;
-  server.requestTimeout = timeoutMs + 5_000;
+  server.requestTimeout = server.headersTimeout + bodyTimeoutMs + 1_000;
   server.maxHeadersCount = 50;
   return server;
 }

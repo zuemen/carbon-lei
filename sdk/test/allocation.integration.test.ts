@@ -152,10 +152,10 @@ describe("allocation book on anvil", () => {
     const out = `${dir}pack/`;
     const { stdout } = await run(process.execPath, [cli, "present-batch", `${dir}book.json`, "--check", "--out", out, ...opts]);
     expect(stdout).toContain("1 proof(s)");
-    expect(readdirSync(out).sort()).toEqual(["a--A-1.proof.json", "share-pack.json"]);
+    expect(readdirSync(out).sort()).toEqual(["a--A-1--bab566e4ab.proof.json", "share-pack.json"]);
     const manifest = readFileSync(`${out}share-pack.json`, "utf8");
     expect(manifest).not.toContain(EORI_A);
-    expect(JSON.parse(readFileSync(`${out}a--A-1.proof.json`, "utf8")).shipment.batchId).toBe("A-1");
+    expect(JSON.parse(readFileSync(`${out}a--A-1--bab566e4ab.proof.json`, "utf8")).shipment.batchId).toBe("A-1");
 
     writeFileSync(`${dir}bad.json`, JSON.stringify({ version: 1, importers: [], batches: [{ batchId: "Z" }] }));
     const bad = await run(process.execPath, [cli, "allocate", `${dir}bad.json`, "--json", ...opts]).then(() => null, (e: { code: number; stdout: string }) => e);

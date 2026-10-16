@@ -8,7 +8,7 @@ import { parseArgs } from "node:util";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { ChainReader, rpcUrlsFrom, type Deployment } from "./chain.ts";
-import { newSalt } from "./encoding.ts";
+import { newSalt, sha256Hex } from "./encoding.ts";
 import type { CredentialClaims, Hex } from "./credential.ts";
 import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "./issue.ts";
@@ -40,7 +40,7 @@ import type { AccreditationRegistry } from "./verification-rules.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import type { PrecursorReport } from "./precursor.ts";
 import { art9Text, carbonPriceLines } from "./carbonprice.ts";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { allocationExitCode, buildSharePack, printAllocation, readAllocationSnapshot, reconcile, reportRefOf } from "./allocation.ts";
 import { evidenceFrom, loadBook, writeSharePack } from "./allocation-files.ts";
 import {
@@ -115,11 +115,14 @@ const USAGE = `carbonlei <command> [options]
                                                     action, else 0. --webhook (or CARBONLEI_RECHECK_WEBHOOK_URL) POSTs
                                                     the changed lines only, without EORI; schema docs/schemas/recheck.schema.json
   serve        [--port 8787] [--host 127.0.0.1] [--cors-origin <origin>] [--evidence-dir <dir>] [--max-body <bytes>]
-               [--timeout <s>] [--max-concurrent <n>] [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
+               [--timeout <s>] [--body-timeout <s>] [--max-concurrent <n>] [--rpc <url>] [--deployment <file>]
+               [--trust-anchor <AID>]
                                                     REST API (docs/schemas/openapi.json): POST /v1/verify, /v1/verify-batch,
                                                     /v1/portfolio, /v1/recheck; GET /v1/health; GET / and
                                                     /v1/openapi.json return the OpenAPI document. NO authentication: keep it
-                                                    on 127.0.0.1 or behind your own gateway (docs/OPERATE.md)
+                                                    on 127.0.0.1 or behind your own gateway (docs/OPERATE.md).
+                                                    /v1/portfolio plans only results this server bound with its HMAC key
+                                                    (CARBONLEI_API_HMAC_KEY, else a key generated per process)
   export-pact  --proof <proof.json> --eori <EORI> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
                [--precursor-trust-anchor <AID>] [--max-head-age <s>] [--out <pact.json>]
@@ -280,6 +283,7 @@ async function main(argv: string[]) {
       "cors-origin": { type: "string" },
       "evidence-dir": { type: "string" },
       "max-body": { type: "string" },
+      "body-timeout": { type: "string" },
       timeout: { type: "string" },
       "max-concurrent": { type: "string" },
       "art9-ref-price": { type: "string" },
@@ -465,16 +469,19 @@ async function main(argv: string[]) {
         const proofName = e.line.proof ?? null;
         if (!e.proofPath) return { proof: null, line: e.line, verdict: null, error: null, proofShipment: null };
         let proof: Presentation | undefined;
+        let proofSha256: string | null = null;
         try {
           const proofText = readFileSync(e.proofPath, "utf8");
+          // The digest of the very bytes verified: recheck re-verifies only a file with the same digest.
+          proofSha256 = sha256Hex(proofText);
           proof = JSON.parse(proofText) as Presentation;
           const v = await withinDeadline(
             verdictFor(proof, pinned, { importerEORI: eori, loadBundle: bundleLoader(e.proofPath), trustAnchor, maxHeadAgeSec, proofText }),
           );
           chainId ??= v.chain.chainId ?? undefined;
-          return { proof: proofName, line: e.line, verdict: v, error: null, proofShipment: proofShipmentOf(proof) };
+          return { proof: proofName, line: e.line, verdict: v, error: null, proofShipment: proofShipmentOf(proof), proofSha256 };
         } catch (err) {
-          return { proof: proofName, line: e.line, verdict: null, error: (err as Error).message, proofShipment: proof ? proofShipmentOf(proof) : null };
+          return { proof: proofName, line: e.line, verdict: null, error: (err as Error).message, proofShipment: proof ? proofShipmentOf(proof) : null, proofSha256 };
         }
       });
       const doc = batchDocument(results, { pinnedBlock: head.number, chainId, eori });
@@ -500,6 +507,8 @@ async function main(argv: string[]) {
         ...(values.defaults ? { defaults: readMap(values.defaults as string, "--defaults") } : {}),
         ...(bm ? { freeAllocation: { benchmarks, ...(cbamFactor ? { cbamFactor } : {}), ...(cscf ? { cscf } : {}) } } : {}),
         ...(values["art9-ref-price"] !== undefined ? { art9: { refPriceEur: values["art9-ref-price"] as string } } : {}),
+        // This command plans from the verdicts in the file; it does not verify any proof again.
+        verdictSource: `taken from the input file ${basename(file)}${values.recheck ? ` and the re-check ${basename(values.recheck as string)}` : ""}, not re-verified by this command (run verify-batch and recheck yourself, and keep the files where only you can change them)`,
       });
       if (values.csv) writeFileSync(values.csv as string, worksheetCsv(summary));
       if (values.out) write(values.out, summary);
@@ -557,6 +566,7 @@ async function main(argv: string[]) {
         corsOrigin: values["cors-origin"] as string | undefined,
         maxBodyBytes: posInt("max-body"),
         timeoutMs: posInt("timeout", 1000),
+        bodyTimeoutMs: posInt("body-timeout", 1000),
         maxConcurrent: posInt("max-concurrent"),
       });
       await new Promise<void>((ok, fail) => server.once("error", fail).listen(port, host, () => ok()));

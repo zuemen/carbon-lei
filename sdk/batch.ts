@@ -48,6 +48,12 @@ export interface BatchResult {
   error: string | null;
   /** The proof's own shipment fields (batch, quantity, date), as presented; trusted only when check 5 passed. */
   proofShipment: { batchId: string; quantityTonnes: string; shipmentDate: string } | null;
+  /**
+   * SHA-256 (hex) of the exact proof bytes this verdict was computed from (the file as read; on the REST API the
+   * JSON of the proof object). `recheck` re-verifies a proof for this line only when its bytes hash to this value,
+   * and `applyRecheck` never improves the line otherwise. Absent in results written before 17 October 2026.
+   */
+  proofSha256?: string | null;
   /** Set by `applyRecheck` (sdk/recheck.ts) when a later re-check found the line needs action: planned on the default. */
   recheck?: { change: string; severity: string; checkedAt: string; pinnedBlock: number | null };
 }
@@ -63,6 +69,11 @@ export interface BatchDocument {
   counts: Record<"VALID" | "INVALID" | "CONTESTED" | "INCOMPLETE" | "ERROR" | "NO_PROOF", number>;
   results: BatchResult[];
   tool: { name: string; version: string };
+  /**
+   * REST API only: HMAC-SHA256 the server computed over the document (without this field), so POST /v1/portfolio
+   * can tell results it produced from caller-supplied verdicts (sdk/server.ts).
+   */
+  binding?: { alg: "HMAC-SHA256"; mac: string };
 }
 
 const isProof = (x: unknown): boolean =>
@@ -162,7 +173,9 @@ export function shipmentsFromBatch(doc: BatchDocument): ShipmentInput[] {
     const bound = v?.checks?.find((c) => c.id === 5)?.status === "pass";
     const ps = bound ? r.proofShipment : null;
     const d = v?.disclosed ?? {};
-    // The importer's own id, else the batch id; a batch id seen before (two proofs for one batch) gets the file name.
+    // The importer's own id, else the batch id; a batch id seen before (two proofs for one batch) gets the file name
+    // so the ids stay unique. That line does not get tonnes of its own: `buildPortfolio` counts every line of one
+    // ledger claim (`claimedBatchId` + credential ID) together against the claimed tonnes, and says so in its notes.
     let id = r.line.id ?? ps?.batchId ?? r.proofShipment?.batchId ?? r.proof ?? `line-${i + 1}`;
     if (seen.has(id) && !r.line.id) id = `${id} (${r.proof ?? `line ${i + 1}`})`;
     seen.add(id);
@@ -184,7 +197,7 @@ export function shipmentsFromBatch(doc: BatchDocument): ShipmentInput[] {
       importDate: pick("importDate", ps?.shipmentDate),
       supplier: r.line.supplier ?? d.supplierLEI,
       installation: r.line.installation ?? d.installationId,
-      ...(ps ? { claimedTonnes: ps.quantityTonnes } : {}),
+      ...(ps ? { claimedTonnes: ps.quantityTonnes, claimedBatchId: ps.batchId } : {}),
       ...(r.line.defaultValue ? { defaultValue: r.line.defaultValue } : {}),
       ...(r.line.sefaActual ? { sefaActual: r.line.sefaActual } : {}),
       ...(r.line.note ? { note: r.line.note } : {}),
@@ -214,7 +227,7 @@ export function eurText(v: string): string {
 /** The portfolio summary for the terminal. */
 export function printPortfolio(p: PortfolioSummary): string {
   const t = p.totals;
-  const L = [`CBAM declaration plan ${p.year} — worksheet, not a CBAM declaration`, ""];
+  const L = [`CBAM declaration plan ${p.year} — worksheet, not a CBAM declaration`, ...(p.verdictSource ? [`Verdicts: ${p.verdictSource}`] : []), ""];
   const w = Math.max(4, ...p.shipments.map((l) => l.id.length));
   L.push(`${"line".padEnd(w)}  CN        orig  Q   net t      basis    tCO2e/t  embedded tCO2e  verdict`);
   for (const l of p.shipments) {

@@ -1,4 +1,5 @@
 // Byte helpers shared by the browser and Node. No Buffer, so the hosted page can load them.
+import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes } from "@noble/hashes/utils.js";
 import type { Hex } from "./credential.ts";
 
@@ -50,6 +51,11 @@ export function newSalt(): Hex {
 
 export function isSalt(s: unknown): s is Hex {
   return typeof s === "string" && /^0x[0-9a-f]{64}$/.test(s);
+}
+
+/** SHA-256 of a text's UTF-8 bytes, lower-case hex without 0x (proof digests: `BatchResult.proofSha256`). */
+export function sha256Hex(text: string): string {
+  return bytesToHex(sha256(utf8ToBytes(text)));
 }
 
 export { bytesToHex, hexToBytes };

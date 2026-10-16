@@ -4,7 +4,7 @@
     "title": "CarbonLEI verification API",
     "version": "0.1.0",
     "summary": "Verify CBAM embedded-emissions proofs, plan a declaration year and re-check accepted values, over the CarbonLEI SDK.",
-    "description": "Served by `carbonlei serve` (sdk/server.ts), node:http only. The same SDK calls as the CLI: a verdict here equals `carbonlei verify --json`.\n\nSECURITY: this API has NO authentication and NO TLS. It binds 127.0.0.1 by default. Expose it only behind your own API gateway or reverse proxy, which must add authentication, TLS and rate limits. It never sends a transaction and holds no key.\n\nLimits (defaults, configurable): request body 1,000,000 bytes (413), Content-Type application/json only (415), 60 s per request (504), 4 POST requests at once (503 with Retry-After), 50 lines per verify-batch, 500 records per re-check. A request body that repeats a JSON key is refused (400).\n\nLogs: one JSON line per request on stderr with method, path, status, duration, body size and outcome; never the body, the EORI, the client address or the query string. URLs in error messages are cut to their origin so an RPC API key is never logged or returned.\n\nNot a CBAM declaration, not the CBAM Registry and not connected to it.",
+    "description": "Served by `carbonlei serve` (sdk/server.ts), node:http only. The same SDK calls as the CLI: a verdict here equals `carbonlei verify --json`.\n\nSECURITY: this API has NO authentication and NO TLS. It binds 127.0.0.1 by default. Expose it only behind your own API gateway or reverse proxy, which must add authentication, TLS and rate limits. It never sends a transaction and holds no key.\n\nLimits (defaults, configurable): request body 1,000,000 bytes (413), Content-Type application/json only (415), 10 s to upload the request body (408; the body is read before a verification slot is taken), 60 s per request after that (504), 4 POST requests at once (503 with Retry-After), 32 bodies uploading at once (503), 50 lines per verify-batch, 500 records per re-check. A request body that repeats a JSON key is refused (400).\n\nLogs: one JSON line per request on stderr with method, path, status, duration, body size and outcome; never the body, the EORI, the client address or the query string. URLs in error messages are cut to their origin so an RPC API key is never logged or returned.\n\nNot a CBAM declaration, not the CBAM Registry and not connected to it.",
     "license": { "name": "MIT", "identifier": "MIT" }
   },
   "servers": [{ "url": "http://127.0.0.1:8787", "description": "Default bind address of `carbonlei serve`" }],
@@ -34,6 +34,7 @@
             "content": { "application/json": { "schema": { "$ref": "verdict.schema.json" } } }
           },
           "503": { "$ref": "#/components/responses/Busy" },
+          "408": { "$ref": "#/components/responses/SlowBody" },
           "504": { "$ref": "#/components/responses/Timeout" }
         }
       }
@@ -54,6 +55,7 @@
           "415": { "$ref": "#/components/responses/WrongType" },
           "502": { "$ref": "#/components/responses/Upstream" },
           "503": { "$ref": "#/components/responses/Busy" },
+          "408": { "$ref": "#/components/responses/SlowBody" },
           "504": { "$ref": "#/components/responses/Timeout" }
         }
       }
@@ -62,7 +64,7 @@
       "post": {
         "operationId": "portfolio",
         "summary": "Declaration plan for a year from verify-batch results",
-        "description": "Pure computation, no chain read: the verified value only for a VALID proof bound by check 5, else the default with the year's mark-up; totals, 50 t de minimis, quarterly holding, certificates, gross EUR. With `recheck`, a line a later re-check says needs action is planned on the default. A worksheet, not a CBAM declaration.",
+        "description": "Pure computation, no chain read: the verified value only for a VALID proof bound by check 5, else the default with the year's mark-up; one ledger claim (credential and batch) on several lines is counted once, in input order; totals, 50 t de minimis, quarterly holding, certificates, gross EUR. With `recheck`, a line a later re-check says needs action is planned on the default. `results` and `recheck` must be this server's own output with an intact `binding` (HMAC), unless `trustCallerVerdicts` is true; the plan's `verdictSource` says which. A worksheet, not a CBAM declaration.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortfolioRequest" } } }
@@ -72,8 +74,9 @@
           "400": { "$ref": "#/components/responses/BadRequest" },
           "413": { "$ref": "#/components/responses/TooLarge" },
           "415": { "$ref": "#/components/responses/WrongType" },
-          "422": { "description": "The input cannot be planned (for example a line without a known default value); the message names the line.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "The input cannot be planned: `results` or `recheck` not bound by this server and trustCallerVerdicts not set, or a line without a known default value (the message names the line).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "503": { "$ref": "#/components/responses/Busy" },
+          "408": { "$ref": "#/components/responses/SlowBody" },
           "504": { "$ref": "#/components/responses/Timeout" }
         }
       }
@@ -98,6 +101,7 @@
           "415": { "$ref": "#/components/responses/WrongType" },
           "502": { "$ref": "#/components/responses/Upstream" },
           "503": { "$ref": "#/components/responses/Busy" },
+          "408": { "$ref": "#/components/responses/SlowBody" },
           "504": { "$ref": "#/components/responses/Timeout" }
         }
       }
@@ -131,11 +135,12 @@
       "WrongType": { "description": "Content-Type is not application/json.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "Upstream": { "description": "The RPC nodes could not be read.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "Busy": {
-        "description": "Too many requests running at once.",
+        "description": "Too many verifications running at once, or too many request bodies being uploaded at once.",
         "headers": { "Retry-After": { "schema": { "type": "string" } } },
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       },
-      "Timeout": { "description": "The request took longer than the per-request timeout.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+      "Timeout": { "description": "The request took longer than the per-request timeout.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "SlowBody": { "description": "The request body did not arrive within the body deadline (default 10 s, `carbonlei serve --body-timeout`); the connection is closed. A body being uploaded holds no verification slot.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
     },
     "schemas": {
       "Error": {
@@ -196,7 +201,7 @@
       },
       "BatchDocument": {
         "type": "object",
-        "description": "verify-batch results (sdk/batch.ts BatchDocument, format 1).",
+        "description": "verify-batch results (sdk/batch.ts BatchDocument, format 1). Each result records `proofSha256`, the SHA-256 of the proof bytes verified. This server adds `binding`; POST /v1/portfolio plans the document only with that binding intact, unless `trustCallerVerdicts` is set.",
         "required": ["format", "kind", "pinnedBlock", "chainId", "eori", "verifiedAt", "counts", "results", "tool"],
         "properties": {
           "format": { "const": 1 },
@@ -207,7 +212,13 @@
           "verifiedAt": { "type": "string" },
           "counts": { "type": "object" },
           "results": { "type": "array", "items": { "type": "object" } },
-          "tool": { "type": "object" }
+          "tool": { "type": "object" },
+          "binding": {
+            "type": "object",
+            "required": ["alg", "mac"],
+            "description": "Set by this server's /v1/verify-batch: HMAC-SHA256 over the canonical JSON (keys sorted) of the document without `binding`. Key: CARBONLEI_API_HMAC_KEY, else generated per process, so bound documents stop being accepted when the server restarts.",
+            "properties": { "alg": { "const": "HMAC-SHA256" }, "mac": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+          }
         }
       },
       "PortfolioRequest": {
@@ -219,7 +230,12 @@
           "priceEur": { "type": "string", "description": "EUR per certificate, every quarter." },
           "defaults": { "type": "object", "additionalProperties": { "type": "string" } },
           "benchmarks": { "type": "object", "additionalProperties": { "type": "string" } },
-          "recheck": { "$ref": "recheck.schema.json" }
+          "recheck": { "$ref": "recheck.schema.json", "description": "Output of this server's /v1/recheck with its `binding` (or set trustCallerVerdicts)." },
+          "trustCallerVerdicts": {
+            "type": "boolean",
+            "default": false,
+            "description": "Plan from `results` (and `recheck`) this server did not bind. The verdicts are then the caller's and are not verified: the plan's `verdictSource` and first note say \"computed from caller-supplied verdicts, not verified by this server\". Without it, unbound input is refused with 422."
+          }
         }
       },
       "RecheckRequest": {
