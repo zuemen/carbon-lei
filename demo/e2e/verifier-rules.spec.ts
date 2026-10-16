@@ -36,7 +36,7 @@ test("V1 Buyer: the demo proof (calendar 2026, report dated 15 March 2027) passe
 
 test("V2 Buyer in 繁體中文: the sub-rule names are translated, codes are not", async ({ page }) => {
   await page.goto("./?lang=zh-TW#buyer");
-  await page.getByRole("button", { name: "Verify the demo proof" }).click();
+  await page.getByRole("button", { name: "驗證示範證明" }).click();
   const c8 = page.locator("ol.checks > li").nth(7);
   await expect(c8.locator(".subrules")).toContainText("針對報告本身的規則");
   await expect(c8.locator('[data-rule="report-after-period"]')).toContainText("報告日期晚於報告期間結束");

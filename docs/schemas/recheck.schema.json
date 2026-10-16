@@ -53,7 +53,7 @@
         "id": { "type": "string" },
         "batchId": { "type": ["string", "null"] },
         "credSAID": { "type": ["string", "null"] },
-        "mode": { "enum": ["full", "ledger-only"], "description": "full: the proof was verified again (checks 0-8); ledger-only: no proof attached, only the report's on-chain status was read." },
+        "mode": { "enum": ["full", "ledger-only"], "description": "full: the proof was verified again (all its checks: 0-8, plus 9 and 10 when it carries a precursor or carbon-price statement); ledger-only: no proof attached, only the report's on-chain status was read." },
         "accepted": {
           "type": "object",
           "additionalProperties": false,

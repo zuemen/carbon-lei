@@ -958,7 +958,7 @@ test("Language: ?lang=zh-TW opens in 繁體中文; the verdict line and check na
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hant-TW");
   await expect(page.getByRole("tab", { name: "買方（進口商）" })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".context")).toContainText("（CBAM）");
-  await page.getByRole("button", { name: "Verify the demo proof" }).click();
+  await page.getByRole("button", { name: "驗證示範證明" }).click();
   await expect(page.locator(".overall .stamp")).toHaveText(/^(已驗證|需審查|未驗證|已拒絕)$/);
   await expect(page.locator(".verify-summary")).toContainText(/8 項檢查中 \d 項通過/);
   const checks = page.locator("ol.checks > li");

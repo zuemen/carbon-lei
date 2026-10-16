@@ -182,6 +182,20 @@ describe("REST API (carbonlei serve) on anvil", () => {
     fetch(url, { method: "POST", headers: { "content-type": type }, body: typeof body === "string" ? body : JSON.stringify(body) });
   afterAll(() => servers.forEach((s) => s.close()));
 
+  it("GET / and GET /v1/openapi.json return the same OpenAPI document as /openapi.json; POST there is 405", async () => {
+    const base = await start();
+    const doc = await (await fetch(`${base}/openapi.json`)).text();
+    for (const p of ["/", "/v1/openapi.json"]) {
+      const r = await fetch(`${base}${p}`);
+      expect([p, r.status, r.headers.get("content-type")]).toEqual([p, 200, "application/json; charset=utf-8"]);
+      expect(await r.text()).toBe(doc);
+    }
+    expect(JSON.parse(doc).openapi).toBe("3.1.0");
+    const post = await fetch(`${base}/`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+    expect([post.status, post.headers.get("allow")]).toEqual([405, "GET"]);
+    expect((await fetch(`${base}/v2/nothing`)).status).toBe(404);
+  });
+
   it("health, OpenAPI, verify (same verdict as the SDK, exit header), verify-batch → portfolio → recheck", async () => {
     const base = await start();
     const h = await fetch(`${base}/v1/health`);

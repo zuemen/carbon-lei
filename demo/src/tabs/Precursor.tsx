@@ -11,6 +11,7 @@ import { Badge, type BadgeKind } from "../components.tsx";
 import { short } from "../data.ts";
 import { useLang, useStrings } from "../i18n.ts";
 import { PRECURSOR_DEMO_TRUST_ANCHOR } from "../../../sdk/vlei.ts";
+import { precursorCheckZh, precursorItemZh } from "../zh-details.ts";
 
 export interface PrecursorData {
   version: 1;
@@ -114,6 +115,8 @@ const T = {
     rejected: "Rejected",
     attackResult: (err: string, rem: string, req: string, code: string) =>
       `Reverted: ${err} (${rem} t left, ${req} t requested). The second screw maker's proof then fails check 9 (${code}): its precursor batch was never claimed.`,
+    credential: "credential",
+    footer: "",
   },
   "zh-TW": {
     kicker: "前驅物（線材）",
@@ -159,6 +162,10 @@ const T = {
     rejected: "已拒絕",
     attackResult: (err: string, rem: string, req: string, code: string) =>
       `已退回：${err}（剩餘 ${rem} t，申請 ${req} t）。第二家螺絲廠的證明因此在檢查 9 失敗（${code}）：其前驅物批次從未被申領。`,
+    credential: "憑證",
+    // precursor-data.json's `label`, translated (the English page shows the label from the data file).
+    footer:
+      "由 scripts/precursor-local.ts 在本機 anvil 鏈（chain ID 31337）上建置，不在 Sepolia。兩層的 vLEI 證據皆為合成資料（確定性測試金鑰，未使用 KERIA），位於合成的測試根之下。所有公司皆為虛構；排放數值僅為示意。",
   },
 };
 
@@ -256,7 +263,7 @@ export function PrecursorBuyer() {
         <p className="fine">
           <strong>{t.recorded}:</strong>{" "}
           <Badge kind={kindOf(c9?.status ?? "skipped")}>{zh ? BADGE_ZH[kindOf(c9?.status ?? "skipped")] : undefined}</Badge> {c9?.code ? <code>{c9.code}</code> : null}{" "}
-          <span lang={zh ? "en" : undefined}>{c9?.detail}</span>
+          {(zh && precursorCheckZh(c9, p)) || <span lang={zh ? "en" : undefined}>{c9?.detail}</span>}
         </p>
         {millOverall && (
           <p className="fine">
@@ -287,14 +294,14 @@ export function PrecursorBuyer() {
           {items.map((i) => (
             <li key={i.id} data-ok={String(i.ok)}>
               <span className={i.ok === true ? "pc-ok" : i.ok === false ? "pc-bad" : "pc-open"}>{i.ok === true ? t.ok : i.ok === false ? t.bad : t.open}</span>{" "}
-              <span lang={zh ? "en" : undefined}>{i.detail}</span>
+              {(zh && precursorItemZh(i)) || <span lang={zh ? "en" : undefined}>{i.detail}</span>}
             </li>
           ))}
         </ul>
       )}
       </div>
       <p className="fine">
-        {t.source}. <span lang={zh ? "en" : undefined}>{d.label}</span>
+        {t.source}. {(zh && t.footer) || <span lang={zh ? "en" : undefined}>{d.label}</span>}
       </p>
     </section>
   );
@@ -312,7 +319,7 @@ export function PrecursorTrustChain() {
     { name: e.qvi.name, role: t.nodes.qvi, meta: `LEI ${e.qvi.lei}` },
     { name: e.millBody.name, role: t.nodes.body(e.millBody.cnScope.join(", "), e.millBody.accreditationNumber), meta: `LEI ${e.millBody.lei} · LE ${short(e.millBody.leSaid, 8, 6)}` },
     { name: e.millAuditor.name, role: t.nodes.auditor, meta: `AID ${short(e.millAuditor.aid, 8, 6)} · ECR ${short(e.millAuditor.ecrSaid, 8, 6)}` },
-    { name: e.mill.name, role: t.nodes.mill(e.mill.installation.id), meta: `LEI ${e.mill.lei} · credential ${short(d.mill.credSAID, 8, 6)}` },
+    { name: e.mill.name, role: t.nodes.mill(e.mill.installation.id), meta: `LEI ${e.mill.lei} · ${t.credential} ${short(d.mill.credSAID, 8, 6)}` },
     { name: e.screwMaker.name, role: `${t.nodes.screw(claimed)} ${e.screwBody.name}`, meta: `LEI ${e.screwMaker.lei}` },
   ];
   return (

@@ -13,6 +13,7 @@ import {
   classify,
   classifyLedgerOnly,
   postWebhook,
+  printRecheck,
   recheckExitCode,
   webhookPayload,
   type RecheckDocument,
@@ -144,6 +145,18 @@ describe("records, exit code, webhook", () => {
     expect(webhookPayload({ ...doc, results: [r("L2", "none", "UNCHANGED")] } as unknown as RecheckDocument)).toBeNull();
   });
 
+  it("printRecheck: a line that was not VALID and still is not reads UNCHANGED, not OK; the JSON severity stays none", () => {
+    const r = (id: string, change: string, overall: string) => ({
+      source: "x", id, batchId: null, credSAID: "E1", mode: "full", accepted: { overall, primaryCode: "", at: null, block: 1 },
+      current: { overall, primaryCode: "", block: 2 }, change, severity: "none", reasons: [], action: "", window: null, verdict: null, error: null,
+    });
+    const doc = { pinnedBlock: 2, chainId: 1, blockTime: null, checkedAt: "t", counts: { action: 0, info: 0, none: 2, error: 0 }, results: [r("L1", "UNCHANGED", "VALID"), r("L2", "STILL_NOT_VALID", "INVALID")] } as unknown as RecheckDocument;
+    const lines = printRecheck(doc).split("\n");
+    expect(lines).toContain("OK        L1  UNCHANGED  accepted VALID → now VALID");
+    expect(lines).toContain("UNCHANGED L2  STILL_NOT_VALID  accepted INVALID → now INVALID");
+    expect(doc.results.map((x) => x.severity)).toEqual(["none", "none"]);
+  });
+
   it("postWebhook POSTs JSON and never reports the URL (it may carry a token)", async () => {
     const got: { type?: string; body: string }[] = [];
     const s = createServer((req, res) => {
@@ -199,7 +212,7 @@ describe("carbonlei recheck (recorded Sepolia answers)", () => {
     expect(JSON.parse(readFileSync(`${dir}rc.json`, "utf8"))).toEqual(doc);
 
     const text = await run(process.execPath, ["--import", replay, cli, "recheck", `${root}fixtures/recheck/demo-accepted-record.json`, "--webhook", "http://127.0.0.1:1/SECRET"], { env }).catch((e) => e);
-    expect(text.stdout).toContain("INFO   BATCH-DEMO-2026-0001  BECAME_FINAL  accepted VALID → now VALID");
+    expect(text.stdout).toContain("INFO      BATCH-DEMO-2026-0001  BECAME_FINAL  accepted VALID → now VALID");
     expect(text.stdout).toContain("1 record(s): 0 need action, 1 for information, 0 unchanged, 0 could not be re-checked");
     // The webhook could not be delivered: exit 3 (alerting failed), and the URL is not printed.
     expect(text.code).toBe(3);

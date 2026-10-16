@@ -6,7 +6,7 @@
 //   POST /v1/portfolio     { results, year, priceEur?, defaults?, benchmarks?, recheck? } → declaration plan
 //   POST /v1/recheck       { records: [...] }                        → re-check (docs/schemas/recheck.schema.json)
 //   GET  /v1/health        chain head, chain ID, RPC node hosts, limits
-//   GET  /openapi.json     the OpenAPI 3.1 description
+//   GET  /openapi.json     the OpenAPI 3.1 description (also at GET / and GET /v1/openapi.json)
 //
 // SECURITY: the server has NO authentication and NO TLS. It binds 127.0.0.1 by default and must sit behind the
 // integrator's own gateway (authentication, TLS, rate limits) before anything else can reach it. It never sends a
@@ -166,6 +166,8 @@ const optMap = (body: Record<string, unknown>, key: string): Record<string, stri
   return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, String(x)]));
 };
 
+/** Paths that return the OpenAPI document: its own path, the API root and the versioned path a client may try first. */
+const OPENAPI_PATHS = new Set(["/openapi.json", "/", "/v1/openapi.json"]);
 let openapiCache: string | undefined;
 function openapiText(): string {
   return (openapiCache ??= readFileSync(fileURLToPath(new URL("../docs/schemas/openapi.json", import.meta.url)), "utf8"));
@@ -335,9 +337,9 @@ export function createApiServer(opts: ServeOptions): Server {
       if (req.method === "OPTIONS" && opts.corsOrigin) {
         return send(204, "", { "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type", "access-control-max-age": "600" });
       }
-      if (path === "/v1/health" || path === "/openapi.json") {
+      if (path === "/v1/health" || OPENAPI_PATHS.has(path)) {
         if (req.method !== "GET") throw new HttpError(405, "use GET", { allow: "GET" });
-        if (path === "/openapi.json") return send(200, openapiText());
+        if (OPENAPI_PATHS.has(path)) return send(200, openapiText());
         const h = await health();
         return send(h.status, h.body);
       }

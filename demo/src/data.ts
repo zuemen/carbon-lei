@@ -189,3 +189,7 @@ export function whatIfFigures(cmp: DemoData["comparison"], intensity: number) {
 
 export const EVIDENCE_WHY =
   "The vLEI credential chain is checked against evidence exported from a local KERI run. KERI agents need a server we do not host here; the local mode (README › Quick start) rebuilds the whole credential chain and its evidence on your machine.";
+
+/** EVIDENCE_WHY in Traditional Chinese (Taiwan), for the first screen's "why?" note. */
+export const EVIDENCE_WHY_ZH =
+  "vLEI 憑證鏈是以從本機 KERI 執行匯出的證據來檢查。KERI 代理需要一台我們未在此託管的伺服器；本機模式（README › Quick start）會在您的電腦上重建整條憑證鏈及其證據。";

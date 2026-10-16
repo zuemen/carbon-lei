@@ -21,6 +21,7 @@ import { Badge, type BadgeKind } from "../components.tsx";
 import { short } from "../data.ts";
 import { useLang, useStrings } from "../i18n.ts";
 import "../carbonprice.css";
+import { carbonPriceCheckZh, carbonPriceItemZh, CP_SOURCES_ZH } from "../zh-details.ts";
 
 export interface CarbonPriceData {
   version: 1;
@@ -111,6 +112,8 @@ const T = {
     of: (red: string, obl: string, pct: string) => `${red} of ${obl} certificates for this shipment: ${pct} %. The honest number is small.`,
     barLabel: (a: string, b: string, pct: string) => `€${a} paid per tonne emitted, €${b} per CBAM certificate: ${pct} %`,
     refNote: "€82.32 is the Q3 2026 CBAM certificate price, as a stand-in: the draft divides by the yearly average of the year of import, not yet known for 2026.",
+    twoPct: (perTonne: string, ofCerts: string, share: string, see: string) =>
+      `${perTonne} % per tonne of wire-rod emissions; ${ofCerts} % of the screws' certificates, because the wire rod is ${share} % of the ${see}.`,
     sensTitle: "The same tonne at other rates",
     sensCaption: "Euro paid per tonne emitted, by fee rate and emission adjustment factor, and as a share of €82.32 (2025 rate of 35.196 TWD per EUR)",
     sensCols: ["Rate", "Factor 0.2 (now)", "Factor 0.4 (next period)", "Factor 1 (not high-leakage)"],
@@ -136,6 +139,7 @@ const T = {
     bad: "✕ fails",
     open: "– on-chain, not re-read",
     sources: "Sources (accessed 2026-10-16)",
+    footer: "",
   },
   "zh-TW": {
     kicker: "已付碳價（CBAM 第 9 條）",
@@ -166,6 +170,8 @@ const T = {
     of: (red: string, obl: string, pct: string) => `這批貨 ${obl} 張憑證中抵減 ${red} 張：${pct}%。誠實的數字很小。`,
     barLabel: (a: string, b: string, pct: string) => `每噸排放已付 €${a}，每張 CBAM 憑證 €${b}：${pct}%`,
     refNote: "€82.32 是 2026 年第 3 季的 CBAM 憑證價格，暫作替代：草案除以進口年度的年平均價，2026 年的數值尚未確定。",
+    twoPct: (perTonne: string, ofCerts: string, share: string, see: string) =>
+      `每噸線材排放是 ${perTonne}%；占螺絲憑證的 ${ofCerts}%，因為線材占 ${see} 的 ${share}%。`,
     sensTitle: "同一噸在其他費率下",
     sensCaption: "依費率與排放量調整係數，每噸排放所付歐元，以及占 €82.32 的比例（2025 年匯率 35.196 TWD/EUR）",
     sensCols: ["費率", "係數 0.2（現行）", "係數 0.4（下一期）", "係數 1（非高碳洩漏）"],
@@ -176,7 +182,8 @@ const T = {
       root: "合成根（釘選在本頁程式碼中）",
       qvi: "簽發查證人的 LE vLEI",
       body: (acc: string, cn: string) => `獨立查證人 · 經認證從事「有效已付碳價之查證」（${acc}），CN ${cn}`,
-      auditor: (role: string) => `${role}（ECR vLEI）· 在其 KEL 中錨定聲明的 SAID`,
+      // The role is the ECR's English role name ("CBAM Certification Lead Auditor"), named here in Chinese.
+      auditor: (role: string) => `${/Lead Auditor$/.test(role) ? "CBAM 查證主任查核員" : role}（ECR vLEI）· 在其 KEL 中錨定聲明的 SAID`,
       statement: (id: string) => `碳價聲明 ${id} · 由線材廠簽署、由查證人登記`,
     },
     recorded: "建置資料時在本機鏈上記錄的檢查 10 結果",
@@ -191,6 +198,9 @@ const T = {
     bad: "✕ 不成立",
     open: "– 鏈上事實，未重新讀取",
     sources: "來源（存取日期 2026-10-16）",
+    // carbonprice-data.json's `label`, translated (the English page shows the label from the data file).
+    footer:
+      "執行法草案，尚未通過——僅供示意。由 scripts/carbonprice-local.ts 在本機 anvil 鏈（chain ID 31337）上建置，不在 Sepolia。線材廠驗證機構與查證人的 vLEI 證據皆為合成資料（確定性測試金鑰，未使用 KERIA），位於合成的前驅物根之下。所有公司與人物皆為虛構；設施與排放數字為編造；台灣碳費規則與匯率是真實的（來源見 fixtures/carbonprice.json）。",
   },
 };
 
@@ -214,6 +224,9 @@ export function CarbonPriceSection() {
   const obl = Number(d.shipment.obligationT);
   const chargeable = Number(st.cpmEmissions) - Number(st.exemptEmissions);
   const line = d.verification.carbonPrice.target;
+  // Share of the good's SEE that comes from the precursor the fee was paid on (m × SEE_p ÷ SEE_good): why the
+  // share of the shipment's certificates is lower than the share per tonne emitted.
+  const precursorShare = line?.massPerTonne && line?.seeCap && Number(d.shipment.see) ? (Number(line.massPerTonne) * Number(line.seeCap)) / Number(d.shipment.see) : null;
   const sens = [300, 100, 50].map((rate) => ({ rate, cells: [0.2, 0.4, 1].map((f) => (rate * f) / Number(fx?.unitsPerEur ?? st.fx.unitsPerEur)) }));
 
   async function recheck() {
@@ -305,6 +318,11 @@ export function CarbonPriceSection() {
         <span className="cp-bar-paid" style={{ width: `${Math.max(pct, 0.8)}%` }} />
       </div>
       <p className="fine">{t.barLabel(nf(perT), d.refPriceEur, nf(pct))}</p>
+      {precursorShare !== null && (
+        <p className="fine" data-testid="cp-two-pct">
+          {t.twoPct(nf(pct), nf((red / obl) * 100), nf(precursorShare * 100, 0), d.shipment.see)}
+        </p>
+      )}
       <p className="fine">{t.refNote}</p>
 
       <h4 className="cp-h4">{t.sensTitle}</h4>
@@ -357,7 +375,7 @@ export function CarbonPriceSection() {
       <div className="pc-result">
         <p className="fine">
           <strong>{t.recorded}:</strong> <Badge kind={kindOf(c10?.status ?? "skipped")}>{zh ? BADGE_ZH[kindOf(c10?.status ?? "skipped")] : undefined}</Badge>{" "}
-          {c10?.code ? <code>{c10.code}</code> : null} <span lang={zh ? "en" : undefined}>{c10?.detail}</span>
+          {c10?.code ? <code>{c10.code}</code> : null} {(zh && carbonPriceCheckZh(c10, cp)) || <span lang={zh ? "en" : undefined}>{c10?.detail}</span>}
         </p>
       </div>
 
@@ -380,7 +398,7 @@ export function CarbonPriceSection() {
             {items.map((i) => (
               <li key={i.id} data-ok={String(i.ok)}>
                 <span className={i.ok === true ? "pc-ok" : i.ok === false ? "pc-bad" : "pc-open"}>{i.ok === true ? t.ok : i.ok === false ? t.bad : t.open}</span>{" "}
-                <span lang={zh ? "en" : undefined}>{i.detail}</span>
+                {(zh && carbonPriceItemZh(i)) || <span lang={zh ? "en" : undefined}>{i.detail}</span>}
               </li>
             ))}
           </ul>
@@ -389,17 +407,25 @@ export function CarbonPriceSection() {
 
       <h4 className="cp-h4">{t.sources}</h4>
       <ul className="cp-sources">
-        {d.sources.map((s) => (
-          <li key={s.url}>
-            <a href={s.url} target="_blank" rel="noreferrer">
-              {s.what}
-            </a>
-          </li>
-        ))}
+        {d.sources.map((s) => {
+          const z = zh ? CP_SOURCES_ZH.find((x) => s.url.includes(x.match)) : undefined;
+          return (
+            <li key={s.url}>
+              <a href={s.url} target="_blank" rel="noreferrer" lang={zh && !z ? "en" : undefined}>
+                {z ? (
+                  <>
+                    {z.title && <span lang={z.title.lang}>{z.title.text}</span>}
+                    {z.text}
+                  </>
+                ) : (
+                  s.what
+                )}
+              </a>
+            </li>
+          );
+        })}
       </ul>
-      <p className="fine">
-        <span lang={zh ? "en" : undefined}>{d.label}</span>
-      </p>
+      <p className="fine">{(zh && t.footer) || <span lang={zh ? "en" : undefined}>{d.label}</span>}</p>
     </section>
   );
 }

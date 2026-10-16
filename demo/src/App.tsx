@@ -1,6 +1,6 @@
 import { createContext, type KeyboardEvent, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
-import { comparisonFigures, EVIDENCE_WHY, fmt, kgToT, loadDemoData, type DemoData } from "./data.ts";
+import { comparisonFigures, EVIDENCE_WHY, EVIDENCE_WHY_ZH, fmt, kgToT, loadDemoData, type DemoData } from "./data.ts";
 import { HTML_LANG, LANGS, type Lang, useLang, useStrings } from "./i18n.ts";
 
 // Tabs and the chain client load on demand, so the first screen needs only the page shell.
@@ -51,9 +51,40 @@ const SHELL = {
     goToStep: (n: number, long: string, current: boolean) => `Go to step ${n}: ${long}${current ? " (current step)" : ""}`,
     currentStep: " (current step)",
     pathHint: "Background reading. The demo itself is the three steps above.",
+    pathHintWorkbench: "For importers with many suppliers: a year's plan built on the same checks. Main path: the three steps above.",
     claim: "A carbon number is only as trustworthy as the person who signed it.",
     context:
       "The EU charges importers for the carbon emitted making steel, aluminium and other goods (CBAM). The charge depends on a verified emissions value: this checks who signed it and that it is not reused beyond its verified tonnes.",
+    glance: "At a glance",
+    answersLabel: "What the checks answer",
+    whoSigned: "Who signed",
+    signer: "Signer identified · vLEI credential",
+    authorised: "Authorised",
+    role: "Role at the registering block",
+    roleNote: "checked by the contract when the report was registered",
+    tonnesLeft: "Tonnes left",
+    verified: "verified",
+    claimed: "claimed",
+    left: "left",
+    refusedPre: "a ",
+    refusedMid: " t claim is ",
+    refused: "refused",
+    tryIt: "Try it (2b)",
+    tryItSr: " on the Try to break it tab",
+    verifyDemo: "Verify the demo proof",
+    verifyHelp: "Loads it on the Buyer tab and runs the eight checks (checks 9–10, precursor and carbon price, are shown on a local chain).",
+    stake: (gap: string, q: string, v: string, d: string) =>
+      `${gap} tCO2e on one ${q} t shipment (${v} verified vs the ${d} tCO2e/t CBAM default with 2026 mark-up): the declared-emissions gap any verified value has (gross, illustrative), not a physical reduction.`,
+    readOnly: (date: string) => `Read-only, no wallet needed · on-chain checks live on Sepolia · vLEI chain: exported evidence (${date}), not live — `,
+    why: "why?",
+    conn: {
+      switched: "Primary node did not respond. Switched to backup node.",
+      connecting: (s: number) => `Connecting to Sepolia… waited ${s} s`,
+      connected: "Connected to Sepolia.",
+      failed: (s: number) => `Could not reach Sepolia after ${s} s. Check your network and retry.`,
+      retry: "Retry",
+      cached: (d: string) => `Show cached results (from ${d})`,
+    },
   },
   "zh-TW": {
     langGroup: "語言",
@@ -61,9 +92,40 @@ const SHELL = {
     goToStep: (n: number, long: string, current: boolean) => `前往步驟 ${n}：${long}${current ? "（目前步驟）" : ""}`,
     currentStep: "（目前步驟）",
     pathHint: "背景資料。示範本身是上方的三個步驟。",
+    pathHintWorkbench: "給有多家供應商的進口商：以同樣的檢查建立整年度的規劃。主要流程：上方的三個步驟。",
     claim: "一個碳排放數字有多可信，取決於簽署它的人。",
     context:
       "歐盟對進口商就鋼鐵、鋁及其他商品生產過程中排放的碳收費（CBAM）。費用取決於經驗證的排放值：本工具檢查是誰簽署了這個數值，並確認它不會被重複使用而超出經驗證的噸數。",
+    glance: "一覽",
+    answersLabel: "這些檢查回答的問題",
+    whoSigned: "誰簽署的",
+    signer: "已識別簽署者 · vLEI 憑證",
+    authorised: "是否獲授權",
+    role: "登記區塊當時的角色",
+    roleNote: "報告登記時由合約檢查",
+    tonnesLeft: "剩餘噸數",
+    verified: "經查證",
+    claimed: "已申領",
+    left: "剩餘",
+    refusedPre: "",
+    refusedMid: " t 的申領會被",
+    refused: "拒絕",
+    tryIt: "試試看（2b）",
+    tryItSr: "（在「試著破解」分頁）",
+    verifyDemo: "驗證示範證明",
+    verifyHelp: "在買方分頁載入證明並執行八項檢查（檢查 9–10，即前驅物與碳價，於本機鏈上展示）。",
+    stake: (gap: string, q: string, v: string, d: string) =>
+      `一批 ${q} t 出貨的 ${gap} tCO2e（經查證 ${v}，對照含 2026 年加成的 CBAM 預設值 ${d} tCO2e/t）：任何經查證數值都有的申報排放差距（毛額，示意），不是實際減排。`,
+    readOnly: (date: string) => `唯讀，不需錢包 · 鏈上檢查即時讀取 Sepolia · vLEI 鏈：匯出的證據（${date}），非即時——`,
+    why: "為什麼？",
+    conn: {
+      switched: "主要節點沒有回應，已切換到備用節點。",
+      connecting: (s: number) => `正在連線到 Sepolia…已等待 ${s} 秒`,
+      connected: "已連線到 Sepolia。",
+      failed: (s: number) => `${s} 秒後仍無法連上 Sepolia。請檢查網路後重試。`,
+      retry: "重試",
+      cached: (d: string) => `顯示快取結果（${d}）`,
+    },
   },
 };
 
@@ -332,7 +394,7 @@ export function App() {
             <LangSwitch />
           </div>
         </header>
-        <section aria-label="At a glance">
+        <section aria-label={s.glance}>
           <Lead
             data={data}
             reader={reader}
@@ -392,7 +454,7 @@ export function App() {
                 </span>
               );
             })}
-            {stepIndex < 0 && <span className="path-hint">{s.pathHint}</span>}
+            {stepIndex < 0 && <span className="path-hint">{tab === "importer-workbench" ? s.pathHintWorkbench : s.pathHint}</span>}
           </div>
         </div>
       </nav>
@@ -453,37 +515,37 @@ function Lead(props: { data: DemoData; reader: ChainReader | null; offline: bool
   const f = comparisonFigures(cmp);
   const body = data.trustChain.find((n) => n.id === "body")?.name;
   const s = useStrings(SHELL);
+  const zh = useLang().lang === "zh-TW";
   return (
     <>
       <p className="claim">{s.claim}</p>
       <p className="context">{s.context}</p>
-      <ul className="answers" aria-label="What the checks answer">
+      <ul className="answers" aria-label={s.answersLabel}>
         <li className="answer">
-          <span className="answer-q">Who signed</span>
-          <strong className="answer-a">Signer identified · vLEI credential</strong>
-          {body && <span className="answer-note">{body}</span>}
+          <span className="answer-q">{s.whoSigned}</span>
+          <strong className="answer-a">{s.signer}</strong>
+          {body && (
+            <span className="answer-note" lang={zh ? "en" : undefined}>
+              {body}
+            </span>
+          )}
         </li>
         <li className="answer">
-          <span className="answer-q">Authorised</span>
-          <strong className="answer-a">Role at the registering block</strong>
-          <span className="answer-note">checked by the contract when the report was registered</span>
+          <span className="answer-q">{s.authorised}</span>
+          <strong className="answer-a">{s.role}</strong>
+          <span className="answer-note">{s.roleNote}</span>
         </li>
         <LedgerStrip data={data} reader={props.reader} offline={props.offline} onTry={props.onTry} />
       </ul>
       <p className="lead-go">
         <button type="button" className="btn" onClick={props.onVerify}>
-          Verify the demo proof
+          {s.verifyDemo}
         </button>{" "}
-        <span className="answer-note">Loads it on the Buyer tab and runs the eight checks.</span>
+        <span className="answer-note">{s.verifyHelp}</span>
       </p>
-      <p className="stake">
-        {fmt(f.gap)} tCO2e on one {fmt(f.q)} t shipment ({cmp.verifiedValue} verified vs the {cmp.defaultValue} tCO2e/t
-        CBAM default with 2026 mark-up): the declared-emissions gap any verified value has (gross, illustrative), not a
-        physical reduction.
-      </p>
+      <p className="stake">{s.stake(fmt(f.gap), fmt(f.q), cmp.verifiedValue, cmp.defaultValue)}</p>
       <p className="readonly-note">
-        Read-only, no wallet needed · on-chain checks live on Sepolia · vLEI chain: exported evidence (
-        {data.exportDate}), not live —{" "}
+        {s.readOnly(data.exportDate)}
         <button
           type="button"
           className="link-btn"
@@ -491,11 +553,11 @@ function Lead(props: { data: DemoData; reader: ChainReader | null; offline: bool
           aria-controls="evidence-why"
           onClick={() => setWhy((w) => !w)}
         >
-          why?
+          {s.why}
         </button>
       </p>
       <p id="evidence-why" className="why-note" hidden={!why}>
-        {EVIDENCE_WHY}
+        {zh ? EVIDENCE_WHY_ZH : EVIDENCE_WHY}
       </p>
     </>
   );
@@ -527,6 +589,7 @@ function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offlin
     };
   }, [reader, offline, data]);
 
+  const s = useStrings(SHELL);
   const leftKg = !offline && liveKg !== null ? liveKg : recordedKg;
   const claimedKg = verifiedKg - leftKg;
   const second = data.attacks.secondImporter.quantityTonnes;
@@ -539,25 +602,28 @@ function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offlin
   );
   return (
     <li className="answer ledger-strip">
-      <span className="answer-q">Tonnes left</span>
+      <span className="answer-q">{s.tonnesLeft}</span>
       <strong className="answer-a">
         <span className="ledger-fig">
-          <span className="ledger-verified">{kgToT(verifiedKg)}</span> verified
+          <span className="ledger-verified">{kgToT(verifiedKg)}</span> {s.verified}
         </span>{" "}
         {sep}
         <span className="ledger-fig">
-          <span className="ledger-claimed">{kgToT(claimedKg)}</span> claimed
+          <span className="ledger-claimed">{kgToT(claimedKg)}</span> {s.claimed}
         </span>{" "}
         {sep}
         <span className="ledger-fig">
-          <span className="ledger-left">{kgToT(leftKg)}</span> left
+          <span className="ledger-left">{kgToT(leftKg)}</span> {s.left}
         </span>
       </strong>
       <span className="answer-note">
         {refused && (
           <>
             <span className="ledger-refusal">
-              a <span className="ledger-second">{second}</span>&nbsp;t claim is <strong className="ledger-refused">refused</strong>
+              {s.refusedPre}
+              <span className="ledger-second">{second}</span>
+              {s.refusedMid.replace(/^ t/, " t")}
+              <strong className="ledger-refused">{s.refused}</strong>
             </span>{" "}
             {sep}
           </>
@@ -570,8 +636,9 @@ function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offlin
             props.onTry();
           }}
         >
-          Try it (2b)<span aria-hidden="true"> →</span>
-          <span className="sr-only"> on the Try to break it tab</span>
+          {s.tryIt}
+          <span aria-hidden="true"> →</span>
+          <span className="sr-only">{s.tryItSr}</span>
         </a>
       </span>
     </li>
@@ -580,32 +647,33 @@ function LedgerStrip(props: { data: DemoData; reader: ChainReader | null; offlin
 
 function ConnectionLine(props: { conn: ConnState; onRetry: () => void; onCached: () => void; cachedDate?: string }) {
   const { conn } = props;
+  const c = useStrings(SHELL).conn;
   if (conn.kind === "connecting") {
     return (
       <p className={`conn ${conn.switched ? "warn" : ""}`} role="status" aria-live="polite">
-        {conn.switched ? "Primary node did not respond. Switched to backup node. " : ""}Connecting to Sepolia… waited{" "}
-        {conn.waited} s
+        {conn.switched ? `${c.switched} ` : ""}
+        {c.connecting(conn.waited)}
       </p>
     );
   }
   if (conn.kind === "live") {
     return (
       <p className={`conn ${conn.switched || conn.behind ? "warn" : ""}`} role="status">
-        {conn.behind ?? (conn.switched ? "Primary node did not respond. Switched to backup node." : "Connected to Sepolia.")}
+        {conn.behind ?? (conn.switched ? c.switched : c.connected)}
       </p>
     );
   }
   if (conn.kind === "failed") {
     return (
       <div className="banner" role="alert">
-        <span>Could not reach Sepolia after {conn.waited} s. Check your network and retry.</span>
+        <span>{c.failed(conn.waited)}</span>
         <span className="btn-row">
           <button className="btn btn-ghost" onClick={props.onRetry}>
-            Retry
+            {c.retry}
           </button>
           {props.cachedDate && (
             <button className="btn btn-ghost" onClick={props.onCached}>
-              Show cached results (from {props.cachedDate.slice(0, 10)})
+              {c.cached(props.cachedDate.slice(0, 10))}
             </button>
           )}
         </span>

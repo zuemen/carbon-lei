@@ -4,7 +4,8 @@ import { useApp } from "../App.tsx";
 import { Badge, SourceLabel, TabHead, TxLink } from "../components.tsx";
 import { fmt, short, type Attack4 } from "../data.ts";
 import { evidenceCheckers } from "../evidence.ts";
-import { CODE_TEXT, revertText } from "../messages.ts";
+import { codeText, revertText } from "../messages.ts";
+import { useLang, type Lang } from "../i18n.ts";
 import { CHECKS, kindOf, tamperedProof } from "./Buyer.tsx";
 import type { DryOutcome } from "./LayerCard.tsx";
 import { PrecursorAttack, usePrecursorData } from "./Precursor.tsx";
@@ -13,7 +14,52 @@ import { ReportDateAttack } from "./VerifierRules.tsx";
 // The "What if one layer were missing?" card loads after the attack cards.
 const LayerCard = lazy(() => import("./LayerCard.tsx"));
 
-type Outcome = { stamp: string; text: string } | null;
+/** A result, rendered in the page's language when shown (so switching the language re-renders it). */
+type Outcome = { red: boolean; show: (zh: boolean) => { stamp: string; text: string } } | null;
+
+/** The result stamps and texts of the attack cards, in English and Traditional Chinese (Taiwan). */
+const R = {
+  en: {
+    rejected: "Rejected",
+    accepted: "Accepted",
+    notCaught: "Not caught",
+    error: "Error",
+    offline: "Offline",
+    checkFailed: (n: number, why: string) => `Check ${n} failed: ${why}`,
+    notFailed: (n: number) => `Check ${n} did not fail — please report this.`,
+    needsLive: "Needs a live connection.",
+    recorded: (d: string) => `Needs a live connection — shown here: the result recorded on ${d}.`,
+    reverted: (err: string, why: string) => `Reverted: ${err} — ${why}`,
+    wouldAccept: "The contract would accept this claim.",
+    a3Reverted: "Reverted:",
+    a3Tail: " The report registered before the revocation sync stays valid on-chain.",
+    a4Chain: (root: string) => [`The impostor's chain leads to ${root} (`, "), not to the root this page pins (", ")."],
+    a4Dry: "A new registration from the impostor now, as a dry run:",
+    a4DryReverted: "reverted",
+    a4DryAccepted: "the contract would accept it.",
+    a4DryCached: " (recorded result; needs a live connection)",
+  },
+  "zh-TW": {
+    rejected: "已拒絕",
+    accepted: "已接受",
+    notCaught: "未攔截",
+    error: "錯誤",
+    offline: "離線",
+    checkFailed: (n: number, why: string) => `檢查 ${n} 未通過：${why}`,
+    notFailed: (n: number) => `檢查 ${n} 沒有失敗——請回報此問題。`,
+    needsLive: "需要即時連線。",
+    recorded: (d: string) => `需要即時連線——此處顯示 ${d} 記錄的結果。`,
+    reverted: (err: string, why: string) => `已退回：${err}——${why}`,
+    wouldAccept: "合約會接受這筆申領。",
+    a3Reverted: "已退回：",
+    a3Tail: "在撤銷同步之前登記的報告，在鏈上仍然有效。",
+    a4Chain: (root: string) => [`冒名者的鏈通往 ${root}（`, "），而不是本頁釘選的根（", "）。"],
+    a4Dry: "冒名者現在再登記一筆，以試算（dry run）執行：",
+    a4DryReverted: "已退回",
+    a4DryAccepted: "合約會接受。",
+    a4DryCached: "（記錄的結果；需要即時連線）",
+  },
+} satisfies Record<Lang, unknown>;
 
 const BIGINT_FIELDS = new Set(["kelSeq", "verifiedKg", "validUntil"]);
 const utc = (iso: string) => `${iso.replace("T", " ").slice(0, 16)} UTC`;
@@ -25,6 +71,9 @@ const utc = (iso: string) => `${iso.replace("T", " ").slice(0, 16)} UTC`;
  */
 function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
   const { data, reader, offline } = useApp();
+  const { lang } = useLang();
+  const zh = lang === "zh-TW";
+  const rt = R[lang];
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [cachedOn, setCachedOn] = useState("");
   const [dry, setDry] = useState<{ errorName: string; args: readonly unknown[]; cached: boolean } | null>(null);
@@ -96,24 +145,25 @@ function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
       {result && !busy && (
         <>
           <div className="attack-result" role="status">
-            <span className={`stamp ${c7?.status === "fail" ? "red" : ""}`}>{c7?.status === "fail" ? "Rejected" : "Not caught"}</span>
+            <span className={`stamp ${c7?.status === "fail" ? "red" : ""}`}>{c7?.status === "fail" ? rt.rejected : rt.notCaught}</span>
             <p>
               {c7?.status === "fail" ? (
                 <>
-                  Check 7 failed: {c7.detail}. The impostor's chain leads to {a4.impostorRoot.name} (
+                  {zh ? rt.checkFailed(7, codeText(c7.code, true) ?? c7.detail) : `${rt.checkFailed(7, c7.detail)}. `}
+                  {rt.a4Chain(a4.impostorRoot.name)[0]}
                   <span className="hash" title={a4.impostorRoot.aid}>
                     {short(a4.impostorRoot.aid)}
                   </span>
-                  ), not to the root this page pins (
+                  {rt.a4Chain(a4.impostorRoot.name)[1]}
                   <span className="hash" title={a4.pinnedRoot}>
                     {short(a4.pinnedRoot)}
                   </span>
-                  ).
+                  {rt.a4Chain(a4.impostorRoot.name)[2]}
                 </>
               ) : (
-                "Check 7 did not fail — please report this."
+                rt.notFailed(7)
               )}
-              {cachedOn ? ` Needs a live connection — shown here: the result recorded on ${cachedOn}.` : ""}
+              {cachedOn ? `${zh ? "" : " "}${rt.recorded(cachedOn)}` : ""}
             </p>
           </div>
           <ol className="checks a4-checks" aria-label="Checks on the impostor's proof" style={{ gridColumn: "1 / -1" }}>
@@ -172,17 +222,20 @@ function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
           </div>
           {dry && (
             <div className="attack-result">
-              <span className={`stamp ${dry.errorName ? "red" : ""}`}>{dry.errorName ? "Rejected" : "Accepted"}</span>
+              <span className={`stamp ${dry.errorName ? "red" : ""}`}>{dry.errorName ? rt.rejected : rt.accepted}</span>
               <p>
-                <SourceLabel source="sepolia" /> A new registration from the impostor now, as a dry run:{" "}
+                <SourceLabel source="sepolia" /> {rt.a4Dry}
+                {zh ? "" : " "}
                 {dry.errorName ? (
                   <>
-                    reverted <code>{dry.errorName}</code> — {revertText(dry.errorName, dry.args)}
+                    {rt.a4DryReverted} <code>{dry.errorName}</code>
+                    {zh ? "——" : " — "}
+                    {revertText(dry.errorName, dry.args, zh)}
                   </>
                 ) : (
-                  "the contract would accept it."
+                  rt.a4DryAccepted
                 )}
-                {dry.cached ? " (recorded result; needs a live connection)" : ""}
+                {dry.cached ? rt.a4DryCached : ""}
               </p>
             </div>
           )}
@@ -194,6 +247,9 @@ function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
 
 export function Attacks() {
   const { data, reader, offline } = useApp();
+  const { lang } = useLang();
+  const zh = lang === "zh-TW";
+  const rt = R[lang];
   const precursorData = usePrecursorData();
   const [out, setOut] = useState<Record<string, Outcome>>({});
   const [busy, setBusy] = useState("");
@@ -224,11 +280,12 @@ export function Attacks() {
         ...o,
         a1:
           c2?.status === "fail"
-            ? { stamp: "Rejected", text: `Check 2 failed: ${CODE_TEXT.DISCLOSURE_TAMPERED}` }
-            : { stamp: "Not caught", text: "Check 2 did not fail — please report this." },
+            ? { red: true, show: (z) => ({ stamp: R[z ? "zh-TW" : "en"].rejected, text: R[z ? "zh-TW" : "en"].checkFailed(2, codeText("DISCLOSURE_TAMPERED", z)!) }) }
+            : { red: false, show: (z) => ({ stamp: R[z ? "zh-TW" : "en"].notCaught, text: R[z ? "zh-TW" : "en"].notFailed(2) }) },
       }));
     } catch (e) {
-      setOut((o) => ({ ...o, a1: { stamp: "Error", text: (e as Error).message } }));
+      const message = (e as Error).message;
+      setOut((o) => ({ ...o, a1: { red: false, show: (z) => ({ stamp: R[z ? "zh-TW" : "en"].error, text: message }) } }));
     } finally {
       setBusy("");
     }
@@ -241,8 +298,14 @@ export function Attacks() {
       setOut((o) => ({
         ...o,
         [id]: c
-          ? { stamp: "Rejected", text: `Needs a live connection — shown here: the result recorded on ${data.cached?.time.slice(0, 10)}. Reverted: ${c.errorName} — ${revertText(c.errorName, c.args)}` }
-          : { stamp: "Offline", text: "Needs a live connection." },
+          ? {
+              red: true,
+              show: (z) => {
+                const x = R[z ? "zh-TW" : "en"];
+                return { stamp: x.rejected, text: `${x.recorded(data.cached?.time.slice(0, 10) ?? "")}${z ? "" : " "}${x.reverted(c.errorName, revertText(c.errorName, c.args, z))}` };
+              },
+            }
+          : { red: false, show: (z) => ({ stamp: R[z ? "zh-TW" : "en"].offline, text: R[z ? "zh-TW" : "en"].needsLive }) },
       }));
       return;
     }
@@ -254,17 +317,18 @@ export function Attacks() {
     setOut((o) => ({
       ...o,
       [id]: r.reverted
-        ? { stamp: "Rejected", text: `Reverted: ${r.errorName} — ${revertText(r.errorName, r.args)}` }
-        : { stamp: "Accepted", text: "The contract would accept this claim." },
+        ? { red: true, show: (z) => ({ stamp: R[z ? "zh-TW" : "en"].rejected, text: R[z ? "zh-TW" : "en"].reverted(r.errorName, revertText(r.errorName, r.args, z)) }) }
+        : { red: false, show: (z) => ({ stamp: R[z ? "zh-TW" : "en"].accepted, text: R[z ? "zh-TW" : "en"].wouldAccept }) },
     }));
   }
 
   const Result = ({ id }: { id: string }) => {
-    const r = out[id];
-    if (!r) return null;
+    const o = out[id];
+    if (!o) return null;
+    const r = o.show(zh);
     return (
       <div className="attack-result" role="status">
-        <span className={`stamp ${r.stamp === "Rejected" ? "red" : ""}`}>{r.stamp}</span>
+        <span className={`stamp ${o.red ? "red" : ""}`}>{r.stamp}</span>
         <p>{r.text}</p>
       </div>
     );
@@ -281,7 +345,7 @@ export function Attacks() {
           Connecting to Sepolia… the attack buttons unlock when the connection is ready.
         </p>
       )}
-      <section className="sheet reveal" aria-label="Attacks">
+      <section className="sheet reveal attacks" aria-label={zh ? "攻擊" : "Attacks"}>
         <div className="attack">
           <div>
             <h3>1 · Change one disclosed number</h3>
@@ -342,10 +406,12 @@ export function Attacks() {
           <span />
           {a3 && (
             <div className="attack-result">
-              <span className="stamp red">Rejected</span>
+              <span className="stamp red">{rt.rejected}</span>
               <p>
-                Reverted: <code>AuditorNotAuthorized</code> — {revertText("AuditorNotAuthorized")} The report registered
-                before the revocation sync stays valid on-chain.
+                {rt.a3Reverted} <code>AuditorNotAuthorized</code>
+                {zh ? "——" : " — "}
+                {revertText("AuditorNotAuthorized", [], zh)}
+                {rt.a3Tail}
               </p>
             </div>
           )}

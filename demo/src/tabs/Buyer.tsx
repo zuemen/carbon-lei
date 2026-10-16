@@ -14,6 +14,7 @@ import { CheckSources } from "./CheckSources.tsx";
 import { SubRules } from "./VerifierRules.tsx";
 import { PrecursorBuyer } from "./Precursor.tsx";
 import { CarbonPriceSection } from "./CarbonPrice.tsx";
+import { workbenchCounts } from "../workbench-data.ts";
 
 // The printable importer's file: loaded only when the importer asks for it.
 const ImporterFile = lazy(() => import("./ImporterFile.tsx"));
@@ -38,7 +39,7 @@ const CHECKS: { n: number; text: string; source: Source }[] = [
 ];
 
 /** The check names (CHECKS) in Traditional Chinese (Taiwan); check 0 is the structure check. */
-const CHECK_TEXT_ZH: Record<number, string> = {
+export const CHECK_TEXT_ZH: Record<number, string> = {
   1: "憑證自簽發後未被更改（其內容雜湊與其 ID 相符）",
   2: "沒有任何已揭露欄位被更改",
   3: "由憑證中所指名的簽發者地址簽署（該地址是否已登記，由檢查 4 判定）",
@@ -91,6 +92,10 @@ const VERDICT = {
     scope:
       " These checks cover who signed the value, their authority (up to this demo's simulated root of trust) and the tonnage claim. They do not show that the emissions figure itself is correct, and they do not replace the verification report or the CBAM Registry.",
     tryBreak: "Try to break it →",
+    nextWorkbench: (n: number, m: number) => `Next: see ${n} shipments from ${m} suppliers in the Importer workbench →`,
+    head: "Check a supplier's proof",
+    headLede: "An EU importer's compliance officer, or a downstream customer.",
+    headStep: ["Step 2 of 3 — the supplier's side is already done in this demo. Load the demo proof, then press Verify.", "", "", ""],
   },
   "zh-TW": {
     checkSr: (n: number) => `檢查 ${n}：`,
@@ -118,6 +123,11 @@ const VERDICT = {
     scope:
       " 這些檢查涵蓋誰簽署了數值、其權限（直到本示範模擬的信任根為止）以及噸數申領。它們不能證明排放數字本身正確，也不能取代驗證報告或 CBAM 登錄系統（CBAM Registry）。",
     tryBreak: "試著破解 →",
+    nextWorkbench: (n: number, m: number) => `下一步：在進口商工作台查看來自 ${m} 家供應商的 ${n} 批出貨 →`,
+    head: "檢查供應商的證明",
+    headLede: "歐盟進口商的法遵人員，或下游客戶。",
+    // The two buttons keep their English names (Load the demo proof, Verify); the sentence names them as shown.
+    headStep: ["第 2 步（共 3 步）——在本示範中，供應商這一方已完成。按", "Load the demo proof", "，再按", "Verify"],
   },
 } satisfies Record<Lang, unknown>;
 
@@ -388,6 +398,7 @@ export function Buyer() {
   const { lang } = useLang();
   const vt = VERDICT[lang];
   const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer, demoVerify, setDemoVerify } = useApp();
+  const wbCounts = workbenchCounts(data);
   // The last verification: the text it read, that text's proof and the result. It is shown only while the text box
   // still holds that same text, so editing, loading or tampering never leaves an earlier result on screen.
   const [verified, setVerified] = useState<{ text: string; proof: Presentation; result: VerificationResult; cached: boolean; at: string } | null>(null);
@@ -596,9 +607,14 @@ export function Buyer() {
 
   return (
     <>
-      <TabHead title="Check a supplier's proof" lede="An EU importer's compliance officer, or a downstream customer.">
+      <TabHead title={vt.head} lede={vt.headLede}>
         <p className="fine">
-          Step 2 of 3 — the supplier's side is already done in this demo. Load the demo proof, then press Verify.
+          {vt.headStep[0]}
+          {vt.headStep[1] && (
+            <>
+              「<span lang="en">{vt.headStep[1]}</span>」{vt.headStep[2]}「<span lang="en">{vt.headStep[3]}</span>」。
+            </>
+          )}
         </p>
       </TabHead>
       <div className="grid-2">
@@ -752,6 +768,13 @@ export function Buyer() {
               <button className="btn btn-ghost" onClick={() => go("try-to-break-it")}>
                 {vt.tryBreak}
               </button>
+              {result.overall === "VALID" && (
+                <p className="fine next-workbench">
+                  <button type="button" className="link-btn" onClick={() => go("importer-workbench")}>
+                    {vt.nextWorkbench(wbCounts.shipments, wbCounts.suppliers)}
+                  </button>
+                </p>
+              )}
             </div>
           )}
         </section>

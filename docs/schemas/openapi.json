@@ -13,8 +13,8 @@
     "/v1/verify": {
       "post": {
         "operationId": "verify",
-        "summary": "Verify one proof (checks 0-8)",
-        "description": "Runs the nine checks on the proof against the chain head. Pass your EORI to bind the shipment to you (check 5); only then is the report judged at the shipment's claim time. Every verdict, VALID or not, is answered 200; the header X-CarbonLEI-Exit carries the CLI exit code (0 VALID, 1 INVALID, 2 CONTESTED, 4 INCOMPLETE). A verification that could not run (RPC failure) is answered 502 with the verdict error object and exit code 3.",
+        "summary": "Verify one proof (checks 0-8; 9 and 10 when present)",
+        "description": "Runs checks 0-8 on the proof against the chain head, plus check 9 or 10 when the proof carries a precursor or carbon-price statement. Pass your EORI to bind the shipment to you (check 5); only then is the report judged at the shipment's claim time. Every verdict, VALID or not, is answered 200; the header X-CarbonLEI-Exit carries the CLI exit code (0 VALID, 1 INVALID, 2 CONTESTED, 4 INCOMPLETE). A verification that could not run (RPC failure) is answered 502 with the verdict error object and exit code 3.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerifyRequest" } } }
@@ -116,6 +116,7 @@
       "get": {
         "operationId": "openapi",
         "summary": "This document",
+        "description": "Also returned by GET / and GET /v1/openapi.json.",
         "responses": { "200": { "description": "OpenAPI 3.1 description.", "content": { "application/json": { "schema": { "type": "object" } } } } }
       }
     }

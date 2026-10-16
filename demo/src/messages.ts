@@ -104,10 +104,21 @@ export function codeText(code: string | undefined, zh: boolean): string | undefi
   return (zh ? CODE_TEXT_ZH[code] : undefined) ?? CODE_TEXT[code];
 }
 
-export function revertText(name: string, args: readonly unknown[] = []): string {
+/** REVERT_TEXT in Traditional Chinese for the reverts the Try to break it tab shows; others fall back to English. */
+const REVERT_TEXT_ZH: Record<string, string> = {
+  NotActiveVerifier: "此地址不是允許清單上有效的驗證機構：它未登記、已由較新的地址取代，或其認證已暫停或到期。",
+  AuditorNotAuthorized: "此查核員在此時未獲此驗證機構授權。",
+  BatchAlreadyClaimed: "此批次已被申領。",
+  ExceedsVerifiedTonnage: "這筆申領會超出經查證報告所涵蓋的噸數。",
+};
+
+export function revertText(name: string, args: readonly unknown[] = [], zh = false): string {
   if (name === "ExceedsVerifiedTonnage" && args.length >= 2) {
-    return `This claim would exceed the tonnes covered by the verified report (${kgToT(args[0])} t left, ${kgToT(args[1])} t requested).`;
+    return zh
+      ? `這筆申領會超出經查證報告所涵蓋的噸數（剩餘 ${kgToT(args[0])} t，申請 ${kgToT(args[1])} t）。`
+      : `This claim would exceed the tonnes covered by the verified report (${kgToT(args[0])} t left, ${kgToT(args[1])} t requested).`;
   }
-  return REVERT_TEXT[name] ?? "The contract rejected this call.";
+  if (zh && REVERT_TEXT_ZH[name]) return REVERT_TEXT_ZH[name];
+  return REVERT_TEXT[name] ?? (zh ? "合約拒絕了這次呼叫。" : "The contract rejected this call.");
 }
 

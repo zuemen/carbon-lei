@@ -381,6 +381,9 @@ describe("carbonlei verify-batch and portfolio (recorded Sepolia answers)", () =
     const text = await run(process.execPath, [cli, "portfolio", results, "--year", "2026", "--price", "82.32"]);
     expect(text.stdout).toContain("worksheet, not a CBAM declaration");
     expect(text.stdout).toContain("Certificates to surrender 556 (all on defaults: 791)");
+    // Text output groups thousands as the page does; the JSON keeps the plain decimal string.
+    expect(text.stdout).toContain("Gross €45,692.46 (all on defaults €65,087.05; difference €19,394.59)");
+    expect(s.totals.grossEur).toBe("45692.46");
 
     writeFileSync(`${dir}bm.json`, JSON.stringify({ "TW:7318": "1.364" }));
     const withFa = JSON.parse((await run(process.execPath, [cli, "portfolio", results, "--year", "2026", "--benchmarks", `${dir}bm.json`, "--json"])).stdout);

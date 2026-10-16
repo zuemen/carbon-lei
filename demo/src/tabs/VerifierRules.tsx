@@ -62,7 +62,9 @@ export function SubRules({ rules, compact = false }: { rules: SubRule[]; compact
             <span className="sr-only">{MARK[s.status][lang]}: </span>
             <span className="subrule-label">{LABEL[s.rule]?.[lang] ?? s.rule}</span>
             {s.code && <code className="subrule-code">{s.code}</code>}
-            <span className="subrule-detail">{s.detail}</span>
+            <span className="subrule-detail" lang={lang === "zh-TW" ? "en" : undefined}>
+              {s.detail}
+            </span>
           </li>
         ))}
       </ul>
@@ -105,6 +107,8 @@ const PANEL = {
     trust:
       "The record is operator data, not signed by the accreditation body: a difference makes check 8 ask for review, never pass. The accreditation body's signed part is the accreditation credential that check 7 verifies.",
     sources: "Sources",
+    activity: "activity group",
+    linkNote: "= hash(accreditation credential SAID)",
   },
   "zh-TW": {
     kicker: "驗證機構的正當性",
@@ -124,6 +128,8 @@ const PANEL = {
       `截至 ${checked}，歐盟執委會尚未公布 CBAM 認證驗證機構名單（「將於本頁公布」）。此紀錄依據認證機構自己的登錄。截至 2026 年 10 月 13 日，有五家驗證機構被記載為已獲認證，全部設立於歐盟。認證驗證機構自 2027 年 1 月起才能簽發首批 CBAM 驗證報告。`,
     trust: "此紀錄是營運者的資料，並非由認證機構簽署：若有差異，檢查 8 會要求人工審查，而不會判定通過。認證機構簽署的部分是檢查 7 所驗證的認證憑證。",
     sources: "資料來源",
+    activity: "活動群組",
+    linkNote: "= hash（認證憑證的 SAID）",
   },
 } satisfies Record<Lang, unknown>;
 
@@ -177,7 +183,7 @@ export function VerifierLegitimacy() {
         <dd>{rec.standards.join(" + ")}</dd>
         <dt>{t.scope}</dt>
         <dd>
-          CN {rec.cnScope.join(", ")} · activity group {rec.activityGroups.join(", ")} (Delegated Reg. (EU) 2025/2551 Annex I)
+          CN {rec.cnScope.join(", ")} · {t.activity} {rec.activityGroups.join(", ")} (<span lang="en">Delegated Reg. (EU) 2025/2551 Annex I</span>)
         </dd>
         <dt>{t.validity}</dt>
         <dd>
@@ -187,7 +193,7 @@ export function VerifierLegitimacy() {
         <dd>{rec.administrativeMeasures.length ? rec.administrativeMeasures.map((m) => `${m.type} ${m.from}–${m.until ?? ""}`).join("; ") : t.none}</dd>
         <dt>{t.link}</dt>
         <dd>
-          <code>{rec.accreditationSaidHash ? `${rec.accreditationSaidHash.slice(0, 10)}…` : "—"}</code> = hash(accreditation credential SAID)
+          <code>{rec.accreditationSaidHash ? `${rec.accreditationSaidHash.slice(0, 10)}…` : "—"}</code> {t.linkNote}
         </dd>
       </dl>
       {extract && <p className="subrules-head">{t.report(extract.reportId, extract.signedAt)}</p>}
@@ -198,12 +204,12 @@ export function VerifierLegitimacy() {
       <p className="fine">{t.trust}</p>
       <p className="fine">
         {t.sources}:{" "}
-        <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en">European Commission, CBAM verification</a>{" "}
+        <a lang="en" href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/cbam-verification_en">European Commission, CBAM verification</a>{" "}
         ·{" "}
-        <a href="https://taxation-customs.ec.europa.eu/document/download/030fe146-38e5-46b8-82b5-5f72da089a7b_en">
+        <a lang="en" href="https://taxation-customs.ec.europa.eu/document/download/030fe146-38e5-46b8-82b5-5f72da089a7b_en">
           Guidance on CBAM verification and accreditation (24 Aug 2026)
         </a>{" "}
-        · <a href="https://cbamguide.com/compliance/verification/">cbamguide.com (accredited bodies, 13 Oct 2026)</a> (accessed 2026-10-16)
+        · <a lang="en" href="https://cbamguide.com/compliance/verification/">cbamguide.com (accredited bodies, 13 Oct 2026)</a> {lang === "zh-TW" ? "（存取日期 2026-10-16）" : "(accessed 2026-10-16)"}
       </p>
     </section>
   );
@@ -219,6 +225,8 @@ export const EARLY_DATE = "2026-12-15";
  */
 export function ReportDateAttack() {
   const { data } = useApp();
+  const { lang } = useLang();
+  const zh = lang === "zh-TW";
   const [out, setOut] = useState<{ status: string; code: string; detail: string; rules: SubRule[] } | null>(null);
   function run() {
     const extract = data.proof.reportExtract as ReportExtract | undefined;
@@ -249,12 +257,17 @@ export function ReportDateAttack() {
       </button>
       {out && (
         <div className="attack-result" role="status">
-          <span className={`stamp ${out.status === "fail" ? "red" : ""}`}>{out.status === "fail" ? "Rejected" : "Not caught"}</span>
+          <span className={`stamp ${out.status === "fail" ? "red" : ""}`}>{out.status === "fail" ? (zh ? "已拒絕" : "Rejected") : zh ? "未攔截" : "Not caught"}</span>
           <p>
             {out.status === "fail" ? (
               <>
-                Check 8 failed: <code>{out.code}</code> — {out.detail}
+                {zh ? "檢查 8 未通過：" : "Check 8 failed: "}
+                <code>{out.code}</code>
+                {zh ? "——" : " — "}
+                <span lang={zh ? "en" : undefined}>{out.detail}</span>
               </>
+            ) : zh ? (
+              `檢查 8 沒有失敗（${out.status}）——請回報此問題。`
             ) : (
               `Check 8 did not fail (${out.status}) — please report this.`
             )}

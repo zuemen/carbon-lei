@@ -5,7 +5,9 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function connected(page: Page) {
-  await expect(page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node."))).toBeVisible();
+  await expect(
+    page.getByText("Connected to Sepolia.").or(page.getByText("Switched to backup node.")).or(page.getByText("已連線到 Sepolia。")).or(page.getByText("已切換到備用節點。")),
+  ).toBeVisible();
 }
 
 async function scan(page: Page, label: string) {

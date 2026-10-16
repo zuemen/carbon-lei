@@ -97,13 +97,13 @@ const USAGE = `carbonlei <command> [options]
                                                     2 if any CONTESTED, 4 if any INCOMPLETE, else 0
   portfolio    <results.json> --year <YYYY> [--price <EUR>] [--csv <worksheet.csv>] [--json] [--out <summary.json>]
                [--defaults <map.json>] [--benchmarks <map.json>]
-               [--art9-ref-price <EUR>]             adds the carbon price deduction of check 10 (DRAFT Art 9
-                                                    rules, not adopted: illustrative), apart from the totals
                                                     declaration plan from verify-batch results: verified value only
                                                     when VALID and bound by check 5, else the default with the year's
                                                     mark-up; totals, 50 t de minimis, quarterly holding, certificates,
                                                     gross EUR; --benchmarks deducts the free-allocation adjustment
                                                     (docs/OPERATE.md). The CSV is a worksheet, not the Registry XML
+               [--art9-ref-price <EUR>]             adds the carbon price deduction of check 10 (DRAFT Art 9
+                                                    rules, not adopted: illustrative), apart from the totals
                [--recheck <recheck.json>]           a line a later re-check says needs action is planned on the default
   recheck      <records-folder | record.json | results.json> [--json] [--out <recheck.json>] [--webhook <URL>]
                [--proofs <folder>] [--window <hours>] [--concurrency <1-4>] [--rpc <url>] [--deployment <file>]
@@ -117,12 +117,15 @@ const USAGE = `carbonlei <command> [options]
   serve        [--port 8787] [--host 127.0.0.1] [--cors-origin <origin>] [--evidence-dir <dir>] [--max-body <bytes>]
                [--timeout <s>] [--max-concurrent <n>] [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
                                                     REST API (docs/schemas/openapi.json): POST /v1/verify, /v1/verify-batch,
-                                                    /v1/portfolio, /v1/recheck; GET /v1/health. NO authentication: keep it
+                                                    /v1/portfolio, /v1/recheck; GET /v1/health; GET / and
+                                                    /v1/openapi.json return the OpenAPI document. NO authentication: keep it
                                                     on 127.0.0.1 or behind your own gateway (docs/OPERATE.md)
   export-pact  --proof <proof.json> --eori <EORI> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
                [--precursor-trust-anchor <AID>] [--max-head-age <s>] [--out <pact.json>]
-                                                    runs checks 0-9 (with check 5 for your EORI) first
+                                                    verifies the proof first, with check 5 for your EORI: checks
+                                                    0-8, plus 9 and 10 when it carries a precursor or carbon-price
+                                                    statement
   import-template <file.xlsx> [--product N] [--out <draft.json>]
                reads a filled CBAM Communication Template (V2.1 or V2.1.1) and prints a draft of the
                credential fields it can fill; the rest is left to the supplier and the verification body
@@ -617,9 +620,12 @@ async function main(argv: string[]) {
       console.log(printTemplate(t, draft, n));
       return 0;
     }
-    default:
+    default: {
+      const help = !command || ["help", "--help", "-h"].includes(command);
+      if (!help) console.error(`unknown command: ${command}`);
       process.stdout.write(USAGE);
-      return command ? 64 : 0;
+      return help ? 0 : 64;
+    }
   }
 }
 
