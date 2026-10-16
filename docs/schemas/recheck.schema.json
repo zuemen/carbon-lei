@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zuemen/carbon-lei/blob/main/docs/schemas/recheck.schema.json",
+  "title": "CarbonLEI re-check of accepted verifications",
+  "description": "Output of `carbonlei recheck --json`, of POST /v1/recheck and of `recheckRecords` in sdk/recheck.ts (format 1). Every record is re-verified at one pinned block and compared with the verdict the importer accepted. Exit codes: 3 if any record could not be re-checked (severity error), else 1 if any needs action, else 0. Not a CBAM declaration and not a CBAM Registry document.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "kind", "pinnedBlock", "blockTime", "chainId", "checkedAt", "windowHours", "counts", "results", "notes", "tool"],
+  "properties": {
+    "format": { "const": 1 },
+    "kind": { "const": "carbonlei-recheck" },
+    "pinnedBlock": { "type": ["integer", "null"], "description": "The one block every re-check of the run read." },
+    "blockTime": { "type": ["integer", "null"], "description": "Timestamp of the pinned block, UNIX seconds." },
+    "chainId": { "type": ["integer", "null"] },
+    "checkedAt": { "type": "string", "description": "When the re-check ran (ISO 8601, UTC)." },
+    "windowHours": { "type": "number", "minimum": 0, "description": "CONTESTED window after registration used for the run (default 24)." },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "info", "none", "error"],
+      "properties": {
+        "action": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 },
+        "none": { "type": "integer", "minimum": 0 },
+        "error": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "results": { "type": "array", "items": { "$ref": "#/$defs/result" } },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "skipped": { "type": "array", "items": { "type": "string" }, "description": "POST /v1/recheck only: input items that were not records." },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": { "name": { "const": "carbonlei" }, "version": { "type": "string" } }
+    }
+  },
+  "$defs": {
+    "change": {
+      "description": "What changed since acceptance. action: REPORT_REVOKED, REPORT_SUPERSEDED, REPORT_EXPIRED, REPORT_NOT_ON_LEDGER, CLAIM_NOT_ON_LEDGER, SHIPMENT_CHANGED, AUDITOR_REVOKED_OR_BODY_SUSPENDED, ADDRESS_ROTATED, REVOCATION_CONTESTED, CONTESTED, AUTHORITY_INVALID, ANCHOR_INVALID, NOW_INVALID, NOW_INCOMPLETE. info: BECAME_FINAL, WINDOW_OPEN, IMPROVED, EXPIRED_SINCE. none: UNCHANGED, STILL_NOT_VALID. error: RECHECK_FAILED.",
+      "enum": [
+        "REPORT_REVOKED", "REPORT_SUPERSEDED", "REPORT_EXPIRED", "REPORT_NOT_ON_LEDGER", "CLAIM_NOT_ON_LEDGER", "SHIPMENT_CHANGED",
+        "AUDITOR_REVOKED_OR_BODY_SUSPENDED", "ADDRESS_ROTATED", "REVOCATION_CONTESTED", "CONTESTED", "AUTHORITY_INVALID", "ANCHOR_INVALID",
+        "NOW_INVALID", "NOW_INCOMPLETE", "BECAME_FINAL", "WINDOW_OPEN", "IMPROVED", "EXPIRED_SINCE", "UNCHANGED", "STILL_NOT_VALID", "RECHECK_FAILED"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "id", "batchId", "credSAID", "mode", "accepted", "current", "change", "severity", "reasons", "action", "window", "verdict", "error"],
+      "properties": {
+        "source": { "type": "string", "description": "File (and line) the record came from." },
+        "id": { "type": "string" },
+        "batchId": { "type": ["string", "null"] },
+        "credSAID": { "type": ["string", "null"] },
+        "mode": { "enum": ["full", "ledger-only"], "description": "full: the proof was verified again (checks 0-8); ledger-only: no proof attached, only the report's on-chain status was read." },
+        "accepted": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["overall", "primaryCode", "at", "block"],
+          "properties": {
+            "overall": { "type": "string" },
+            "primaryCode": { "type": "string" },
+            "at": { "type": ["string", "null"], "description": "When the record says it was accepted (ISO 8601)." },
+            "block": { "type": ["integer", "null"] }
+          }
+        },
+        "current": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["overall", "primaryCode", "block"],
+              "properties": {
+                "overall": { "type": "string", "description": "VALID, INVALID, CONTESTED or INCOMPLETE; in ledger-only mode INVALID or NOT_REVERIFIED." },
+                "primaryCode": { "type": "string" },
+                "block": { "type": ["integer", "null"] }
+              }
+            }
+          ]
+        },
+        "change": { "$ref": "#/$defs/change" },
+        "severity": { "enum": ["action", "info", "none", "error"] },
+        "reasons": { "type": "array", "items": { "type": "string" } },
+        "action": { "type": "string", "description": "What the importer should do." },
+        "window": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["closesAt", "closed"],
+              "properties": { "closesAt": { "type": "integer" }, "closed": { "type": "boolean" } }
+            }
+          ]
+        },
+        "verdict": {
+          "description": "The full current verdict (mode full), else null.",
+          "oneOf": [{ "type": "null" }, { "$ref": "verdict.schema.json#/$defs/verdict" }]
+        },
+        "error": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

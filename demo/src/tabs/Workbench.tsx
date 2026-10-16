@@ -9,6 +9,7 @@ import { Badge, TabHead, type BadgeKind } from "../components.tsx";
 import { evidenceCheckers } from "../evidence.ts";
 import { useLang, type Lang } from "../i18n.ts";
 import { DEMO_BENCHMARKS, demoLine, FICTIONAL_LINES, shiftYear } from "../workbench-data.ts";
+import { RecheckPanel } from "./RecheckPanel.tsx";
 import "../workbench.css";
 
 const PRICE = "82.32";
@@ -127,6 +128,8 @@ const eur = (s: string, lang: Lang) =>
 function zhReason(r: string): string {
   let m: RegExpExecArray | null;
   if (r === "no supplier proof") return "沒有供應商證明";
+  if ((m = /^re-checked after acceptance: (\S+) \(illustrative re-check\)$/.exec(r))) return `接受後重新檢查：${m[1]}（示意重新檢查）`;
+  if ((m = /^re-checked after acceptance: (.*)$/.exec(r))) return `接受後重新檢查：${m[1]}`;
   if ((m = /^proof (\w+)(?: \((.+)\))?$/.exec(r))) return `證明判定為 ${m[1]}${m[2] ? `（${m[2]}）` : ""}`;
   if ((m = /^verification did not run: (.*)$/.exec(r))) {
     return `驗證未執行：${m[1] === "not verified yet" ? "尚未驗證" : m[1] === "offline view" ? "離線檢視" : m[1]}`;
@@ -148,7 +151,7 @@ function zhWhy(q: PortfolioSummary["quarterlyHolding"][number], p: PortfolioSumm
   return q.quarter < x.quarter ? `尚未需要：於第 ${x.quarter} 季超過 50 公噸門檻` : "尚未需要：本季超過門檻，須於下一季結束前遵守（第 22(2a) 條）";
 }
 
-type Live = { kind: "waiting" | "running" | "offline" } | { kind: "done"; verdict: Verdict } | { kind: "failed"; message: string };
+type Live = { kind: "waiting" | "running" | "offline" } | { kind: "done"; verdict: Verdict; at: string } | { kind: "failed"; message: string };
 
 function saveCsv(text: string, filename: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
@@ -166,6 +169,8 @@ export function Workbench() {
   const [live, setLive] = useState<Live>({ kind: offline ? "offline" : "waiting" });
   const [year, setYear] = useState<2026 | 2027>(2026);
   const [withFa, setWithFa] = useState(false);
+  // Lines a re-check (RecheckPanel) says need action → planned on the default, with the re-check as the reason.
+  const [downgrades, setDowngrades] = useState<Record<string, string>>({});
 
   // Line 1: the demo proof, verified live once the chain reader is ready (the Buyer tab's checks, same SDK call).
   useEffect(() => {
@@ -177,7 +182,7 @@ export function Workbench() {
     let on = true;
     setLive({ kind: "running" });
     verifyPresentation(data.proof, reader, { importerEORI: data.importer.eori, checkers: evidenceCheckers(data) }).then(
-      (r) => on && setLive({ kind: "done", verdict: toVerdict(data.proof, r, { chainId: data.network.chainId, block: r.atBlock }) }),
+      (r) => on && setLive({ kind: "done", verdict: toVerdict(data.proof, r, { chainId: data.network.chainId, block: r.atBlock }), at: new Date().toISOString() }),
       (e: Error) => on && setLive({ kind: "failed", message: e.message }),
     );
     return () => {
@@ -191,9 +196,11 @@ export function Workbench() {
       live.kind === "done" ? live.verdict : null,
       live.kind === "failed" ? live.message : live.kind === "offline" ? "offline view" : live.kind !== "done" ? "not verified yet" : undefined,
     );
-    const lines = [first, ...FICTIONAL_LINES.map(({ supplierName: _, ...l }) => l)].map((l) => shiftYear(l, year - 2026));
+    const lines = [first, ...FICTIONAL_LINES.map(({ supplierName: _, ...l }) => l)]
+      .map((l) => (downgrades[l.id] ? { ...l, downgradedBy: downgrades[l.id] } : l))
+      .map((l) => shiftYear(l, year - 2026));
     return buildPortfolio(lines, { year, priceEur: PRICE, ...(withFa ? { freeAllocation: { benchmarks: DEMO_BENCHMARKS } } : {}) });
-  }, [data, live, year, withFa]);
+  }, [data, live, year, withFa, downgrades]);
 
   const t = plan.totals;
   const maxReq = Math.max(1, ...plan.quarterlyHolding.map((q) => Number(q.cumulativeBasisT) / 2));
@@ -249,6 +256,13 @@ export function Workbench() {
           </table>
         </div>
       </section>
+
+      <RecheckPanel
+        verdict={live.kind === "done" ? live.verdict : null}
+        acceptedAt={live.kind === "done" ? live.at : null}
+        lineIds={plan.shipments.map((l) => l.id)}
+        onDowngrades={setDowngrades}
+      />
 
       <section className="sheet reveal workbench" aria-labelledby="wb-plan-h">
         <p className="sheet-kicker" id="wb-plan-h">

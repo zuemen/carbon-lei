@@ -28,7 +28,7 @@ Only the first column describes what exists. The pilot column restates the plan 
 | Lead auditor | A KERI identifier with its key event log ([`verifier/src/anchor.ts`](../verifier/src/anchor.ts)) | Anchors each credential's SAID in that log before registration | Hosting of the KERI agent, not estimated ([PILOT §6](PILOT.md#6-costs-test-network-and-production-chain)) |
 | Trust-registry operator (allowlist owner key) | [`verifier/src/onboard-check.ts`](../verifier/src/onboard-check.ts), then `addVerifier` and `addAuditor` ([PILOT §2](PILOT.md#2-roles-and-what-each-must-provide)) | Sends allowlist transactions; receives each body's vLEI chain to check | Gas per listed body and auditor; key custody (a single test key in the prototype, a multisig proposed for the pilot) |
 | Watcher | [`verifier/src/watch.ts`](../verifier/src/watch.ts), a polling process with the watcher key. It syncs revocations on-chain; it is not a KERI watcher and does no duplicity detection | Reads the body's KEL through the witnesses; sends `revokeAuditor`; suspensions are sent by hand ([ARCHITECTURE](ARCHITECTURE.md)) | An always-on process and the gas of each sync |
-| Importer | The hosted page or `carbonlei verify` (`--json` for a [machine-readable verdict](schemas/verdict.schema.json)) | Receives the proof; sends only read requests to an RPC node; no wallet; re-runs the check once `contestedWindowHours` (default 24 h) have passed since the report's registration, because a revocation synced within that window turns VALID into CONTESTED ([FAQ Q23](FAQ.md)) ([PILOT §2](PILOT.md#2-roles-and-what-each-must-provide)) | None on-chain |
+| Importer | The hosted page or `carbonlei verify` (`--json` for a [machine-readable verdict](schemas/verdict.schema.json)) | Receives the proof; sends only read requests to an RPC node; no wallet; re-checks every accepted value with `carbonlei recheck` (scheduled daily until it files), which reports a revocation, a supersession, a CONTESTED event and the close of the `contestedWindowHours` window (default 24 h) since acceptance ([Importer re-check](#importer-re-check-from-acceptance-to-filing), [FAQ Q23](FAQ.md)) ([PILOT §2](PILOT.md#2-roles-and-what-each-must-provide)) | None on-chain |
 | Bank or downstream buyer | The same verifier as the importer ([ADOPTION §5.1](ADOPTION.md#51-participation-when-the-cap-binds)) | Receives the proof the supplier chooses to share | None on-chain |
 | RPC providers | Public Sepolia nodes listed in `SEPOLIA_RPCS` ([`sdk/chain.ts`](../sdk/chain.ts)), or `--rpc` | Answer view calls and event searches; a node that fails is skipped ([README](../README.md#terminal-check-nodejs-2218-or-later-nvmrc-22200-no-docker-wallet-or-key)) | The provider's own limits; not measured |
 | KERI witnesses | Local containers in [`verifier/docker-compose.yaml`](../verifier/docker-compose.yaml) in the prototype | Receipt KEL events; the verifier checks the receipts in the exported evidence and does not query witnesses ([PILOT §3](PILOT.md#3-what-runs-where)) | Hosting, not estimated |
@@ -38,6 +38,7 @@ Only the first column describes what exists. The pilot column restates the plan 
 - The hosted page: a static build on GitHub Pages ([`.github/workflows/pages.yml`](../.github/workflows/pages.yml)) that runs the checks in the browser and reads Sepolia through public RPC nodes ([ADOPTION §8](ADOPTION.md#8-current-status-by-area)).
 - The Communication Template importer in the Supplier tab, which parses the file in a Web Worker and uploads nothing ([README](../README.md#start-from-the-commissions-communication-template)).
 - `carbonlei verify`, which never sends a transaction ([`sdk/cli.ts`](../sdk/cli.ts)).
+- `carbonlei serve` is the one exception to "no server": an HTTP API the importer runs on its own machine, never operated by CarbonLEI ([REST API](#rest-api-carbonlei-serve-deployment-and-security)).
 
 ## Needs an operator
 
@@ -101,7 +102,8 @@ An importer with many suppliers does not verify one proof at a time. The workben
 1. Collect each supplier's proof file and write a manifest with what customs knows about each consignment ([example](../fixtures/workbench/manifest.json)): `{ "eori": "<your EORI>", "shipments": [{ "proof": "proofs/a.json", "id": "<your line id>", "quantityTonnes": "200", "cnCode": "73181595", "country": "TW", "importDate": "2026-10-10" }, …] }`. A line with `"proof": null` is planned on the default. A folder of proof files also works; the quantity and date then come from each proof's shipment, and only when check 5 confirms it.
 2. `node sdk/cli.ts verify-batch manifest.json --out results.json` (or `npm run -s carbonlei -- verify-batch …`). Every proof is verified with the same checks as `verify --json`, at one block read once at the start, so all verdicts describe the same chain state (`pinnedBlock` in the results file). At most `--concurrency` proofs (default 2, at most 4) are verified at once, to stay within public RPC limits. The head-age limit still applies to that block: split a batch that takes more than about five minutes. Exit code: 3 if a verification could not run, else 1 if any proof is INVALID, 2 if any is CONTESTED, 4 if any is INCOMPLETE, else 0.
 3. `node sdk/cli.ts portfolio results.json --year 2026 --price 82.32 --csv worksheet.csv` prints the plan (`--json` or `--out` for the [schema](schemas/portfolio.schema.json)'s JSON) and writes the worksheet. Without `--price` the CLI gives no € figures (2026 goods are priced per quarter of importation; the SDK's `quarterPrices` option takes one price per quarter). `--benchmarks map.json` (`{"TW:7318": "1.364"}`, optional `"cbamFactor"`) deducts the free-allocation adjustment on default lines; `--defaults map.json` adds default values for goods the SDK does not list (only CN 7318 from Taiwan is built in).
-4. Review every default line's reason (no proof, a verdict other than VALID, check 5 not bound to your EORI, a CN code or origin the credential does not cover, more tonnes declared than were claimed on the ledger), then re-run before the quarter ends: a revocation synced within 24 hours of a registration turns VALID into CONTESTED ([FAQ Q23](FAQ.md)).
+4. Review every default line's reason (no proof, a verdict other than VALID, check 5 not bound to your EORI, a CN code or origin the credential does not cover, more tonnes declared than were claimed on the ledger).
+5. Before each quarter end and before filing, re-check what you accepted: `node sdk/cli.ts recheck results.json --proofs <proof folder> --out recheck.json`, then `node sdk/cli.ts portfolio results.json --year 2026 --recheck recheck.json`. A line the re-check says needs action (revoked, superseded, CONTESTED, claim gone) is then planned on the default, with the re-check as its reason ([Importer re-check](#importer-re-check-from-acceptance-to-filing)).
 
 **Rules the plan applies** (sources accessed 2026-10-16 unless stated)
 
@@ -129,9 +131,49 @@ Sources for this section:
 4. Commission Implementing Regulation (EU) 2025/2620, Annex points 4, 5.1 and 5.3, read from the Publications Office (`http://publications.europa.eu/resource/celex/32025R2620`), accessed 2026-10-16. http://data.europa.eu/eli/reg_impl/2025/2620/oj
 5. European Commission, DG TAXUD, Guidance on CBAM verification and accreditation for verifiers and National Accreditation Bodies, 24 August 2026, section on the free allocation adjustment, Table 3 "CBAM factor and (partly preliminary) CSCF values", p. 26, retrieved 2026-10-13. https://taxation-customs.ec.europa.eu/document/download/030fe146-38e5-46b8-82b5-5f72da089a7b_en
 
+## Importer re-check: from acceptance to filing
+
+A value accepted today can stop being usable later: the verification body revokes the report or a revision supersedes it, the watcher revokes the auditor or suspends the body within 24 hours after the registration (the report becomes CONTESTED), the registering address is rotated away, or the claim is no longer on the ledger. The first CBAM declaration, for 2026 imports, is due by 30 September 2027 (Reg. (EU) 2023/956 Art 6(1) as amended by Reg. (EU) 2025/2083; [CLIMATE_IMPACT](CLIMATE_IMPACT.md) source 20), so a value accepted in 2026 must hold for months. `carbonlei recheck` replaces "re-run the check later": it re-verifies every accepted record at one pinned block and says what changed since acceptance and what to do. Code: [`sdk/recheck.ts`](../sdk/recheck.ts) (no file system, also used by the hosted page), [`sdk/recheck-files.ts`](../sdk/recheck-files.ts); schema: [`schemas/recheck.schema.json`](schemas/recheck.schema.json).
+
+**Procedure**
+
+1. Keep what you accept: the Buyer tab's "Download verification record (JSON)" (it now carries the proof), or the `verify-batch` results file with the proof files, or the verdict of `verify --json` / POST `/v1/verify` stored with its proof as `{ "proof", "verdict", "eori", "acceptedAt" }`. Keep them in one folder.
+2. `node sdk/cli.ts recheck <folder> --out recheck.json` (`--json` prints the JSON; `--proofs <folder>` tells it where a results file's proofs are). A record without its proof is re-checked against the ledger only (the report's registration, revocation, supersession and validity, by its credential ID) and says so.
+3. Schedule it daily until you file, for example with [`examples/importer-recheck.yml`](examples/importer-recheck.yml) (GitHub Actions; copy it into your own repository). `--webhook <URL>` or `CARBONLEI_RECHECK_WEBHOOK_URL` POSTs the changed lines only (id, credential ID, change, severity, verdicts, action); never the EORI, the proof or the disclosed values. The URL is never printed, because it often carries a token.
+4. Act on each line: **action** → declare the line on the default value (with the year's mark-up) until the supplier sends a new proof that verifies VALID; for a supersession, ask the supplier for the proof of the new credential; for a CONTESTED line, a person reviews it ([Incident procedures](#incident-procedures)). **info** → nothing to change. **error** → the accepted value is not confirmed: fix the cause (usually the RPC nodes) and run again. `portfolio --recheck recheck.json` applies the action lines to the plan.
+5. Keep `recheck.json` with the record of the accepted value.
+
+| Change | Severity | When |
+|---|---|---|
+| `REPORT_REVOKED` | action | The body revoked the report (check 4), or it was revoked after the claim (check 5) |
+| `REPORT_SUPERSEDED` | action | A revision replaced the report before your claim (judged at the claim time when bound to your EORI); in ledger-only mode, any supersession (fail closed: the claim time is unknown) |
+| `AUDITOR_REVOKED_OR_BODY_SUSPENDED`, `ADDRESS_ROTATED`, `REVOCATION_CONTESTED`, `CONTESTED` | action | The verdict is now CONTESTED, with the CONTESTED rule that fired |
+| `CLAIM_NOT_ON_LEDGER`, `SHIPMENT_CHANGED`, `REPORT_NOT_ON_LEDGER`, `REPORT_EXPIRED`, `AUTHORITY_INVALID`, `ANCHOR_INVALID`, `NOW_INVALID`, `NOW_INCOMPLETE` | action | Check 5, 4, 7 or 6 fails, or another check, or some checks could not run |
+| `BECAME_FINAL` | info | Still VALID; accepted while the 24 h window was open, which has since closed with no event. The report can still be revoked or superseded later |
+| `WINDOW_OPEN` | info | Still VALID; the window is still open: re-check after it closes |
+| `IMPROVED`, `EXPIRED_SINCE` | info | A line that was not VALID now is (review before using it); ledger-only: past validity, which does not matter for a shipment claimed before |
+| `UNCHANGED`, `STILL_NOT_VALID` | none | Nothing to change |
+| `RECHECK_FAILED` | error | Unreadable record, record from another chain or registry, RPC failure |
+
+Exit codes: 3 if any record could not be re-checked or the webhook could not be delivered, else 1 if any line needs action, else 0. A scheduler therefore fails the run, and alerts, whenever a person has to look.
+
+## REST API (`carbonlei serve`): deployment and security
+
+`node sdk/cli.ts serve [--port 8787] [--host 127.0.0.1]` serves the same SDK calls over HTTP, for an ERP or compliance tool: POST `/v1/verify`, `/v1/verify-batch`, `/v1/portfolio`, `/v1/recheck`; GET `/v1/health` (chain ID, head block and its age, RPC node hosts, limits) and `/openapi.json` ([`schemas/openapi.json`](schemas/openapi.json), OpenAPI 3.1, hand-written). A verdict from `/v1/verify` equals `carbonlei verify --json` (tested); the header `X-CarbonLEI-Exit` carries the CLI exit code. Code: [`sdk/server.ts`](../sdk/server.ts), `node:http` only, no new dependency. It is a prototype.
+
+**Security caveats (read before deploying)**
+
+- **No authentication, no TLS.** Anyone who can reach the port can use it. It binds 127.0.0.1 by default and prints a warning when bound to any other address. Expose it only behind your own API gateway or reverse proxy, which adds authentication, TLS and rate limits.
+- **Denial of service.** Each verification sends tens of RPC requests. Limits: 1,000,000-byte bodies (413), `Content-Type: application/json` only (415), 60 s per request (504), 4 POST requests at once (503 with `Retry-After`), 50 lines per verify-batch, 500 records per re-check; node:http header and request timeouts against slow clients. A timed-out verification keeps its slot until it ends (it cannot be cancelled midway), so the cap holds. Tune with `--max-body`, `--timeout`, `--max-concurrent`; the RPC provider's own rate limits still apply.
+- **Personal data in logs.** One JSON line per request on stderr: request id, method, path, status, duration, body size, outcome (verdict or counts) and whether an EORI was given. Never the body, the EORI (not even hashed: an EORI is short and structured enough that an unsalted hash could be reversed by trying them), the client address or the query string. URLs inside error messages are cut to their origin, so an RPC API key in a URL path is not logged or returned.
+- **Files.** Evidence bundles a proof refers to are read only from `--evidence-dir` (default `demo/public`), after resolving symbolic links, at most 5 MB each; a path outside it is refused. A request body that repeats a JSON key is refused (400), as check 0 refuses a proof that does.
+- **CORS** is off: no browser page on another origin can call it, unless `--cors-origin <origin>` allows exactly one.
+- It never sends a transaction and holds no key. Threats: [SECURITY › HTTP API](SECURITY.md#14-http-api-carbonlei-serve).
+
 ## Not built
 
-- ERP or EDI connectors: the inputs are an Excel template and JSON files ([`sdk/cli.ts`](../sdk/cli.ts)).
+- ERP or EDI connectors: the inputs are an Excel template and JSON files ([`sdk/cli.ts`](../sdk/cli.ts)); an ERP can call the prototype REST API (`carbonlei serve`), but no ERP-specific connector exists.
+- A hosted alerting service: `carbonlei recheck --webhook` runs on the importer's own scheduler and POSTs to the importer's own endpoint; CarbonLEI runs nothing that watches on an importer's behalf.
 - A connection to any PACT network: the export is field-compatible JSON ([PACT_MAPPING](PACT_MAPPING.md); [ADOPTION §8](ADOPTION.md#8-current-status-by-area)).
 - Witness operation beyond the local containers ([PILOT §3](PILOT.md#3-what-runs-where)).
 - Custodial wallets: each party signs with its own key ([PILOT §2](PILOT.md#2-roles-and-what-each-must-provide)).

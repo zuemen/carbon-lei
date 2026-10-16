@@ -65,6 +65,11 @@ export interface ShipmentInput {
   verdict?: Verdict | null;
   /** Error of a verification that could not run (the `error` of a VerdictError). */
   verifyError?: string;
+  /**
+   * A re-check after acceptance (sdk/recheck.ts) found this line needs action, for example "REPORT_REVOKED": the
+   * line is planned on the default value whatever its verdict, with this as the reason.
+   */
+  downgradedBy?: string;
   /** Net mass in tonnes, as a decimal string with at most 3 decimals (kg). */
   quantityTonnes: string;
   /** CN code, 4 to 8 digits (spaces allowed). */
@@ -311,6 +316,7 @@ const countryOfLocode = (l: string | undefined) => (l && /^[A-Z]{2}/.test(l) ? l
  */
 export function eligibility(s: ShipmentInput): { ok: true; see: string } | { ok: false; reason: string } {
   const v = s.verdict;
+  if (s.downgradedBy) return { ok: false, reason: `re-checked after acceptance: ${s.downgradedBy}` };
   if (s.verifyError) return { ok: false, reason: `verification did not run: ${s.verifyError}` };
   if (!v) return { ok: false, reason: "no supplier proof" };
   if (v.overall !== "VALID") return { ok: false, reason: `proof ${v.overall}${v.primaryCode ? ` (${v.primaryCode})` : ""}` };

@@ -9,7 +9,7 @@ import type { DemoData } from "./data.ts";
 const CHECK_NAMES = ["Structure", "SAID", "Disclosures", "Signature", "On-chain report", "Shipment", "KEL anchor", "Authority chain", "Reconciliation"];
 
 /** A precomputed verdict (format 2), with the given check statuses; all other checks passed. */
-function fixtureVerdict(
+export function fixtureVerdict(
   overall: Verdict["overall"],
   disclosed: Record<string, string>,
   special: Partial<Record<number, Pick<VerdictCheck, "status" | "code">>> = {},
