@@ -12,12 +12,12 @@ import {
   causesOf,
   classify,
   classifyLedgerOnly,
-  loadRecords,
   postWebhook,
   recheckExitCode,
   webhookPayload,
   type RecheckDocument,
 } from "../recheck.ts";
+import { loadRecords } from "../recheck-files.ts";
 import { redact } from "../server.ts";
 import type { Verdict, VerdictCheck } from "../verdict.ts";
 import { recheckSchemaErrors } from "./helpers/recheck-schema.ts";

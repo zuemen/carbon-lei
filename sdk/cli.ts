@@ -31,7 +31,8 @@ import {
   type BatchResult,
 } from "./batch.ts";
 import { buildPortfolio, worksheetCsv } from "./portfolio.ts";
-import { applyRecheck, loadRecords, postWebhook, printRecheck, recheckExitCode, recheckRecords, webhookPayload, type RecheckDocument } from "./recheck.ts";
+import { loadRecords } from "./recheck-files.ts";
+import { applyRecheck, postWebhook, printRecheck, recheckExitCode, recheckRecords, webhookPayload, type RecheckDocument } from "./recheck.ts";
 import { createApiServer, DEFAULTS as SERVE_DEFAULTS, isLoopback } from "./server.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";

@@ -567,6 +567,8 @@ export function Buyer() {
         ? { quantityTonnes: q, verifiedIntensity_tCO2e_per_t: cmp.verifiedValue, declared_tCO2e: vq }
         : { quantityTonnes: null, verifiedIntensity_tCO2e_per_t: verifiedValue ?? null, declared_tCO2e: null },
       onChainClaim: claim ? { tx: claim.hash, block: claim.block, time: claim.time, url: explorer("tx", claim.hash) } : null,
+      // The proof itself, so `carbonlei recheck` can re-verify this record later (docs/OPERATE.md › Importer re-check).
+      proof: checked,
     };
     saveJson(record, `carbonlei-verification-${batchId || "record"}.json`);
   }

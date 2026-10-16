@@ -11,11 +11,10 @@
 //   none    — unchanged;
 //   error   — the re-check could not run (RPC failure, unreadable record): the old answer is NOT confirmed.
 // It never changes a verdict and sends nothing on-chain. Schema: docs/schemas/recheck.schema.json.
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
-import { pinnedToHead, runLimited, type BatchDocument, type BatchResult } from "./batch.ts";
+import type { BatchDocument, BatchResult } from "./batch.ts";
 import type { ChainReader } from "./chain.ts";
 import { reportKeyOf } from "./commitment.ts";
+import { pinnedToHead, runLimited } from "./pinned.ts";
 import type { Presentation } from "./disclosure.ts";
 import { EXIT, TOOL, verdictFor, type Verdict, type VerdictOptions } from "./verdict.ts";
 
@@ -315,46 +314,6 @@ export function recordsFromJson(
     return fromBatchDocument(x as BatchDocument, source, findProof);
   }
   return { records: [], skipped: [`${source}: not a verification record or a verify-batch results file`] };
-}
-
-/**
- * Reads a file or a folder of records (every .json file, in name order). A `verify-batch` results file names each
- * proof as given to verify-batch: it is looked up next to the results file, then in `proofsDir`, then in the
- * current directory; a proof not found leaves the record to a ledger-only re-check.
- */
-export function loadRecords(target: string, opts: { proofsDir?: string } = {}): { records: AcceptedRecord[]; skipped: string[] } {
-  const files = statSync(target).isDirectory()
-    ? readdirSync(target)
-        .filter((n) => n.endsWith(".json"))
-        .sort()
-        .map((n) => resolve(target, n))
-    : [resolve(target)];
-  const out = { records: [] as AcceptedRecord[], skipped: [] as string[] };
-  for (const file of files) {
-    const name = basename(file);
-    let x: unknown;
-    try {
-      x = JSON.parse(readFileSync(file, "utf8"));
-    } catch (e) {
-      out.skipped.push(`${name}: not JSON (${(e as Error).message})`);
-      continue;
-    }
-    const bases = [dirname(file), ...(opts.proofsDir ? [resolve(opts.proofsDir)] : []), process.cwd()];
-    const findProof = (p: string) => {
-      for (const b of bases) {
-        const path = resolve(b, p);
-        if (existsSync(path) && statSync(path).isFile()) return { path, text: readFileSync(path, "utf8") };
-      }
-      return null;
-    };
-    const r = recordsFromJson(x, name, findProof);
-    // A Buyer record's evidence bundles are read relative to the record file.
-    for (const rec of r.records) if (rec.proof && !rec.proofPath) rec.proofPath = file;
-    out.records.push(...r.records);
-    out.skipped.push(...r.skipped);
-  }
-  if (out.records.length > MAX_RECORDS) throw new Error(`${out.records.length} records: at most ${MAX_RECORDS} per run`);
-  return out;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
