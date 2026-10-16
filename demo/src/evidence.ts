@@ -3,6 +3,10 @@
 import { isSafeBundlePath, vleiCheckers } from "../../sdk/checkers.ts";
 import type { EvidenceCheckers } from "../../sdk/verify.ts";
 import type { DemoData } from "./data.ts";
+import type { AccreditationRegistry } from "../../sdk/verification-rules.ts";
+import registryJson from "../../fixtures/accreditation-registry.json";
+
+const ACCREDITATION_REGISTRY = registryJson as AccreditationRegistry;
 
 // One download per evidence file per page load, for at most MAX_FILES files (the oldest is dropped).
 // The checker still hashes the text against the proof on every verification, so a cached file is
@@ -37,5 +41,6 @@ export function prefetchEvidence(authorityEvidence: unknown) {
 }
 
 export function evidenceCheckers(_data: DemoData): EvidenceCheckers {
-  return vleiCheckers({ loadBundle: loadEvidence });
+  // Check 8 also runs the provenance sub-rules on the allowlist operator's accreditation record.
+  return vleiCheckers({ loadBundle: loadEvidence, accreditationRegistry: ACCREDITATION_REGISTRY });
 }
