@@ -96,11 +96,18 @@ found : search [1] cr1Inst(v1, bWatch, wOnRotation, gCancel, false, 10) =>* { S:
 *** REVOKE_HOLD of the rotation and cancels every WATCHER grant to another account within its delay
 none : search cr1Inst(v2, bWatch, wNone, gNone, false, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 none : search cr1Inst(v2, bNone, wOnRotation, gCancel, false, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
-*** Finding of 14 October (No solution while the model left role grants out): once the owner key has
-*** dropped the watcher, the body's own cancellation is not enough. The key grants WATCHER to an
-*** account of its own (nobody is left to cancel), suspends the body (a suspended body cannot cancel,
-*** M2), lets the rotation execute, lifts the suspension and revokes; expected: a solution each, the
-*** second on a path where the honest watcher never suspended (cr1BadThiefSusp)
+*** Finding C1 of 14 October, and the C1 prototype fix (branch c1-fix-prototype, not merged). Before
+*** the fix the owner key dropped the watcher at once, so even a body that cancels every rotation and
+*** a watcher that cancels every WATCHER grant lost (mutant revokeNow below). With the fix the
+*** revocation is delayed and the last watcher cannot be revoked; expected: No solution, and a
+*** non-vacuity witness (the drop was proposed, the watcher kept its role, time at the bound)
+none : search cr1Inst(v2, bWatch, wNone, gCancel, true, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+found : search [1] cr1Inst(v2, bWatch, wNone, gCancel, true, 10) =>* { S:CrConf } such that dropWitness(S:CrConf) .
+*** Residual after the fix: a watcher that does not cancel WATCHER grants (gNone). The key grants WATCHER
+*** to an account of its own, the honest watcher is then not the last one and its revocation executes;
+*** the key suspends the body (a suspended body cannot cancel, M2), lets the rotation execute, lifts and
+*** revokes (tick 9). Before the fix, the same instance was the C1 counterexample. Expected: a solution
+*** each, the second on a path where the honest watcher never suspended (cr1BadThiefSusp)
 found : search [1] cr1Inst(v2, bWatch, wNone, gNone, true, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 found : search [1] cr1Inst(v2, bWatch, wNone, gNone, true, 10) =>* { S:CrConf } such that cr1BadThiefSusp(S:CrConf) .
 *** V2 without monitoring: the attack completes (a solution), but not before tick 6 = 144 h (No
@@ -109,12 +116,13 @@ found : search [1] cr1Inst(v2, bWatch, wNone, gNone, true, 10) =>* { S:CrConf } 
 found : search [1] cr1Inst(v2, bNone, wNone, gNone, true, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 none : search cr1Inst(v2, bNone, wNone, gNone, true, 7) =>* { S:CrConf } such that cr1BadBefore(6, S:CrConf) .
 *** V2, weaker monitoring; expected: a solution each. A watcher that reacts only to RevocationQueued;
-*** a watcher whose role the owner key removes first; a watcher that suspends after the rotation but
-*** does not cancel the attacker's WATCHER grant (the grant's account lifts the suspension and the
-*** revocation executes in the same block)
+*** a watcher that suspends after the rotation but does not cancel the attacker's WATCHER grant (the
+*** grant's account lifts the suspension and the revocation executes in the same block)
 found : search [1] cr1Inst(v2, bNone, wOnQueued, gCancel, false, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
-found : search [1] cr1Inst(v2, bNone, wOnRotation, gCancel, true, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 found : search [1] cr1Inst(v2, bNone, wOnRotation, gNone, false, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+*** C1 fix: the body misses the rotation and the owner key tries to drop the watcher first. Before the
+*** fix this found a solution (the watcher's role removed at tick 0); now expected: No solution
+none : search cr1Inst(v2, bNone, wOnRotation, gCancel, true, 10) =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 *** Non-vacuity of the two V2 No-solution results; expected: a solution each. A rotation proposal
 *** cancelled and time at the bound; the rotation done, a revocation queued, the body suspended and
 *** time at the bound; a WATCHER grant to the attacker cancelled and time at the bound
@@ -130,3 +138,7 @@ found : search [1] cr1Inst(v2, bNone, wOnRotation, gCancel, false, 10) +mut noLa
 found : search [1] cr1Inst(v2, bNone, wOnRotation, gCancel, false, 10) +mut grantNow =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 found : search [1] cr1Inst(v2, bNone, wOnRotation, gCancel, false, 10) +mut noGrantCancel =>* { S:CrConf } such that cr1Bad(S:CrConf) .
 found : search [1] cr1Inst(v2, bNone, wOnRotation, gCancel, false, 10) +mut liftByOwner =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+*** C1 mutants (2 mutants, 2 runs), on the C1 instance; expected: a solution each. revokeRole for
+*** WATCHER_ROLE at once (the code before the C1 fix); the delay kept but the LastWatcher guard removed
+found : search [1] cr1Inst(v2, bWatch, wNone, gCancel, true, 10) +mut revokeNow =>* { S:CrConf } such that cr1Bad(S:CrConf) .
+found : search [1] cr1Inst(v2, bWatch, wNone, gCancel, true, 10) +mut noLastGuard =>* { S:CrConf } such that cr1Bad(S:CrConf) .

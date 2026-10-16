@@ -688,8 +688,12 @@ endm
 ***   bNone, wNone, gNone: no obligation; the body and the watcher may still act at any time, or never.
 *** The body's obligation applies only while it can cancel (cancelRotation: not suspended); while
 *** it cannot and the watcher has lost its role, nobody honest can cancel, and time may pass.
-*** With dropOK the owner key may also revoke the watcher's role (revokeRole is not delayed in the
-*** contract unless the owner is a timelock); without it, it may not.
+*** With dropOK the owner key may also try to revoke the watcher's role; without it, it may not.
+*** C1 prototype fix (branch c1-fix-prototype, not merged): in V2 the revocation is two-step,
+*** proposeRoleRevoke then executeRoleRevoke after ROTATION_DELAY; it executes only while another account
+*** holds WATCHER_ROLE (LastWatcher; here only the attacker's tw can be that account), and only
+*** another watcher or the owner can cancel it, so the honest watcher cannot cancel its own. Before
+*** the fix revokeRole was immediate: the mutant revokeNow (and V1, where revokeRole is immediate).
 *** The attacker's WATCHER grant goes to an account it controls (tw; not an address of the body, so
 *** not tracked as an Addr). With the role it may suspend the body (which closes the body's own
 *** cancel path, M2) and lift suspensions; liftSuspension and executeRevocation can be in one block,
@@ -714,7 +718,9 @@ mod CARBONLEI-CR1 is
   *** RoleGrantNeedsDelay); noGrantCancel lets only the owner cancel a pending grant (the WATCHER
   *** cannot); liftByOwner lets the owner key lift a suspension without the role (liftSuspension
   *** without onlyRole(WATCHER_ROLE))
-  ops noHold noLapse grantNow noGrantCancel liftByOwner : -> CrMutant [ctor] .
+  *** C1 mutants: revokeNow revokes the WATCHER role at once (the code before the C1 fix);
+  *** noLastGuard keeps the delay but drops the LastWatcher guard
+  ops noHold noLapse grantNow noGrantCancel liftByOwner revokeNow noLastGuard : -> CrMutant [ctor] .
   op empty : -> CrConf [ctor] .
   op __ : CrConf CrConf -> CrConf [ctor assoc comm id: empty] .
   op {_} : CrConf -> CrSys [ctor] .
@@ -734,6 +740,10 @@ mod CARBONLEI-CR1 is
   op gprop : Nat -> CrFact [ctor] .
   *** the attacker's account tw holds WATCHER_ROLE
   op twatch : -> CrFact [ctor] .
+  *** pendingRoleRevokes[WATCHER_ROLE][watcher] = readyAt (C1 fix)
+  op dprop : Nat -> CrFact [ctor] .
+  *** ghost: the owner key proposed revoking the watcher at least once
+  op dtried : -> CrFact [ctor] .
   *** ghosts: a WATCHER grant to tw was cancelled at least once; a suspension was lifted
   op gcancel : Bool -> CrFact [ctor] .
   op lifted : Body -> CrFact [ctor] .
@@ -800,6 +810,12 @@ mod CARBONLEI-CR1 is
   op thiefWatcher : CrConf -> Bool .
   eq thiefWatcher(twatch S) = true .
   eq thiefWatcher(S) = false [owise] .
+  op hasDProp : CrConf -> Bool .
+  eq hasDProp(dprop(T) S) = true .
+  eq hasDProp(S) = false [owise] .
+  op markD : CrConf -> CrConf .
+  eq markD(dtried S) = dtried S .
+  eq markD(S) = S dtried [owise] .
   op hasWatcher : CrConf -> Bool .
   eq hasWatcher(watcher S) = true .
   eq hasWatcher(S) = false [owise] .
@@ -863,8 +879,18 @@ mod CARBONLEI-CR1 is
   *** suspendVerifier by the WATCHER (not lifted within the bound)
   crl [suspend] : { watcher cur(B, A, T) S } => { watcher cur(B, A, T) markH(S) susp(B) }
     if not isSusp(B, S) .
-  *** the owner key revokes the WATCHER role
-  rl [drop-watcher] : { dropOK watcher S } => { S } .
+  *** the owner key revokes the WATCHER role at once: V1, and V2 before the C1 fix (mutant revokeNow)
+  crl [drop-watcher] : { dropOK watcher S } => { S }
+    if isV1(S) or mutant(revokeNow, S) .
+  *** C1 fix: proposeRoleRevoke(WATCHER_ROLE, watcher) with the stolen owner key
+  crl [propose-drop] : { ver(v2) dropOK watcher clock(N) S }
+    => { ver(v2) dropOK watcher clock(N) markD(S) dprop(N + delay) }
+    if not hasDProp(S) /\ not mutant(revokeNow, S) .
+  *** executeRoleRevoke: anyone, once readyAt has passed, and only if another account (tw) holds
+  *** the role (LastWatcher), unless the mutant noLastGuard. No cancel rule: only another watcher,
+  *** here the attacker's tw, or the owner, the attacker, may cancel, and neither does
+  crl [exec-drop] : { dprop(T) watcher clock(N) S } => { clock(N) S }
+    if N >= T /\ (thiefWatcher(S) or mutant(noLastGuard, S)) .
 
   *** H2 paths (V2). proposeRoleGrant(WATCHER_ROLE, tw) with the stolen owner key, which holds
   *** DEFAULT_ADMIN_ROLE because it follows ownership; again after a cancellation
@@ -946,6 +972,11 @@ mod CARBONLEI-CR1 is
   ceq grantCancelWitness(gcancel(true) clock(M) tmax(M) S) = true
     if not thiefWatcher(S) .
   eq grantCancelWitness(S) = false [owise] .
+  *** non-vacuity (C1 fix): the owner key proposed revoking the watcher, the watcher still holds the
+  *** role, and time reached the bound
+  op dropWitness : CrConf -> Bool .
+  eq dropWitness(dtried watcher clock(M) tmax(M) S) = true .
+  eq dropWitness(S) = false [owise] .
 
   *** ------------------------------------------------------------ instance
   *** cr1Inst(contract version, body monitoring, watcher monitoring of rotations and revocations,
