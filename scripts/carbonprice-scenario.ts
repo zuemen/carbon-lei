@@ -4,7 +4,7 @@
 // synthetic precursor root) certifies the mill's carbon price statement, anchors its SAID in the lead auditor's KEL
 // and registers it in the same EmissionsClaimRegistry (separate key domain), with the mill's supplier wallet as the
 // address that may claim against it; the mill signs the statement (EIP-191) and claims the tonnes of wire rod it
-// delivered to the screw maker against it (importerCommit = the screw maker's LEI). Shared by
+// delivered to the screw maker against it (importerCommit = the screw maker's LEI and its credential's SAID). Shared by
 // sdk/test/carbonprice.integration.test.ts and scripts/carbonprice-local.ts. Local chain only: nothing here runs on
 // Sepolia.
 import { readFileSync } from "node:fs";
@@ -20,7 +20,7 @@ import {
   type CarbonPriceEvidence,
   type CarbonPriceStatement,
 } from "../sdk/carbonprice.ts";
-import { auditorAidHashOf, batchKeyOf, hashString, importerCommitOf, leiHashOf } from "../sdk/commitment.ts";
+import { auditorAidHashOf, batchKeyOf, hashString, importerCommitOf, leiHashOf, precursorBeneficiaryOf, shipmentBeneficiaryOf } from "../sdk/commitment.ts";
 import { isoToSeconds, tonnesToKg, type Hex } from "../sdk/credential.ts";
 import { newSalt } from "../sdk/encoding.ts";
 import type { SignedCredential } from "../sdk/issue.ts";
@@ -137,12 +137,22 @@ export async function registerStatement(w: CarbonWorld, st: CarbonPriceStatement
   ]);
 }
 
-/** The operator claims `quantityTonnes` of good against `st` for `beneficiary` (maker LEI or importer EORI). */
-export async function claimAgainst(w: CarbonWorld, st: CarbonPriceStatement, s: { batchId: string; quantityTonnes: string; beneficiary: string; from?: PrivateKeyAccount }) {
+/**
+ * The operator claims `quantityTonnes` of good against `st` for `beneficiary`: a maker's LEI with `goodSAID`, the
+ * maker's credential that relies on the statement (precursorBeneficiaryOf), or the importer's EORI with
+ * `shipmentBatchKey`, the one shipment of the good the claim covers (shipmentBeneficiaryOf). Without either, the
+ * claim commits to the bare LEI or EORI, which check 10 does not accept (kept for the attack tests).
+ */
+export async function claimAgainst(
+  w: CarbonWorld,
+  st: CarbonPriceStatement,
+  s: { batchId: string; quantityTonnes: string; beneficiary: string; goodSAID?: string; shipmentBatchKey?: Hex; from?: PrivateKeyAccount },
+) {
   const batchSalt = newSalt();
   const beneficiarySalt = newSalt();
   const reportKey = carbonPriceKeys(st).reportKey;
-  const args = [reportKey, batchKeyOf(reportKey, s.batchId, batchSalt), tonnesToKg(s.quantityTonnes), importerCommitOf(s.beneficiary, beneficiarySalt)] as const;
+  const who = s.goodSAID ? precursorBeneficiaryOf(s.beneficiary, s.goodSAID) : s.shipmentBatchKey ? shipmentBeneficiaryOf(s.beneficiary, s.shipmentBatchKey) : s.beneficiary;
+  const args = [reportKey, batchKeyOf(reportKey, s.batchId, batchSalt), tonnesToKg(s.quantityTonnes), importerCommitOf(who, beneficiarySalt)] as const;
   const receipt = await send(w.c, s.from ?? w.millSupplier, "registry", "claimShipment", args);
   return { claim: { batchId: s.batchId, quantityTonnes: s.quantityTonnes, batchSalt, beneficiarySalt }, args, receipt };
 }

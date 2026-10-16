@@ -28,15 +28,27 @@
 //     the verification bodies, registers it in the same EmissionsClaimRegistry under a separate key domain
 //     (SCOPE_DOMAIN): one current statement per installation and period, revocable, superseded by a new one;
 //   - carries `productionTonnes` as the registered tonnage: the operator claims the tonnes of good it delivered to
-//     each downstream maker against it (importerCommit = that maker's LEI, or the importer's EORI for the good
-//     itself), so the contract's ExceedsVerifiedTonnage cap stops the same statement from reducing more tonnes than it
-//     covers, across all makers and importers.
+//     each downstream credential against it (importerCommit over precursorBeneficiaryOf: that maker's LEI and the SAID
+//     of the maker's credential that relies on it; for the good itself, shipmentBeneficiaryOf: the importer's EORI and
+//     the batch key of the one shipment the claim covers), so the contract's ExceedsVerifiedTonnage cap stops the same
+//     statement from reducing more tonnes than it covers, across all makers, credentials, importers and shipments.
 // Check 10 (only when the proof carries carbonPriceEvidence) verifies all of that, re-derives the effective price
 // from the statement's fields with a PINNED exchange rate (never the statement's own), caps the paid emissions per
 // tonne at the credential's embedded emissions, and reports the € per tonne of the declared good that the deduction
 // may use. The deduction itself (÷ reference price × quantity) is computed by sdk/portfolio.ts.
 import { encodeAbiParameters, keccak256, recoverMessageAddress } from "viem";
-import { auditorAidHashOf, batchKeyOf, hashString, importerCommitOf, installationCommitOf, leiHashOf, reportKeyOf, supplierCommitOf } from "./commitment.ts";
+import {
+  auditorAidHashOf,
+  batchKeyOf,
+  hashString,
+  importerCommitOf,
+  installationCommitOf,
+  leiHashOf,
+  precursorBeneficiaryOf,
+  reportKeyOf,
+  shipmentBeneficiaryOf,
+  supplierCommitOf,
+} from "./commitment.ts";
 import { isCnCode, isLei, isReportingPeriod, isoSeconds, kgToTonnes, tonnesToKg, type Hex } from "./credential.ts";
 import type { PrecursorReport } from "./precursor.ts";
 import { computeSaid } from "./said.ts";
@@ -399,6 +411,8 @@ export interface CarbonPriceContext {
   importerEORI?: string;
   /** The proof's shipment quantity (the tonnes a statement on the good itself must cover). */
   shipmentTonnes?: string;
+  /** The proof's shipment batch key (a claim against a statement on the good itself is bound to that shipment). */
+  shipmentBatchKey?: Hex;
 }
 
 const SEE = "specificEmbeddedEmissions_tCO2e_per_t";
@@ -438,13 +452,16 @@ function emptyReport(): CarbonPriceReport {
  *    on, or another installation, period, CN code or LEI; not registered, registered with other keys, revoked or
  *    superseded; the operator's signature is not from the address registered as the credential's supplier; the
  *    certifier's KEL anchor or vLEI chain fails (another role, no accreditation for activity LIV, not on the allowlist
- *    at registration, another root); no claim for this maker/importer, or fewer tonnes claimed than needed; rebates
+ *    at registration, another root); no claim for this maker's credential (precursor) or for this importer's shipment
+ *    (the good itself), or fewer tonnes claimed than needed; rebates
  *    understated against the scheme's own parameters; the implied payment exceeds the official record; more emissions
  *    attributed than the mechanism covered; the exchange rate differs from the pinned one; the stated € price exceeds
  *    the recomputed one by more than PRICE_TOLERANCE_EUR;
  *  - warn CONTESTED → CONTESTED: the certifier's lead auditor was revoked on the allowlist after the registration;
  *  - skipped → INCOMPLETE: no pinned exchange rate for that currency and year; the precursor the statement applies to
- *    was not verified (check 9 not decided); a statement on the good itself without the importer's EORI;
+ *    was not verified (check 9 not decided), or the precursor statement is not signed into the credential (no
+ *    precursorDigest: its mass per tonne m is the supplier's word, so it cannot set the deduction); a statement on the
+ *    good itself without the importer's EORI or without a shipment in the proof;
  *  - advisory warn (overall unchanged): exchange rate of another year than the period; paid emissions capped at the
  *    credential's; the stated price is below the recomputed one (the lower is used).
  * Every detail starts with DRAFT_LABEL.
@@ -502,7 +519,8 @@ export function carbonPriceChecker(opts: CarbonPriceCheckerOptions) {
     const lines = extra.precursors?.lines ?? [];
     const line = lines.find((l) => l.source === "verified" && l.credSAID && st.credentials.includes(l.credSAID));
     if (st.credentials.includes(ctx.core.d)) {
-      const own = extra.precursors?.attributedDirect ?? d[SEE] ?? null;
+      // The good's own direct emissions come from the precursor statement only when its body signed it.
+      const own = (extra.precursors?.signed ? extra.precursors.attributedDirect : null) ?? d[SEE] ?? null;
       target = {
         kind: "good",
         credSAID: ctx.core.d,
@@ -512,10 +530,16 @@ export function carbonPriceChecker(opts: CarbonPriceCheckerOptions) {
         lei: goodLei,
         installationId: d.installationId,
         reportingPeriod: d.reportingPeriod,
-        beneficiary: extra.importerEORI,
+        // One claim covers one shipment: the claim commits to the importer's EORI and the shipment's batch key.
+        ...(extra.importerEORI && extra.shipmentBatchKey ? { beneficiary: shipmentBeneficiaryOf(extra.importerEORI, extra.shipmentBatchKey) } : {}),
         ...(extra.shipmentTonnes ? { needKg: tonnesToKg(extra.shipmentTonnes) } : {}),
       };
       if (!extra.importerEORI) note("skipped", "", "the statement is on the good itself: its claim is checked for the importer, so verify with your EORI");
+      else if (!extra.shipmentBatchKey) note("skipped", "", "the statement is on the good itself: its claim is bound to one shipment, and this proof carries none");
+    } else if (line && !extra.precursors?.signed) {
+      // m_i and the precursor's identity come from the precursor statement: an unsigned one cannot set the deduction.
+      note("skipped", "", "the statement applies to a precursor, but the precursor statement is not signed into this credential (no precursorDigest), so its mass per tonne cannot be used");
+      return done();
     } else if (line) {
       target = {
         kind: "precursor",
@@ -527,7 +551,8 @@ export function carbonPriceChecker(opts: CarbonPriceCheckerOptions) {
         lei: line.producer?.lei,
         installationId: line.producer?.installationId,
         reportingPeriod: line.producer?.reportingPeriod,
-        beneficiary: goodLei,
+        // The claim commits to the maker's LEI and the good credential's SAID, as the precursor claim of check 9.
+        beneficiary: precursorBeneficiaryOf(goodLei, ctx.core.d),
         ...(line.neededTonnes ? { needKg: tonnesToKg(line.neededTonnes) } : {}),
       };
       if (line.status === "fail") note("fail", "CARBON_PRICE_INVALID/NOT_BOUND", `the precursor credential the statement applies to fails check 9 (${line.code})`);
@@ -610,7 +635,7 @@ export function carbonPriceChecker(opts: CarbonPriceCheckerOptions) {
       const s = await rd.shipmentStatus(batchKey);
       if (s.claimedAt === 0n || s.reportKey !== keys.reportKey) note("fail", "CARBON_PRICE_INVALID/NOT_CLAIMED", `batch ${cl.batchId} was not claimed against this statement`);
       else if (s.importerCommit !== importerCommitOf(target.beneficiary, cl.beneficiarySalt as Hex)) {
-        note("fail", "CARBON_PRICE_INVALID/NOT_CLAIMED", `batch ${cl.batchId} was claimed for someone other than ${target.kind === "precursor" ? `the maker ${target.beneficiary}` : "you"}`);
+        note("fail", "CARBON_PRICE_INVALID/NOT_CLAIMED", `batch ${cl.batchId} was claimed for someone other than ${target.kind === "precursor" ? `the maker ${goodLei} for this credential` : "you for this shipment"}`);
       } else {
         report.claim.claimedTonnes = kgToTonnes(s.quantityKg);
         if (target.needKg !== undefined && s.quantityKg < target.needKg) {

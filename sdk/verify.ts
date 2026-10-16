@@ -1,8 +1,9 @@
 // Full verification of a supplier's proof (presentation), shared by the hosted page and the CLI.
 // Checks: 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment,
 // 6 KEL anchor, 7 authority chain, 8 report reconciliation (advisory; its sub-rules on the report dates, site visit and
-// accreditation, sdk/verification-rules.ts, fail it only when the signed report breaks them), and 9 precursors (sdk/precursor.ts) only for a
-// credential that commits to a precursor statement or a proof that carries precursor evidence, and 10 carbon price
+// accreditation, sdk/verification-rules.ts, fail it only when the signed report breaks them; for a credential whose
+// core commits to a reconciliation, check 8 not decided on the signed extract makes the result INCOMPLETE), and
+// 9 precursors (sdk/precursor.ts) only for a credential that commits to a precursor statement or a proof that carries precursor evidence, and 10 carbon price
 // paid (sdk/carbonprice.ts, draft CBAM Art 9 rules) only for a proof that carries carbon price evidence.
 // All steps run even after a failure, so the result shows every failing check;
 // only a malformed presentation (step 0) stops early.
@@ -31,7 +32,7 @@ import {
   tonnesToKg,
   type Hex,
 } from "./credential.ts";
-import { extractShapeProblem } from "./consistency.ts";
+import { extractShapeProblem, pickReconciledClaims, reconcile, type ReportExtract } from "./consistency.ts";
 import type { SubRule } from "./verification-rules.ts";
 import { decodeDisclosure, disclosureDigest, type CredentialCore, type Presentation } from "./disclosure.ts";
 import { recoverIssuer } from "./eip712.ts";
@@ -82,7 +83,7 @@ export type Overall = "VALID" | "INVALID" | "CONTESTED" | "INCOMPLETE";
 
 /** Something the caller should know about how the checks were run; it does not change any check. */
 export interface VerificationWarning {
-  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED" | "PRECURSORS_NOT_CHECKED" | "CARBON_PRICE_NOT_CHECKED";
+  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED" | "RECONCILIATION_NOT_CHECKED" | "PRECURSORS_NOT_CHECKED" | "CARBON_PRICE_NOT_CHECKED";
   detail: string;
 }
 
@@ -127,7 +128,7 @@ export interface EvidenceContext {
   report?: ReportRecord;
   reader: ChainReader;
   /** The options of this verification that a producer's proof is verified with too (check 9). */
-  options?: Pick<VerifyOptions, "contestedWindowHours" | "minAddressTenureDays">;
+  options?: Pick<VerifyOptions, "contestedWindowHours" | "minAddressTenureDays" | "precursorBudget">;
 }
 
 export interface VerifyOptions {
@@ -159,6 +160,11 @@ export interface VerifyOptions {
    * a key in any object, which `JSON.parse` would silently resolve to the last value.
    */
   proofText?: string;
+  /**
+   * Internal (check 9): producer verifications left for the whole precursor tree, shared by its tiers
+   * (sdk/precursor.ts MAX_PRECURSOR_NODES). Callers leave it out.
+   */
+  precursorBudget?: { left: number };
 }
 
 /**
@@ -692,6 +698,7 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     options: {
       ...(opts.contestedWindowHours !== undefined ? { contestedWindowHours: opts.contestedWindowHours } : {}),
       ...(opts.minAddressTenureDays !== undefined ? { minAddressTenureDays: opts.minAddressTenureDays } : {}),
+      ...(opts.precursorBudget ? { precursorBudget: opts.precursorBudget } : {}),
     },
   };
   const c = opts.checkers ?? {};
@@ -935,6 +942,27 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
   } else {
     checks.push({ ...(await reconciliationP), index: 8, name: NAMES[8] });
   }
+  // A credential whose core commits to a reconciliation (the three hashes, signed by the body) states that check 8
+  // can be decided on the signed report: an extract that is missing, differs from the signed one or cannot be read,
+  // or reconciled fields kept hidden, leave the sub-rules on the signed report unapplied. Not decided is not a pass
+  // (INCOMPLETE), so changing or dropping the extract cannot turn a signed sub-rule breach into a VALID result.
+  // Whether the presented extract is the signed one is recomputed here, whatever checker ran check 8.
+  const c8i = checks.findIndex((x) => x.index === 8);
+  const c8 = checks[c8i];
+  const signedRec = core.reconciliation;
+  let extractIsSigned = false;
+  if (signedRec && p.reportExtract !== undefined && !extractShapeProblem(p.reportExtract)) {
+    const rc = pickReconciledClaims(disclosed);
+    if (rc) {
+      const mine = reconcile(p.reportExtract as unknown as ReportExtract, rc).reconciliation;
+      extractIsSigned = mine.inputHash === signedRec.inputHash && mine.outputHash === signedRec.outputHash && mine.ruleVersionHash === signedRec.ruleVersionHash;
+    }
+  }
+  const reconciliationNotChecked = signedRec !== undefined && c8.status !== "fail" && (!extractIsSigned || c8.status === "skipped");
+  if (reconciliationNotChecked && c8.status !== "skipped") {
+    const why = c8.code || c8.status;
+    checks[c8i] = { ...c8, status: "skipped", code: "", detail: `not decided (${why}): ${c8.detail}` };
+  }
   // ---------------------------------------------------------------- 9 precursors
   let precursorReport: PrecursorReport | undefined;
   const signedPrecursors = core.precursorDigest !== undefined;
@@ -966,6 +994,7 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
         ...(precursorReport ? { precursors: precursorReport } : {}),
         ...(opts.importerEORI ? { importerEORI: opts.importerEORI } : {}),
         ...(p.shipment?.quantityTonnes ? { shipmentTonnes: p.shipment.quantityTonnes } : {}),
+        ...(batchKey ? { shipmentBatchKey: batchKey } : {}),
       });
       carbonPriceReport = rep10;
       checks.push({ ...c10, index: 10, name: NAMES[10] });
@@ -1002,6 +1031,13 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     });
   }
 
+  if (reconciliationNotChecked) {
+    warnings.push({
+      code: "RECONCILIATION_NOT_CHECKED",
+      detail: `check 8 not run or not decided, although the credential commits to a signed reconciliation: ${checks[c8i].detail}`,
+    });
+  }
+
   // Check 9 decides whether the value's precursor basis holds, when the credential commits to one: not run is not a pass.
   const precursorsNotChecked = signedPrecursors && c9?.status === "skipped";
   if (precursorsNotChecked) {
@@ -1016,7 +1052,7 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
 
   const failed = checks.filter((x) => x.status === "fail");
   return {
-    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length || precursorsNotChecked || carbonPriceNotChecked ? "INCOMPLETE" : "VALID",
+    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length || reconciliationNotChecked || precursorsNotChecked || carbonPriceNotChecked ? "INCOMPLETE" : "VALID",
     checks,
     disclosed,
     hidden,

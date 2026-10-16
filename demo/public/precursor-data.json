@@ -73,7 +73,7 @@
         "cnCode": "7213",
         "massPerTonne": "1.125",
         "source": "verified",
-        "credSAID": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1",
+        "credSAID": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY",
         "batchId": "WR-DEMO-2026-0001"
       }
     ]
@@ -81,63 +81,63 @@
   "statementNote": "Illustrative: 1.125 t of wire rod consumed per t of screws (0.125 t leaves as scrap); 0.18 tCO2e/t direct emissions of the screw process; 0.18 + 1.125 x 1.44 = 1.80 tCO2e/t.",
   "good": {
     "proof": {
-      "core": "{\"d\":\"EBZUDwbTCZyoYt_IQR-RoW7fw79nPhFuOHuRXIjwNLWL\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO152\",\"auditorAID\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\"},\"digests\":[\"2WAFEQqREAbgfMYGqwNr0CC08iLNfYFwGChaBC9NZXM\",\"3l1lBoByNS-Itda-sxAbSNqPOqGaGiADUqUpKpVh6Qw\",\"4aRYZwl1rV5f1YwMfbPsY3JaIQi_UKRmRPSWgwzbY5o\",\"6m7-FeapAuSSyZBMbv012_qE8uACcLk1UGhdozUS4ks\",\"C2FewdYgVIGRsSmHEJVTzN7qGJhKNdrKrOVNwo33kaM\",\"DJrSrHBJMXwhFr5Li8nEwWXlWtnYMH-TmtyDyliIJNo\",\"Dbc2P8MFrX5F-Vj5AvReW3m2hMcrEA5DtVWh5cZFzbo\",\"IVDxUPvlawvj7Td8IQNYuOrmrD1ybeVoLpwy9TC-uhc\",\"K2i6FZC_iQ81h9nQ_smja-rMUaRpzr96e-Yg1Uvtf54\",\"W8gldV142szNx2_vRxaHBf_U0fLgGxquTMtR74LetsA\",\"YZEqkJgRRFPmuzzUmLRS8RvwZ_fNOUH8KaGdx_0IsC0\",\"ZoIqU16q-erpDSc79cfey2lrPoMh69PAVUImifaENFY\",\"_mp53TIgBfZNFMiONmeqi4CJcX3trmU_ek_krchL2fc\",\"b5TU9MaoIfsmzG35_aNHkoMuJQwcuxUR05HgLjMjsYQ\",\"gBEHM9ASeG1gDCmps1fuggUR9Jalx_y_b2s7tZliiWc\",\"hQC0NeoQhW0pyYB-y9g4ZEXmaSPUb4se-z_r24gua1Y\",\"j0FBHvgWb8haaMnV7xtgr2sL876WY7JIHUdUNHB8btk\",\"n2uwQ6fV5N-Pmvo89vQBxHI6gMA1x0iFI7AeLP_miCY\",\"nRXhsABvX6Bu50XYRoS__6_KGhddGWH113p-t-6fO94\",\"np--jdg5j3M0VR_639NQ7mL1Huka2H80h-0X1HlzzxU\",\"oP80-e9Ckax7vL2sp1Wd3akXgCeKI8TS_bqOSnBHjK0\",\"pURIzVB0wlY1gBfISPZx097wgCpO9EteQh-19IU5wok\",\"q5OjwCes0hbi_QbaIlkcqvvy59FY0OB50cczrV1RXKs\",\"s8s0zjXEX8RS9UrEcfIbFxP6H4HGcX6gaqBIAme3vYE\",\"sXBSdCyagiRs2QKQIek7v7EmiEY1YOmxHDlvSfBH5AU\",\"uAXQdEeIu1Ag0Qdq0rxwkUFMI-rdK6-oLanizi5pEZQ\"],\"precursorDigest\":\"0xe08ce08320d1ad4698c528649d9b9c62ad3e45de072fcf0481b0f86bda00df22\",\"issuedAt\":\"2027-03-20T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
-      "signature": "0xeb8af6f967c855b51f6757622a9547a8d006a07a138fdc913581e96e0ed66d305794d3c85e83c1aebb8a8f5816ab54be7c1bb092766478f9f6be18c1dab03f6d1b",
+      "core": "{\"d\":\"EDHfkmzqPG3mgIIlwNcBETwcMQwOI3l4USo6sWZy2tRP\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO152\",\"auditorAID\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\"},\"digests\":[\"-ALlty-lm7uZLz3TGkoaTl6kUHw3Uw2RwPfW1GZ3p2o\",\"-dFU2ds7utcfcMx8WEos4ZPd9TWHe7wwKNuAW4FP3Z8\",\"1xENHRtysamugG-p2VNi_Ag8RLUvZTy00vmo-QGKjbA\",\"4USNLUxxRDvaNijoR4DLvwi2YxXWTsjJV5i221RR0-I\",\"6eu9vpcyYHgmfBZAWJEEz0ar3eODEN4FGmObbOH-53E\",\"81O_79HnaBkFMsJ9UXDM9aNpGk9WR6Mm5PAshUyT_lI\",\"8VEs1ZeQ7dF7PjW3fGy3AwdcHpznspMs-25wQbJxm9Y\",\"E5SLxh6meYbhHurrdKLTUJw36pSz2pu9wHmFSisbf3E\",\"Ky_gF4tQJTvD4evIANyf8Vz2vEaiXuLJWJ9Hu3cYKeo\",\"Pz9o-yRaN4JAqWSNiG_RiDNxIp5XJRrwAJGwHNfYFYI\",\"RqaTqmUZGsMXBiOCtrjKc4MjSlNop98DcpH0KPkCL4w\",\"VqwloP25vp2Gys4d_ROLnXW4WT3xx5LL2jJPGjF0KQo\",\"W1QEuMk57XnEJ__OTTIUMCejle2FVRe6Niwr3L9Jk6g\",\"YhFDqD7r7zWe5s689mYMEhYcSxPyqI2JHAZY07RMSTg\",\"aJ08Ch3RXANlTsXOxT8737UWSrPLcc04fO0eJ0AEucs\",\"ad1yVeOJ4Oh5VGaQYetSGvrsP0_zYs7qN4R2HmePVdM\",\"b6TdWui8HST8SAg3Ta3HElr8eLwVBgj5yq1HCR_pOXc\",\"bFwk2wiBckJ2wmTkXsEykoXh-cV4aXFTmIBYGwlLhxw\",\"cBHLjU6PLb4K0vXAt5WhXXoOwDrctK4DWrOF1h4KiPY\",\"hUSt1bVszByzDaQZwg5CNWFYMPOpy1gozoWV2R8Ds4M\",\"mPJ4sXSZjL0bUOCH_uBS54z2U1UTQrDQGQlbTdlxXwM\",\"peuF3I9HFFfEyIIDzgQsi2gBdz8hoCClTgAqn7w0694\",\"rDOzRgu4rlD-JgLAW0_Igsj37s_gNtUHGtdtO4ossQM\",\"sJ2Z_y7N4pN-N-0bvC3ncmolCqBdnp0w5TnvBF16mNk\",\"szzEanvWg8MgVJcLVdbcY_bRRNMjvSUST4c45FQByRo\",\"zBrfhtBHwyEoooXpNRQRiPGWrupj0Hfk2NMCdgOgk8s\"],\"precursorDigest\":\"0xb234d20b81aa6a44ff978035050207a0e5f0bdb192f9aa598035f9d1f58ecd84\",\"issuedAt\":\"2027-03-20T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
+      "signature": "0x28eeb34d435ea0674ad677b0a3876e5e40704f037dcb5af597a12cc772695dd818975eaa0cda7715cc26a6513aa0d1b86d67b4c509266824c25698e8f8fcb1a51b",
       "disclosures": [
-        "WyIweDVmNGNlZjU0MjY2ODFlYWYzZDhjZTYwNjA5YWI2Y2QxMDcyNDBmYzlkZWEwNTc1YTBhNzdhZTQ5MmYzYjg2NzUiLCJzdXBwbGllckxFSSIsIlpaWlowMFRXU0NSRVdERU1PMTg1Il0",
-        "WyIweDJiZjA2MmI4NGU3NTY3NzRkMTQ5MzBjYzFlNTEwNDAxNTc0ZDRjMGMyZDQ0MWE3YzE0MjBkMTEwMDRhZjhhYzYiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXU0NSRVdERU1PMTg1LTAwMDEiXQ",
-        "WyIweDI3ZjE1ODc4NjVjODI0ZjkxZTc5ZWVlZTYyMTNjNjE5MWNjYTkwOGYzZWFhOTc5N2YyNTY2NDA0OTUxMDRiZjMiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
-        "WyIweDE2ZmY1YzFiYTM0MGE3YzRjMGMyN2NlNzY1OTAyZWFiOWFmNmFmYWQwODFiZTgyOTdjMWRhZTk1MWRjMTExNjIiLCJjbkNvZGUiLCI3MzE4Il0",
-        "WyIweDk1ZDVjNGEyOGFkMGYwZDFmYjkwNmU1NjZhMmQ5OTM2ZmJlMDY0Y2JjMDRlYzc5ZTRmN2YxYmE3OGI0OWMyYzkiLCJjYmFtUm91dGUiLCJDIl0",
-        "WyIweGMwZDA1MTNjYjdhZDgyZTYwYWY2MTNhMTEzNTVkYjI4NzIyNjk2MGI3MTA5NTcxNDVjMzZkNWNiYzZiYTg0ODEiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
-        "WyIweDFjYWE2M2UxNmFlMThhZDA0YThlN2M2MDAwMzBhZjUzZWE3YzcyY2MwMjNiN2MyOTQxM2U5M2EyODI3MmQ0ZDUiLCJ2ZXJpZmllZFRvbm5lcyIsIjUwMCJd",
-        "WyIweDFkOGMyOTkwMWMyNTMzMDE4ZmZkNjhkMjUyNWU0NGNmYTBkZTU0ZGQxM2NjNzcyNWNlNDFlMGJmNmE4ODFjMmMiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
-        "WyIweDAwYzM5MTFiNjQ0NTAyYjU1MTkzMTllZGY2OTNmZmJlMTJlNjRkM2UxNDRkYWJhNDQ4YTQ2ZmE2MTRiODg4NjQiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
-        "WyIweDdiY2VmZDRmNzE5ZjIyYjE2NWM3MDRkNTg4M2VmZGI5ZmZkYTFlNWVmOWJmNmJlMDRkNDFlYjVjMTlkNWQzNTUiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
-        "WyIweGFmY2NkNDA4Njk3YTZkYTczZTU2NWMyZGViZmQ1OWUzMzZmNjFlZTMzMmJiZmU4ZTE2ZGVlODJkMjRiYzZhMWYiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tMDAwMSJd",
-        "WyIweGFkYTE5YWU4NDAyMWU3YjgyOWFkMzQ0OGU0ZjU5MGQ5MzJiNzZmYmZjNzYzYjc2ZjQ3NWIyMzRjNzExZGVmMTciLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMTUyIl0",
-        "WyIweDAwNzczMzVjYWExMTI3ZjA5N2NiOGFjM2Q5N2FlNGI4YWM4M2VjMzJhYjZhZDE3NjE1ZGQ1MGViMWJlZTIyMmUiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAxIl0",
-        "WyIweGM3NDRkNzI2OTQ1YzY2YzdiMTgyZTNmZjg4MzY3MWI0MjdlNGY3Y2M2MTFhODRlYjdmOTM2NGM5NzNjZDgzYzEiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
-        "WyIweGQ3YmUxOTkxNDY3YzM4ZGU1NzUxNWExYTYxMDg4NDFlMjllMDJiMDAyZmE3YThhYmQ2Y2JjOGNiZDJmYzM4MDYiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
-        "WyIweGE4MTU5Zjg5ZTIwN2QzZTcyZjM1MzQ0OTVmMWE2Y2IwYTkxZTg2MDhmYTU2MGQ4OTgzNjZkNTU5MTc4YmMxYjgiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
-        "WyIweGYwZWI1ZGU0OTA2YjgxZTFlZDFiODUyODg5MGJlYTY1ZTAxNGM3MzgzMzk3NTgwMTY2MmFhYzEzMDkzYWFmOGUiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
-        "WyIweGNlMTAzM2Y0NDg1ODZiMTIzNDY3Y2RjNGE2ZWM4ZmFkMzgxMTNhOWFkMzdkNDZhNGQyZDkxNmIyYzAwZjljMGQiLCJpZFNhbHQiLCIweGMxMmY4MDQ5ODY2ZWEyYmZhYzlhMDEyNWIyYjczY2FjYjQyNWE3OWIyYmQxNTIzNzY0YjRlZmRiYmIxYzRkYzQiXQ",
-        "WyIweDdkZjczMTMzYmEyMmIwYjg4MjZjYzg1Y2IwN2ZmNGMyOTVhMzE0ZTViZWVjMDQ1MzA5NTUzODQ1YjdhYWYyNWEiLCJiYXRjaFNhbHQiLCIweDhlODdkYTA0NzNkNTYzNDg0MDgzZWJjMTgwODgzZWMzNmE4Mzk0OTAzMjBhZmY1NjQ4MDM2NjgwNzY4Y2Y3OTMiXQ",
-        "WyIweGYxYTU3ZGFkOTUwM2NhYjNmODM2NjhhYzc4N2U2MjI3YWIxZjM5MmY4MDdlN2NmMzJkYjY2MmZlMzgyNmRiN2EiLCJpc3N1ZWRBdCIsIjIwMjctMDMtMjBUMDA6MDA6MDBaIl0",
-        "WyIweDQ3MTFkODU0ZjI3OTY2YTQ1ZTcwNDg4NGRiMGRmOTE0YzQ2ZGZiZTU2OWRkOGVkYzdjMWNlYzJhZGRhOTllN2YiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
+        "WyIweDM5YjNlZDFlYmIxZGEyN2FhYTY5ZmViZTk0ZjU3MDZjZDNmNjAxMzMxM2JlOTczZWYxYjdjNzQyZjVmMmRmZDciLCJzdXBwbGllckxFSSIsIlpaWlowMFRXU0NSRVdERU1PMTg1Il0",
+        "WyIweDYyNjE0N2Q1NzI3YWQzMWZiYzRhOTFjM2M2OGY4YWNjZjNiNzE0NmE4ZGQyNjY4NDUyNTNiNGRhYmJmZjE3NzgiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXU0NSRVdERU1PMTg1LTAwMDEiXQ",
+        "WyIweDQ5ZWU0MGYwNGJmYzQ1NDQ5OTYzOWY3NTk0MGUxNWUxMjA4YTY5NDYzNTMzNWI5Yjk0MDU5YjhhYWU0YTM5M2IiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
+        "WyIweDAxNmQyMWNkNTkxMmMwMzZiM2FiOGRhZjZkMjczNjRiNmYzNTQyMWVmZWI5NDI4Njc5Y2MwZTgyZTc1NDUxMzIiLCJjbkNvZGUiLCI3MzE4Il0",
+        "WyIweGZhY2ZkNzNhYWQwZDBkN2RlMTg4YzVhZGE4ODEzNjEwNWU5N2M4OTg1ODg5ZjNkNmNmY2U0YmQxNmY5MjQwZGMiLCJjYmFtUm91dGUiLCJDIl0",
+        "WyIweGE4M2ZlZDVmYjc0YzNmYTNiY2I4YzgyOGUzOTM3MTU3NGM4YWQ3ZWM4MjAxNjgxOWVjZjg3MTUxZTFmYTk3NWUiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
+        "WyIweDAwOGFhYTE2NDg4MGJhOTdiOTk3YjZiNjZjY2VlOWEwNGUyYzFmNjFiNjRmZDg0Yjg3YmY1MzA5NjIzZDgxZWIiLCJ2ZXJpZmllZFRvbm5lcyIsIjUwMCJd",
+        "WyIweGJlYmRkNWIzYjAzNTVhMGE1ZGJlYTA3ZjlhMTI1MGM3ZDczNzlkOTAzZTRjNTQ5OWNjYWUzNGRlZTE3YTg1NDgiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS44Il0",
+        "WyIweDMyOGRmMDEwNjk2Y2YwYmFmNDczMWY0ZDRlYWU5NzFmNzJmOWYxNTE3NTViMDJlMGI3OWYyNmVlZmRkNWRjYzYiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
+        "WyIweDk2YWMwOTUzYzYyYjc3ZWM3ZWQ1MjAzZjE0MjE3NjA0MmQwY2JhYmRlZWRkYTM4YzhkMmQ3Nzc2NzQ3YjUzMTciLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
+        "WyIweDAzZjAwZDQ2N2Y3NjkwMDZlYmM0YzBmNDZkODBmOTU4MzIyMGViM2Q3NWU1MWM5YjI1OTdiNGM5ZDkxNzIzYTkiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tMDAwMSJd",
+        "WyIweDgzZTNhZTIyMDg4MzYyMmQ2ZTk1MTk4Mzg3ZGE4ZTBmZjk3YjQ4YjNiMjFlYzBhNmI1ODdlOTM5N2JkMjQ3MWYiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMTUyIl0",
+        "WyIweGI1MTZkNzBmOTRlNTU3NTE2ZjczZWY1ZGM5ZDZiZGNiNDBjNmU4NjVhNDNmNzUyMjk4ODdhYzUxYjNjYzU1MGQiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAxIl0",
+        "WyIweDQ3ZmRiN2YzZTkxZDVlNDk4NjYzMjJjNDAxZjI5ODhjNWI5ZWYxZTA5MGMwOWMxYTAzNmYwZGE0OTE5MGJmNzkiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
+        "WyIweGE3YTAyMGRmYzk3YzVlOTIwNjNkMjQyMDhmY2U4ZmYxZGNiOGQ5MmE0OWExNTA0NWNhZjRkMzZhNzI2Njk4ZTYiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
+        "WyIweDhiMTZjMDM5MzY5NjhjN2U4NDIxZGE1Y2VjMTk4ODM2N2UwMzcxMGUxZmRhY2Y2ZDhiNjVkZTQ4ZTI4MGRhZmUiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
+        "WyIweDdlYWFlOTk3OGQwYTc1MTRkMTY2M2MzNWZhMTEzNTcxYThmOWE2OTkzY2I0Nzg3ZjdlZjVjYTc0NzlmZTc1NjEiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
+        "WyIweDgzNWU2YjAyMTJhN2Y1YmRmNGE1OTEzMzY2NTcxNDEwNzAyNTFjOTVjOWU5OGY3YjYzYzFlMTJkMDRkODZmNTYiLCJpZFNhbHQiLCIweDFjMTM3OTJhOTY1NGQyYmU1NDdiYTFiMTBiNGY1ZmI0ZDdiNGJlYjlhYjA2ODA2NWZhZGQ1MDM5NDg5Y2E2MDgiXQ",
+        "WyIweDI3ODM2MzIwYWNhZDE4MzE3NGNkZDdmMTFlMzlkMGY5ZDliZmE5ZmM0MWNiN2U4YzNjM2U5NjJjMGRhZjc3ZjEiLCJiYXRjaFNhbHQiLCIweDQzNjQxMWU2ZmUxYzMxZmI1ZmMzMTU0NGJjMmNkOWFlYzgyMmQzMjVmZmM0NzFiZDQxYWVhMTA1YmQ0ZDFhNzgiXQ",
+        "WyIweGViYTQ2Zjc1ODY4MzM1OGIxYjVhYjI4YTlhNzE4YmU5MmQyOWRkNGI1MmU5ZDI1ZTIzY2FiNzcwZGJkZTE2YTkiLCJpc3N1ZWRBdCIsIjIwMjctMDMtMjBUMDA6MDA6MDBaIl0",
+        "WyIweDk1ZDFlYjNmOGUwNDRkNTg2OGRjZTZhNTM4ODUxMzM0MjNhMGQ1MDRiMmQ5YjlhYjdhZmIwYTVjOTgxZGRiMDYiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
       ],
       "shipment": {
         "batchId": "BATCH-DEMO-2026-0001",
         "quantityTonnes": "200",
         "shipmentDate": "2026-10-10",
-        "importerSalt": "0x16fc59b5837740308547b7fdcba40b77f155bbb5f32ea0746ee88bece8fe51fc"
+        "importerSalt": "0xdd311b92fdf91f961c3d841e09de45404adabf884f2a607673991c4b763adf62"
       },
       "anchorEvidence": {
         "note": "SYNTHETIC (local precursor demo and tests only; built without KERIA by verifier/src/precursor-chain.ts, deterministic test keys). Its root is a synthetic test root, not the demo's pinned root; a verifier must pin it explicitly. Fictional identities. Interaction event #1 in the auditor's KEL anchoring credential SAIDs.",
         "synthetic": true,
-        "credSAID": "EBZUDwbTCZyoYt_IQR-RoW7fw79nPhFuOHuRXIjwNLWL",
+        "credSAID": "EDHfkmzqPG3mgIIlwNcBETwcMQwOI3l4USo6sWZy2tRP",
         "auditor": "ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY",
         "kelSeq": 1,
         "event": {
-          "raw": "{\"v\":\"KERI10JSON000134_\",\"t\":\"ixn\",\"d\":\"EKiXQZzWM1a0zmMPGfo-t6a_zL2QwFAX22P9dxSNAX1r\",\"i\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\",\"s\":\"1\",\"p\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\",\"a\":[{\"d\":\"EBZUDwbTCZyoYt_IQR-RoW7fw79nPhFuOHuRXIjwNLWL\"},{\"d\":\"EOn5aiS0liiRa0gcDwAknjiPxnZz6a_tcN-UdZwaTYat\"}]}",
-          "said": "EKiXQZzWM1a0zmMPGfo-t6a_zL2QwFAX22P9dxSNAX1r",
+          "raw": "{\"v\":\"KERI10JSON000134_\",\"t\":\"ixn\",\"d\":\"ELivvqbVGpOyPSa4GDohTnR3V1IVeXf7Dj0fzhlAYC_N\",\"i\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\",\"s\":\"1\",\"p\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\",\"a\":[{\"d\":\"EDHfkmzqPG3mgIIlwNcBETwcMQwOI3l4USo6sWZy2tRP\"},{\"d\":\"EGIBLrHqOOYjNmCH2CU88KB8YGX8MEdik8M9WdtxnoDb\"}]}",
+          "said": "ELivvqbVGpOyPSa4GDohTnR3V1IVeXf7Dj0fzhlAYC_N",
           "type": "ixn",
           "sn": "1",
           "prior": "ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY",
           "seals": [
             {
-              "d": "EBZUDwbTCZyoYt_IQR-RoW7fw79nPhFuOHuRXIjwNLWL"
+              "d": "EDHfkmzqPG3mgIIlwNcBETwcMQwOI3l4USo6sWZy2tRP"
             },
             {
-              "d": "EOn5aiS0liiRa0gcDwAknjiPxnZz6a_tcN-UdZwaTYat"
+              "d": "EGIBLrHqOOYjNmCH2CU88KB8YGX8MEdik8M9WdtxnoDb"
             }
           ]
         },
         "signatures": [
           {
-            "qb64": "AAD00cHIkoIHurbCp3FBJ1WaTWp38zu-eoImw6mRoa2mJ3SvKZmIG4li4N-QkxfV9poLIU8GcffaKpV88TmR0S0I",
+            "qb64": "AAAsGeBUTZSDa6hY3_xvdRRlXeUUOh1Jsv_6s3Yox0yxxxTm5f5YHQaSumE60rCClALjI58tWsBs34bqHb5PXEoJ",
             "index": 0,
-            "hex": "f4d1c1c8928207bab6c2a7714127559a4d6a77f33bbe7a8226c3a991a1ada62774af2999881b8962e0df909317d5f69a0b214f0671f7da2a957cf13991d12d08"
+            "hex": "2c19e0544d94836ba858dffc6f7514655de5143a1d49b2fffab37628c74cb1c714e6e5fe581d0692ba613ad2b0829402e3239f2d5ac06cdf86ea1dbe4f5c4a09"
           }
         ],
         "signingKeys": [
@@ -153,7 +153,7 @@
         },
         "establishmentRaw": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\",\"i\":\"ELxS976GfwMTpcSfETKic6QLolPBhDswuoDuViwl1nqY\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK1aCVZY1aQpvfcN3YmSzfQ9G2GRpY9xezMwsxSt9Frs\"],\"nt\":\"1\",\"n\":[\"EDYSLv5r7ahfrMiey5rX1QPSMiCbPt9tPdIWyDCha_sT\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}",
         "establishmentAttachment": "-AABAAAgFDDyNxs6Z3E0fS3ODO6nYbBDE39dbdyQNf_Dsn2IE8oeMmlX3ALm48yqq4vO96kEjJIr_kQXunNZQooIHJUJ",
-        "kelAttachment": "-AABAAD00cHIkoIHurbCp3FBJ1WaTWp38zu-eoImw6mRoa2mJ3SvKZmIG4li4N-QkxfV9poLIU8GcffaKpV88TmR0S0I",
+        "kelAttachment": "-AABAAAsGeBUTZSDa6hY3_xvdRRlXeUUOh1Jsv_6s3Yox0yxxxTm5f5YHQaSumE60rCClALjI58tWsBs34bqHb5PXEoJ",
         "checks": {
           "saidRecomputed": true,
           "sizeMatchesVersion": true,
@@ -185,67 +185,67 @@
               "cnCode": "7213",
               "massPerTonne": "1.125",
               "source": "verified",
-              "credSAID": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1",
+              "credSAID": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY",
               "batchId": "WR-DEMO-2026-0001"
             }
           ]
         },
         "proofs": [
           {
-            "core": "{\"d\":\"EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0x976EA74026E726554dB657fA54763abd0C3a0aa9\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO249\",\"auditorAID\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\"},\"digests\":[\"-BwkL8GcG0qJD5urgc8mQyc_x3QcfiKp_rBC-OpHZdM\",\"2FJcjhtG0Fx6GMhh4wPzlXU3emLXInioFLQqJkG1MQc\",\"7rHTu9SwjxTlZO56BgHBy3BoMC0Vm77bVG7eyXgR0wM\",\"8ne_dkTYs0xPHrQi_P8iqMV609Fw50h4qw506XWLU5o\",\"8qcuNUxCPvfxI3L3R2iWsY1pArDm06Uirm8l0IItgJw\",\"A-GQfw-et8ihvTFF4i4nrBJvSHlBxhFy7XFH5miEzSk\",\"AprXQrM0zvSmrNNr04CoqInN0TrpydYELKBT6ifHyo4\",\"DtwagyHBrCUizk_jkb6WGVbh6tce5JBSlcA8IvoPcFM\",\"GjEaQg8rSMSTt9P2maELECpDt6cOGz0Q0_1agaGAKuI\",\"HBFZxXAjP8rUFuThJbRjnKdPNmKuIhqUZqb4BEsdkQk\",\"HUSoZ0KGb1vUUf4L7FIXG1Eyn6vP8VYKLzQqHoOwivw\",\"M9lNhfKHG9feK9nS8Gjyajh-ytwAM3FpelbwpDNk_9k\",\"MRVXXozxdKCZ7btZfkpJH6g_fmuC3U24Wdccaa_LAGU\",\"Oqmlxio6e-XDV8z7H5IbDt1S9-ITzIDQbBmAmlcXZKE\",\"RgoyOI1Iz_UfzenrKtrh_WSvyuYRiNQB8zUj_5yiYKY\",\"Y4pfxSqN2bBQ_2C84z8kfzGfxpFbZ3cM2veFde2HyPU\",\"ajs290aAV2fsAmKdohzQ-0bw8SgQCHpCg86TZ1FNSS4\",\"byzqpjv3cmqeIgi1L4Px1YicPORGz9EqBnSF8uq4yo0\",\"htDZr-tK51xZ0qEfU0-_QwTZNgh4VmgAQdcafsb1_Z8\",\"q47iDl4e_BnB9LDVfXuhxFk7D3hE2plESEQnrV8q7q0\",\"qhnL5HBnA54TahO6seVSG51Xx2CPWNtMN8lomau2uyM\",\"qj1tLKht9NBIWgRdgH-LSwod5s48V1zYRdMbvScXWmQ\",\"v2NPwxs-tdEM0mm7HqnIWhTdVgI_j5-2345B-ynFZWA\",\"wK3MGxGwaSv83Vc5vBpB5TTMVfJyGjQPPFD0sgXlBOc\",\"wQy61fsSRghTfp4WunjQPDxjCWpi04EYdchOLYAh7P4\",\"wrpGhjdRiq8Jx1ab5-sZqbQipHVlmDfIXRWfa6EMKMU\"],\"issuedAt\":\"2027-02-15T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
-            "signature": "0x6880c0c568288859d6ef548bef8471b838ba9c472b2350d73daa6189191c6307010fb8486f7efa1b34cf7b58ea5b4dda8f8c3a655c3e8b96a4cce4ede419935e1c",
+            "core": "{\"d\":\"EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY\",\"type\":\"CBAM Embedded Emissions Credential\",\"version\":\"0.1.0\",\"issuer\":{\"verifierAddress\":\"0x976EA74026E726554dB657fA54763abd0C3a0aa9\",\"verifierLEI\":\"ZZZZ00EUVERIFDEMO249\",\"auditorAID\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\"},\"digests\":[\"-ezApf1FlYC9U3lQB5ZUDebyxrfAjMCYZ3Qijmq6yXU\",\"17p2HaBaPW5CemhSlhelpIc0HFugnMpfqK-_OC2958A\",\"1EbGzcPfNDrYYDGojZC_6cSa3FltC6dQb1m4Z0DY8YQ\",\"4EF17yksbuwaAoo2E-zlelK0Pa6vXVeER-Uq50Vdg1Y\",\"6ZXQHjiM52pzbCBsL7svfppc00s8gg1cwoM8UYQEU3k\",\"8NVA4K-o6s5zLQ27KVWl8t8bzQXpyn-n1M86AZtKUbc\",\"99kP1xNgGR0qsvbGNt0iH_wmxZx9lDX97wW9-LBJ72E\",\"B10oZ_msncFIRoxhPk30KCh1xOb1cGndKhsX-Dn5wPs\",\"B7NOogsyp-7o5QOJhX3nseFMgHboRNlRRgWli3oCXNo\",\"DfirggTodilMb_K-CdRX6U9hPcIqZXjQPejx8yHDeAA\",\"GQuK353ZfuxWFREiHGylT0U3WbmRLEe496TfqUYYnaA\",\"GbK_LBOmaL4_0OmFI4Lz0whMFp_26EzMirPOoeNrxyA\",\"O7os3T086p4bJZSLbwSjkE4S7te-AfOBt7hTk5EO_bg\",\"PxVhJngnxl6yDuikIyhNQNW3nGpF7VgfX_br2LsxJfI\",\"RRtMpkPRCsn33_fv3OAwSwBo5qe5ljzL4nhwfh7ctSk\",\"TllvQMXyjyo794sV6gtleRN9BYmcDDtHVyejqufsdsM\",\"VN-gTCa3nGGMYoKQIReS3I3JsxY0m2_sDByUW9oi_ys\",\"ZiU1cslqcrfNDkUtaexNH2aXew4IVMhOxFn3pPJKjGQ\",\"eGoLOI9dTXgfdjDsodHMUrT9bYcPew8lRb4BKYxhPCI\",\"izBvxAFnlcRWHUHqYP86bAoA9RrCZObGh7cJAkdjD1E\",\"kqs7nWsec2P_FHq15b5mq8tl7VrrGq6gm7xJoxTQfXc\",\"ptsWB_Al74Gbq1O2MvJl8P9Iuz9QWNsXDLXOz8N48Yg\",\"tAH1KLRVJ2XGpT580_mcYf-Fbe1c9QI7ZWP57d34gSU\",\"uWu03C3ZNRxYf4xrQq0-CA-7RXP3teHaXCrvY26ttmA\",\"xJRrtn51yQXabOqfDDjQGhpo1Ud-7ikR7s4rqU6fjY4\",\"yxerv5AYqW9l-5y3IDcRLUr4Zv9P5d7LR9lYRvupRcg\"],\"issuedAt\":\"2027-02-15T00:00:00Z\",\"validUntil\":\"2027-12-31T00:00:00Z\"}",
+            "signature": "0xc244b23c60a4afd50d4af9735a1ddbce7180f3c07f4fb31bc49cd36cebd108af29be44d10f98d5fb02618b2a73bc31145c93302bf62221b3362f19790d3520b11b",
             "disclosures": [
-              "WyIweDQzYzExZDk1ODFjNDU3MGEwYmNjMjI3ODFiNTQ5Y2E5NDFiOTU3NGZhNDJhNDBkYmFlNDA1OGVlMWI2NjIyYTQiLCJzdXBwbGllckxFSSIsIlpaWlowMFRXV0lSRVJERU1PMTA4Il0",
-              "WyIweDA3MDg5YmM3MGZkMWEzNjc3Y2E0YjU4YmJkNzMyYWQxZDZiYjYxODNjMmQ1NzM5MmU1OGQzNTgzZTU3Nzc2YTUiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXV0lSRVJERU1PMTA4LTAwMDEiXQ",
-              "WyIweDAyMzc1NWI1MTU0M2NlMjljMDZiY2MyNjU4YzM1MGQ2M2RjYmY3MTY4MGNjZmYwMTliNTljZDYxYjc1Zjc5NjUiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
-              "WyIweDgzNmRkNDFkMGY4M2JkMmE2MGE3MWEzNTU3ZGRmOGU1NzU3NTJkZGNlNTFjYjA3MTY4ZDkxNjI0ZDkxZDI5NzMiLCJjbkNvZGUiLCI3MjEzIl0",
-              "WyIweDhhOTg3ZmRlNDk3MDY0NzIyN2QzMWRkZGQyNzhiY2FhODI2MmNiZDZlZjFmZDVhNGFmNWViZThiNWFkMDMwOTAiLCJjYmFtUm91dGUiLCJDIl0",
-              "WyIweDdjYTcyNGUzZjU0YTQ5ZmI4MjJlMzc4MDgyZTI0YzQ1MDkyZmYxNzk5MDJjNjQwOTE5MDA4ZjA0MDM2MjgzN2YiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
-              "WyIweGE5OTQ3MDNkYjAzODc2YTRlMGUwNTBmODJkYjVmNTBiODE0ZWU0YWZkM2I2NmIxNjI0NjFjNGZhZWUxNDI2YmYiLCJ2ZXJpZmllZFRvbm5lcyIsIjEwMDAiXQ",
-              "WyIweGNlYTAzMmQyNTcwMDA4OWZkZmU4ZmQzZGIyNzJlNTBhYTJkZjM0NDIzMmRkYmUzYWU0NmRiZjQzYjA2YzQ1MjEiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS40NCJd",
-              "WyIweGE2NWQ2MzBkNmFmNTcwN2I3NDMxMGJkYzJmMTI0N2YwY2NiNTk5MTFlY2ZhMDJlNzE2MTMxZTc1MzYxNDE4MzAiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
-              "WyIweGY4Y2RlYmNmOWZiNzM4NTczOWYwNjdmNzlhMzMyYTg3ZTI4MjFjZDc3NTgwOTgyMDJlODQ5NWY4OTRmMmQ5MjIiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
-              "WyIweDZjMGUzYjIyY2ZlN2M4OGNlNDcxYWUwN2E4NTEzOWFlYjhkZmJlOTNiYjQ4YzRiNzY2YTQ5MTE4OWZlMzg3OTciLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tV1ItMDAwMSJd",
-              "WyIweGEyMGQxNmU3ZjFjZWE4MTE0NTU2ZTdhMDI5NGMxODkyODExZTA2ZjliNGQ4MGUyNTNhNzI0MjYwMDBjOTU2MmQiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMjQ5Il0",
-              "WyIweGNiY2Y2NzVlOWM5YzdjZDdjNjdlNDhkMmFjZjg4MGIwOTRmMTQ4OWRjZmRiYTBmY2I0OGQ4MjEwN2FjYmVkNWIiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAyIl0",
-              "WyIweDExNWZkNTg1NWU1OTQwNjJiYWIxYjU3OGU1OTU5MDZiYjEyNDMwYTNmZWVmYzU0ZDhiNDcwMGU1YmE0M2Y4NzQiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
-              "WyIweDVhYTUxYzQ3NWUxZDM5ZTE4YjJkNTk1YjJjMWU2NTljNDRlMTE5ZTU1ZGE3Mzg1MWRhZmNlOTcxN2NkZmRiZDgiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
-              "WyIweGRkOTYxOTRjZjMxNjgzNjBmZjJiMDc5OGI3YzMyZjM0ODY0NzBhYzdhZmQ4NGRmMzhjZTEyMmU2YWQ0ZmJhODAiLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
-              "WyIweDRmZmMzNjc1YTE1YTY1NWIxMWUzMDRjMGY3NjIyMWIwZWY4MTk0ODcxZDUwNTAwOTczMjc2ZTAyMzE3MThiNGQiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
-              "WyIweDI5YzllYzE0N2FmZjc5Mjc2MmM1OGIyMTBkMmE5OTkxZGY1YWQxZjAxYjk5ZDhlYzRiMDJlOTM3NDQ3NmU4Y2MiLCJpZFNhbHQiLCIweGEyMTI1ODY0YzA5ZTQ3MzhkYjg5NGRiODI5ODBjYWUwYTEyY2E2YzBkNjFlOWJmMmIzNGFmMGRlYzZiZTkwYTMiXQ",
-              "WyIweDc1NDhlNTA4ZjA5NzAxZjY3YTBhMzgxMGFkMmZiNjU2NDBjZTAxMGI4OTcyOTQ3YWMxZTU4MGY2MDY3MDQ2MjgiLCJiYXRjaFNhbHQiLCIweGNlZDYxMDhmYTM0Mzg0OWI3YzBhZjBkMDlmZWZkNjQ3MWVjNTkyOWUxM2JkYmFlZWYxY2QyYjdhZDA3NTVmYTkiXQ",
-              "WyIweDk2YjE4YTFlZWVkMmE5MzY3M2Y3NzJlZDBlMThhYzRkMDQ5YzQ1OGM3ZGExM2Q3OTIyMWE2OTZhMjI1MTQ1ZGMiLCJpc3N1ZWRBdCIsIjIwMjctMDItMTVUMDA6MDA6MDBaIl0",
-              "WyIweDJjOGIyOTg3ZjQ2YTNmNjczYTBkNzNkOWNhZjNlYmU4MDdkNzBlMjYyMTBjYTk5NDMxMDE0OWM4YTQ3NTBlZTAiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
+              "WyIweGM5MzUxZWI0OWIxMzk1YWNiODVkMGQ2M2MyNzRkYWM5OTRkNWQ5ODI2NWJhNmE4NWM5Mjk0YjgwMjM1YzcxZDAiLCJzdXBwbGllckxFSSIsIlpaWlowMFRXV0lSRVJERU1PMTA4Il0",
+              "WyIweDNkZmJlMzEzOTRlMWJhZjIyYzI2MWIwYzk1N2I1Mzk4MDVmMDQ5NGYwYzJmNDU4YjRkMjhhYWZlM2ZlOGYzNmQiLCJpbnN0YWxsYXRpb25JZCIsIlRXLVpaWlowMFRXV0lSRVJERU1PMTA4LTAwMDEiXQ",
+              "WyIweDBmYzQzNjEwOGZjODM1OGI0NDUzOWUwZGU5NGIzNTFjOGE3MTQzOTUwNDhjNjM1ZjY2MDg3MDBjYzZmZWEwMmQiLCJ1bkxvY29kZSIsIlRXS0hIIl0",
+              "WyIweDNmZGY5NmY2NmY1ZGI5ZWRkZDYxMzA4ZDYzZDM1YTUxYzgwMDlmYWUyZDc5N2UyZTJiZTUwZmM5ZGEwMWJjZjciLCJjbkNvZGUiLCI3MjEzIl0",
+              "WyIweGY5OGEwNzg4MTViYzkwMzA2ODNmNDU3ZTc2ZjZmNzViMWZjZTdmMGVhYWY5ZDIyYWQ4NmI1YTUyOWFhMzdhMjQiLCJjYmFtUm91dGUiLCJDIl0",
+              "WyIweGFkNDY0ZGQzNDcxMTlmZWM0OWZhY2JhMjY2NmU5NzQzNjIxY2FkNjMyOWU0ZmVmNjcwOWU4NmRiMTg4MThhMjAiLCJyZXBvcnRpbmdQZXJpb2QiLCIyMDI2LTAxLTAxLzIwMjYtMTItMzEiXQ",
+              "WyIweDlkNjAyYzkxMjViY2Y4NWQ2YTkzNWIzODM1N2NjYWRjZTE4ODI4NzY1NDQzMWU0NmNjZmNkZDAyOGM2MjAyYjkiLCJ2ZXJpZmllZFRvbm5lcyIsIjEwMDAiXQ",
+              "WyIweDI4ZDFhNjZjOThiOGM5OGJlYzViOTI4NTFhYzA2MjM3MTMzMDI3ODI4NTFhMTI2YTIxZTE0MzFmNjgyMTQ2ZDYiLCJzcGVjaWZpY0VtYmVkZGVkRW1pc3Npb25zX3RDTzJlX3Blcl90IiwiMS40NCJd",
+              "WyIweGQzZDQ5YmJkMmU2MTc0YTU0NzRiM2ViZTM4MWEyZmQ4OTM2MDI3MzVkOWY5OTAyZTJhY2YxMzg0MzA2YzZlN2UiLCJ2YWx1ZVR5cGUiLCJhY3R1YWwiXQ",
+              "WyIweGVjN2Y4YmU5Mjg4MGEyYzI3YTJjZGJlZTlhZTRhN2UyZDFhZDM5MmFhNDk4OTVkODY3YzE3NTBmOTQ2ZmM3MzAiLCJtZXRob2RvbG9neU5vdGUiLCJpbGx1c3RyYXRpdmUg4oCUIG5vdCBvZmZpY2lhbCBDQkFNIG1ldGhvZG9sb2d5Il0",
+              "WyIweDA5NWM3MGJmNjI2YzFlMDhhOTgzMzA1ZTc0OTBmNGE4ZDNkMjc4OGFiZmRjMTMxZTBlMWY3MTQ0ZWE5OGM0MjUiLCJ2ZXJpZmljYXRpb25SZXBvcnRJZCIsIlZSLURFTU8tV1ItMDAwMSJd",
+              "WyIweDYwMmE4ODMwY2E3ODU3MjJmMjIwNTgzOTc3YTMzMGQxZDQ3ZDg5MTMwYjE3NDFiZTk1ZDAxYmRlMWZiNDRlYWEiLCJ2ZXJpZmllckxFSSIsIlpaWlowMEVVVkVSSUZERU1PMjQ5Il0",
+              "WyIweDAzNzFmZmJlM2ZiMjdmMTM1MTljY2E4MGMyZWQzMTgxYTQ2YmM5MjZlZjEyMjY2MzQ2NTU5ZTRjNzY4ZTEzY2QiLCJhY2NyZWRpdGF0aW9uTnVtYmVyIiwiREVNTy1BQ0MtQ0JBTS0wMDAyIl0",
+              "WyIweGIyYzMzNTQ1MmVmNjQxNzhhMTI4MzBjMDEzZTJiMzc5ZjI5NDg4ZDc5NDUxNTU3OTJlZDg4ZjQ4MWEzZWRiNjAiLCJuYWJOYW1lIiwiRGVtbyBBY2NyZWRpdGF0aW9uIEJvZHkgKGZpY3Rpb25hbCkiXQ",
+              "WyIweDI0NDRlMzA0MTdlNjU5NDNmZjNkYzk2NmM0MDE4NDZiNTY5ZDQ1MGZjZDNkZTFlZmJmNGZiNmFjZjYyM2QwZGIiLCJzaXRlVmlzaXQiLCJwaHlzaWNhbCJd",
+              "WyIweDNiNjdiNzZiMDg3ZDg4OGIxZDRmODRmMGRhYTRhYzU0N2Y0OGU3YmRhM2MyMDQyYzljOGM0OWZlODM4MTgxZDciLCJhc3N1cmFuY2VMZXZlbCIsInJlYXNvbmFibGUiXQ",
+              "WyIweDljY2IxY2M1MmQzNmY2YTJjODIzZmMxMmUwYmFjZmM0ZTY3ODY1ODg1ZjdjZmZkNjg2ODYwNzFhZmY3YWVhNmIiLCJtYXRlcmlhbGl0eVRocmVzaG9sZCIsIjUlIl0",
+              "WyIweGEwMzUwZTA2ZDA2NmE0ZGYxMTUyYTc0MGQyODE2OTc1ZmE1MzljNTM4NjBlNzNmOTc1YjU4YTRjNjNkM2MzYzkiLCJpZFNhbHQiLCIweGM2NTE4OTkwNDVjYTI4ZDZmYjg3MTkxZjU2NzFhZWQwZjc5OTJlM2U3MTQ2NTEwMDY3YzkzNzEwNzNmOTIyNzUiXQ",
+              "WyIweDU3ZDk3MDMwNjZiMzQ2MGVjMjhmNWZmZGY0MDNlMjYwNWJkMTA1MmFmMWU3MDgxZDFiZGZlYjYxY2NhZDU3NDkiLCJiYXRjaFNhbHQiLCIweDNlZTkxMTAzNjU4NGUyNTliYWRjMmRjNjUyYzI2ZWNjYmY2OTY2NDc4YTg2NWFiYTg4NWIxYzcxOGYzMDVmMTciXQ",
+              "WyIweDUxZmM5MjZhYWRjMzY5NTc1MmVjMDE2YmZmNzYwZTRlNjliMDIzZmI3ZjM3ZGYxYmNlZTJlMjZkNGY5M2M1ZTEiLCJpc3N1ZWRBdCIsIjIwMjctMDItMTVUMDA6MDA6MDBaIl0",
+              "WyIweDYyZTYyNmI4NTJlOTQ5YzM5NGVmMDZiN2E5ZjdlNmI0MDAzODYzNGE2MGZhZDRjMTYyMThkZDM2YjQ0ZTk3MWQiLCJ2YWxpZFVudGlsIiwiMjAyNy0xMi0zMVQwMDowMDowMFoiXQ"
             ],
             "shipment": {
               "batchId": "WR-DEMO-2026-0001",
               "quantityTonnes": "562.5",
               "shipmentDate": "2026-06-30",
-              "importerSalt": "0x8be2e500132d02e06315bb0ec1a557557055002eb16645f3b4375a77bf3edd30"
+              "importerSalt": "0x30e2befe611d07ba1afbd51bfa5f2059a61dd724d01a500a5455c97771cc7317"
             },
             "anchorEvidence": {
               "note": "SYNTHETIC (local precursor demo and tests only; built without KERIA by verifier/src/precursor-chain.ts, deterministic test keys). Its root is a synthetic test root, not the demo's pinned root; a verifier must pin it explicitly. Fictional identities. Interaction event #1 in the auditor's KEL anchoring credential SAIDs.",
               "synthetic": true,
-              "credSAID": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1",
+              "credSAID": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY",
               "auditor": "EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_",
               "kelSeq": 1,
               "event": {
-                "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EFrQj2p2cKUlGW4DPTcu9DlmzxvRN1KPsgCVPNL186R2\",\"i\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\",\"s\":\"1\",\"p\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\",\"a\":[{\"d\":\"EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1\"}]}",
-                "said": "EFrQj2p2cKUlGW4DPTcu9DlmzxvRN1KPsgCVPNL186R2",
+                "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"ENaJjnDAQe4wXg7WLHt74iDQrxSvcDBoJW8luxGQ-1pR\",\"i\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\",\"s\":\"1\",\"p\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\",\"a\":[{\"d\":\"EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY\"}]}",
+                "said": "ENaJjnDAQe4wXg7WLHt74iDQrxSvcDBoJW8luxGQ-1pR",
                 "type": "ixn",
                 "sn": "1",
                 "prior": "EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_",
                 "seals": [
                   {
-                    "d": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1"
+                    "d": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY"
                   }
                 ]
               },
               "signatures": [
                 {
-                  "qb64": "AABKcgv1eft8gkvY4Nr0cXTCPOqspO1AhNlbz7_wIj8wFPwEik8Y_ECEVridgWuL9XrkrnQgZ-H2vh0heB1EBoME",
+                  "qb64": "AACpkz2BK7SRmtWX1aVdRUun3Gy59Uk9YQoQ2aHfeJHRWcNSUdT5sjwTDvBU2RNCxKVoEEFqaPmydw4MjGxmcCMD",
                   "index": 0,
-                  "hex": "4a720bf579fb7c824bd8e0daf47174c23ceaaca4ed4084d95bcfbff0223f3014fc048a4f18fc408456b89d816b8bf57ae4ae742067e1f6be1d21781d44068304"
+                  "hex": "a9933d812bb4919ad597d5a55d454ba7dc6cb9f5493d610a10d9a1df7891d159c35251d4f9b23c130ef054d91342c4a56810416a68f9b2770e0c8c6c66702303"
                 }
               ],
               "signingKeys": [
@@ -261,7 +261,7 @@
               },
               "establishmentRaw": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\",\"i\":\"EC1hL2AWD7CUip_1hrXbtVgOybftXxAqVrSrisLLd7W_\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DAKuiTqwO1r_pGy_9Ln6Uf7y4O6ftCDeHczYzS_FFTM6\"],\"nt\":\"1\",\"n\":[\"EMojT0BPgEUR3q02E9RwKUQ2Q3-ZJwSKrFAHilmS6WmV\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}",
               "establishmentAttachment": "-AABAAB6vBkZQEris_eCNYwSfHpImgNzQGKfKA7UPHCC4nS10ZRGI9NdC-ORV6Kntm15jm_oGi35KMauk00bNfN3v5MI",
-              "kelAttachment": "-AABAABKcgv1eft8gkvY4Nr0cXTCPOqspO1AhNlbz7_wIj8wFPwEik8Y_ECEVridgWuL9XrkrnQgZ-H2vh0heB1EBoME",
+              "kelAttachment": "-AABAACpkz2BK7SRmtWX1aVdRUun3Gy59Uk9YQoQ2aHfeJHRWcNSUdT5sjwTDvBU2RNCxKVoEEFqaPmydw4MjGxmcCMD",
               "checks": {
                 "saidRecomputed": true,
                 "sizeMatchesVersion": true,
@@ -287,12 +287,12 @@
         ]
       }
     },
-    "reportKey": "0x002b4766842f8a3ca19e8f0ec65a2c3ffd474bfadc693a51d57115bfca3dd4a8",
+    "reportKey": "0x4e726954491e0f3f8b57c98b03bac3c3bc531135d2b7c9e4f68815a74f82594a",
     "kelSeq": "1"
   },
   "mill": {
-    "credSAID": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1",
-    "reportKey": "0x0578e7ec56157341061c80a0b72fa92fd53b834044ec0002bf4a5c91b2c28e0c",
+    "credSAID": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY",
+    "reportKey": "0x8729ebdb11256339f6d55277422a18cb6215e8fbf8cf6ad98f7093e5e6639d77",
     "verifiedTonnes": "1000",
     "remainingKg": "437500"
   },
@@ -367,7 +367,7 @@
         "name": "Precursors",
         "status": "pass",
         "code": "",
-        "detail": "0.18 + 1.62 = 1.8 tCO2e/t recomputed, 1.8 declared, within 0.01; 1 verified precursor credential, each claimed for this maker on the shared ledger"
+        "detail": "0.18 + 1.62 = 1.8 tCO2e/t recomputed, 1.8 declared, within 0.01; 1 verified precursor credential, each claimed for this maker and this credential on the shared ledger"
       }
     ],
     "disclosed": {
@@ -388,15 +388,15 @@
       "siteVisit": "physical",
       "assuranceLevel": "reasonable",
       "materialityThreshold": "5%",
-      "idSalt": "0xc12f8049866ea2bfac9a0125b2b73cacb425a79b2bd1523764b4efdbbb1c4dc4",
-      "batchSalt": "0x8e87da0473d563484083ebc180883ec36a839490320aff5648036680768cf793",
+      "idSalt": "0x1c13792a9654d2be547ba1b10b4f5fb4d7b4beb9ab068065fadd5039489ca608",
+      "batchSalt": "0x436411e6fe1c31fb5fc31544bc2cd9aec822d325ffc471bd41aea105bd4d1a78",
       "issuedAt": "2027-03-20T00:00:00Z",
       "validUntil": "2027-12-31T00:00:00Z"
     },
     "hidden": 5,
     "onchain": {
-      "reportKey": "0x002b4766842f8a3ca19e8f0ec65a2c3ffd474bfadc693a51d57115bfca3dd4a8",
-      "batchKey": "0x2f8f24859aff06247808f40b9705f9090d841d2bd42ef82540ed7a473e93c91e",
+      "reportKey": "0x4e726954491e0f3f8b57c98b03bac3c3bc531135d2b7c9e4f68815a74f82594a",
+      "batchKey": "0xadae1f9f1aa7b17e1b14ce9293d17fec2e34c5435e23e76d127b5a6617bfa12b",
       "registeredAt": "1790000000",
       "validUntil": "1830211200",
       "verifiedKg": "500000",
@@ -431,7 +431,7 @@
           "detail": "1.125 t/t × 1.44 tCO2e/t = 1.62 tCO2e per t of good",
           "see": "1.44",
           "contribution": "1.62",
-          "credSAID": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1",
+          "credSAID": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY",
           "batchId": "WR-DEMO-2026-0001",
           "verification": {
             "overall": "VALID",
@@ -528,10 +528,10 @@
         ]
       },
       "args": [
-        "0x0578e7ec56157341061c80a0b72fa92fd53b834044ec0002bf4a5c91b2c28e0c",
-        "0x67435e7e080e1e698fa18abe4ac864431981e9210e91507643c48a255f3e5c95",
+        "0x8729ebdb11256339f6d55277422a18cb6215e8fbf8cf6ad98f7093e5e6639d77",
+        "0x9e9829dfcbc6a4baa1df29d4f16b3717ab1ad91918adca1977ddc486741b502c",
         "500000",
-        "0xee09ee1dba6ea4d4f0ba4d50ec14dc54e94bd5d1c31f83d2f1b4a8fefdf815fc"
+        "0xbad194e94f4f4f735c35980eb97171aa90bb4a7c22a4dfb55e7940f3da145ce9"
       ]
     },
     "verification": {
@@ -626,14 +626,14 @@
         "siteVisit": "physical",
         "assuranceLevel": "reasonable",
         "materialityThreshold": "5%",
-        "idSalt": "0x711509a5a3c3ecc8fe61d1221651e649cabc765884f8381db1592f20a79c013f",
-        "batchSalt": "0x431bbf4b53acf835cdae13f0ad1345744f0d0dcaa793ebaaa5bcdee3d52eb1a8",
+        "idSalt": "0x848903fa8a89d4e21bf5a3e846b229c5056da746440bf4f6625b4a569c0e144c",
+        "batchSalt": "0xdf3407803c9378ef47ba2e5ee83eff50a61e9d85d7712034e645e7c94899013e",
         "issuedAt": "2027-03-20T00:00:00Z",
         "validUntil": "2027-12-31T00:00:00Z"
       },
       "hidden": 5,
       "onchain": {
-        "reportKey": "0xd8fa9891d281bb0582aab26ce817a49a54240e02e18def3c6100d44cd757da58",
+        "reportKey": "0x9d0ebab5fbbf08d2a11aca9b905becb1404b4be428675c5d3a187c0e6a9360dc",
         "registeredAt": "1790000000",
         "validUntil": "1830211200",
         "verifiedKg": "400000",
@@ -667,7 +667,7 @@
             "detail": "the precursor credential does not verify (check 5 SHIPMENT_MISMATCH: no claim for this batch on the registry); the good's value cannot rely on its data, and the precursor's default value would apply instead",
             "see": "1.44",
             "contribution": "1.8",
-            "credSAID": "EKX19xrH-SoyAD9xWDqQARV_unDx5892eEDkLnGJLHa1",
+            "credSAID": "EBHi2L0CJRPkkWjjLklvkIIVLC0QfEg0puyRCe0fQyJY",
             "batchId": "WR-DEMO-2026-0002",
             "verification": {
               "overall": "INVALID",
@@ -755,7 +755,7 @@
     {
       "step": "registerMill",
       "label": "Mill report registered by the mill's verification body (1000 t of wire rod at 1.44 tCO2e/t)",
-      "hash": "0xf44558e9abbd44e1d02cb931ca746f6acb95351a88639fe5e8048ff23e8bf87c",
+      "hash": "0x4fc42756b2ff0d05b9067fff28a0d26c39e9be081863601892dd50daf5c6efa6",
       "block": 7,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -763,7 +763,7 @@
     {
       "step": "registerScrew",
       "label": "Screw report registered, with the precursor statement's digest in its signed core (500 t at 1.8 tCO2e/t)",
-      "hash": "0x5167b0a0766f49c738aefa3cd43eab70c88c534646005441f09818f9228a58f6",
+      "hash": "0x21645a32d23a184fb4e11f92f92f475c9ebd97e525a3f2d595cc693ebefe4655",
       "block": 8,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -771,15 +771,15 @@
     {
       "step": "registerSecond",
       "label": "Second screw maker's report registered (400 t, 1.25 t of wire rod per t)",
-      "hash": "0x75dad2aa30ff8ab464f2ecbbc06dfed689361e4809243e9430bb652a0b211400",
+      "hash": "0x56476318cf7a29e98fc77578afe9aec9b4dc4ed0ec14ef619c7de70f79412174",
       "block": 9,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
     },
     {
       "step": "claimWireRod",
-      "label": "Mill claims 562.5 t of wire rod for the screw maker on its report (importerCommit = the screw maker's LEI)",
-      "hash": "0x45c7e406aef04a63e21f83f86b1569f9cbd13d3cab5d841cc4e8a3d69c0a8a96",
+      "label": "Mill claims 562.5 t of wire rod for the screw maker on its report (importerCommit = the screw maker's LEI and the screw credential's SAID)",
+      "hash": "0xb0256388044feed3aba0749d0a14e9abcbcd2f6827572d04289114fa130f0907",
       "block": 10,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -787,7 +787,7 @@
     {
       "step": "claimScrews",
       "label": "Screw maker claims 200 t of screws for the EU importer",
-      "hash": "0x0b04770ff835b308a06fcd974f4817c9e7cd4e2eb618aaaf5961a04256f394c8",
+      "hash": "0xef31ae305247741c274542fd0ce4de9f540112a57a83f25bf7758dafc1f13204",
       "block": 11,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
