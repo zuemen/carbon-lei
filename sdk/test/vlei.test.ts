@@ -632,6 +632,23 @@ describe("checks 6-8: vleiCheckers on the Sepolia demo proof", () => {
     const changed = { ...proof.reportExtract, specificEmbeddedEmissionsPerCn: [{ cnCode: "7318", value: "1.2" }] };
     expect(rec(changed, ctxOf())).toMatchObject({ index: 8, status: "warn", code: expect.stringMatching(/^CONSISTENCY_WARNING/) });
   });
+
+  it("check 8 with the operator's accreditation registry: the demo proof passes every sub-rule; the record is tied to the allowlist entry", async () => {
+    const registry = JSON.parse(readFileSync(new URL("../../fixtures/accreditation-registry.json", import.meta.url), "utf8"));
+    const reader = allowlist();
+    const r = await vleiCheckers({ accreditationRegistry: registry }).reconciliation!(proof.reportExtract, ctxOf({ reader }));
+    expect(r).toMatchObject({ index: 8, status: "pass", code: "" });
+    expect(reader.institution).toHaveBeenCalledWith(report.issuerLeiHash);
+    expect(r.rules?.map((s) => s.status)).not.toContain("fail");
+    expect(r.rules?.filter((s) => s.status === "warn")).toEqual([]);
+    expect(registry.records[0].accreditationSaidHash).toBe(expectAuth.onchain.accreditationSaidHash);
+    // an allowlist entry with another accreditation credential than the record → advisory warning
+    const other = await vleiCheckers({ accreditationRegistry: registry }).reconciliation!(
+      proof.reportExtract,
+      ctxOf({ reader: allowlist({ accreditationSaidHash: hashString("another accreditation") }) }),
+    );
+    expect(other).toMatchObject({ status: "warn", code: "VERIFIER_PROVENANCE/RECORD_MISMATCH" });
+  });
 });
 
 // A TEST identifier's KEL produced by keripy 1.2.13 (sdk/test/fixtures/kel-rotation/SOURCE.md): icp with

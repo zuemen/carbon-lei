@@ -6,6 +6,7 @@ import { bytesToHex, utf8 } from "./encoding.ts";
 import type { CheckResult, EvidenceCheckers, EvidenceContext } from "./verify.ts";
 import { DEMO_TRUST_ANCHOR, verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "./vlei.ts";
 import { checkReconciliation, type ReportExtract } from "./consistency.ts";
+import type { AccreditationRegistry } from "./verification-rules.ts";
 import { MAX_PRECURSOR_DEPTH, precursorChecker } from "./precursor.ts";
 import { carbonPriceChecker } from "./carbonprice.ts";
 
@@ -49,6 +50,8 @@ export function vleiCheckers(
     precursorDepth?: number;
     /** Root of trust for the carbon price certifier's chain (check 10; default: precursorTrustAnchor, then trustAnchor). */
     carbonPriceTrustAnchor?: string;
+    /** The allowlist operator's accreditation records (fixtures/accreditation-registry.json): check 8's provenance sub-rules. */
+    accreditationRegistry?: AccreditationRegistry;
   } = {},
 ): EvidenceCheckers {
   const trustAnchor = opts.trustAnchor ?? DEMO_TRUST_ANCHOR;
@@ -128,8 +131,20 @@ export function vleiCheckers(
       return result(7, r.ok, r.code, r.detail);
     },
     reconciliation: (extract: Record<string, unknown>, ctx: EvidenceContext) => {
-      const r = checkReconciliation(extract as unknown as ReportExtract, ctx.disclosed, ctx.core.reconciliation, ctx.rejected);
-      return { index: 8, name: "", status: r.status, code: r.code, detail: r.detail };
+      const run = (accreditationSaidHash?: string): CheckResult => {
+        const r = checkReconciliation(extract as unknown as ReportExtract, ctx.disclosed, ctx.core.reconciliation, ctx.rejected, {
+          ...(opts.accreditationRegistry ? { registry: opts.accreditationRegistry } : {}),
+          verifierLEI: ctx.core.issuer.verifierLEI,
+          ...(accreditationSaidHash ? { accreditationSaidHash } : {}),
+        });
+        return { index: 8, name: "", status: r.status, code: r.code, detail: r.detail, ...(r.rules ? { rules: r.rules } : {}) };
+      };
+      if (!opts.accreditationRegistry || !ctx.report) return run();
+      // The allowlist entry's accreditation SAID hash links the operator's record to the body on-chain.
+      return ctx.reader.institution(ctx.report.issuerLeiHash).then(
+        (inst) => run(inst.accreditationSaidHash),
+        () => run(),
+      );
     },
   };
 }

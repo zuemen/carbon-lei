@@ -1,6 +1,8 @@
 // Check 8: rule-based reconciliation between the verification report (its structured fields,
 // "report extract") and the signed credential. Advisory: a mismatch flags the report for human
-// review; it never fails the check list. No AI model is involved.
+// review. No AI model is involved. Check 8 also runs the sub-rules of sdk/verification-rules.ts on the report
+// itself (dates, site visit, accreditation at the report date); only those can fail it, and only when the
+// extract is the one the auditor signed.
 //
 // At issuance the verification body runs the rules and puts three hashes in the credential core
 // (input, output, rule version), so the reconciliation is covered by the SAID and the signature.
@@ -8,6 +10,7 @@
 import { keccak256, stringToBytes } from "viem";
 import type { CredentialClaims, Hex } from "./credential.ts";
 import type { Reconciliation } from "./disclosure.ts";
+import { provenanceRules, registryShapeProblem, reportRules, type AccreditationRegistry, type SubRule } from "./verification-rules.ts";
 
 export const RULES_VERSION = "carbonlei-reconciliation/1";
 
@@ -164,13 +167,71 @@ export function pickReconciledClaims(fields: Record<string, string>): Reconciled
   return out as ReconciledClaims;
 }
 
-/** Check 8 at verification: compare the recomputed hashes, then report the first failing rule. */
+export interface ReconciliationOutcome {
+  status: "pass" | "warn" | "skipped" | "fail";
+  code: string;
+  detail: string;
+  /** Check 8 sub-rules on the report itself (sdk/verification-rules.ts), shown under the check. */
+  rules?: SubRule[];
+}
+
+export interface ReconciliationOptions {
+  /** The allowlist operator's accreditation records; when given, the provenance sub-rules run. */
+  registry?: AccreditationRegistry;
+  /** The issuing body's LEI (credential core) and its accreditation SAID hash (allowlist), for the provenance rules. */
+  verifierLEI?: string;
+  accreditationSaidHash?: string;
+}
+
+/**
+ * Check 8 at verification: compare the recomputed hashes and report the first failing reconciliation rule, then
+ * run the sub-rules of sdk/verification-rules.ts. A sub-rule breached by the signed extract fails check 8
+ * (INVALID); every other finding is a warning (advisory).
+ */
 export function checkReconciliation(
   x: ReportExtract,
   disclosed: Record<string, string>,
   signed?: Reconciliation,
   rejected: readonly string[] = [],
-): { status: "pass" | "warn" | "skipped"; code: string; detail: string } {
+  opts: ReconciliationOptions = {},
+): ReconciliationOutcome {
+  const base = reconciliationBase(x, disclosed, signed, rejected);
+  if (base.code === "CONSISTENCY_WARNING/EXTRACT_MALFORMED") return base;
+  const isSigned = base.status === "pass" || (base.status === "warn" && base.code !== "CONSISTENCY_WARNING/PROOF_MISMATCH");
+  const rules = [...reportRules(x, isSigned)];
+  if (opts.registry) {
+    const shape = registryShapeProblem(opts.registry);
+    if (shape) rules.push({ rule: "allowlist-record", status: "warn", code: "VERIFIER_PROVENANCE/NO_RECORD", detail: shape });
+    else {
+      rules.push(
+        ...provenanceRules(opts.registry, x, {
+          verifierLEI: opts.verifierLEI ?? "",
+          cnCode: typeof disclosed.cnCode === "string" ? disclosed.cnCode : "",
+          ...(opts.accreditationSaidHash ? { accreditationSaidHash: opts.accreditationSaidHash } : {}),
+        }),
+      );
+    }
+  }
+  const failed = rules.find((r) => r.status === "fail");
+  const warned = rules.find((r) => r.status === "warn");
+  if (failed) {
+    return { status: "fail", code: failed.code, detail: `rule "${failed.rule}": ${failed.detail} — breached by the signed report`, rules };
+  }
+  if (base.status === "warn" || !warned) return { ...base, rules };
+  return {
+    status: "warn",
+    code: warned.code,
+    detail: `${base.status === "pass" ? `${base.detail}; ` : ""}rule "${warned.rule}": ${warned.detail} — needs human review`,
+    rules,
+  };
+}
+
+function reconciliationBase(
+  x: ReportExtract,
+  disclosed: Record<string, string>,
+  signed: Reconciliation | undefined,
+  rejected: readonly string[],
+): ReconciliationOutcome {
   const c = pickReconciledClaims(disclosed);
   if (!c) {
     // A field that was presented but refused by check 2 is not the same as one the supplier kept hidden.

@@ -170,7 +170,7 @@ const stubCheckers: EvidenceCheckers = {
   authority: () => pass(7, "Authority chain"),
   reconciliation: () => pass(8, "Reconciliation"),
 };
-const asCheck = (c: VerificationResult["checks"][number]) => ({ id: c.index, name: c.name, status: c.status, code: c.code, detail: c.detail });
+const asCheck = (c: VerificationResult["checks"][number]) => ({ id: c.index, name: c.name, status: c.status, code: c.code, detail: c.detail, ...(c.rules ? { rules: c.rules } : {}) });
 
 describe("toVerdict", () => {
   it("CONTESTED: maps every check field by field, in order, and copies the disclosed values", () => {
@@ -258,6 +258,31 @@ describe("verdictFor", () => {
     });
     expect(v.checks).toEqual(r.checks.map(asCheck));
     expect(v.disclosed).toEqual(r.disclosed);
+  }, 30_000);
+
+  it("the demo proof (calendar 2026, report dated 15 March 2027) with the operator's accreditation registry: still VALID, check 8 shows its sub-rules", async () => {
+    vi.stubGlobal("fetch", replayFetch(recording));
+    const head = readJson("sdk/test/fixtures/sepolia-demo-rpc.json").answers['eth_getBlockByNumber ["latest",false]'].result;
+    const now = () => Number(BigInt(head.timestamp)) * 1000 + 5_000;
+    const accreditationRegistry = readJson("fixtures/accreditation-registry.json");
+    const v = await verdictFor(proof, ChainReader.forSepolia(deployment), { importerEORI: "NLDEMO000000001", loadBundle, now, accreditationRegistry });
+    expect([v.overall, v.primaryCode]).toEqual(["VALID", ""]);
+    const c8 = v.checks.find((c) => c.id === 8)!;
+    expect(c8.status).toBe("pass");
+    expect(c8.rules?.map((s) => [s.rule, s.status])).toEqual([
+      ["first-report-date", "pass"],
+      ["report-after-period", "pass"],
+      ["accreditation-at-report-date", "pass"],
+      ["site-visit", "pass"],
+      ["allowlist-record", "pass"],
+      ["record-matches-report", "pass"],
+      ["nab-member-state", "pass"],
+      ["standard", "pass"],
+      ["scope", "pass"],
+      ["valid-at-report", "pass"],
+      ["commission-list", "note"],
+    ]);
+    expect(verdictSchemaErrors(v)).toEqual([]);
   }, 30_000);
 
   it("a head older than 300 s on Sepolia (a node that is behind) is refused before any check result", async () => {
