@@ -1,0 +1,9 @@
+{
+  "eori": "NLDEMO000000001",
+  "note": "Example manifest for carbonlei verify-batch (docs/OPERATE.md, Importer workbench). Line 1 is the Sepolia demo proof; line 2 its tampered copy; line 3 an import with no supplier proof. Quantities, dates and names of lines 2 and 3 are illustrative; all companies are fictional.",
+  "shipments": [
+    { "proof": "../sepolia-demo-proof.json", "id": "BATCH-DEMO-2026-0001", "quantityTonnes": "200", "cnCode": "7318", "country": "TW", "importDate": "2026-10-10" },
+    { "proof": "../sepolia-demo-proof.tampered.json", "id": "TAMPERED-COPY", "quantityTonnes": "40", "cnCode": "7318", "country": "TW", "importDate": "2026-11-05", "note": "illustrative: the demo proof with one number changed" },
+    { "proof": null, "id": "NO-PROOF-0001", "quantityTonnes": "25.5", "cnCode": "73181595", "country": "TW", "importDate": "2026-12-01", "supplier": "Example Bolts Co. (fictional)", "note": "illustrative: no supplier proof" }
+  ]
+}
