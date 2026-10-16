@@ -1,7 +1,8 @@
 // Full verification of a supplier's proof (presentation), shared by the hosted page and the CLI.
 // Checks: 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment,
 // 6 KEL anchor, 7 authority chain, 8 report reconciliation (advisory), and 9 precursors (sdk/precursor.ts) only for a
-// credential that commits to a precursor statement or a proof that carries precursor evidence.
+// credential that commits to a precursor statement or a proof that carries precursor evidence, and 10 carbon price
+// paid (sdk/carbonprice.ts, draft CBAM Art 9 rules) only for a proof that carries carbon price evidence.
 // All steps run even after a failure, so the result shows every failing check;
 // only a malformed presentation (step 0) stops early.
 import {
@@ -34,6 +35,7 @@ import { decodeDisclosure, disclosureDigest, type CredentialCore, type Presentat
 import { recoverIssuer } from "./eip712.ts";
 import { isSalt } from "./encoding.ts";
 import type { PrecursorReport } from "./precursor.ts";
+import type { CarbonPriceContext, CarbonPriceReport } from "./carbonprice.ts";
 import { duplicateKey, verifySaid } from "./said.ts";
 
 export type CheckStatus = "pass" | "fail" | "warn" | "skipped";
@@ -76,7 +78,7 @@ export type Overall = "VALID" | "INVALID" | "CONTESTED" | "INCOMPLETE";
 
 /** Something the caller should know about how the checks were run; it does not change any check. */
 export interface VerificationWarning {
-  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED" | "PRECURSORS_NOT_CHECKED";
+  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED" | "PRECURSORS_NOT_CHECKED" | "CARBON_PRICE_NOT_CHECKED";
   detail: string;
 }
 
@@ -98,6 +100,8 @@ export interface VerificationResult {
   warnings?: VerificationWarning[];
   /** Check 9's breakdown (direct and precursor contributions, each producer's verification), when check 9 ran. */
   precursors?: PrecursorReport;
+  /** Check 10's breakdown (draft CBAM Art 9 rules: the effective carbon price per tonne), when check 10 ran. */
+  carbonPrice?: CarbonPriceReport;
 }
 
 /** Plug-ins for checks 6–9 (vLEI evidence, report reconciliation and precursors live in their own modules). */
@@ -107,6 +111,8 @@ export interface EvidenceCheckers {
   reconciliation?: (extract: Record<string, unknown>, ctx: EvidenceContext) => Promise<CheckResult> | CheckResult;
   /** Check 9 (sdk/precursor.ts precursorChecker): verifies the precursor tier, one proof verification per producer. */
   precursors?: (evidence: unknown, ctx: EvidenceContext) => Promise<CheckResult & { precursors?: PrecursorReport }>;
+  /** Check 10 (sdk/carbonprice.ts carbonPriceChecker): a certified carbon price statement, after check 9. */
+  carbonPrice?: (evidence: unknown, ctx: EvidenceContext, extra: CarbonPriceContext) => Promise<CheckResult & { carbonPrice?: CarbonPriceReport }>;
 }
 
 export interface EvidenceContext {
@@ -280,6 +286,7 @@ const NAMES = [
   "Authority chain (vLEI)",
   "Report reconciliation",
   "Precursors",
+  "Carbon price paid (draft Art 9)",
 ];
 
 const lower = (s: string) => s.toLowerCase();
@@ -475,7 +482,7 @@ export async function verifyOffline(
   if (isFinal(local)) return local;
   const { checks, disclosed, hidden } = local;
   checks.push((await signatureCheck(p, local, deployment.registry, deployment.chainId)).check);
-  const last = hasPrecursorPart(p, local.core) ? 9 : 8;
+  const last = p.carbonPriceEvidence !== undefined ? 10 : hasPrecursorPart(p, local.core) ? 9 : 8;
   for (let i = 4; i <= last; i++) checks.push(result(i, "skipped", "", "not run: needs a live connection to the chain"));
   const failed = checks.filter((x) => x.status === "fail");
   return {
@@ -945,6 +952,23 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
   }
   const c9 = checks.find((x) => x.index === 9);
   if (c9?.status === "warn" && c9.code === "CONTESTED" && signedPrecursors) contested = true;
+  // ---------------------------------------------------------------- 10 carbon price paid (draft Art 9 rules)
+  let carbonPriceReport: CarbonPriceReport | undefined;
+  if (p.carbonPriceEvidence !== undefined) {
+    if (!c.carbonPrice) {
+      checks.push(result(10, "skipped", "", "carbon price verification not available here"));
+    } else {
+      const { carbonPrice: rep10, ...c10 } = await c.carbonPrice(p.carbonPriceEvidence, ctx, {
+        ...(precursorReport ? { precursors: precursorReport } : {}),
+        ...(opts.importerEORI ? { importerEORI: opts.importerEORI } : {}),
+        ...(p.shipment?.quantityTonnes ? { shipmentTonnes: p.shipment.quantityTonnes } : {}),
+      });
+      carbonPriceReport = rep10;
+      checks.push({ ...c10, index: 10, name: NAMES[10] });
+    }
+  }
+  const c10 = checks.find((x) => x.index === 10);
+  if (c10?.status === "warn" && c10.code === "CONTESTED") contested = true;
 
   const warnings: VerificationWarning[] = [];
   if (p.shipment && !opts.importerEORI) {
@@ -980,9 +1004,15 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     warnings.push({ code: "PRECURSORS_NOT_CHECKED", detail: `check 9 not run or not decided: ${c9!.detail}` });
   }
 
+  // Check 10: a carbon price claim the proof carries but that was not decided is not a pass either.
+  const carbonPriceNotChecked = c10?.status === "skipped";
+  if (carbonPriceNotChecked) {
+    warnings.push({ code: "CARBON_PRICE_NOT_CHECKED", detail: `check 10 not run or not decided: ${c10!.detail}` });
+  }
+
   const failed = checks.filter((x) => x.status === "fail");
   return {
-    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length || precursorsNotChecked ? "INCOMPLETE" : "VALID",
+    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length || precursorsNotChecked || carbonPriceNotChecked ? "INCOMPLETE" : "VALID",
     checks,
     disclosed,
     hidden,
@@ -992,5 +1022,6 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     atBlock: head.number,
     warnings,
     ...(precursorReport ? { precursors: precursorReport } : {}),
+    ...(carbonPriceReport ? { carbonPrice: carbonPriceReport } : {}),
   };
 }

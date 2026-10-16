@@ -7,6 +7,7 @@ import type { CheckResult, EvidenceCheckers, EvidenceContext } from "./verify.ts
 import { DEMO_TRUST_ANCHOR, verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "./vlei.ts";
 import { checkReconciliation, type ReportExtract } from "./consistency.ts";
 import { MAX_PRECURSOR_DEPTH, precursorChecker } from "./precursor.ts";
+import { carbonPriceChecker } from "./carbonprice.ts";
 
 export interface BundleRef {
   bundle: string;
@@ -41,12 +42,20 @@ function result(index: number, ok: boolean, code: string, detail: string): Check
  * tiers below the good (default MAX_PRECURSOR_DEPTH); past it, a tier's own check 9 is not run.
  */
 export function vleiCheckers(
-  opts: { loadBundle?: (path: string) => Promise<string>; trustAnchor?: string; precursorTrustAnchor?: string; precursorDepth?: number } = {},
+  opts: {
+    loadBundle?: (path: string) => Promise<string>;
+    trustAnchor?: string;
+    precursorTrustAnchor?: string;
+    precursorDepth?: number;
+    /** Root of trust for the carbon price certifier's chain (check 10; default: precursorTrustAnchor, then trustAnchor). */
+    carbonPriceTrustAnchor?: string;
+  } = {},
 ): EvidenceCheckers {
   const trustAnchor = opts.trustAnchor ?? DEMO_TRUST_ANCHOR;
   const depth = opts.precursorDepth ?? MAX_PRECURSOR_DEPTH;
   const precursorAnchor = opts.precursorTrustAnchor ?? trustAnchor;
   return {
+    carbonPrice: carbonPriceChecker({ trustAnchor: opts.carbonPriceTrustAnchor ?? opts.precursorTrustAnchor ?? trustAnchor }),
     ...(depth > 0
       ? {
           precursors: precursorChecker({

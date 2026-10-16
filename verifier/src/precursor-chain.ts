@@ -18,6 +18,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { base64url, bytesToHex, utf8 } from "../../sdk/encoding.ts";
 import { saidify } from "../../sdk/said.ts";
 import { AUDITOR_ROLE, SCHEMA, type AuthorityEvidence } from "../../sdk/vlei.ts";
+import { CERTIFIER_ACTIVITY, CERTIFIER_ROLE } from "../../sdk/carbonprice.ts";
 import { versioned } from "./impostor-chain.ts";
 
 type Json = Record<string, any>;
@@ -36,6 +37,13 @@ export interface PrecursorChainInput {
     BodyKey,
     { name: string; lei: string; accreditationNumber: string; accreditedUntil: string; cnScope: string[]; auditor: { name: string } }
   >;
+  /**
+   * Optional independent person for the carbon price demo (check 10, draft CBAM Art 9 rules): an LE vLEI from the QVI,
+   * an accreditation from the NAB for CERTIFIER_ACTIVITY, and an ECR with role CERTIFIER_ROLE for its lead auditor.
+   * Its events are appended after every other issuance, so the bodies' credentials (and SAIDs) are the same with or
+   * without it; only the QVI's and the NAB's KELs grow by one event each.
+   */
+  certifier?: { name: string; lei: string; accreditationNumber: string; accreditedUntil: string; cnScope: string[]; auditor: { name: string } };
 }
 
 /** The input for the demo's two tiers, from fixtures/demo.json (entities and entities.precursorChain). */
@@ -100,6 +108,8 @@ export interface BodyChain {
 }
 
 export interface PrecursorChain {
+  /** The carbon price certifier, when the input has one (same shape: its "auditor" is the certification lead auditor). */
+  certifier?: BodyChain;
   note: string;
   trustAnchor: string;
   qviAid: string;
@@ -197,6 +207,35 @@ export function syntheticPrecursorChain(input: PrecursorChainInput, opts: { seed
     );
   }
 
+  // The carbon price certifier (optional): appended after every other event, so nothing above changes.
+  const ci = input.certifier;
+  const certC = ci ? { body: controller("certifier/body"), auditor: controller("certifier/auditor") } : undefined;
+  let cert: { le: ReturnType<typeof issue>; acc: ReturnType<typeof issue>; reg: Json; ecr: ReturnType<typeof issue> } | undefined;
+  if (ci && certC) {
+    const le = issue(qvi, qviReg, SCHEMA.LE, certC.body.aid, { LEI: ci.lei }, "leBody/certifier", qviEdge);
+    const acc = issue(
+      nab,
+      nabReg,
+      SCHEMA.ACCREDITATION,
+      certC.body.aid,
+      { LEI: ci.lei, accreditationNumber: ci.accreditationNumber, activity: CERTIFIER_ACTIVITY, cnScope: ci.cnScope, validUntil: ci.accreditedUntil },
+      "accreditation/certifier",
+      { nab: { n: cLeNab.acdc.d, s: SCHEMA.LE } },
+    );
+    const reg = registry(certC.body, "body/certifier");
+    const ecr = issue(
+      certC.body,
+      reg,
+      SCHEMA.ECR,
+      certC.auditor.aid,
+      { LEI: ci.lei, personLegalName: ci.auditor.name, engagementContextRole: CERTIFIER_ROLE },
+      "ecr/certifier",
+      { le: { n: le.acdc.d, s: SCHEMA.LE } },
+      true,
+    );
+    cert = { le, acc, reg, ecr };
+  }
+
   // CESR text streams laid out like KERIA's credentials().get(said, true): chained sources first, then the issuer's
   // KEL (all of it, so the QVI's and the NAB's KELs are the same in both bodies' bundles), the issuee's inception,
   // the registry, the TEL issuance and the credential.
@@ -207,20 +246,24 @@ export function syntheticPrecursorChain(input: PrecursorChainInput, opts: { seed
   const sQvi = tail(root, qvi, rootReg, cQvi);
   const sLeNab = sQvi + tail(qvi, nab, qviReg, cLeNab);
 
-  const bodies = {} as Record<BodyKey, BodyChain>;
-  for (const k of BODY_KEYS) {
-    const sLeBody = sQvi + tail(qvi, bodyC[k], qviReg, cLeBody[k]);
-    const sAcc = sLeNab + tail(nab, bodyC[k], nabReg, cAcc[k]);
-    const sEcr = sLeBody + tail(bodyC[k], auditorC[k], bodyReg[k], cEcr[k]);
-    const auditor = auditorC[k];
+  const chainOf = (
+    body: Controller,
+    auditor: Controller,
+    meta: { lei: string; name: string; auditorName: string },
+    c: { le: ReturnType<typeof issue>; acc: ReturnType<typeof issue>; reg: Json; ecr: ReturnType<typeof issue> },
+    what: string,
+  ): BodyChain => {
+    const sLeBody = sQvi + tail(qvi, body, qviReg, c.le);
+    const sAcc = sLeNab + tail(nab, body, nabReg, c.acc);
+    const sEcr = sLeBody + tail(body, auditor, c.reg, c.ecr);
     const auditorIcp = auditor.events[0].ked;
-    bodies[k] = {
-      lei: input.bodies[k].lei,
-      name: input.bodies[k].name,
-      bodyAid: bodyC[k].aid,
+    return {
+      lei: meta.lei,
+      name: meta.name,
+      bodyAid: body.aid,
       auditorAid: auditor.aid,
-      auditorName: input.bodies[k].auditor.name,
-      saids: { leBody: cLeBody[k].acdc.d, accreditation: cAcc[k].acdc.d, ecr: cEcr[k].acdc.d },
+      auditorName: meta.auditorName,
+      saids: { leBody: c.le.acdc.d, accreditation: c.acc.acdc.d, ecr: c.ecr.acdc.d },
       bundle: {
         note: PRECURSOR_CHAIN_NOTE,
         exportedAt: iso,
@@ -233,7 +276,7 @@ export function syntheticPrecursorChain(input: PrecursorChainInput, opts: { seed
         const raw = JSON.stringify(ked);
         const sig = ed25519.sign(utf8(raw), auditor.secret);
         return {
-          note: `${PRECURSOR_CHAIN_NOTE} Interaction event #1 in the auditor's KEL anchoring credential SAIDs.`,
+          note: `${PRECURSOR_CHAIN_NOTE} Interaction event #1 in the ${what}'s KEL anchoring ${what === "auditor" ? "credential" : "statement"} SAIDs.`,
           synthetic: true,
           credSAID: credSaids[0],
           auditor: auditor.aid,
@@ -251,6 +294,12 @@ export function syntheticPrecursorChain(input: PrecursorChainInput, opts: { seed
         };
       },
     };
+  };
+  const bodies = {} as Record<BodyKey, BodyChain>;
+  for (const k of BODY_KEYS) {
+    const b = input.bodies[k];
+    bodies[k] = chainOf(bodyC[k], auditorC[k], { lei: b.lei, name: b.name, auditorName: b.auditor.name }, { le: cLeBody[k], acc: cAcc[k], reg: bodyReg[k], ecr: cEcr[k] }, "auditor");
   }
-  return { note: PRECURSOR_CHAIN_NOTE, trustAnchor: root.aid, qviAid: qvi.aid, nabAid: nab.aid, qviSaid: cQvi.acdc.d, leNabSaid: cLeNab.acdc.d, bodies };
+  const certifier = ci && certC && cert ? chainOf(certC.body, certC.auditor, { lei: ci.lei, name: ci.name, auditorName: ci.auditor.name }, cert, "certification lead auditor") : undefined;
+  return { note: PRECURSOR_CHAIN_NOTE, trustAnchor: root.aid, qviAid: qvi.aid, nabAid: nab.aid, qviSaid: cQvi.acdc.d, leNabSaid: cLeNab.acdc.d, bodies, ...(certifier ? { certifier } : {}) };
 }

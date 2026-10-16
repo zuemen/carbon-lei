@@ -384,6 +384,10 @@ export interface AuthorityExpect {
   cnCode: string;
   /** Registration time (seconds); the accreditation must cover it, and authority is judged at it. */
   registeredAt?: bigint;
+  /** ECR role required (default AUDITOR_ROLE; check 10 asks for the carbon price certifier's role). */
+  role?: string;
+  /** When set, the accreditation's `activity` must equal it (check 10: the carbon price certification activity). */
+  activity?: string;
   /**
    * The allowlist records of the body and the auditor, read at the verified block. With them,
    * `registeredAt` is required.
@@ -434,7 +438,8 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     // ECR: auditor's role, issued by the body, chained to the body's LE
     if (E.s !== SCHEMA.ECR) return fail(code, "auditor credential is not an ECR vLEI");
     if (E.a?.i !== x.auditorAID) return fail(code, "the role credential was issued to another AID");
-    if (E.a?.engagementContextRole !== AUDITOR_ROLE) return fail(code, `role is not "${AUDITOR_ROLE}"`);
+    const role = x.role ?? AUDITOR_ROLE;
+    if (E.a?.engagementContextRole !== role) return fail(code, `role is not "${role}"`);
     if (E.a?.LEI !== x.verifierLEI) return fail(code, "role credential names another LEI");
     if (E.e?.le?.n !== L.d) return fail(code, "role credential does not chain to the body's LE vLEI");
     if (E.i !== L.a?.i) return fail(code, "role credential not issued by the verification body");
@@ -449,6 +454,7 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     if (A.s !== SCHEMA.ACCREDITATION) return fail(code, "accreditation credential has another schema");
     if (A.a?.i !== L.a?.i || A.a?.LEI !== x.verifierLEI) return fail(code, "accreditation issued to another body");
     if (!Array.isArray(A.a?.cnScope) || !A.a.cnScope.includes(x.cnCode)) return fail(code, `accreditation scope does not include CN ${x.cnCode}`);
+    if (x.activity !== undefined && A.a?.activity !== x.activity) return fail(code, `accreditation is not for "${x.activity}"`);
     if (A.e?.nab?.n !== N.d || A.i !== N.a?.i) return fail(code, "accreditation not issued by the accreditation body");
     if (N.s !== SCHEMA.LE || N.e?.qvi?.n !== Q.d) return fail(code, "accreditation body has no LE vLEI from the QVI");
     if (A.a?.validUntil === undefined) return fail(code, "accreditation credential has no validUntil");
@@ -494,7 +500,7 @@ export function verifyAuthority(ev: AuthorityEvidence, x: AuthorityExpect): Chec
     return {
       ok: true,
       code: "",
-      detail: `root → QVI → verification body (LE vLEI) → auditor (ECR, ${AUDITOR_ROLE}); accredited by the NAB for CN ${x.cnCode}; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts${x.onchain ? "; hashes match the on-chain allowlist" : ""}${after}`,
+      detail: `root → QVI → ${x.role ? "certifier body" : "verification body"} (LE vLEI) → ${x.role ? "lead auditor" : "auditor"} (ECR, ${x.role ?? AUDITOR_ROLE}); accredited by the NAB for ${x.activity ? `"${x.activity}", ` : ""}CN ${x.cnCode}; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts${x.onchain ? "; hashes match the on-chain allowlist" : ""}${after}`,
     };
   } catch (e) {
     return fail(code, `evidence could not be read: ${(e as Error).message}`);
