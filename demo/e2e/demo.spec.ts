@@ -614,6 +614,12 @@ test("Climate link under a VALID result: the price per 0.1 tCO2e/t at the card's
   await expect(line).toHaveText(
     `Climate link: CBAM's price rewards lower verified emissions only if buyers trust the verified value instead of the higher default. At €${c.priceEur}/tCO2e, each 0.1 tCO2e/t lower is worth about €${per} per tonne of goods (gross, illustrative). Price table and slider ↓`,
   );
+  // Below the check list (17 October 2026), so the verdict banner and the check legend come first.
+  const after = await page.evaluate(() => {
+    const ol = document.querySelector("ol.checks"), p = document.querySelector(".verify-climate");
+    return !!ol && !!p && !!(ol.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  expect(after, "climate link after the check list").toBe(true);
   // The same figure as the slider's rate line.
   await expect(page.locator(".whatif-rate")).toContainText(`€${per} per tonne of goods`);
   await line.getByRole("button", { name: "Price table and slider ↓" }).click();

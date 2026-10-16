@@ -313,7 +313,6 @@ function VerifySummary({
   }
   const f = cmp ? comparisonFigures(cmp) : null;
   return (
-    <>
     <p className="verify-summary ok">
       <span aria-hidden="true">✓ </span>
       <strong>{counts}</strong> ·{" "}
@@ -322,17 +321,32 @@ function VerifySummary({
         {v.seeComparison}
       </button>
     </p>
-    {cmp && (
+  );
+}
+
+/** Under a VALID result, after the check list: what the verified value is worth under CBAM's price. */
+function ClimateLink({ cmp, onSeeComparison }: { cmp: DemoData["comparison"]; onSeeComparison: () => void }) {
+  const { lang } = useLang();
+  const per = eur2(whatIfFigures(cmp, 0).eurPerTenth);
+  if (lang === "zh-TW")
+    return (
       <p className="verify-climate">
-        <strong>Climate link:</strong> CBAM's price rewards lower verified emissions only if buyers trust the verified
-        value instead of the higher default. At €{cmp.priceEur}/tCO2e, each 0.1 tCO2e/t lower is worth about €
-        {eur2(whatIfFigures(cmp, 0).eurPerTenth)} per tonne of goods (gross, illustrative).{" "}
+        <strong>氣候連結：</strong>CBAM 的價格只有在買方信任查證值、而不是較高的預設值時，才會獎勵較低的查證排放。以 €{cmp.priceEur}/tCO2e
+        計，每低 0.1 tCO2e/t，每噸貨物約值 €{per}（毛額、示意）。{" "}
         <button type="button" className="link-btn" onClick={onSeeComparison}>
-          Price table and slider ↓
+          價格表與滑桿 ↓
         </button>
       </p>
-    )}
-    </>
+    );
+  return (
+    <p className="verify-climate">
+      <strong>Climate link:</strong> CBAM's price rewards lower verified emissions only if buyers trust the verified
+      value instead of the higher default. At €{cmp.priceEur}/tCO2e, each 0.1 tCO2e/t lower is worth about €
+      {per} per tonne of goods (gross, illustrative).{" "}
+      <button type="button" className="link-btn" onClick={onSeeComparison}>
+        Price table and slider ↓
+      </button>
+    </p>
   );
 }
 
@@ -737,6 +751,9 @@ export function Buyer() {
               );
             })}
           </ol>
+          {result && !running && result.overall === "VALID" && fromProof?.cmp && (
+            <ClimateLink cmp={fromProof.cmp} onSeeComparison={seeComparison} />
+          )}
           {result && !running && revokeTx && isDemoProof && (
             <p className="fine">
               This report's auditor was revoked later ({revokeTx.time.slice(0, 10)}, synced on-chain in block {revokeTx.block}).
