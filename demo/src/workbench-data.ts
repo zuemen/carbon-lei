@@ -146,6 +146,12 @@ export function demoLine(data: DemoData, verdict: Verdict | null, verifyError?: 
   };
 }
 
+/** How many shipments and distinct suppliers the workbench shows (the Buyer tab's pointer to it). */
+export function workbenchCounts(data: DemoData): { shipments: number; suppliers: number } {
+  const lines = [demoLine(data, null), ...FICTIONAL_LINES];
+  return { shipments: lines.length, suppliers: new Set(lines.map((l) => l.supplier)).size };
+}
+
 /** The same lines imported one year later (a hypothetical, to show the 2027 mark-up and the quarterly holding). */
 export const shiftYear = (s: ShipmentInput, years: number): ShipmentInput => ({
   ...s,

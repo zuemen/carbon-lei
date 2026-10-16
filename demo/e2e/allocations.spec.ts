@@ -98,3 +98,27 @@ test("AL4 allocations in 繁體中文 and on a 390 px phone: translated, no side
   expect(await rows(page).first().evaluate((el) => getComputedStyle(el).display)).toBe("block");
   await scan(page, "Supplier allocations at 390 px");
 });
+
+test("AL5 390 px in 繁體中文: the contract check's answer is a full-width row and ExceedsVerifiedTonnage is not broken inside", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openAllocations(page, "?lang=zh-TW");
+  await connected(page);
+  await section(page).getByRole("button", { name: /以合約逐列檢查計畫/ }).click();
+  const dry = rows(page).nth(1).locator(".alloc-dry");
+  await expect(dry).toContainText("ExceedsVerifiedTonnage");
+  // As wide as the row's cell (not squeezed into the label column)...
+  const [w, cell] = await dry.evaluate((el) => [el.getBoundingClientRect().width, el.parentElement!.getBoundingClientRect().width]);
+  expect(w / cell).toBeGreaterThan(0.9);
+  // ...and the error name sits on one line.
+  const lines = await dry.evaluate((el) => {
+    const node = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.includes("ExceedsVerifiedTonnage"))!;
+    const at = node.textContent!.indexOf("ExceedsVerifiedTonnage");
+    const r = document.createRange();
+    r.setStart(node, at);
+    r.setEnd(node, at + "ExceedsVerifiedTonnage".length);
+    return new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size;
+  });
+  expect(lines).toBe(1);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});

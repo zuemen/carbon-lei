@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useApp } from "./App.tsx";
-import { EVIDENCE_WHY, short } from "./data.ts";
+import { EVIDENCE_WHY, EVIDENCE_WHY_ZH, short } from "./data.ts";
+import { useLang } from "./i18n.ts";
 
 export { EVIDENCE_WHY, fmt } from "./data.ts";
 
@@ -51,17 +52,17 @@ export type Source = "sepolia" | "browser" | "evidence" | "advisory";
 
 export function SourceLabel({ source }: { source: Source }) {
   const { data, offline } = useApp();
+  const zh = useLang().lang === "zh-TW";
   if (source === "sepolia" && offline && data.cached) {
-    return <span className="source">⧗ cached · {data.cached.time.slice(0, 10)}</span>;
+    return <span className="source">{zh ? "⧗ 快取" : "⧗ cached"} · {data.cached.time.slice(0, 10)}</span>;
   }
-  const text = {
-    sepolia: "◉ live · Sepolia",
-    browser: "◎ live · your browser",
-    evidence: `▤ exported evidence · ${data.exportDate}`,
-    advisory: "≡ rule-based · advisory",
-  }[source];
+  const text = (
+    zh
+      ? { sepolia: "◉ 即時 · Sepolia", browser: "◎ 即時 · 您的瀏覽器", evidence: `▤ 匯出的證據 · ${data.exportDate}`, advisory: "≡ 規則式 · 僅供參考" }
+      : { sepolia: "◉ live · Sepolia", browser: "◎ live · your browser", evidence: `▤ exported evidence · ${data.exportDate}`, advisory: "≡ rule-based · advisory" }
+  )[source];
   return (
-    <span className="source" title={source === "evidence" ? EVIDENCE_WHY : undefined}>
+    <span className="source" title={source === "evidence" ? (zh ? EVIDENCE_WHY_ZH : EVIDENCE_WHY) : undefined}>
       {text}
     </span>
   );

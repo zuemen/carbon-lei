@@ -92,4 +92,17 @@ describe("carbonlei CLI", () => {
     expect([noEvidence.code, noEvidence.stderr]).toEqual([1, expect.stringContaining("the proof fails check 6 (ANCHOR_NOT_FOUND); nothing exported")]);
     expect(existsSync(`${dir}pact.json`)).toBe(false);
   }, 60_000);
+
+  it("an unknown command names itself on stderr before the help and exits 64; --help prints the help and exits 0", async () => {
+    const bad = await run(process.execPath, [cli, "verfy", "--proof", "x.json"]).catch((e) => e);
+    expect(bad.code).toBe(64);
+    expect(bad.stderr).toBe("unknown command: verfy\n");
+    expect(bad.stdout).toMatch(/^carbonlei <command> \[options\]/);
+    const help = await run(process.execPath, [cli, "--help"]);
+    expect(help.stderr).toBe("");
+    expect(help.stdout).toMatch(/^carbonlei <command> \[options\]/);
+    // The --art9-ref-price option sits under the portfolio description, not inside it.
+    const portfolio = help.stdout.slice(help.stdout.indexOf("  portfolio "), help.stdout.indexOf("  recheck "));
+    expect(portfolio.indexOf("declaration plan from verify-batch results")).toBeLessThan(portfolio.indexOf("[--art9-ref-price <EUR>]"));
+  });
 });

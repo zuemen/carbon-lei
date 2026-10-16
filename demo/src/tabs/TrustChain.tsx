@@ -5,6 +5,31 @@ import { EVIDENCE_WHY, TabHead } from "../components.tsx";
 import { short } from "../data.ts";
 import { PactVsVlei } from "./PactVsVlei.tsx";
 import { PrecursorTrustChain } from "./Precursor.tsx";
+import { useStrings } from "../i18n.ts";
+
+/** The tab head and section headings in English and Traditional Chinese; the body text stays in English. */
+const H = {
+  en: {
+    title: "Who is allowed to sign",
+    lede: "Background: who is allowed to sign. You can skip this on a first visit.",
+    chain: "Credential chain",
+    impostor: "Impostor",
+    notInChain: "Not in the chain",
+    writes: "Who writes the allowlist",
+    note: (d: string) =>
+      `Each node is a verifiable credential. Status shown as of the evidence export on ${d} (hosted demo); the anchoring event's signature is re-checked in your browser from that evidence. Signatures are Ed25519 (KERI) and secp256k1 ECDSA (Ethereum); neither is post-quantum safe.`,
+  },
+  "zh-TW": {
+    title: "誰有權簽署",
+    lede: "背景資料：誰有權簽署。第一次瀏覽可以略過。",
+    chain: "憑證鏈",
+    impostor: "冒名者",
+    notInChain: "不在鏈中",
+    writes: "誰寫入允許清單",
+    note: (d: string) =>
+      `每個節點都是一份可驗證憑證。狀態以 ${d} 匯出證據時為準（託管示範）；錨定事件的簽章由您的瀏覽器依該證據重新檢查。簽章採用 Ed25519（KERI）與 secp256k1 ECDSA（Ethereum）；兩者都不具抗量子安全性。`,
+  },
+};
 
 const STATUS = { valid: "✓ Valid", revoked: "✕ Revoked", suspended: "! Suspended", expired: "✕ Expired" } as const;
 
@@ -14,6 +39,7 @@ export function TrustChain() {
   const auditor = data.trustChain.find((n) => n.id === "auditor");
   const body = data.trustChain.find((n) => n.id === "body");
   const revoke = data.txs.find((t) => t.step === "revokeAuditor");
+  const h = useStrings(H);
 
   useEffect(() => {
     if (!reader || offline || !auditor?.aid || !body?.lei) return;
@@ -40,15 +66,11 @@ export function TrustChain() {
 
   return (
     <>
-      <TabHead title="Who is allowed to sign" lede="Background: who is allowed to sign. You can skip this on a first visit.">
-        <p className="fine">
-          Each node is a verifiable credential. Status shown as of the evidence export on {data.exportDate} (hosted demo);
-          the anchoring event's signature is re-checked in your browser from that evidence. Signatures are Ed25519 (KERI)
-          and secp256k1 ECDSA (Ethereum); neither is post-quantum safe.
-        </p>
+      <TabHead title={h.title} lede={h.lede}>
+        <p className="fine">{h.note(data.exportDate)}</p>
       </TabHead>
       <div className="grid-2">
-        <section className="sheet reveal" aria-label="Credential chain">
+        <section className="sheet reveal" aria-label={h.chain}>
           <ol className="chain">
             {data.trustChain.map((n, i) => (
               <li key={n.id} className="node">
@@ -88,8 +110,8 @@ export function TrustChain() {
           </p>
         </section>
         <div>
-          <section className="sheet reveal" aria-label="Impostor">
-            <p className="sheet-kicker">Not in the chain</p>
+          <section className="sheet reveal" aria-label={h.impostor}>
+            <p className="sheet-kicker">{h.notInChain}</p>
             <h3>{data.impostor.name}</h3>
             {data.attacks.attack4 ? (
               <p>
@@ -104,8 +126,8 @@ export function TrustChain() {
               </p>
             )}
           </section>
-          <section className="sheet reveal" aria-label="Who writes the allowlist">
-            <p className="sheet-kicker">Who writes the allowlist</p>
+          <section className="sheet reveal" aria-label={h.writes}>
+            <p className="sheet-kicker">{h.writes}</p>
             <p className="fine">
               In this demo, the allowlist owner key and the watcher key. The allowlist owner key (held by the trust-registry
               operator) adds verification bodies and auditors and can rotate a body's address; a separate watcher key syncs an auditor's revocation automatically (a watcher process

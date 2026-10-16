@@ -62,7 +62,7 @@ We are not asking for money and not offering any. No partner has expressed inter
 |---|---|---|
 | Contracts (`VerifierAllowlist`, `EmissionsClaimRegistry`) | Ethereum Sepolia, source verified | A fresh deployment on the pilot chain; a multisig owner |
 | vLEI chain (KERI agents, credentials) | Local KERIA stack, simulated GLEIF root, fictional parties | Real credentials from the QVI and the NAB; where the body's and auditor's KERI agents are hosted is to be agreed with the body |
-| Verification (eight checks) | In the browser (GitHub Pages), the SDK and the CLI | The same code; a hosted verifier API is on the roadmap |
+| Verification (checks 0–10; eight for a proof without a precursor or carbon-price statement) | In the browser (GitHub Pages), the SDK and the CLI | The same code; a hosted verifier API is on the roadmap |
 | Watcher | One process, ECR revocations only; suspensions sent by hand | Several independent watchers with liveness alerts (roadmap item to build for the pilot) |
 | vLEI evidence for check 7 | Exported once from the local agents; witness receipts verified from the exported evidence, witnesses not queried | Exported from the real agents; querying the witnesses at verification time is on the roadmap ([SECURITY §4.1](SECURITY.md#41-limits-of-the-vlei-checks-in-the-prototype)) |
 | PACT export | `carbonlei export-pact`, validated against the PACT v3.0.3 schema | Each importer tries the JSON in its existing CBAM declaration software (not tested with any specific tool so far) |

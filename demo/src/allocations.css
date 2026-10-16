@@ -24,4 +24,7 @@
   .alloc-table tr { padding: 8px 0; border-bottom: 1px dashed #cfc5b2; }
   table.ledger.alloc-table td { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; border: 0; padding: 3px 0; }
   table.ledger.alloc-table td::before { content: attr(data-label); font: 600 11px/1.75 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+  /* The contract check's answer gets a full-width row under the status, and breaks between words, not inside
+     an error name such as ExceedsVerifiedTonnage. */
+  table.ledger.alloc-table td .alloc-dry { grid-column: 1 / -1; margin-top: 2px; overflow-wrap: break-word; word-break: normal; }
 }

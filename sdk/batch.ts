@@ -205,6 +205,12 @@ export function printBatch(doc: BatchDocument): string {
   return L.join("\n");
 }
 
+/** A decimal euro string with thousands separators for the terminal ("45692.46" → "€45,692.46"); JSON keeps the plain string. */
+export function eurText(v: string): string {
+  const [int, frac] = v.replace(/^-/, "").split(".");
+  return `${v.startsWith("-") ? "−" : ""}€${int.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${frac !== undefined ? `.${frac}` : ""}`;
+}
+
 /** The portfolio summary for the terminal. */
 export function printPortfolio(p: PortfolioSummary): string {
   const t = p.totals;
@@ -225,7 +231,7 @@ export function printPortfolio(p: PortfolioSummary): string {
     `Certificates to surrender ${t.certificates} (all on defaults: ${t.allDefaultCertificates})`,
     t.grossEur === null
       ? "Gross €: no price for every quarter (pass --price)"
-      : `Gross € ${t.grossEur} (all on defaults € ${t.allDefaultGrossEur}; difference € ${t.savedEur}) — illustrative, gross`,
+      : `Gross ${eurText(t.grossEur)} (all on defaults ${eurText(t.allDefaultGrossEur!)}; difference ${eurText(t.savedEur!)}) — illustrative, gross`,
     "",
     "Quarterly holding (Art 22(2)):",
   );

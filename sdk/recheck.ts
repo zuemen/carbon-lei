@@ -134,7 +134,7 @@ export interface RecheckResult {
   id: string;
   batchId: string | null;
   credSAID: string | null;
-  /** full: the proof was verified again (checks 0-8); ledger-only: only the report's status was read (no proof). */
+  /** full: the proof was verified again (all its checks: 0-8, plus 9 and 10 when it carries a precursor or carbon-price statement); ledger-only: only the report's status was read (no proof). */
   mode: "full" | "ledger-only";
   accepted: { overall: string; primaryCode: string; at: string | null; block: number | null };
   current: { overall: string; primaryCode: string; block: number | null } | null;
@@ -452,7 +452,7 @@ export function classifyLedgerOnly(
     change = "REPORT_REVOKED";
     overall = "INVALID";
     code = "REPORT_INVALID/REVOKED";
-    reasons.push(`REPORT_REVOKED: the report was revoked at ${new Date(Number(report.revokedAt) * 1000).toISOString()} (ledger only; attach the proof for checks 0-8)`);
+    reasons.push(`REPORT_REVOKED: the report was revoked at ${new Date(Number(report.revokedAt) * 1000).toISOString()} (ledger only; attach the proof for the full checks)`);
   } else if (!/^0x0{64}$/i.test(report.supersededBy)) {
     // Without the proof the claim time is unknown, so a supersession after the claim cannot be told apart: fail closed.
     change = "REPORT_SUPERSEDED";
@@ -682,12 +682,15 @@ export function applyRecheck(batch: BatchDocument, recheck: RecheckDocument): Ba
 /** The re-check for the terminal. */
 export function printRecheck(doc: RecheckDocument, skipped: string[] = []): string {
   const L = [`Re-check at pinned block ${doc.pinnedBlock ?? "—"} (chain ${doc.chainId ?? "—"}, block time ${doc.blockTime ? new Date(doc.blockTime * 1000).toISOString() : "—"})`, ""];
+  // Severity "none" reads OK only when the line still rests on a verified value; a line that was not VALID and still
+  // is not reads UNCHANGED (the workbench's NO CHANGE). The JSON keeps the severity values as they are.
   const mark: Record<Severity, string> = { action: "ACTION", info: "INFO", none: "OK", error: "ERROR" };
   for (const r of doc.results) {
     const now = r.current ? `${r.current.overall}${r.current.primaryCode ? ` [${r.current.primaryCode}]` : ""}` : "—";
-    L.push(`${mark[r.severity].padEnd(6)} ${r.id}  ${r.change}  accepted ${r.accepted.overall} → now ${now}${r.mode === "ledger-only" ? "  (ledger only)" : ""}`);
-    for (const why of r.reasons) L.push(`         ${why}`);
-    if (r.severity !== "none") L.push(`         → ${r.action}`);
+    const label = r.change === "STILL_NOT_VALID" ? "UNCHANGED" : mark[r.severity];
+    L.push(`${label.padEnd(9)} ${r.id}  ${r.change}  accepted ${r.accepted.overall} → now ${now}${r.mode === "ledger-only" ? "  (ledger only)" : ""}`);
+    for (const why of r.reasons) L.push(`            ${why}`);
+    if (r.severity !== "none") L.push(`            → ${r.action}`);
   }
   for (const s of skipped) L.push(`(skipped) ${s}`);
   const c = doc.counts;
