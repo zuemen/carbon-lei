@@ -94,7 +94,7 @@ test("W2 workbench CSV: the declaration worksheet with one row per line, labelle
   expect(lines[8]).toMatch(/^TOTAL,.*,540\.000,.*,1267\.160,,1267\.160$/);
 });
 
-test("W3 workbench a11y: axe finds no violations (English and 繁體中文); controls work with the keyboard", async ({ page }) => {
+test("W3 workbench a11y: axe finds no violations (English and 繁體中文); controls work with the keyboard", async ({ page, browserName }) => {
   await openVerified(page);
   await scan(page, "Importer workbench");
   // Keyboard: Tab to the year radios, arrow to 2027; Space toggles the adjustment; Enter downloads the CSV.
@@ -102,7 +102,8 @@ test("W3 workbench a11y: axe finds no violations (English and 繁體中文); con
   await r2026.focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: /2027 imports/ })).toBeChecked();
-  await page.keyboard.press("Tab");
+  // WebKit on macOS (Safari's default "Press Tab to highlight each item" off) moves to form controls with Option+Tab.
+  await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
   await expect(page.getByRole("checkbox", { name: /free-allocation adjustment/ })).toBeFocused();
   await page.keyboard.press("Space");
   await expect(page.locator(".wb-adjustment")).toBeVisible();
