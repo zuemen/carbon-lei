@@ -102,7 +102,7 @@ a:hover { color: var(--ink); }
 
 /* ---------------------------------------------------------------------- tabs */
 .tabbar { position: sticky; top: 0; z-index: 5; background: var(--paper); padding-top: 8px; border-bottom: 1.5px solid var(--ink); }
-.tabs { display: grid; grid-template-columns: repeat(6, auto); justify-content: start; gap: 0; margin: 0; padding: 0; list-style: none; }
+.tabs { display: grid; grid-template-columns: repeat(7, auto); justify-content: start; gap: 0; margin: 0; padding: 0; list-style: none; }
 .tab {
   font: 500 14px/1 var(--mono); letter-spacing: 0.02em; color: var(--ink-soft); background: transparent;
   border: 1.5px solid transparent; border-bottom: 0; padding: 11px 14px 10px; cursor: pointer; margin-bottom: -1.5px;

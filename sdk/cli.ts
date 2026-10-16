@@ -1,4 +1,4 @@
-// carbonlei CLI: issue, present, verify, export-pact, import-template.
+// carbonlei CLI: issue, present, verify, verify-batch, portfolio, export-pact, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
 import { readFileSync, statSync, writeFileSync } from "node:fs";
@@ -15,6 +15,22 @@ import { exportPactFromProof } from "./pact.ts";
 import { verifyPresentation } from "./verify.ts";
 import { EXIT, exitCodeOf, verdictError, verdictFor } from "./verdict.ts";
 import { disclosureSummary } from "./summary.ts";
+import {
+  batchDocument,
+  batchExitCode,
+  DEFAULT_CONCURRENCY,
+  loadBatchInput,
+  printBatch,
+  pinnedToHead,
+  printPortfolio,
+  proofShipmentOf,
+  readMap,
+  runLimited,
+  shipmentsFromBatch,
+  type BatchDocument,
+  type BatchResult,
+} from "./batch.ts";
+import { buildPortfolio, worksheetCsv } from "./portfolio.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import { dirname, resolve } from "node:path";
@@ -43,6 +59,20 @@ const USAGE = `carbonlei <command> [options]
                [--json]                             print the verdict as JSON (docs/schemas/verdict.schema.json);
                                                     exit 0 VALID, 1 INVALID, 2 CONTESTED, 3 error, 4 INCOMPLETE
                [--expect-invalid <CODE>]            exit 0 only if the proof is INVALID with a check failing on CODE
+  verify-batch <folder | manifest.json> [--eori <EORI>] [--concurrency <1-4>] [--out <results.json>] [--json]
+               [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>] [--max-head-age <s>]
+                                                    verifies many proofs (a folder of proof files, or a manifest
+                                                    listing proofs with net mass, CN code, origin and import date);
+                                                    every proof is read at one pinned block; default concurrency 2.
+                                                    Exit 3 if a verification could not run, else 1 if any INVALID,
+                                                    2 if any CONTESTED, 4 if any INCOMPLETE, else 0
+  portfolio    <results.json> --year <YYYY> [--price <EUR>] [--csv <worksheet.csv>] [--json] [--out <summary.json>]
+               [--defaults <map.json>] [--benchmarks <map.json>]
+                                                    declaration plan from verify-batch results: verified value only
+                                                    when VALID and bound by check 5, else the default with the year's
+                                                    mark-up; totals, 50 t de minimis, quarterly holding, certificates,
+                                                    gross EUR; --benchmarks deducts the free-allocation adjustment
+                                                    (docs/OPERATE.md). The CSV is a worksheet, not the Registry XML
   export-pact  --proof <proof.json> --eori <EORI> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
                [--max-head-age <s>] [--out <pact.json>]   runs checks 0-8 (with check 5 for your EORI) first
@@ -171,6 +201,12 @@ async function main(argv: string[]) {
       "trust-anchor": { type: "string" },
       "max-head-age": { type: "string" },
       json: { type: "boolean", default: false },
+      concurrency: { type: "string" },
+      year: { type: "string" },
+      price: { type: "string" },
+      csv: { type: "string" },
+      defaults: { type: "string" },
+      benchmarks: { type: "string" },
     },
   });
 
@@ -269,6 +305,63 @@ async function main(argv: string[]) {
       // Check 8 is advisory: a warning shows in the summary but does not change the exit code.
       return EXIT[r.overall];
     }
+    case "verify-batch": {
+      const target = positionals[0];
+      if (!target) throw new Error("usage: carbonlei verify-batch <folder | manifest.json> [--eori <EORI>]");
+      const { entries, eori: manifestEori, skipped } = loadBatchInput(target);
+      const eori = (values.eori as string | undefined) ?? manifestEori;
+      const concurrency = values.concurrency === undefined ? DEFAULT_CONCURRENCY : Number(values.concurrency);
+      const trustAnchor = values["trust-anchor"] as string | undefined;
+      const maxHeadAgeSec = maxHeadAge(values);
+      // One snapshot for the whole run: every proof is checked against the same block.
+      const rd = reader(values);
+      const head = await withinDeadline(rd.latestBlock());
+      const pinned = pinnedToHead(rd, head);
+      let chainId: number | undefined;
+      const results = await runLimited(entries, concurrency, async (e): Promise<BatchResult> => {
+        const proofName = e.line.proof ?? null;
+        if (!e.proofPath) return { proof: null, line: e.line, verdict: null, error: null, proofShipment: null };
+        let proof: Presentation | undefined;
+        try {
+          const proofText = readFileSync(e.proofPath, "utf8");
+          proof = JSON.parse(proofText) as Presentation;
+          const v = await withinDeadline(
+            verdictFor(proof, pinned, { importerEORI: eori, loadBundle: bundleLoader(e.proofPath), trustAnchor, maxHeadAgeSec, proofText }),
+          );
+          chainId ??= v.chain.chainId ?? undefined;
+          return { proof: proofName, line: e.line, verdict: v, error: null, proofShipment: proofShipmentOf(proof) };
+        } catch (err) {
+          return { proof: proofName, line: e.line, verdict: null, error: (err as Error).message, proofShipment: proof ? proofShipmentOf(proof) : null };
+        }
+      });
+      const doc = batchDocument(results, { pinnedBlock: head.number, chainId, eori });
+      if (values.out) write(values.out, doc);
+      if (values.json) process.stdout.write(json(doc) + "\n");
+      else {
+        console.log(printBatch(doc));
+        if (skipped.length) console.log(`Skipped (not a proof): ${skipped.join(", ")}`);
+      }
+      return batchExitCode(doc);
+    }
+    case "portfolio": {
+      const file = positionals[0];
+      if (!file || values.year === undefined) throw new Error("usage: carbonlei portfolio <results.json> --year <YYYY> [--price <EUR>] [--csv <file>]");
+      if (!/^\d{4}$/.test(values.year as string)) throw new Error(`--year must be a four-digit year, got ${values.year}`);
+      const doc = readJson(file) as BatchDocument;
+      const bm = values.benchmarks ? readMap(values.benchmarks as string, "--benchmarks") : undefined;
+      const { cbamFactor, cscf, ...benchmarks } = bm ?? {};
+      const summary = buildPortfolio(shipmentsFromBatch(doc), {
+        year: Number(values.year),
+        ...(values.price !== undefined ? { priceEur: values.price as string } : {}),
+        ...(values.defaults ? { defaults: readMap(values.defaults as string, "--defaults") } : {}),
+        ...(bm ? { freeAllocation: { benchmarks, ...(cbamFactor ? { cbamFactor } : {}), ...(cscf ? { cscf } : {}) } } : {}),
+      });
+      if (values.csv) writeFileSync(values.csv as string, worksheetCsv(summary));
+      if (values.out) write(values.out, summary);
+      if (values.json) process.stdout.write(json(summary) + "\n");
+      else if (!values.out) console.log(printPortfolio(summary) + (values.csv ? `\n\nWorksheet written to ${values.csv}` : ""));
+      return 0;
+    }
     case "export-pact": {
       const proofText = readFileSync(values.proof as string, "utf8");
       const proof = JSON.parse(proofText) as Presentation;
@@ -320,7 +413,7 @@ async function main(argv: string[]) {
 const args = process.argv.slice(2);
 // `verify --json`: any error (unreadable proof, RPC failure, bad option) prints an error object on
 // stdout and exits 3, so a caller can tell it from INVALID. Every other run that throws exits 1, as before.
-const jsonVerify = args[0] === "verify" && args.includes("--json");
+const jsonVerify = (args[0] === "verify" || args[0] === "verify-batch") && args.includes("--json");
 main(args).then(
   (code) => process.exit(code),
   (err) => {

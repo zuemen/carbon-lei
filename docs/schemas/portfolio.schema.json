@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zuemen/carbon-lei/blob/main/docs/schemas/portfolio.schema.json",
+  "title": "CarbonLEI importer declaration plan",
+  "description": "Output of `carbonlei portfolio --json` and of `buildPortfolio` in sdk/portfolio.ts (format 1). A planning worksheet, not a CBAM declaration and not the CBAM Registry's XML format. Quantities are tonnes of net mass and emissions tCO2e, as decimal strings with 3 decimals; intensities tCO2e per tonne; money EUR with 2 decimals. Rounding rules are listed in `rounding`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "kind", "year", "shipments", "excluded", "totals", "byCnCode", "byCountry", "byInstallation", "bySupplier", "byQuarter", "deMinimis", "quarterlyHolding", "freeAllocation", "prices", "rounding", "notes"],
+  "$defs": {
+    "t3": { "type": "string", "pattern": "^-?\\d+\\.\\d{3}$" },
+    "eur": { "type": ["string", "null"], "pattern": "^-?\\d+\\.\\d{2}$" },
+    "intensity": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
+    "quarter": { "enum": [1, 2, 3, 4] },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "shipments", "quantityTonnes", "embeddedT", "allDefaultT"],
+      "properties": {
+        "key": { "type": "string" },
+        "shipments": { "type": "integer", "minimum": 1 },
+        "quantityTonnes": { "$ref": "#/$defs/t3" },
+        "embeddedT": { "$ref": "#/$defs/t3" },
+        "allDefaultT": { "$ref": "#/$defs/t3" }
+      }
+    },
+    "groups": { "type": "array", "items": { "$ref": "#/$defs/group" } },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cnCode", "country", "importDate", "quarter", "supplier", "installation", "quantityTonnes", "verdict", "primaryCode", "basis", "reason", "seeUsed", "seeVerified", "defaultValue", "defaultMarkedUp", "embeddedT", "allDefaultT", "adjustmentT", "obligationT", "holdingBasisT", "verificationReportId", "verifierLEI", "credSAID", "pinnedBlock", "note"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "cnCode": { "type": "string" },
+        "country": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "importDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "quarter": { "$ref": "#/$defs/quarter" },
+        "supplier": { "type": "string" },
+        "installation": { "type": "string" },
+        "quantityTonnes": { "$ref": "#/$defs/t3" },
+        "verdict": { "enum": ["VALID", "INVALID", "CONTESTED", "INCOMPLETE", "ERROR", "NONE"], "description": "ERROR: the verification could not run; NONE: no supplier proof." },
+        "primaryCode": { "type": "string" },
+        "basis": { "enum": ["actual", "default"] },
+        "reason": { "type": "string", "description": "Why the line is on default values; empty when it uses the verified value." },
+        "seeUsed": { "$ref": "#/$defs/intensity" },
+        "seeVerified": { "type": "string" },
+        "defaultValue": { "$ref": "#/$defs/intensity" },
+        "defaultMarkedUp": { "$ref": "#/$defs/intensity" },
+        "embeddedT": { "$ref": "#/$defs/t3" },
+        "allDefaultT": { "$ref": "#/$defs/t3" },
+        "adjustmentT": { "type": "string", "pattern": "^(\\d+\\.\\d{3})?$", "description": "Free-allocation adjustment; empty when not computed." },
+        "obligationT": { "$ref": "#/$defs/t3" },
+        "holdingBasisT": { "$ref": "#/$defs/t3" },
+        "verificationReportId": { "type": "string" },
+        "verifierLEI": { "type": "string" },
+        "credSAID": { "type": "string" },
+        "pinnedBlock": { "type": ["integer", "null"], "minimum": 0 },
+        "note": { "type": "string" }
+      }
+    }
+  },
+  "properties": {
+    "format": { "const": 1 },
+    "kind": { "const": "carbonlei-portfolio" },
+    "year": { "type": "integer", "minimum": 2026 },
+    "shipments": { "type": "array", "items": { "$ref": "#/$defs/line" } },
+    "excluded": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "reason"], "properties": { "id": { "type": "string" }, "reason": { "type": "string" } } }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shipments", "onActual", "onDefault", "quantityTonnes", "embeddedT", "allDefaultT", "gapT", "adjustmentT", "obligationT", "allDefaultObligationT", "certificates", "allDefaultCertificates", "grossEur", "allDefaultGrossEur", "savedEur"],
+      "properties": {
+        "shipments": { "type": "integer", "minimum": 0 },
+        "onActual": { "type": "integer", "minimum": 0 },
+        "onDefault": { "type": "integer", "minimum": 0 },
+        "quantityTonnes": { "$ref": "#/$defs/t3" },
+        "embeddedT": { "$ref": "#/$defs/t3" },
+        "allDefaultT": { "$ref": "#/$defs/t3" },
+        "gapT": { "$ref": "#/$defs/t3", "description": "allDefaultT − embeddedT: a gap in declared emissions, not a physical reduction." },
+        "adjustmentT": { "$ref": "#/$defs/t3" },
+        "obligationT": { "$ref": "#/$defs/t3" },
+        "allDefaultObligationT": { "$ref": "#/$defs/t3" },
+        "certificates": { "type": "integer", "minimum": 0, "description": "obligationT rounded up to a whole certificate." },
+        "allDefaultCertificates": { "type": "integer", "minimum": 0 },
+        "grossEur": { "$ref": "#/$defs/eur" },
+        "allDefaultGrossEur": { "$ref": "#/$defs/eur" },
+        "savedEur": { "$ref": "#/$defs/eur" }
+      }
+    },
+    "byCnCode": { "$ref": "#/$defs/groups" },
+    "byCountry": { "$ref": "#/$defs/groups" },
+    "byInstallation": { "$ref": "#/$defs/groups" },
+    "bySupplier": { "$ref": "#/$defs/groups" },
+    "byQuarter": { "$ref": "#/$defs/groups" },
+    "deMinimis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["thresholdTonnes", "netMassTonnes", "exempt", "exceededBy"],
+      "properties": {
+        "thresholdTonnes": { "const": 50 },
+        "netMassTonnes": { "$ref": "#/$defs/t3" },
+        "exempt": { "type": "boolean" },
+        "exceededBy": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["id", "importDate", "quarter"],
+          "properties": { "id": { "type": "string" }, "importDate": { "type": "string" }, "quarter": { "$ref": "#/$defs/quarter" } }
+        }
+      }
+    },
+    "quarterlyHolding": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["quarter", "end", "cumulativeBasisT", "requiredT", "requiredCertificates", "applies", "why"],
+        "properties": {
+          "quarter": { "$ref": "#/$defs/quarter" },
+          "end": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "cumulativeBasisT": { "$ref": "#/$defs/t3" },
+          "requiredT": { "$ref": "#/$defs/t3" },
+          "requiredCertificates": { "type": "integer", "minimum": 0 },
+          "applies": { "type": "boolean" },
+          "why": { "type": "string" }
+        }
+      }
+    },
+    "freeAllocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied", "cbamFactor", "cscf", "note"],
+      "properties": {
+        "applied": { "enum": ["none", "partial", "all"] },
+        "cbamFactor": { "type": ["string", "null"] },
+        "cscf": { "type": ["string", "null"] },
+        "note": { "type": "string" }
+      }
+    },
+    "prices": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["Q1", "Q2", "Q3", "Q4"],
+      "properties": { "Q1": { "$ref": "#/$defs/eur" }, "Q2": { "$ref": "#/$defs/eur" }, "Q3": { "$ref": "#/$defs/eur" }, "Q4": { "$ref": "#/$defs/eur" } }
+    },
+    "rounding": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}

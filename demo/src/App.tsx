@@ -9,12 +9,14 @@ const Supplier = lazy(() => import("./tabs/Supplier.tsx").then((m) => ({ default
 const VerificationBody = lazy(() => import("./tabs/VerificationBody.tsx").then((m) => ({ default: m.VerificationBody })));
 const Attacks = lazy(() => import("./tabs/Attacks.tsx").then((m) => ({ default: m.Attacks })));
 const TrustChain = lazy(() => import("./tabs/TrustChain.tsx").then((m) => ({ default: m.TrustChain })));
+const Workbench = lazy(() => import("./tabs/Workbench.tsx").then((m) => ({ default: m.Workbench })));
 const OnchainProof = lazy(() => import("./tabs/OnchainProof.tsx").then((m) => ({ default: m.OnchainProof })));
 
 export const TABS = [
   { id: "verification-body", label: "Verification body", short: "Body" },
   { id: "supplier", label: "Supplier", short: "Supplier" },
   { id: "buyer", label: "Buyer", short: "Buyer" },
+  { id: "importer-workbench", label: "Importer workbench", short: "Workbench" },
   { id: "try-to-break-it", label: "Try to break it", short: "Break it" },
   { id: "trust-chain", label: "Trust chain", short: "Trust" },
   { id: "on-chain-proof", label: "On-chain proof", short: "Proof" },
@@ -32,6 +34,7 @@ const ZH_TAB: Record<TabId, { label: string; short: string }> = {
   "verification-body": { label: "驗證機構", short: "驗證機構" },
   supplier: { label: "供應商", short: "供應商" },
   buyer: { label: "買方（進口商）", short: "買方" },
+  "importer-workbench": { label: "進口商工作台", short: "工作台" },
   "try-to-break-it": { label: "試著破解", short: "破解" },
   "trust-chain": { label: "信任鏈", short: "信任鏈" },
   "on-chain-proof": { label: "鏈上證明", short: "鏈上證明" },
@@ -414,6 +417,7 @@ export function App() {
             {tab === "verification-body" && <VerificationBody />}
             {tab === "supplier" && <Supplier />}
             {tab === "buyer" && <Buyer />}
+            {tab === "importer-workbench" && <Workbench />}
             {tab === "try-to-break-it" && <Attacks />}
             {tab === "trust-chain" && <TrustChain />}
             {tab === "on-chain-proof" && <OnchainProof />}

@@ -551,7 +551,7 @@ test("Phone (390 px): the sticky tab bar is one row that scrolls sideways, main-
   const bar = page.locator(".tabbar");
   expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(60);
   const tabs = page.getByRole("tab");
-  await expect(tabs).toHaveCount(6);
+  await expect(tabs).toHaveCount(7);
   const tops = await tabs.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
   expect(new Set(tops).size, "one row").toBe(1);
   for (const h of await tabs.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))) expect(h).toBeGreaterThanOrEqual(44);
