@@ -15,7 +15,7 @@ import { parseArgs } from "node:util";
 import { BaseError, ContractFunctionRevertedError, type TransactionReceipt } from "viem";
 import { DRAFT_LABEL, DRAFT_REF, PINNED_FX, art9Reduction, carbonPriceKeys } from "../sdk/carbonprice.ts";
 import { vleiCheckers } from "../sdk/checkers.ts";
-import { reportKeyOf } from "../sdk/commitment.ts";
+import { precursorBeneficiaryOf, reportKeyOf } from "../sdk/commitment.ts";
 import { newSalt } from "../sdk/encoding.ts";
 import { claimArgsOf } from "../sdk/issue.ts";
 import type { PrecursorEvidence } from "../sdk/precursor.ts";
@@ -47,15 +47,15 @@ async function main() {
     await log("registerMill", "Mill report registered by the mill's verification body (1000 t of wire rod at 1.44 tCO2e/t)", register(w, "mill", mill, w.millSupplier));
     await log("registerScrew", "Screw report registered, with the precursor statement's digest in its signed core (500 t at 1.8 tCO2e/t)", register(w, "screw", screw, w.screwSupplier));
     const shipA = { batchId: PC.delivery.batchId, quantityTonnes: PC.delivery.quantityTonnes, shipmentDate: PC.delivery.shipmentDate, importerSalt: newSalt() };
-    await log("claimWireRod", `Mill claims ${PC.delivery.quantityTonnes} t of wire rod for the screw maker on its report`, send(c, w.millSupplier, "registry", "claimShipment", claimArgsOf(mill, { ...shipA, importerEORI: SCREW_LEI })));
+    await log("claimWireRod", `Mill claims ${PC.delivery.quantityTonnes} t of wire rod for the screw maker on its report`, send(c, w.millSupplier, "registry", "claimShipment", claimArgsOf(mill, { ...shipA, importerEORI: precursorBeneficiaryOf(SCREW_LEI, screw.core.d) })));
     const shipment = { batchId: demo.shipments[0].batchId, quantityTonnes: demo.shipments[0].quantityTonnes, shipmentDate: demo.shipments[0].shipmentDate, importerSalt: newSalt() };
     await log("claimScrews", `Screw maker claims ${shipment.quantityTonnes} t of screws for the EU importer`, send(c, w.screwSupplier, "registry", "claimShipment", claimArgsOf(screw, { ...shipment, importerEORI: IMPORTER_EORI })));
 
     // ---- carbon price: certified statement, registered by the certifier body; the mill's claim for the screw maker
     const st = statementFor(w, mill);
     await log("registerStatement", `Certifier registers the mill's carbon price statement (draft rules; ${st.productionTonnes} t of wire rod produced in the period are claimable against it)`, registerStatement(w, st));
-    const ca = await claimAgainst(w, st, { batchId: "CP-DEMO-2026-0001", quantityTonnes: PC.delivery.quantityTonnes, beneficiary: SCREW_LEI });
-    await log("claimStatement", `Mill claims ${PC.delivery.quantityTonnes} t of wire rod against the statement for the screw maker (importerCommit = its LEI)`, Promise.resolve(ca.receipt));
+    const ca = await claimAgainst(w, st, { batchId: "CP-DEMO-2026-0001", quantityTonnes: PC.delivery.quantityTonnes, beneficiary: SCREW_LEI, goodSAID: screw.core.d });
+    await log("claimStatement", `Mill claims ${PC.delivery.quantityTonnes} t of wire rod against the statement for the screw maker (importerCommit = its LEI and the screw credential's SAID)`, Promise.resolve(ca.receipt));
     const claim = ca.claim;
     const evidence = await evidenceFor(w, st, claim);
 

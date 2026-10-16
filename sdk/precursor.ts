@@ -12,15 +12,18 @@
 // applied) by committing to its digest in the credential core (`precursorDigest`, covered by the SAID, the EIP-712
 // signature and the auditor's KEL anchor). The supplier presents the statement and, per verified precursor, the
 // producer's own proof. Check 9 then
-//   (a) verifies each producer's proof with checks 0–9 (recursively), with check 5 bound to the good's supplier LEI:
-//       the producer claimed that batch for this maker on the same registry, so one verified tonne of wire rod can
-//       back only one screw maker (the contract's ExceedsVerifiedTonnage cap, one tier up);
+//   (a) verifies each producer's proof with checks 0–9 (recursively), with check 5 bound to the good's supplier LEI
+//       and the good credential's SAID (precursorBeneficiaryOf): the producer claimed that batch for this maker and
+//       this credential on the same registry, so one verified tonne of wire rod can back only one screw credential
+//       (the contract's ExceedsVerifiedTonnage cap, one tier up). At most MAX_PRECURSOR_NODES producer proofs are
+//       verified per verification, all tiers together;
 //   (b) checks the precursor's CN code and period against the statement and the good, and that the claimed tonnes
 //       cover m_i × the good's verified tonnes;
 //   (c) recomputes SEE_g and compares it with the declared (signed) value within PRECURSOR_TOLERANCE;
 //   (d) flags a precursor for which the statement applies a default value (advisory: the value is the body's, not
 //       checked against the Default Values Act here).
 import { keccak256, stringToBytes } from "viem";
+import { precursorBeneficiaryOf } from "./commitment.ts";
 import { canonicalJson } from "./consistency.ts";
 import { isCnCode, isReportingPeriod, kgToTonnes, tonnesToKg, type Hex } from "./credential.ts";
 import type { Presentation } from "./disclosure.ts";
@@ -38,6 +41,12 @@ export const PRECURSOR_TOLERANCE = "0.01";
 export const MAX_PRECURSOR_DEPTH = 3;
 /** Most lines one statement may have. */
 export const MAX_PRECURSOR_LINES = 16;
+/**
+ * Most producer proofs verified in one verification, all tiers together (each is a full proof verification with its
+ * own chain reads). In a larger tree the lines beyond the limit are not checked: INCOMPLETE when the statement is
+ * signed.
+ */
+export const MAX_PRECURSOR_NODES = 32;
 
 export interface PrecursorLine {
   /** CN code of the precursor (4, 6 or 8 digits), e.g. "7213" (wire rod). */
@@ -207,20 +216,24 @@ function firstFailing(checks: CheckResult[]): string {
  * precursor evidence). Verdict mapping, from the worst line:
  *  - fail → INVALID: the statement's digest differs from the signed one; the signed statement is malformed; a
  *    producer's proof is INVALID (not registered, unknown or revoked body or auditor, revoked or superseded report,
- *    batch not claimed for this maker, ...); a precursor outside the statement's CN code, not a relevant precursor,
- *    or from a later period; claimed tonnes below m_i × the good's verified tonnes; declared SEE below the
+ *    batch not claimed for this maker and credential, ...); a precursor outside the statement's CN code, not a
+ *    relevant precursor, or from a later period; claimed tonnes below m_i × the good's verified tonnes; declared SEE below the
  *    recomputation by more than the tolerance (the good's value relies on precursor data it cannot rely on);
  *  - warn CONTESTED → CONTESTED: a producer's proof is CONTESTED (needs a person's review);
  *  - skipped → INCOMPLETE (when the core commits to a statement): a producer's proof or a value needed for the
- *    recomputation was not presented, or a producer's proof is INCOMPLETE;
+ *    recomputation was not presented, or a producer's proof is INCOMPLETE, or the tree needs more than
+ *    MAX_PRECURSOR_NODES producer verifications;
  *  - advisory warn (overall unchanged): a default value applied for a precursor (PRECURSOR_WARNING/DEFAULT_USED);
  *    declared SEE above the recomputation (PRECURSOR_WARNING/SEE_OVERSTATED: conservative, but inconsistent).
- * When the core carries no `precursorDigest`, nothing binds the statement to the good's value: every outcome is
- * reported as an advisory warning (PRECURSOR_WARNING/UNSIGNED) and the overall result does not change.
+ * When the core carries no `precursorDigest`, nothing binds the statement to the good's value: the producers' proofs
+ * are not verified, every outcome is reported as an advisory warning (PRECURSOR_WARNING/UNSIGNED) and the overall
+ * result does not change.
  */
 export function precursorChecker(opts: PrecursorCheckerOptions) {
   return async (evidence: unknown, ctx: EvidenceContext): Promise<PrecursorCheckResult> => {
     const signed = typeof ctx.core.precursorDigest === "string";
+    // One budget of producer verifications for the whole tree, shared with the tiers below.
+    const budget = ctx.options?.precursorBudget ?? { left: MAX_PRECURSOR_NODES };
     const d = ctx.disclosed;
     const report: PrecursorReport = {
       signed,
@@ -292,7 +305,13 @@ export function precursorChecker(opts: PrecursorCheckerOptions) {
         const proof = proofs[i];
         if (!isObj(proof)) {
           set("skipped", "", `the producer's proof for precursor line ${i + 1} (credential ${line.credSAID}) was not presented`);
+        } else if (!signed) {
+          // Advisory only: a statement the good's body did not sign never costs a producer verification (fan-out).
+          set("skipped", "", "the producer's proof was not verified, because the statement is not signed into this credential");
+        } else if (budget.left <= 0) {
+          set("skipped", "", `the producer's proof was not verified: the limit of ${MAX_PRECURSOR_NODES} producer proofs per verification (all tiers) was reached`);
         } else {
+          budget.left--;
           const p = proof as unknown as Presentation;
           let coreD: unknown;
           try {
@@ -302,9 +321,11 @@ export function precursorChecker(opts: PrecursorCheckerOptions) {
           else if (p.shipment?.batchId !== line.batchId) set("fail", "PRECURSOR_INVALID/NOT_BOUND", "the producer's proof does not carry the batch the statement names");
           else {
             const v = await verifyPresentation(p, ctx.reader, {
-              // Check 5 of the producer's proof: the batch was claimed for this good's maker (its LEI, committed
-              // with the proof's importer salt), so the claim counts against the producer's verified tonnes.
-              importerEORI: goodLei,
+              // Check 5 of the producer's proof: the batch was claimed for this good's maker and this good's
+              // credential (the maker's LEI and the credential's SAID, committed with the proof's importer salt), so
+              // the claim counts against the producer's verified tonnes once, for one credential.
+              importerEORI: precursorBeneficiaryOf(goodLei, ctx.core.d),
+              precursorBudget: budget,
               checkers: opts.checkers(),
               // The reader is pinned to the block the good's verification already checked for freshness.
               maxHeadAgeSec: Infinity,
@@ -381,7 +402,7 @@ export function precursorChecker(opts: PrecursorCheckerOptions) {
     const worst = [...report.lines.map((l) => ({ status: l.status, code: l.code, detail: `precursor line ${l.index + 1} (CN ${l.cnCode}): ${l.detail}` })), balance].reduce((a, b) => (rank(b) > rank(a) ? b : a));
     if (worst.status === "pass") {
       const v = report.lines.filter((l) => l.source === "verified").length;
-      return out("pass", "", `${balance.detail}; ${v} verified precursor credential${v === 1 ? "" : "s"}, each claimed for this maker on the shared ledger`);
+      return out("pass", "", `${balance.detail}; ${v} verified precursor credential${v === 1 ? "" : "s"}, each claimed for this maker and this credential on the shared ledger`);
     }
     // Advisory findings are listed together, so a default line does not hide an overstated value (or the reverse).
     if (rank(worst) === 1) {

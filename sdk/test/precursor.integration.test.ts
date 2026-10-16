@@ -117,13 +117,13 @@ beforeAll(async () => {
   for (const s of ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]) await register(w, "screw", cred[s], w.screwSupplier);
   await register(w, "screw", cred.B, w.secondSupplier);
 
-  // ---- the mill's claims for the screw maker (importerCommit = the screw maker's LEI)
-  ship["WR-A"] = await claimFor(w, cred.M1, { batchId: "WR-A", quantityTonnes: PC.delivery.quantityTonnes, makerLei: SCREW_LEI });
-  ship["WR-U"] = await claimFor(w, cred.M1, { batchId: "WR-U", quantityTonnes: "45", makerLei: SCREW_LEI });
-  ship["WR-O"] = await claimFor(w, cred.M1, { batchId: "WR-O", quantityTonnes: "45", makerLei: SCREW_LEI });
-  ship["WR-R"] = await claimFor(w, cred.M2, { batchId: "WR-R", quantityTonnes: "45", makerLei: SCREW_LEI });
-  ship["WR-P"] = await claimFor(w, cred.M3, { batchId: "WR-P", quantityTonnes: "45", makerLei: SCREW_LEI });
-  ship["WR-C"] = await claimFor(w, cred.M4, { batchId: "WR-C", quantityTonnes: "45", makerLei: SCREW_LEI });
+  // ---- the mill's claims for the screw maker (importerCommit = the screw maker's LEI and the SAID of the screw credential that relies on the batch)
+  ship["WR-A"] = await claimFor(w, cred.M1, { batchId: "WR-A", quantityTonnes: PC.delivery.quantityTonnes, makerLei: SCREW_LEI, goodSAID: cred.S1.core.d });
+  ship["WR-U"] = await claimFor(w, cred.M1, { batchId: "WR-U", quantityTonnes: "45", makerLei: SCREW_LEI, goodSAID: cred.S2.core.d });
+  ship["WR-O"] = await claimFor(w, cred.M1, { batchId: "WR-O", quantityTonnes: "45", makerLei: SCREW_LEI, goodSAID: cred.S8.core.d });
+  ship["WR-R"] = await claimFor(w, cred.M2, { batchId: "WR-R", quantityTonnes: "45", makerLei: SCREW_LEI, goodSAID: cred.S3.core.d });
+  ship["WR-P"] = await claimFor(w, cred.M3, { batchId: "WR-P", quantityTonnes: "45", makerLei: SCREW_LEI, goodSAID: cred.S4.core.d });
+  ship["WR-C"] = await claimFor(w, cred.M4, { batchId: "WR-C", quantityTonnes: "45", makerLei: SCREW_LEI, goodSAID: cred.S5.core.d });
   ship["WR-X"] = { batchId: "WR-X", quantityTonnes: "45", shipmentDate: "2026-06-30", importerSalt: newSalt() }; // never claimable
   // the second maker's 500 t: more than the 1000 − 562.5 − 45 − 45 = 347.5 t left on the mill's report
   ship[PC.secondScrewMaker.batchId] = { batchId: PC.secondScrewMaker.batchId, quantityTonnes: PC.secondScrewMaker.quantityTonnes, shipmentDate: "2026-07-15", importerSalt: newSalt() };
@@ -175,7 +175,7 @@ describe("check 9: precursor chain of trust (local anvil)", () => {
 
   it("the second maker cannot reuse the first maker's claimed batch: the claim is committed to the first maker's LEI", async () => {
     // Even with its own body signing a statement that names the first maker's batch WR-A, the claim's importerCommit is
-    // the first maker's LEI, so check 5 of the mill's proof (bound to the second maker's LEI) fails.
+    // the first maker's LEI and credential, so check 5 of the mill's proof (bound to the second maker's LEI and credential) fails.
     const s = statementOf([wireRodLine(cred.M1, "WR-A", "1.25")]);
     const bad = await issueAs(w, "screw", screwClaims({ supplierLEI: SECOND_LEI, operatorId: `TW${SECOND_LEI}`, installationId: `TW-${SECOND_LEI}-0002`, verificationReportId: "VR-DEMO-T10", verifiedTonnes: "400", specificEmbeddedEmissions_tCO2e_per_t: "1.98" }), { statement: s });
     const p = proofOf(w, "screw", bad, { precursorEvidence: { statement: s, proofs: [proofOf(w, "mill", cred.M1, { shipment: ship["WR-A"] })] } });
@@ -235,11 +235,12 @@ describe("check 9: precursor chain of trust (local anvil)", () => {
   });
 
   it("claimed wire rod below m × the screw tonnes: MASS_NOT_COVERED", async () => {
-    // statement S1 with batch WR-U (45 t claimed) instead of WR-A (562.5 t): needs a credential signing that statement
-    const s = statementOf([wireRodLine(cred.M1, "WR-U")]);
+    // a 500 t screw credential backed by a 45 t claim (562.5 t needed): its own batch WR-T, claimed for it
+    const s = statementOf([wireRodLine(cred.M1, "WR-T")]);
     const thin = await issueAs(w, "screw", screwClaims({ installationId: screwInst(9), verificationReportId: "VR-DEMO-T11" }), { statement: s });
     await register(w, "screw", thin, w.screwSupplier);
-    const r = await verify(proofOf(w, "screw", thin, { precursorEvidence: { statement: s, proofs: [proofOf(w, "mill", cred.M1, { shipment: ship["WR-U"] })] } }));
+    const sh = await claimFor(w, cred.M1, { batchId: "WR-T", quantityTonnes: "45", makerLei: SCREW_LEI, goodSAID: thin.core.d });
+    const r = await verify(proofOf(w, "screw", thin, { precursorEvidence: { statement: s, proofs: [proofOf(w, "mill", cred.M1, { shipment: sh })] } }));
     expect(status(r)[9]).toBe("fail:PRECURSOR_INVALID/MASS_NOT_COVERED");
     expect(r.precursors!.lines[0]).toMatchObject({ claimedTonnes: "45", neededTonnes: "562.5" });
   });
@@ -343,7 +344,7 @@ describe("check 9: a CONTESTED precursor makes the good CONTESTED", () => {
     const sc = await issueAs(w2, "screw", screwClaims(), { statement: s });
     await register(w2, "mill", m, w2.millSupplier);
     await register(w2, "screw", sc, w2.screwSupplier);
-    const sh = await claimFor(w2, m, { batchId: "WR-A", quantityTonnes: "562.5", makerLei: SCREW_LEI });
+    const sh = await claimFor(w2, m, { batchId: "WR-A", quantityTonnes: "562.5", makerLei: SCREW_LEI, goodSAID: sc.core.d });
     const { auditorAidHashOf, leiHashOf } = await import("../commitment.ts");
     await send(c2, c2.watcher, "allowlist", "revokeAuditor", [auditorAidHashOf(w2.chain.bodies.mill.auditorAid), leiHashOf(PC.body.lei)]);
     const p = proofOf(w2, "screw", sc, { precursorEvidence: { statement: s, proofs: [proofOf(w2, "mill", m, { shipment: sh })] } });

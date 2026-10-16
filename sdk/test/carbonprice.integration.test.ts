@@ -11,7 +11,7 @@ import { BaseError, ContractFunctionRevertedError } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DRAFT_LABEL, carbonPriceKeys, saidifyStatement, type CarbonPriceEvidence, type CarbonPriceStatement } from "../carbonprice.ts";
 import { vleiCheckers } from "../checkers.ts";
-import { auditorAidHashOf, leiHashOf } from "../commitment.ts";
+import { auditorAidHashOf, batchKeyOf, leiHashOf, precursorBeneficiaryOf, reportKeyOf } from "../commitment.ts";
 import type { Presentation, ShipmentPart } from "../disclosure.ts";
 import { newSalt } from "../encoding.ts";
 import { claimArgsOf, type SignedCredential } from "../issue.ts";
@@ -62,7 +62,7 @@ async function tier(n: number, opts: { screwTonnes?: string } = {}) {
   await register(w, "screw", screw[k], w.screwSupplier);
   const need = (Number(opts.screwTonnes ?? "500") * 1.125).toString();
   const importerSalt = newSalt();
-  await send(c, w.millSupplier, "registry", "claimShipment", claimArgsOf(mill[k], { batchId: `WR-${n}`, quantityTonnes: need, importerEORI: SCREW_LEI, importerSalt }));
+  await send(c, w.millSupplier, "registry", "claimShipment", claimArgsOf(mill[k], { batchId: `WR-${n}`, quantityTonnes: need, importerEORI: precursorBeneficiaryOf(SCREW_LEI, screw[k].core.d), importerSalt }));
   wr[k] = { batchId: `WR-${n}`, quantityTonnes: need, shipmentDate: "2026-06-30", importerSalt };
 }
 
@@ -76,7 +76,7 @@ beforeAll(async () => {
   // 1: the honest statement, claimed for the screw maker (562.5 t of wire rod)
   cps["1"] = statementFor(w, mill["1"]);
   await registerStatement(w, cps["1"]);
-  ev["1"] = await evidenceFor(w, cps["1"], (await claimAgainst(w, cps["1"], { batchId: "CP-1", quantityTonnes: "562.5", beneficiary: SCREW_LEI })).claim);
+  ev["1"] = await evidenceFor(w, cps["1"], (await claimAgainst(w, cps["1"], { batchId: "CP-1", quantityTonnes: "562.5", beneficiary: SCREW_LEI, goodSAID: screw["1"].core.d })).claim);
   // double use: the same statement claimed beyond the 400,000 t it covers
   try {
     await claimAgainst(w, cps["1"], { batchId: "CP-1-over", quantityTonnes: "399438", beneficiary: SECOND_LEI });
@@ -87,23 +87,23 @@ beforeAll(async () => {
   // 2: a small statement (600 t produced): 500 t claimed for the screw maker (562.5 t needed); a second maker's 150 t
   cps["2"] = statementFor(w, mill["2"], { operator: { name: PC.mill.name, lei: PC.mill.lei, installationId: millInst(2) }, productionTonnes: "600", cpmEmissions: "864", exemptEmissions: "691.2", feePaid: "51840", certificationReportId: "CPR-CP-2" });
   await registerStatement(w, cps["2"]);
-  ev["2"] = await evidenceFor(w, cps["2"], (await claimAgainst(w, cps["2"], { batchId: "CP-2", quantityTonnes: "500", beneficiary: SCREW_LEI })).claim);
+  ev["2"] = await evidenceFor(w, cps["2"], (await claimAgainst(w, cps["2"], { batchId: "CP-2", quantityTonnes: "500", beneficiary: SCREW_LEI, goodSAID: screw["2"].core.d })).claim);
 
   // 3: revoked by the certifier body after registration
   cps["3"] = statementFor(w, mill["3"], { operator: { name: PC.mill.name, lei: PC.mill.lei, installationId: millInst(3) }, certificationReportId: "CPR-CP-3" });
   await registerStatement(w, cps["3"]);
-  ev["3"] = await evidenceFor(w, cps["3"], (await claimAgainst(w, cps["3"], { batchId: "CP-3", quantityTonnes: "562.5", beneficiary: SCREW_LEI })).claim);
+  ev["3"] = await evidenceFor(w, cps["3"], (await claimAgainst(w, cps["3"], { batchId: "CP-3", quantityTonnes: "562.5", beneficiary: SCREW_LEI, goodSAID: screw["3"].core.d })).claim);
   await send(c, w.certifierSigner, "registry", "revokeReport", [carbonPriceKeys(cps["3"]).reportKey]);
 
   // 4: FX manipulated (30 TWD/EUR instead of the pinned 35.196), certified and registered as such
   cps["4"] = statementFor(w, mill["4"], { operator: { name: PC.mill.name, lei: PC.mill.lei, installationId: millInst(4) }, fx: { unitsPerEur: "30", year: 2025, source: "made up" }, certificationReportId: "CPR-CP-4" });
   await registerStatement(w, cps["4"]);
-  ev["4"] = await evidenceFor(w, cps["4"], (await claimAgainst(w, cps["4"], { batchId: "CP-4", quantityTonnes: "562.5", beneficiary: SCREW_LEI })).claim);
+  ev["4"] = await evidenceFor(w, cps["4"], (await claimAgainst(w, cps["4"], { batchId: "CP-4", quantityTonnes: "562.5", beneficiary: SCREW_LEI, goodSAID: screw["4"].core.d })).claim);
 
   // another period for installation 1 (2027): registered, but the credential is for 2026
   cps.period = statementFor(w, mill["1"], { reportingPeriod: "2027-01-01/2027-12-31", certificationReportId: "CPR-CP-2027" });
   await registerStatement(w, cps.period);
-  ev.period = await evidenceFor(w, cps.period, (await claimAgainst(w, cps.period, { batchId: "CP-P", quantityTonnes: "562.5", beneficiary: SCREW_LEI })).claim);
+  ev.period = await evidenceFor(w, cps.period, (await claimAgainst(w, cps.period, { batchId: "CP-P", quantityTonnes: "562.5", beneficiary: SCREW_LEI, goodSAID: screw["1"].core.d })).claim);
 
   // hypothetical: a statement on the screws themselves (a screw maker above the 25,000 t threshold), claimed for the importer
   cps.good = statementFor(w, mill["1"], {
@@ -119,7 +119,7 @@ beforeAll(async () => {
     certificationReportId: "CPR-CP-SCREW",
   });
   await registerStatement(w, cps.good, { supplier: w.screwSupplier });
-  ev.good = await evidenceFor(w, cps.good, (await claimAgainst(w, cps.good, { batchId: "CP-G", quantityTonnes: "200", beneficiary: IMPORTER_EORI, from: w.screwSupplier })).claim, { signer: w.screwSupplier });
+  ev.good = await evidenceFor(w, cps.good, (await claimAgainst(w, cps.good, { batchId: "CP-G", quantityTonnes: "200", beneficiary: IMPORTER_EORI, shipmentBatchKey: batchKeyOf(reportKeyOf(screw["1"].core.d), shipment.batchId, screw["1"].claims.batchSalt), from: w.screwSupplier })).claim, { signer: w.screwSupplier });
 
   // a certifier not on the allowlist tries to register a statement
   cps.impostor = statementFor(w, mill["1"], { certificationReportId: "CPR-IMPOSTOR" });

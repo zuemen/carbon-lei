@@ -83,13 +83,13 @@
         },
         "warnings": {
           "type": "array",
-          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: check 6 or 7 did not pass or fail (not run, or only a warning from a caller's own checker); overall is then INCOMPLETE, unless a check failed (INVALID) or check 4 is CONTESTED (CONTESTED). PRECURSORS_NOT_CHECKED: the credential commits to a precursor statement, but check 9 was not run or not decided (the statement or a producer's proof not presented, or a producer's proof INCOMPLETE); overall is then INCOMPLETE unless a check failed or something is CONTESTED. CARBON_PRICE_NOT_CHECKED: the proof carries a carbon price statement, but check 10 was not run or not decided (no pinned exchange rate, the precursor it applies to not verified, no EORI for a statement on the good itself); overall is then INCOMPLETE unless a check failed or something is CONTESTED.",
+          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: check 6 or 7 did not pass or fail (not run, or only a warning from a caller's own checker); overall is then INCOMPLETE, unless a check failed (INVALID) or check 4 is CONTESTED (CONTESTED). RECONCILIATION_NOT_CHECKED: the credential commits to a signed reconciliation (its three hashes are in the core), but check 8 was not run or not decided (the report extract missing, different from the signed one, unreadable, or reconciled fields hidden), so the sub-rules on the signed report were not applied; overall is then INCOMPLETE unless a check failed or something is CONTESTED. PRECURSORS_NOT_CHECKED: the credential commits to a precursor statement, but check 9 was not run or not decided (the statement or a producer's proof not presented, or a producer's proof INCOMPLETE); overall is then INCOMPLETE unless a check failed or something is CONTESTED. CARBON_PRICE_NOT_CHECKED: the proof carries a carbon price statement, but check 10 was not run or not decided (no pinned exchange rate, the precursor it applies to not verified or its precursor statement not signed into the credential, no EORI or no shipment for a statement on the good itself); overall is then INCOMPLETE unless a check failed or something is CONTESTED.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": ["code", "detail"],
             "properties": {
-              "code": { "enum": ["SHIPMENT_NOT_BOUND", "EVIDENCE_NOT_CHECKED", "PRECURSORS_NOT_CHECKED", "CARBON_PRICE_NOT_CHECKED"] },
+              "code": { "enum": ["SHIPMENT_NOT_BOUND", "EVIDENCE_NOT_CHECKED", "RECONCILIATION_NOT_CHECKED", "PRECURSORS_NOT_CHECKED", "CARBON_PRICE_NOT_CHECKED"] },
               "detail": { "type": "string", "minLength": 1 }
             }
           }

@@ -1,13 +1,14 @@
 // Precursor chain of trust on a local anvil chain: a fictional wire-rod mill (CN 7213) with its own verification body
 // and lead auditor registers its verified report in the same EmissionsClaimRegistry; the mill's supplier wallet claims
-// the wire rod it delivered to the screw maker against that report (importerCommit = the screw maker's LEI with a
-// salt), so the same verified tonnes of wire rod cannot back two screw makers; the screw maker's verification body
+// the wire rod it delivered to the screw maker against that report (importerCommit = the screw maker's LEI and the
+// SAID of the screw credential that relies on it, with a salt), so the same verified tonnes of wire rod cannot back two
+// screw makers, nor two credentials of the same maker; the screw maker's verification body
 // signs a precursor statement (sdk/precursor.ts) into the screw credential. Shared by
 // sdk/test/precursor.integration.test.ts and scripts/precursor-local.ts. Local chain only: nothing here runs on
 // Sepolia. vLEI evidence: the synthetic two-body chain of verifier/src/precursor-chain.ts.
 import { readFileSync } from "node:fs";
 import type { PrivateKeyAccount } from "viem";
-import { hashString, importerCommitOf, leiHashOf, auditorAidHashOf } from "../sdk/commitment.ts";
+import { hashString, importerCommitOf, leiHashOf, auditorAidHashOf, precursorBeneficiaryOf } from "../sdk/commitment.ts";
 import { METHODOLOGY_NOTE, isoToSeconds, type CredentialClaims, type Hex } from "../sdk/credential.ts";
 import type { Presentation, ShipmentPart } from "../sdk/disclosure.ts";
 import { newSalt } from "../sdk/encoding.ts";
@@ -184,16 +185,18 @@ export async function register(w: World, body: BodyKey, cred: SignedCredential, 
 }
 
 /**
- * The mill's supplier claims `quantityTonnes` of `millCred` for the maker with LEI `makerLei` (the claim's
- * importerCommit). Returns the shipment part the maker presents in the mill's proof.
+ * The mill's supplier claims `quantityTonnes` of `millCred` for the maker with LEI `makerLei` and its credential
+ * `goodSAID` (the claim's importerCommit, over precursorBeneficiaryOf(makerLei, goodSAID)): the batch backs that one
+ * credential. Returns the shipment part the maker presents in the mill's proof.
  */
 export async function claimFor(
   w: World,
   millCred: SignedCredential,
-  s: { batchId: string; quantityTonnes: string; makerLei: string; shipmentDate?: string; importerSalt?: Hex },
+  s: { batchId: string; quantityTonnes: string; makerLei: string; goodSAID: string; shipmentDate?: string; importerSalt?: Hex },
 ): Promise<ShipmentPart> {
   const importerSalt = s.importerSalt ?? newSalt();
-  await send(w.c, w.millSupplier, "registry", "claimShipment", claimArgsOf(millCred, { batchId: s.batchId, quantityTonnes: s.quantityTonnes, importerEORI: s.makerLei, importerSalt }));
+  const importerEORI = precursorBeneficiaryOf(s.makerLei, s.goodSAID);
+  await send(w.c, w.millSupplier, "registry", "claimShipment", claimArgsOf(millCred, { batchId: s.batchId, quantityTonnes: s.quantityTonnes, importerEORI, importerSalt }));
   return { batchId: s.batchId, quantityTonnes: s.quantityTonnes, shipmentDate: s.shipmentDate ?? PC.delivery.shipmentDate, importerSalt };
 }
 
@@ -213,5 +216,5 @@ export function proofOf(
   };
 }
 
-/** The importer commitment of `importerCommitOf` for a maker's LEI, re-exported for the tests. */
-export const makerCommit = (lei: string, salt: Hex) => importerCommitOf(lei, salt);
+/** The importer commitment of a precursor claim for a maker's LEI and its credential's SAID, for the tests. */
+export const makerCommit = (lei: string, goodSAID: string, salt: Hex) => importerCommitOf(precursorBeneficiaryOf(lei, goodSAID), salt);

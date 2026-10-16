@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { BaseError, ContractFunctionRevertedError, type TransactionReceipt } from "viem";
 import { vleiCheckers } from "../sdk/checkers.ts";
-import { reportKeyOf } from "../sdk/commitment.ts";
+import { precursorBeneficiaryOf, reportKeyOf } from "../sdk/commitment.ts";
 import { newSalt } from "../sdk/encoding.ts";
 import { claimArgsOf } from "../sdk/issue.ts";
 import type { PrecursorEvidence } from "../sdk/precursor.ts";
@@ -63,15 +63,15 @@ async function main() {
     const shipA = { batchId: PC.delivery.batchId, quantityTonnes: PC.delivery.quantityTonnes, shipmentDate: PC.delivery.shipmentDate, importerSalt: newSalt() };
     await log(
       "claimWireRod",
-      `Mill claims ${PC.delivery.quantityTonnes} t of wire rod for the screw maker on its report (importerCommit = the screw maker's LEI)`,
-      send(c, w.millSupplier, "registry", "claimShipment", claimArgsOf(mill, { ...shipA, importerEORI: SCREW_LEI })),
+      `Mill claims ${PC.delivery.quantityTonnes} t of wire rod for the screw maker on its report (importerCommit = the screw maker's LEI and the screw credential's SAID)`,
+      send(c, w.millSupplier, "registry", "claimShipment", claimArgsOf(mill, { ...shipA, importerEORI: precursorBeneficiaryOf(SCREW_LEI, screw.core.d) })),
     );
     const shipment = { batchId: demo.shipments[0].batchId, quantityTonnes: demo.shipments[0].quantityTonnes, shipmentDate: demo.shipments[0].shipmentDate, importerSalt: newSalt() };
     await log("claimScrews", `Screw maker claims ${shipment.quantityTonnes} t of screws for the EU importer`, send(c, w.screwSupplier, "registry", "claimShipment", claimArgsOf(screw, { ...shipment, importerEORI: IMPORTER_EORI })));
 
     // The second maker's 500 t of the same wire rod: more than the 437.5 t left (eth_call; the transaction is not sent).
     const shipB = { batchId: PC.secondScrewMaker.batchId, quantityTonnes: PC.secondScrewMaker.quantityTonnes, shipmentDate: "2026-07-15", importerSalt: newSalt() };
-    const argsB = claimArgsOf(mill, { ...shipB, importerEORI: PC.secondScrewMaker.lei });
+    const argsB = claimArgsOf(mill, { ...shipB, importerEORI: precursorBeneficiaryOf(PC.secondScrewMaker.lei, second.core.d) });
     let secondRevert: { errorName: string; args: string[] } | null = null;
     try {
       await send(c, w.millSupplier, "registry", "claimShipment", argsB);

@@ -61,7 +61,7 @@
   "statement": {
     "type": "CarbonLEI Carbon Price Statement",
     "version": "0.1.0",
-    "d": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+    "d": "EJCGgrv-VB4BYttpp8SP3KpoxnkLBaFEwwjyNZgGVbeR",
     "notice": "Draft implementing act, not adopted — illustrative",
     "operator": {
       "name": "Demo Wire Rod Co. (fictional)",
@@ -71,7 +71,7 @@
     "reportingPeriod": "2026-01-01/2026-12-31",
     "cnCode": "7213",
     "credentials": [
-      "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU"
+      "EGJWe4LYY6PptLuWPnGqhRVdW4QHgjChf4U_KnCquO-j"
     ],
     "mechanism": {
       "country": "TW",
@@ -115,7 +115,7 @@
     "statement": {
       "type": "CarbonLEI Carbon Price Statement",
       "version": "0.1.0",
-      "d": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+      "d": "EJCGgrv-VB4BYttpp8SP3KpoxnkLBaFEwwjyNZgGVbeR",
       "notice": "Draft implementing act, not adopted — illustrative",
       "operator": {
         "name": "Demo Wire Rod Co. (fictional)",
@@ -125,7 +125,7 @@
       "reportingPeriod": "2026-01-01/2026-12-31",
       "cnCode": "7213",
       "credentials": [
-        "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU"
+        "EGJWe4LYY6PptLuWPnGqhRVdW4QHgjChf4U_KnCquO-j"
       ],
       "mechanism": {
         "country": "TW",
@@ -165,30 +165,30 @@
       "certifiedAt": "2027-06-30T00:00:00Z",
       "validUntil": "2027-12-31T00:00:00Z"
     },
-    "operatorSignature": "0xe1bbffb1e385276ef493134274150ca08b03183bd29a58bdd6c41d5481522e3848076c9f433f8f51e397d6ed65fdaa9360bb06e452bc6fc20fe1597250acfc311c",
+    "operatorSignature": "0x7318dc211119d5d56f38ca726380ab65a39820e1f2bf8c46c13ad9fc43404ab73e7cd2e0698c1bb988400ab6a06170325c52c5446b205964d359fadba4ec25701b",
     "anchorEvidence": {
       "note": "SYNTHETIC (local precursor demo and tests only; built without KERIA by verifier/src/precursor-chain.ts, deterministic test keys). Its root is a synthetic test root, not the demo's pinned root; a verifier must pin it explicitly. Fictional identities. Interaction event #1 in the certification lead auditor's KEL anchoring statement SAIDs.",
       "synthetic": true,
-      "credSAID": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+      "credSAID": "EJCGgrv-VB4BYttpp8SP3KpoxnkLBaFEwwjyNZgGVbeR",
       "auditor": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
       "kelSeq": 1,
       "event": {
-        "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EMI6bvaUvADC0fBlC0x9UbAizcKxGJ2G-ezM0Djm8RFe\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"s\":\"1\",\"p\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"a\":[{\"d\":\"EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj\"}]}",
-        "said": "EMI6bvaUvADC0fBlC0x9UbAizcKxGJ2G-ezM0Djm8RFe",
+        "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EKicVbMcxAFe-9O8DmMi1YtrsiuBMcg3eiOivjX0xLZo\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"s\":\"1\",\"p\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"a\":[{\"d\":\"EJCGgrv-VB4BYttpp8SP3KpoxnkLBaFEwwjyNZgGVbeR\"}]}",
+        "said": "EKicVbMcxAFe-9O8DmMi1YtrsiuBMcg3eiOivjX0xLZo",
         "type": "ixn",
         "sn": "1",
         "prior": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
         "seals": [
           {
-            "d": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj"
+            "d": "EJCGgrv-VB4BYttpp8SP3KpoxnkLBaFEwwjyNZgGVbeR"
           }
         ]
       },
       "signatures": [
         {
-          "qb64": "AACScbXAvpdqC1Stw_sYK5M-g39sU4q53maDg-fXaLHLWAPbsiJ_FRjVgzni8HC8G0R0Wu_bhJ481u4tXcHLwO8P",
+          "qb64": "AAAZn7HwaL3bBFc1J5o_1n6A4sBJ_ih_-MIQCQizLENLiGAlbx0Kn85O4xcvjQHTQ9l_D_7805qqzgXp2SMQk80F",
           "index": 0,
-          "hex": "9271b5c0be976a0b54adc3fb182b933e837f6c538ab9de668383e7d768b1cb5803dbb2227f1518d58339e2f070bc1b44745aefdb849e3cd6ee2d5dc1cbc0ef0f"
+          "hex": "199fb1f068bddb045735279a3fd67e80e2c049fe287ff8c2100908b32c434b8860256f1d0a9fce4ee3172f8d01d343d97f0ffefcd39aaace05e9d9231093cd05"
         }
       ],
       "signingKeys": [
@@ -204,7 +204,7 @@
       },
       "establishmentRaw": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DBj-sJiX7bTUjjKcsu5UKdFgtMTPyugpEd05XN00qkpG\"],\"nt\":\"1\",\"n\":[\"ECJkILSxK54WGyY_b_MSJosPILV8MJKU5hPEGmzoc5dg\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}",
       "establishmentAttachment": "-AABAABHo3wiCnb4RlUhOOnouSCkAirR9VBgtNI76CKHYZjL3t30uyT1sv9b-Pm1t972nomWu8HJEYmAttxaszYD634H",
-      "kelAttachment": "-AABAACScbXAvpdqC1Stw_sYK5M-g39sU4q53maDg-fXaLHLWAPbsiJ_FRjVgzni8HC8G0R0Wu_bhJ481u4tXcHLwO8P",
+      "kelAttachment": "-AABAAAZn7HwaL3bBFc1J5o_1n6A4sBJ_ih_-MIQCQizLENLiGAlbx0Kn85O4xcvjQHTQ9l_D_7805qqzgXp2SMQk80F",
       "checks": {
         "saidRecomputed": true,
         "sizeMatchesVersion": true,
@@ -229,11 +229,11 @@
     "claim": {
       "batchId": "CP-DEMO-2026-0001",
       "quantityTonnes": "562.5",
-      "batchSalt": "0xc96f83a1ac9306814977c9b5a933cf877072b7ceecffa6862d7b8f3e82b6920b",
-      "beneficiarySalt": "0xbb525fb39192f4239caa0a94f9551d5d0f41c2411f341fba514276480c6708fb"
+      "batchSalt": "0xcf80c527ff758d28b58c64c3bcb839714c1d2dae2a2d90d5ff211523ed33f657",
+      "beneficiarySalt": "0xbc6faf6a6b13f6723e3918f0c0d1b6f81df823f475f10c575126b6ee5a8d64e1"
     }
   },
-  "statementKey": "0x44c23c3504ca67260c66fdb3e7be6b21fcb14a490d026de263c8faa6e4dc0312",
+  "statementKey": "0x87896242b6cc65cf27f0c5f542c85141a8fbbed02aadacdfb9351ba5e4e3713d",
   "fx": {
     "currency": "TWD",
     "year": 2025,
@@ -320,7 +320,7 @@
         "name": "Precursors",
         "status": "pass",
         "code": "",
-        "detail": "0.18 + 1.62 = 1.8 tCO2e/t recomputed, 1.8 declared, within 0.01; 1 verified precursor credential, each claimed for this maker on the shared ledger"
+        "detail": "0.18 + 1.62 = 1.8 tCO2e/t recomputed, 1.8 declared, within 0.01; 1 verified precursor credential, each claimed for this maker and this credential on the shared ledger"
       },
       {
         "index": 10,
@@ -332,11 +332,11 @@
     ],
     "carbonPrice": {
       "draft": "Draft implementing act, not adopted — illustrative",
-      "statementSAID": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+      "statementSAID": "EJCGgrv-VB4BYttpp8SP3KpoxnkLBaFEwwjyNZgGVbeR",
       "target": {
         "kind": "precursor",
         "line": 0,
-        "credSAID": "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU",
+        "credSAID": "EGJWe4LYY6PptLuWPnGqhRVdW4QHgjChf4U_KnCquO-j",
         "cnCode": "7213",
         "massPerTonne": "1.125",
         "seeCap": "1.44"
@@ -402,7 +402,7 @@
           "detail": "1.125 t/t × 1.44 tCO2e/t = 1.62 tCO2e per t of good",
           "see": "1.44",
           "contribution": "1.62",
-          "credSAID": "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU",
+          "credSAID": "EGJWe4LYY6PptLuWPnGqhRVdW4QHgjChf4U_KnCquO-j",
           "batchId": "WR-DEMO-2026-0001",
           "verification": {
             "overall": "VALID",
@@ -507,13 +507,13 @@
         "name": "Carbon price paid (draft Art 9)",
         "status": "fail",
         "code": "CARBON_PRICE_INVALID/NOT_CLAIMED",
-        "detail": "[Draft implementing act, not adopted — illustrative] batch CP-DEMO-2026-0001 was claimed for someone other than the maker ZZZZ00TWSCREWDEMO185"
+        "detail": "[Draft implementing act, not adopted — illustrative] batch CP-DEMO-2026-0001 was claimed for someone other than the maker ZZZZ00TWSCREWDEMO185 for this credential"
       }
     }
   },
   "mill": {
-    "credSAID": "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU",
-    "reportKey": "0xadbaf6625e20ab12fd28d0d01bcf312cea1dd56259cae25e8b727619c620fb3e"
+    "credSAID": "EGJWe4LYY6PptLuWPnGqhRVdW4QHgjChf4U_KnCquO-j",
+    "reportKey": "0x762faccf912e28a68bb68edf750c4c95f7296543562f348e3598bd523b2df8b8"
   },
   "sources": [
     {
@@ -552,7 +552,7 @@
     {
       "step": "registerMill",
       "label": "Mill report registered by the mill's verification body (1000 t of wire rod at 1.44 tCO2e/t)",
-      "hash": "0x8a0d385fb19a0092e809e363f59e05b6abf44a597c86eb07df3f9c5e168b85f7",
+      "hash": "0xd7d65bc5c5890d30d55a61d699506f565af8c9fff5575a75f9c548b58ac91370",
       "block": 9,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -560,7 +560,7 @@
     {
       "step": "registerScrew",
       "label": "Screw report registered, with the precursor statement's digest in its signed core (500 t at 1.8 tCO2e/t)",
-      "hash": "0xc0c0bba140db65fae58a67532e4159b373db89a160cf5f7cd30c4b4a0fd56474",
+      "hash": "0x9abf205f8be74248362f6e234e98b860a57768731b3c1f30d78255080d8a40f2",
       "block": 10,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -568,7 +568,7 @@
     {
       "step": "claimWireRod",
       "label": "Mill claims 562.5 t of wire rod for the screw maker on its report",
-      "hash": "0xd382c692c27dbc4b941b6fd5a1274f2f5161c1e18249c9f0d9f2c0fecdd926e0",
+      "hash": "0x6a437a71c0d0b1d0ecb0243f0da6468d451b71a37029d43465f8066d44603669",
       "block": 11,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -576,7 +576,7 @@
     {
       "step": "claimScrews",
       "label": "Screw maker claims 200 t of screws for the EU importer",
-      "hash": "0x82ddae0cd19db7131e2cd6ef0182ca73a7b2f49c9da92e3beddbbbf3c274bae9",
+      "hash": "0xfe8ae627492dda4e8d1573709743c7db70116d300b21fd6a7e6de398435c0bac",
       "block": 12,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
@@ -584,15 +584,15 @@
     {
       "step": "registerStatement",
       "label": "Certifier registers the mill's carbon price statement (draft rules; 400000 t of wire rod produced in the period are claimable against it)",
-      "hash": "0x39b0acc2cfa21726deb8cc5d14ad7dfcf5ab84c3e353e3009d75bd7f9c6271d9",
+      "hash": "0x5b2b87993f9b099e3e3f7d2a3acf61d116136fc75706f2cd1935614300a8e09c",
       "block": 13,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
     },
     {
       "step": "claimStatement",
-      "label": "Mill claims 562.5 t of wire rod against the statement for the screw maker (importerCommit = its LEI)",
-      "hash": "0xeca1a0be8f79acc743276b1520ce5e93adaba92c162a547072dc52bc2b3fa984",
+      "label": "Mill claims 562.5 t of wire rod against the statement for the screw maker (importerCommit = its LEI and the screw credential's SAID)",
+      "hash": "0xad60edc9be8588a9f1599d4e0d86a96f0d223f39e4f5acfae18eb73beabd26f1",
       "block": 14,
       "time": "2026-09-21T14:13:20Z",
       "result": "success"
