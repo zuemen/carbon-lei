@@ -6,6 +6,7 @@ import { bytesToHex, utf8 } from "./encoding.ts";
 import type { CheckResult, EvidenceCheckers, EvidenceContext } from "./verify.ts";
 import { DEMO_TRUST_ANCHOR, verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "./vlei.ts";
 import { checkReconciliation, type ReportExtract } from "./consistency.ts";
+import { MAX_PRECURSOR_DEPTH, precursorChecker } from "./precursor.ts";
 
 export interface BundleRef {
   bundle: string;
@@ -34,11 +35,25 @@ function result(index: number, ok: boolean, code: string, detail: string): Check
   return { index, name: "", status: ok ? "pass" : "fail", code: ok ? "" : code, detail };
 }
 
+/**
+ * Checkers for checks 6–9. Check 9 verifies each precursor producer's proof with the same checkers one tier down,
+ * with `precursorTrustAnchor` (default: `trustAnchor`) pinned for checks 7 of those tiers, up to `precursorDepth`
+ * tiers below the good (default MAX_PRECURSOR_DEPTH); past it, a tier's own check 9 is not run.
+ */
 export function vleiCheckers(
-  opts: { loadBundle?: (path: string) => Promise<string>; trustAnchor?: string } = {},
+  opts: { loadBundle?: (path: string) => Promise<string>; trustAnchor?: string; precursorTrustAnchor?: string; precursorDepth?: number } = {},
 ): EvidenceCheckers {
   const trustAnchor = opts.trustAnchor ?? DEMO_TRUST_ANCHOR;
+  const depth = opts.precursorDepth ?? MAX_PRECURSOR_DEPTH;
+  const precursorAnchor = opts.precursorTrustAnchor ?? trustAnchor;
   return {
+    ...(depth > 0
+      ? {
+          precursors: precursorChecker({
+            checkers: () => vleiCheckers({ ...opts, trustAnchor: precursorAnchor, precursorTrustAnchor: precursorAnchor, precursorDepth: depth - 1 }),
+          }),
+        }
+      : {}),
     anchor: (ev: unknown, ctx: EvidenceContext) => {
       if (!ctx.report) return result(6, false, "ANCHOR_NOT_FOUND", "the report is not registered, so there is no anchor to check");
       const r = verifyAnchor(ev as AnchorEvidence, {

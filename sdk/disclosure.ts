@@ -32,6 +32,12 @@ export interface CredentialCore {
   issuer: { verifierAddress: Hex; verifierLEI: string; auditorAID: string };
   digests: string[];
   reconciliation?: Reconciliation;
+  /**
+   * keccak256 of the canonical JSON of the precursor statement (sdk/precursor.ts): the good's own process emissions
+   * and, per precursor, the mass consumed per tonne and the producer's credential or the default applied. Absent in
+   * credentials without a precursor statement (all credentials registered on Sepolia so far).
+   */
+  precursorDigest?: Hex;
   issuedAt: string;
   validUntil: string;
 }
@@ -52,6 +58,8 @@ export interface Presentation {
   anchorEvidence?: unknown;
   authorityEvidence?: unknown;
   reportExtract?: Record<string, unknown>;
+  /** Check 9: the precursor statement and the producers' proofs (sdk/precursor.ts PrecursorEvidence). */
+  precursorEvidence?: unknown;
 }
 
 /** Encoded disclosure: base64url of the compact JSON array [salt, name, value]. */
@@ -88,6 +96,8 @@ export interface IssueInput {
   verifierAddress: Hex;
   auditorAID: string;
   reconciliation?: Reconciliation;
+  /** Digest of the precursor statement (sdk/precursor.ts precursorDigestOf), signed with the core. */
+  precursorDigest?: Hex;
   /** Fixed salts for test vectors; random otherwise. */
   salts?: Partial<Record<ClaimName, Hex>>;
 }
@@ -119,6 +129,7 @@ export function buildCredential(input: IssueInput): IssuedCredential {
     },
     digests: sortDigests(Object.values(disclosures).map(disclosureDigest)),
     ...(input.reconciliation ? { reconciliation: input.reconciliation } : {}),
+    ...(input.precursorDigest ? { precursorDigest: input.precursorDigest } : {}),
     issuedAt: input.claims.issuedAt,
     validUntil: input.claims.validUntil,
   };

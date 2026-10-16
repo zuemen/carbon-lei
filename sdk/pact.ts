@@ -19,6 +19,13 @@ export const PRODUCT_ID_DOMAIN = "zuemen.github.io";
 /** CN codes are maintained by the European Commission; the URN uses the issuer's domain. */
 export const CN_ISSUER_DOMAIN = "ec.europa.eu";
 export const BOUNDARY = "CBAM embedded direct emissions — not a full product carbon footprint";
+/**
+ * The boundary note when check 9 verified a signed precursor statement: the value includes the precursors' embedded
+ * direct emissions (CBAM SEE of a complex good, Commission Guidance No. 3, section 4.2.2.3), and says how many of them
+ * rest on a verified producer credential and how many on a default value.
+ */
+export const boundaryWithPrecursors = (verified: number, defaults: number) =>
+  `CBAM embedded direct emissions, including the precursors' embedded direct emissions (${verified} from verified precursor credential${verified === 1 ? "" : "s"}${defaults ? `, ${defaults} from default values` : ""}, checked by CarbonLEI check 9) — not a full product carbon footprint`;
 export const EXTENSION_SCHEMA_URL = "https://zuemen.github.io/carbon-lei/schemas/carbonlei-extension-0.1.0.json";
 export const DOCUMENTATION_URL = "https://github.com/zuemen/carbon-lei/blob/main/docs/PACT_MAPPING.md";
 const ZERO32 = `0x${"0".repeat(64)}`;
@@ -49,6 +56,8 @@ export interface PactContext {
   kelSeq: bigint;
   registry: Hex;
   chainId: number;
+  /** Check 9 verified a signed precursor statement with this many verified and default precursor lines. */
+  precursors?: { verified: number; defaults: number };
   /** On-chain state; omit for an offline export (then status is Active and the comment says so). */
   onchain?: { revoked: boolean; replaced: boolean; supersedes?: Hex; supersedesSameLayer?: boolean };
   companyName: string;
@@ -125,7 +134,7 @@ export function exportPact(ctx: PactContext): Record<string, unknown> {
       ipccCharacterizationFactors: ["AR6"],
       crossSectoralStandards: [CROSS_SECTORAL_STANDARD],
       exemptedEmissionsPercent: "0",
-      boundaryProcessesDescription: BOUNDARY,
+      boundaryProcessesDescription: ctx.precursors ? boundaryWithPrecursors(ctx.precursors.verified, ctx.precursors.defaults) : BOUNDARY,
       verification: {
         coverage: "product level",
         ...(ctx.verifierName ? { providerName: ctx.verifierName } : {}),
@@ -169,7 +178,10 @@ export type PactProduct = Pick<PactContext, "companyName" | "productNameCompany"
  * - check 4 failed for any other reason (revoked, expired, issuer, supplier or scope mismatch, ...), or for that
  *   reason as well as supersession;
  * - check 6 or 7 did not pass (not run, so INCOMPLETE, or only a warning);
+ * - check 9 (precursors) failed, or did not decide a precursor statement the credential commits to (INCOMPLETE);
  * - the overall result is CONTESTED (it needs a person's review first).
+ * When check 9 verified a signed precursor statement, `boundaryProcessesDescription` says the value includes the
+ * precursors' embedded direct emissions.
  * `r` should come from a verification with the importer's EORI (check 5), so that check 4 judged the claim time only
  * for the importer the batch was declared to. Reads the report's on-chain record for `status`, `precedingPfIds` and
  * the KEL sequence number.
@@ -190,7 +202,7 @@ export async function exportPactFromProof(
   // Checks 6 and 7 decide whether the auditor was authorised; a result without them, or with one failed, says
   // nothing a footprint's `status` could carry (status only follows the on-chain record of check 4).
   if (r.overall === "INCOMPLETE") {
-    throw new Error("the verification did not run every check (INCOMPLETE: checks 6 and 7 need the evidence checkers); nothing exported");
+    throw new Error("the verification did not run every check (INCOMPLETE: checks 6 and 7 need the evidence checkers, and check 9 the precursor tier a credential commits to); nothing exported");
   }
   const failedEvidence = r.checks.find((c) => (c.index === 6 || c.index === 7) && c.status === "fail");
   if (failedEvidence) {
@@ -206,6 +218,10 @@ export async function exportPactFromProof(
   const c4 = check(4);
   if (c4?.status === "fail" && !onlySuperseded(c4)) {
     throw new Error(`the proof fails check 4 (${c4.code}: ${c4.detail}); nothing exported`);
+  }
+  // Check 9: a precursor tier that fails means the value relies on precursor data it cannot rely on.
+  if (check(9)?.status === "fail") {
+    throw new Error(`the proof fails check 9 (${check(9)?.code}: ${check(9)?.detail}); nothing exported`);
   }
   // Check 5: with an EORI, the shipment must have been declared to that importer.
   if (check(5)?.status === "fail") {
@@ -228,6 +244,14 @@ export async function exportPactFromProof(
     documentationUrl: DOCUMENTATION_URL,
     ...product,
     disclosed: r.disclosed,
+    ...(r.precursors?.signed && (check(9)?.status === "pass" || (check(9)?.status === "warn" && check(9)?.code.startsWith("PRECURSOR_WARNING/")))
+      ? {
+          precursors: {
+            verified: r.precursors.lines.filter((l) => l.source === "verified").length,
+            defaults: r.precursors.lines.filter((l) => l.source === "default").length,
+          },
+        }
+      : {}),
     credSAID: core.d,
     auditorAID: core.issuer.auditorAID,
     verifierLEI: core.issuer.verifierLEI,

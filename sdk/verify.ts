@@ -1,6 +1,7 @@
 // Full verification of a supplier's proof (presentation), shared by the hosted page and the CLI.
 // Checks: 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment,
-// 6 KEL anchor, 7 authority chain, 8 report reconciliation (advisory).
+// 6 KEL anchor, 7 authority chain, 8 report reconciliation (advisory), and 9 precursors (sdk/precursor.ts) only for a
+// credential that commits to a precursor statement or a proof that carries precursor evidence.
 // All steps run even after a failure, so the result shows every failing check;
 // only a malformed presentation (step 0) stops early.
 import {
@@ -32,6 +33,7 @@ import { extractShapeProblem } from "./consistency.ts";
 import { decodeDisclosure, disclosureDigest, type CredentialCore, type Presentation } from "./disclosure.ts";
 import { recoverIssuer } from "./eip712.ts";
 import { isSalt } from "./encoding.ts";
+import type { PrecursorReport } from "./precursor.ts";
 import { duplicateKey, verifySaid } from "./said.ts";
 
 export type CheckStatus = "pass" | "fail" | "warn" | "skipped";
@@ -66,13 +68,15 @@ export interface OnchainView {
  * rotated away soon after the revocation; the revision chain names another supplier address, or another body revised
  * the credential with more tonnes or into another layer. INCOMPLETE: no check failed, but checks that decide validity
  * were not run (no evidence checkers for checks 6 and 7, a checker that answered only `warn` for one of them, or the
- * offline view without a chain); not a pass.
+ * offline view without a chain); not a pass. Check 9 (precursors) maps the same way: a producer's proof that fails, or a
+ * declared value below the recomputation, is INVALID; a producer's proof that is CONTESTED makes this one CONTESTED;
+ * a precursor tier the credential commits to but that was not presented or not fully checked makes it INCOMPLETE.
  */
 export type Overall = "VALID" | "INVALID" | "CONTESTED" | "INCOMPLETE";
 
 /** Something the caller should know about how the checks were run; it does not change any check. */
 export interface VerificationWarning {
-  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED";
+  code: "SHIPMENT_NOT_BOUND" | "EVIDENCE_NOT_CHECKED" | "PRECURSORS_NOT_CHECKED";
   detail: string;
 }
 
@@ -92,13 +96,17 @@ export interface VerificationResult {
   atBlock?: bigint;
   /** Absent in results recorded before warnings existed (the demo's cached view). */
   warnings?: VerificationWarning[];
+  /** Check 9's breakdown (direct and precursor contributions, each producer's verification), when check 9 ran. */
+  precursors?: PrecursorReport;
 }
 
-/** Plug-ins for checks 6–8 (vLEI evidence and report reconciliation live in their own modules). */
+/** Plug-ins for checks 6–9 (vLEI evidence, report reconciliation and precursors live in their own modules). */
 export interface EvidenceCheckers {
   anchor?: (evidence: unknown, ctx: EvidenceContext) => Promise<CheckResult> | CheckResult;
   authority?: (evidence: unknown, ctx: EvidenceContext) => Promise<CheckResult> | CheckResult;
   reconciliation?: (extract: Record<string, unknown>, ctx: EvidenceContext) => Promise<CheckResult> | CheckResult;
+  /** Check 9 (sdk/precursor.ts precursorChecker): verifies the precursor tier, one proof verification per producer. */
+  precursors?: (evidence: unknown, ctx: EvidenceContext) => Promise<CheckResult & { precursors?: PrecursorReport }>;
 }
 
 export interface EvidenceContext {
@@ -108,6 +116,8 @@ export interface EvidenceContext {
   rejected?: readonly string[];
   report?: ReportRecord;
   reader: ChainReader;
+  /** The options of this verification that a producer's proof is verified with too (check 9). */
+  options?: Pick<VerifyOptions, "contestedWindowHours" | "minAddressTenureDays">;
 }
 
 export interface VerifyOptions {
@@ -269,6 +279,7 @@ const NAMES = [
   "Auditor anchor (KEL)",
   "Authority chain (vLEI)",
   "Report reconciliation",
+  "Precursors",
 ];
 
 const lower = (s: string) => s.toLowerCase();
@@ -333,6 +344,9 @@ function localChecks(p: Presentation, proofText?: string): LocalPart | Verificat
   }
   if (isoSeconds(core.validUntil) === undefined) {
     return malformed("the credential core's validUntil is not an ISO 8601 time with a time zone");
+  }
+  if (core.precursorDigest !== undefined && !(typeof core.precursorDigest === "string" && /^0x[0-9a-f]{64}$/.test(core.precursorDigest))) {
+    return malformed("the credential core's precursorDigest is not a 32-byte lower-case hex value");
   }
   for (const enc of p.disclosures) {
     try {
@@ -444,6 +458,9 @@ async function signatureCheck(
 
 const isFinal = (x: LocalPart | VerificationResult): x is VerificationResult => "overall" in x;
 
+/** Check 9 runs (and appears in the result) only for a core with a precursor digest or a proof with precursor evidence. */
+const hasPrecursorPart = (p: Presentation, core: CredentialCore) => core.precursorDigest !== undefined || p.precursorEvidence !== undefined;
+
 /**
  * Checks 0-3 without a chain (the demo's offline view): the signature is checked under the signing domain of
  * `registry` on `chainId`, taken from the deployment, not from a node. Checks 4-8 need the chain and are reported
@@ -458,7 +475,8 @@ export async function verifyOffline(
   if (isFinal(local)) return local;
   const { checks, disclosed, hidden } = local;
   checks.push((await signatureCheck(p, local, deployment.registry, deployment.chainId)).check);
-  for (let i = 4; i <= 8; i++) checks.push(result(i, "skipped", "", "not run: needs a live connection to the chain"));
+  const last = hasPrecursorPart(p, local.core) ? 9 : 8;
+  for (let i = 4; i <= last; i++) checks.push(result(i, "skipped", "", "not run: needs a live connection to the chain"));
   const failed = checks.filter((x) => x.status === "fail");
   return {
     overall: failed.length ? "INVALID" : "INCOMPLETE",
@@ -654,9 +672,24 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     })());
 
   // Checks 6-8 only need the report and the disclosed fields: start them now, alongside check 4's reads.
-  const ctx: EvidenceContext = { core, disclosed, rejected: decoded.map((d) => d.name).filter((n) => !Object.hasOwn(disclosed, n)), report: rep.registeredAt === 0n ? undefined : rep, reader: rd };
+  const ctx: EvidenceContext = {
+    core,
+    disclosed,
+    rejected: decoded.map((d) => d.name).filter((n) => !Object.hasOwn(disclosed, n)),
+    report: rep.registeredAt === 0n ? undefined : rep,
+    reader: rd,
+    options: {
+      ...(opts.contestedWindowHours !== undefined ? { contestedWindowHours: opts.contestedWindowHours } : {}),
+      ...(opts.minAddressTenureDays !== undefined ? { minAddressTenureDays: opts.minAddressTenureDays } : {}),
+    },
+  };
   const c = opts.checkers ?? {};
-  const { anchor, authority, reconciliation } = c;
+  const { anchor, authority, reconciliation, precursors } = c;
+  const precursorEvidence = p.precursorEvidence;
+  const precursorsP =
+    precursorEvidence !== undefined && precursors
+      ? early(Promise.resolve().then(() => precursors(precursorEvidence, ctx)))
+      : undefined;
   const anchorP =
     p.anchorEvidence !== undefined && anchor ? early(Promise.resolve().then(() => anchor(p.anchorEvidence, ctx))) : undefined;
   const authorityP =
@@ -891,6 +924,27 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
   } else {
     checks.push({ ...(await reconciliationP), index: 8, name: NAMES[8] });
   }
+  // ---------------------------------------------------------------- 9 precursors
+  let precursorReport: PrecursorReport | undefined;
+  const signedPrecursors = core.precursorDigest !== undefined;
+  if (hasPrecursorPart(p, core)) {
+    if (precursorEvidence === undefined) {
+      checks.push(result(9, "skipped", "", "the credential commits to a precursor statement, but the proof does not carry it"));
+    } else if (!precursorsP) {
+      checks.push(result(9, "skipped", "", "precursor verification not available here"));
+    } else {
+      const { precursors: rep9, ...c9 } = await precursorsP;
+      precursorReport = rep9;
+      // Without a signed digest the checker reports at most an advisory warning; enforce it for any checker.
+      checks.push(
+        signedPrecursors || c9.status === "skipped" || (c9.status === "warn" && c9.code !== "CONTESTED")
+          ? { ...c9, index: 9, name: NAMES[9] }
+          : { ...c9, index: 9, name: NAMES[9], status: "warn", code: "PRECURSOR_WARNING/UNSIGNED" },
+      );
+    }
+  }
+  const c9 = checks.find((x) => x.index === 9);
+  if (c9?.status === "warn" && c9.code === "CONTESTED" && signedPrecursors) contested = true;
 
   const warnings: VerificationWarning[] = [];
   if (p.shipment && !opts.importerEORI) {
@@ -920,9 +974,15 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     });
   }
 
+  // Check 9 decides whether the value's precursor basis holds, when the credential commits to one: not run is not a pass.
+  const precursorsNotChecked = signedPrecursors && c9?.status === "skipped";
+  if (precursorsNotChecked) {
+    warnings.push({ code: "PRECURSORS_NOT_CHECKED", detail: `check 9 not run or not decided: ${c9!.detail}` });
+  }
+
   const failed = checks.filter((x) => x.status === "fail");
   return {
-    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length ? "INCOMPLETE" : "VALID",
+    overall: failed.length ? "INVALID" : contested ? "CONTESTED" : notChecked.length || precursorsNotChecked ? "INCOMPLETE" : "VALID",
     checks,
     disclosed,
     hidden,
@@ -931,5 +991,6 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
     checkedAt: t,
     atBlock: head.number,
     warnings,
+    ...(precursorReport ? { precursors: precursorReport } : {}),
   };
 }
