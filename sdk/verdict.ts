@@ -7,6 +7,7 @@ import type { Presentation } from "./disclosure.ts";
 import { disclosureCounts } from "./summary.ts";
 import { DEMO_TRUST_ANCHOR } from "./vlei.ts";
 import type { PrecursorLineResult, PrecursorReport } from "./precursor.ts";
+import type { CarbonPriceReport } from "./carbonprice.ts";
 import {
   verifyPresentation,
   type EvidenceCheckers,
@@ -65,6 +66,8 @@ export interface Verdict {
   trustAnchor: string | null;
   /** Check 9's breakdown, when check 9 ran: direct and precursor contributions, each producer's verification. */
   precursors?: VerdictPrecursors;
+  /** Check 10's breakdown, when check 10 ran (draft CBAM Art 9 rules, not adopted: illustrative). */
+  carbonPrice?: CarbonPriceReport;
   tool: { name: string; version: string };
 }
 
@@ -109,6 +112,8 @@ export interface VerdictOptions extends Omit<VerifyOptions, "checkers"> {
   trustAnchor?: string;
   /** Root of trust for check 7 of the precursor tiers (check 9; default: `trustAnchor`). */
   precursorTrustAnchor?: string;
+  /** Root of trust for the carbon price certifier (check 10; default: `precursorTrustAnchor`, then `trustAnchor`). */
+  carbonPriceTrustAnchor?: string;
 }
 
 const num = (x: bigint | undefined) => (x === undefined ? null : Number(x));
@@ -139,6 +144,7 @@ export function toVerdict(
     warnings: (r.warnings ?? []).map((w) => ({ ...w })),
     trustAnchor: ctx.trustAnchor ?? null,
     ...(r.precursors ? { precursors: toVerdictPrecursors(r.precursors) } : {}),
+    ...(r.carbonPrice ? { carbonPrice: r.carbonPrice } : {}),
     tool: { ...TOOL },
   };
 }
@@ -181,7 +187,7 @@ export async function verdictFor(proof: Presentation, reader: ChainReader, opts:
       return typeof v === "function" ? v.bind(target) : v;
     },
   });
-  const { checkers, loadBundle, trustAnchor, precursorTrustAnchor, ...rest } = opts;
+  const { checkers, loadBundle, trustAnchor, precursorTrustAnchor, carbonPriceTrustAnchor, ...rest } = opts;
   const r = await verifyPresentation(proof, watched, {
     ...rest,
     checkers:
@@ -190,6 +196,7 @@ export async function verdictFor(proof: Presentation, reader: ChainReader, opts:
         ...(loadBundle ? { loadBundle: async (p: string) => loadBundle(p) } : {}),
         ...(trustAnchor ? { trustAnchor } : {}),
         ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}),
+        ...(carbonPriceTrustAnchor ? { carbonPriceTrustAnchor } : {}),
       }),
   });
   return toVerdict(proof, r, { chainId, block, trustAnchor: checkers ? (trustAnchor ?? null) : (trustAnchor ?? DEMO_TRUST_ANCHOR) });

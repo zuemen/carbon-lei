@@ -1,0 +1,47 @@
+{
+  "note": "Carbon price paid (check 10) of the local carbon price demo only (scripts/carbonprice-local.ts, anvil). DRAFT RULES: the Commission's draft implementing regulation on CBAM Art 9 (Ref. Ares(2026)4841230, 13 May 2026) is NOT adopted; everything here is illustrative. The wire-rod mill of fixtures/demo.json (entities.precursorChain) is the fee payer; the certifier is a fictional independent person under the synthetic precursor root. All companies and people fictional; emissions and installation figures invented; the fee rules and the exchange rate are real and sourced below.",
+  "certifier": {
+    "name": "Demo Carbon Price Certification GmbH (fictional)",
+    "lei": "ZZZZ00EUCPCERTDEMO77",
+    "country": "DE",
+    "accreditationNumber": "DEMO-ACC-LIV-0001",
+    "accreditedUntil": "2031-06-30T00:00:00Z",
+    "cnScope": ["7213", "7318"],
+    "auditor": { "name": "Lena Demo (fictional person)", "role": "CBAM Certification Lead Auditor" }
+  },
+  "mill": {
+    "productionRoute": "integrated BF/BOF: hot metal, billet casting and wire rod rolling on one site (illustrative)",
+    "productionTonnes": "400000",
+    "cpmEmissions": "576000",
+    "emissionsPerTonne": "1.44"
+  },
+  "fee": {
+    "country": "TW",
+    "name": "Taiwan carbon fee (碳費)",
+    "legalBasis": "Climate Change Response Act; Regulations Governing the Collection of Carbon Fees (碳費收費辦法), Arts 3, 5 and 6 (MOENV, issued 2024-08-29, amended 2026-09-01)",
+    "currency": "TWD",
+    "ratePerTonne": "300",
+    "thresholdK": "0",
+    "factor": "0.2",
+    "exemptBasis": "high carbon leakage risk with an approved self-reduction plan: emission adjustment factor 0.2 for the first period (Art 6), K = 0 for high-leakage entities (Art 5); exempted share (1 − 0.2) counted as a rebate (draft Art 8(1)(b)(iii); Annex I 5(d))",
+    "refunds": "0",
+    "feePaid": "34560000"
+  },
+  "fx": { "unitsPerEur": "35.196", "year": 2025 },
+  "statement": {
+    "reportingPeriod": "2026-01-01/2026-12-31",
+    "certificationReportId": "CPR-DEMO-WR-2026-0001",
+    "certifiedAt": "2027-06-30T00:00:00Z",
+    "validUntil": "2027-12-31T00:00:00Z"
+  },
+  "refPriceEur": "82.32",
+  "refPriceNote": "€82.32 is the Q3 2026 CBAM certificate price, used here as an illustrative stand-in: the draft's reference price is the yearly average of the CBAM certificate prices of the year of import (draft Art 6(3)), which for 2026 is not yet known (Q4 not published on 2026-10-16).",
+  "sources": [
+    { "what": "CBAM Art 9 draft implementing regulation (formulae Annex I eq. 1-17, Art 5, Art 6, Art 8, Art 9, Art 16, Annex II-IV)", "url": "https://ec.europa.eu/info/law/better-regulation/have-your-say/initiatives/14830-Carbon-border-adjustment-mechanism-CBAM-carbon-price-paid-in-a-third-country_en", "mirror": "https://www.knowtbt.kr/mrim/rsti/download?tbtNotiSeq=726148&fileMasterSeq=273708&fileSeq=604049", "accessed": "2026-10-16" },
+    { "what": "Status: working draft 13 May 2026, feedback 13 May-10 June 2026, not adopted as of 12 Oct 2026", "url": "https://cbamguide.com/compliance/carbon-price-deduction/", "accessed": "2026-10-16" },
+    { "what": "Taiwan carbon fee regulation: fee = (emissions − K) × adjustment factor × rate; K 25,000 t (0 for high leakage); factor 0.2 / 0.4 / 0.6", "url": "https://oaout.moenv.gov.tw/laW/LawContent.aspx?id=GL007914", "accessed": "2026-10-16" },
+    { "what": "First payment (May 2026, 2025 emissions): NT$4.97 bn; standard NT$300/t; preferential NT$50 and NT$100; 29 steel plants NT$400 m", "url": "https://www.taipeitimes.com/News/front/archives/2026/06/04/2003858496", "accessed": "2026-10-16" },
+    { "what": "224 high-leakage plants pay on emissions × 0.2; next period 0.4", "url": "https://www.e-info.org.tw/node/243508", "accessed": "2026-10-16" },
+    { "what": "EUR/TWD annual average 2025 = 35.196 (Eurostat ert_bil_eur_a, updated 2026-07-08)", "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/ert_bil_eur_a?currency=TWD&statinfo=AVG&format=JSON&lang=EN", "accessed": "2026-10-16" }
+  ]
+}

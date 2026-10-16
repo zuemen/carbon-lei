@@ -1,0 +1,601 @@
+{
+  "version": 1,
+  "mode": "local",
+  "draft": "Draft implementing act, not adopted — illustrative",
+  "draftRef": "Commission draft implementing regulation on the carbon price paid in a third country (CBAM Art 9(5)), Ref. Ares(2026)4841230 of 13 May 2026; feedback closed 10 June 2026; not adopted",
+  "label": "Draft implementing act, not adopted — illustrative. Built on a local anvil chain (chain ID 31337) by scripts/carbonprice-local.ts, not on Sepolia. vLEI evidence of the mill's body and of the certifier is synthetic (deterministic test keys, no KERIA) under the synthetic precursor root. All companies and people fictional; installation and emissions figures invented; the Taiwan fee rules and the exchange rate are real (sources in fixtures/carbonprice.json).",
+  "chainId": 31337,
+  "deployment": {
+    "registry": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "allowlist": "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+  },
+  "trustAnchor": "EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn",
+  "entities": {
+    "mill": {
+      "name": "Demo Wire Rod Co. (fictional)",
+      "lei": "ZZZZ00TWWIRERDEMO108",
+      "installation": {
+        "id": "TW-ZZZZ00TWWIRERDEMO108-0001",
+        "name": "Demo Wire Rod Mill 1 (fictional)"
+      }
+    },
+    "screwMaker": {
+      "name": "Demo Fasteners Co. (fictional)",
+      "lei": "ZZZZ00TWSCREWDEMO185"
+    },
+    "secondScrewMaker": {
+      "name": "Demo Screw Works Ltd. (fictional)",
+      "lei": "ZZZZ00TWSCREWDEMO282"
+    },
+    "root": {
+      "name": "Synthetic Test Root (fictional)",
+      "role": "synthetic root of the local precursor demo; not the pinned demo root"
+    },
+    "qvi": {
+      "name": "Demo QVI (fictional; synthetic keys)",
+      "lei": "ZZZZ00QVIISSRDEMO116"
+    },
+    "nab": {
+      "name": "Demo Accreditation Body (fictional; synthetic keys)",
+      "lei": "ZZZZ00NABACCRDEMO119"
+    },
+    "certifierBody": {
+      "name": "Demo Carbon Price Certification GmbH (fictional)",
+      "lei": "ZZZZ00EUCPCERTDEMO77",
+      "aid": "EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT",
+      "accreditationNumber": "DEMO-ACC-LIV-0001",
+      "cnScope": [
+        "7213",
+        "7318"
+      ],
+      "leSaid": "ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb",
+      "accreditationSaid": "EGwbcOwSv8sG09dgullUVSXZUVWJZqE82SXeHVTGyiUw"
+    },
+    "certifierAuditor": {
+      "name": "Lena Demo (fictional person)",
+      "role": "CBAM Certification Lead Auditor",
+      "aid": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
+      "ecrSaid": "EG37Zevr_x_aaZtrGWx_0LuzrxlBdit0DOaa1LQuna97"
+    }
+  },
+  "statement": {
+    "type": "CarbonLEI Carbon Price Statement",
+    "version": "0.1.0",
+    "d": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+    "notice": "Draft implementing act, not adopted — illustrative",
+    "operator": {
+      "name": "Demo Wire Rod Co. (fictional)",
+      "lei": "ZZZZ00TWWIRERDEMO108",
+      "installationId": "TW-ZZZZ00TWWIRERDEMO108-0001"
+    },
+    "reportingPeriod": "2026-01-01/2026-12-31",
+    "cnCode": "7213",
+    "credentials": [
+      "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU"
+    ],
+    "mechanism": {
+      "country": "TW",
+      "name": "Taiwan carbon fee (碳費)",
+      "legalBasis": "Climate Change Response Act; Regulations Governing the Collection of Carbon Fees (碳費收費辦法), Arts 3, 5 and 6 (MOENV, issued 2024-08-29, amended 2026-09-01)",
+      "form": "point-source carbon tax",
+      "covers": "direct"
+    },
+    "currency": "TWD",
+    "ratePerTonne": "300",
+    "cpmEmissions": "576000",
+    "exemptEmissions": "460800",
+    "exemptBasis": "high carbon leakage risk with an approved self-reduction plan: emission adjustment factor 0.2 for the first period (Art 6), K = 0 for high-leakage entities (Art 5); exempted share (1 − 0.2) counted as a rebate (draft Art 8(1)(b)(iii); Annex I 5(d))",
+    "adjustment": {
+      "thresholdK": "0",
+      "factor": "0.2"
+    },
+    "refunds": "0",
+    "feePaid": "34560000",
+    "productionTonnes": "400000",
+    "emissionsPerTonne": "1.44",
+    "fx": {
+      "unitsPerEur": "35.196",
+      "year": 2025,
+      "source": "Eurostat ert_bil_eur_a, annual average 2025 (Commission yearly rates of draft Art 5 not yet published)"
+    },
+    "effectivePriceEurPerTonne": "2.454824",
+    "materiality": "5%",
+    "rebatesChecked": true,
+    "certifier": {
+      "name": "Demo Carbon Price Certification GmbH (fictional)",
+      "lei": "ZZZZ00EUCPCERTDEMO77",
+      "auditorAID": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
+      "accreditationNumber": "DEMO-ACC-LIV-0001"
+    },
+    "certificationReportId": "CPR-DEMO-WR-2026-0001",
+    "certifiedAt": "2027-06-30T00:00:00Z",
+    "validUntil": "2027-12-31T00:00:00Z"
+  },
+  "evidence": {
+    "statement": {
+      "type": "CarbonLEI Carbon Price Statement",
+      "version": "0.1.0",
+      "d": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+      "notice": "Draft implementing act, not adopted — illustrative",
+      "operator": {
+        "name": "Demo Wire Rod Co. (fictional)",
+        "lei": "ZZZZ00TWWIRERDEMO108",
+        "installationId": "TW-ZZZZ00TWWIRERDEMO108-0001"
+      },
+      "reportingPeriod": "2026-01-01/2026-12-31",
+      "cnCode": "7213",
+      "credentials": [
+        "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU"
+      ],
+      "mechanism": {
+        "country": "TW",
+        "name": "Taiwan carbon fee (碳費)",
+        "legalBasis": "Climate Change Response Act; Regulations Governing the Collection of Carbon Fees (碳費收費辦法), Arts 3, 5 and 6 (MOENV, issued 2024-08-29, amended 2026-09-01)",
+        "form": "point-source carbon tax",
+        "covers": "direct"
+      },
+      "currency": "TWD",
+      "ratePerTonne": "300",
+      "cpmEmissions": "576000",
+      "exemptEmissions": "460800",
+      "exemptBasis": "high carbon leakage risk with an approved self-reduction plan: emission adjustment factor 0.2 for the first period (Art 6), K = 0 for high-leakage entities (Art 5); exempted share (1 − 0.2) counted as a rebate (draft Art 8(1)(b)(iii); Annex I 5(d))",
+      "adjustment": {
+        "thresholdK": "0",
+        "factor": "0.2"
+      },
+      "refunds": "0",
+      "feePaid": "34560000",
+      "productionTonnes": "400000",
+      "emissionsPerTonne": "1.44",
+      "fx": {
+        "unitsPerEur": "35.196",
+        "year": 2025,
+        "source": "Eurostat ert_bil_eur_a, annual average 2025 (Commission yearly rates of draft Art 5 not yet published)"
+      },
+      "effectivePriceEurPerTonne": "2.454824",
+      "materiality": "5%",
+      "rebatesChecked": true,
+      "certifier": {
+        "name": "Demo Carbon Price Certification GmbH (fictional)",
+        "lei": "ZZZZ00EUCPCERTDEMO77",
+        "auditorAID": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
+        "accreditationNumber": "DEMO-ACC-LIV-0001"
+      },
+      "certificationReportId": "CPR-DEMO-WR-2026-0001",
+      "certifiedAt": "2027-06-30T00:00:00Z",
+      "validUntil": "2027-12-31T00:00:00Z"
+    },
+    "operatorSignature": "0xe1bbffb1e385276ef493134274150ca08b03183bd29a58bdd6c41d5481522e3848076c9f433f8f51e397d6ed65fdaa9360bb06e452bc6fc20fe1597250acfc311c",
+    "anchorEvidence": {
+      "note": "SYNTHETIC (local precursor demo and tests only; built without KERIA by verifier/src/precursor-chain.ts, deterministic test keys). Its root is a synthetic test root, not the demo's pinned root; a verifier must pin it explicitly. Fictional identities. Interaction event #1 in the certification lead auditor's KEL anchoring statement SAIDs.",
+      "synthetic": true,
+      "credSAID": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+      "auditor": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
+      "kelSeq": 1,
+      "event": {
+        "raw": "{\"v\":\"KERI10JSON0000ff_\",\"t\":\"ixn\",\"d\":\"EMI6bvaUvADC0fBlC0x9UbAizcKxGJ2G-ezM0Djm8RFe\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"s\":\"1\",\"p\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"a\":[{\"d\":\"EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj\"}]}",
+        "said": "EMI6bvaUvADC0fBlC0x9UbAizcKxGJ2G-ezM0Djm8RFe",
+        "type": "ixn",
+        "sn": "1",
+        "prior": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
+        "seals": [
+          {
+            "d": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj"
+          }
+        ]
+      },
+      "signatures": [
+        {
+          "qb64": "AACScbXAvpdqC1Stw_sYK5M-g39sU4q53maDg-fXaLHLWAPbsiJ_FRjVgzni8HC8G0R0Wu_bhJ481u4tXcHLwO8P",
+          "index": 0,
+          "hex": "9271b5c0be976a0b54adc3fb182b933e837f6c538ab9de668383e7d768b1cb5803dbb2227f1518d58339e2f070bc1b44745aefdb849e3cd6ee2d5dc1cbc0ef0f"
+        }
+      ],
+      "signingKeys": [
+        {
+          "qb64": "DBj-sJiX7bTUjjKcsu5UKdFgtMTPyugpEd05XN00qkpG",
+          "hex": "18feb09897edb4d48e329cb2ee5429d160b4c4cfcae82911dd395cdd34aa4a46"
+        }
+      ],
+      "signingThreshold": "1",
+      "establishmentEvent": {
+        "sn": "0",
+        "said": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT"
+      },
+      "establishmentRaw": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DBj-sJiX7bTUjjKcsu5UKdFgtMTPyugpEd05XN00qkpG\"],\"nt\":\"1\",\"n\":[\"ECJkILSxK54WGyY_b_MSJosPILV8MJKU5hPEGmzoc5dg\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}",
+      "establishmentAttachment": "-AABAABHo3wiCnb4RlUhOOnouSCkAirR9VBgtNI76CKHYZjL3t30uyT1sv9b-Pm1t972nomWu8HJEYmAttxaszYD634H",
+      "kelAttachment": "-AABAACScbXAvpdqC1Stw_sYK5M-g39sU4q53maDg-fXaLHLWAPbsiJ_FRjVgzni8HC8G0R0Wu_bhJ481u4tXcHLwO8P",
+      "checks": {
+        "saidRecomputed": true,
+        "sizeMatchesVersion": true,
+        "signatureValid": true,
+        "matchesSubmittedEvent": null
+      },
+      "exportedAt": "2026-10-05T00:00:00.000Z"
+    },
+    "authorityEvidence": {
+      "note": "SYNTHETIC (local precursor demo and tests only; built without KERIA by verifier/src/precursor-chain.ts, deterministic test keys). Its root is a synthetic test root, not the demo's pinned root; a verifier must pin it explicitly. Fictional identities.",
+      "exportedAt": "2026-10-05T00:00:00.000Z",
+      "trustAnchor": "EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn",
+      "accreditationSchema": "EIyPVSpzpiV8PXfxjAhPdESlnvpUGZtBLeZ1jaoVRt8G",
+      "cesr": {
+        "qvi": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DGTLAL8A6odS_Z_jmxTmVHRKNURSQvigQ3EwwqzvG2CC\"],\"nt\":\"1\",\"n\":[\"EJsAv6PmLBAJPRTSd69wGBPHsIjNLCHHB6--VkTZMwHK\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAC5rzE2FtClYI8mNyJH2MdADTZSu-Y0lH9W_APoO0ZsV0XYc0sUisQ_8adis23E2UGtNgaPqMuKfE4rcAQ4K0gH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"1\",\"p\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"a\":[{\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"0\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\"}]}-AABAAAsHxg0ERLKOY9tk8cAndk3lNvJRdRtgwxS19JscPGjvSwpjqXqCYbQg-v4DC9Y6ZBeyaEO7Sdd3bCAulRtLv4B{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EDk139vQpnwwJoqwymoclAR4FARoLdX3ta8TJqGaV1E_\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"2\",\"p\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"a\":[{\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\"}]}-AABAAAITSeRJMAHimTf74sEtl_9cDbSfJGhSKS-y3R1zfelfnosBFEszY-U7vHMq8MV-_y2P3p4uDhadsnPsfI3zEIO{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"ii\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AEwKKm1SdDV8IVjV8BdqSi1c_lXbPpAAMT15ob3JJdfE\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\",\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON000197_\",\"d\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\",\"a\":{\"d\":\"EACCCH4oEwiURhCglONrrifrSu815Q5TvphcM9bTcE7k\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00QVIISSRDEMO116\"}}",
+        "leBody": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DGTLAL8A6odS_Z_jmxTmVHRKNURSQvigQ3EwwqzvG2CC\"],\"nt\":\"1\",\"n\":[\"EJsAv6PmLBAJPRTSd69wGBPHsIjNLCHHB6--VkTZMwHK\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAC5rzE2FtClYI8mNyJH2MdADTZSu-Y0lH9W_APoO0ZsV0XYc0sUisQ_8adis23E2UGtNgaPqMuKfE4rcAQ4K0gH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"1\",\"p\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"a\":[{\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"0\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\"}]}-AABAAAsHxg0ERLKOY9tk8cAndk3lNvJRdRtgwxS19JscPGjvSwpjqXqCYbQg-v4DC9Y6ZBeyaEO7Sdd3bCAulRtLv4B{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EDk139vQpnwwJoqwymoclAR4FARoLdX3ta8TJqGaV1E_\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"2\",\"p\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"a\":[{\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\"}]}-AABAAAITSeRJMAHimTf74sEtl_9cDbSfJGhSKS-y3R1zfelfnosBFEszY-U7vHMq8MV-_y2P3p4uDhadsnPsfI3zEIO{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"ii\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AEwKKm1SdDV8IVjV8BdqSi1c_lXbPpAAMT15ob3JJdfE\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\",\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON000197_\",\"d\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\",\"a\":{\"d\":\"EACCCH4oEwiURhCglONrrifrSu815Q5TvphcM9bTcE7k\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00QVIISSRDEMO116\"}}{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"1\",\"p\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"a\":[{\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"0\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\"}]}-AABAABpOJ-l16xk6WsWAzcs0GO7_Hl4rU6FhvWYPJD5p8lFKiXN6-E5EOssn8qGJehO92LibNUpuHHHlWImLPLvW7IE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"2\",\"p\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"a\":[{\"i\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"0\",\"d\":\"EJJO9XxSt1DWah2NDKBn0nT1zHJ3DBUQNmzNMn5R53Y4\"}]}-AABAACFazgWYTPd-SVbHx4VYRO1XNZ13kWVXLQSpWa-tMoQe8ii5jaSd9vi8Z2vb2HcJnAIhiZfLIetBK1GtYlVp9cE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"3\",\"p\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"a\":[{\"i\":\"EEKX7LGHGBcDme23X4PlR2qRTuq1qGCBYKJIECrMS8gX\",\"s\":\"0\",\"d\":\"EBgMc3rT4rCevck9jHV3DOD_EI6siMnRS663Re-L7Q78\"}]}-AABAADird4QsaoJhh-svhevDhCtqR6D9R9KrYXeXvnUCaXAFeHdC2MxcbgiasdVkgxU8cQgxS-RSq3TofGi1CtSEVIH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"4\",\"p\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"a\":[{\"i\":\"EF-WhR99R6egZdF_r7mOeRdyTEwQFgpIX2tKDA-T4Lif\",\"s\":\"0\",\"d\":\"EB9kPd3jb2cYaNNlKE3Js4pUH0i1UGqf2z03SF7K8A17\"}]}-AABAAB_-eNO57flr7n0I9v3vQYPT476Pt94S6vRD5wLJ-DhBLNgh0pJYwZ9MfkY0XVUsWL_cb2X90YS8R5vf7sh7CsN{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EFgLzG2JhD9Fg_EpMbtDSxPZtRrRxZiSOIfZkxr9xLZr\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"5\",\"p\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"a\":[{\"i\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"0\",\"d\":\"EPapefk_fozRpTnPOpSjqJCFVThVh-385gxp656e4nJo\"}]}-AABAAA9Z5yaRKaOXjRJZmNl_MOaQnOkClp0dkjHBet0I90s58FqZrZWrqGIKWMiZZ02z3IEY0cWUoPl_vMdEkIR5G0G{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DH8MfPt_bxcw98SKsS4sjpL2FLB8oDvbdxkwJZfkd-9n\"],\"nt\":\"1\",\"n\":[\"EMt9TXKUYcijCyC_agLrefR2qfEFoxFPXu8ax8fKWLqn\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAB3QStcHLjWreJ6vwfaFu6j3orrWFgUGVLupl0K6_BsEbKYkpab1R4MY8MJWDuL2bpPbU8xnyl7-YsmEfEbO3AI{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"ii\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AF42OLpBI4TEM2aZLxsxvQEXC9_EnBhbk12Qa5TBb7UK\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EPapefk_fozRpTnPOpSjqJCFVThVh-385gxp656e4nJo\",\"i\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"0\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON00023e_\",\"d\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY\",\"a\":{\"d\":\"EESlpa5AKu2b72kn0fTI5mh8ONzWTXY0_YBt0mDIxqpT\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00EUCPCERTDEMO77\"},\"e\":{\"d\":\"EEt_mZF9BQGwdcFiqMgwR6PEIjpFcwF7L7VxfwkO-c5r\",\"qvi\":{\"n\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\"}}}",
+        "leNab": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DGTLAL8A6odS_Z_jmxTmVHRKNURSQvigQ3EwwqzvG2CC\"],\"nt\":\"1\",\"n\":[\"EJsAv6PmLBAJPRTSd69wGBPHsIjNLCHHB6--VkTZMwHK\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAC5rzE2FtClYI8mNyJH2MdADTZSu-Y0lH9W_APoO0ZsV0XYc0sUisQ_8adis23E2UGtNgaPqMuKfE4rcAQ4K0gH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"1\",\"p\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"a\":[{\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"0\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\"}]}-AABAAAsHxg0ERLKOY9tk8cAndk3lNvJRdRtgwxS19JscPGjvSwpjqXqCYbQg-v4DC9Y6ZBeyaEO7Sdd3bCAulRtLv4B{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EDk139vQpnwwJoqwymoclAR4FARoLdX3ta8TJqGaV1E_\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"2\",\"p\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"a\":[{\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\"}]}-AABAAAITSeRJMAHimTf74sEtl_9cDbSfJGhSKS-y3R1zfelfnosBFEszY-U7vHMq8MV-_y2P3p4uDhadsnPsfI3zEIO{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"ii\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AEwKKm1SdDV8IVjV8BdqSi1c_lXbPpAAMT15ob3JJdfE\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\",\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON000197_\",\"d\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\",\"a\":{\"d\":\"EACCCH4oEwiURhCglONrrifrSu815Q5TvphcM9bTcE7k\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00QVIISSRDEMO116\"}}{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"1\",\"p\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"a\":[{\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"0\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\"}]}-AABAABpOJ-l16xk6WsWAzcs0GO7_Hl4rU6FhvWYPJD5p8lFKiXN6-E5EOssn8qGJehO92LibNUpuHHHlWImLPLvW7IE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"2\",\"p\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"a\":[{\"i\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"0\",\"d\":\"EJJO9XxSt1DWah2NDKBn0nT1zHJ3DBUQNmzNMn5R53Y4\"}]}-AABAACFazgWYTPd-SVbHx4VYRO1XNZ13kWVXLQSpWa-tMoQe8ii5jaSd9vi8Z2vb2HcJnAIhiZfLIetBK1GtYlVp9cE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"3\",\"p\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"a\":[{\"i\":\"EEKX7LGHGBcDme23X4PlR2qRTuq1qGCBYKJIECrMS8gX\",\"s\":\"0\",\"d\":\"EBgMc3rT4rCevck9jHV3DOD_EI6siMnRS663Re-L7Q78\"}]}-AABAADird4QsaoJhh-svhevDhCtqR6D9R9KrYXeXvnUCaXAFeHdC2MxcbgiasdVkgxU8cQgxS-RSq3TofGi1CtSEVIH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"4\",\"p\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"a\":[{\"i\":\"EF-WhR99R6egZdF_r7mOeRdyTEwQFgpIX2tKDA-T4Lif\",\"s\":\"0\",\"d\":\"EB9kPd3jb2cYaNNlKE3Js4pUH0i1UGqf2z03SF7K8A17\"}]}-AABAAB_-eNO57flr7n0I9v3vQYPT476Pt94S6vRD5wLJ-DhBLNgh0pJYwZ9MfkY0XVUsWL_cb2X90YS8R5vf7sh7CsN{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EFgLzG2JhD9Fg_EpMbtDSxPZtRrRxZiSOIfZkxr9xLZr\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"5\",\"p\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"a\":[{\"i\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"0\",\"d\":\"EPapefk_fozRpTnPOpSjqJCFVThVh-385gxp656e4nJo\"}]}-AABAAA9Z5yaRKaOXjRJZmNl_MOaQnOkClp0dkjHBet0I90s58FqZrZWrqGIKWMiZZ02z3IEY0cWUoPl_vMdEkIR5G0G{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DA6qtfmKl6PC9RNA4BJ6zWT97nMPkBmh9UVj5xs_-7E0\"],\"nt\":\"1\",\"n\":[\"EAQE65tTRk0ob7z2gm3Kj7xNY0PYPkOidXJCniu9Ecs6\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAyETcnll_siVHv6A3IH1kl0hEhZfH7cPKzwKLL5nYqRI4Srpk79Iq8y_0Oo75tccLr6ZBT7rRGy-AM3CKac1UH{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"ii\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AF42OLpBI4TEM2aZLxsxvQEXC9_EnBhbk12Qa5TBb7UK\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJJO9XxSt1DWah2NDKBn0nT1zHJ3DBUQNmzNMn5R53Y4\",\"i\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"0\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON00023e_\",\"d\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY\",\"a\":{\"d\":\"ECPniQoksEFbyiH9OxG3X5oKi0lZnxSeoXCZyGa--85u\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00NABACCRDEMO119\"},\"e\":{\"d\":\"EEt_mZF9BQGwdcFiqMgwR6PEIjpFcwF7L7VxfwkO-c5r\",\"qvi\":{\"n\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\"}}}",
+        "accreditation": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DGTLAL8A6odS_Z_jmxTmVHRKNURSQvigQ3EwwqzvG2CC\"],\"nt\":\"1\",\"n\":[\"EJsAv6PmLBAJPRTSd69wGBPHsIjNLCHHB6--VkTZMwHK\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAC5rzE2FtClYI8mNyJH2MdADTZSu-Y0lH9W_APoO0ZsV0XYc0sUisQ_8adis23E2UGtNgaPqMuKfE4rcAQ4K0gH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"1\",\"p\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"a\":[{\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"0\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\"}]}-AABAAAsHxg0ERLKOY9tk8cAndk3lNvJRdRtgwxS19JscPGjvSwpjqXqCYbQg-v4DC9Y6ZBeyaEO7Sdd3bCAulRtLv4B{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EDk139vQpnwwJoqwymoclAR4FARoLdX3ta8TJqGaV1E_\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"2\",\"p\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"a\":[{\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\"}]}-AABAAAITSeRJMAHimTf74sEtl_9cDbSfJGhSKS-y3R1zfelfnosBFEszY-U7vHMq8MV-_y2P3p4uDhadsnPsfI3zEIO{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"ii\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AEwKKm1SdDV8IVjV8BdqSi1c_lXbPpAAMT15ob3JJdfE\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\",\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON000197_\",\"d\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\",\"a\":{\"d\":\"EACCCH4oEwiURhCglONrrifrSu815Q5TvphcM9bTcE7k\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00QVIISSRDEMO116\"}}{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"1\",\"p\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"a\":[{\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"0\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\"}]}-AABAABpOJ-l16xk6WsWAzcs0GO7_Hl4rU6FhvWYPJD5p8lFKiXN6-E5EOssn8qGJehO92LibNUpuHHHlWImLPLvW7IE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"2\",\"p\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"a\":[{\"i\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"0\",\"d\":\"EJJO9XxSt1DWah2NDKBn0nT1zHJ3DBUQNmzNMn5R53Y4\"}]}-AABAACFazgWYTPd-SVbHx4VYRO1XNZ13kWVXLQSpWa-tMoQe8ii5jaSd9vi8Z2vb2HcJnAIhiZfLIetBK1GtYlVp9cE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"3\",\"p\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"a\":[{\"i\":\"EEKX7LGHGBcDme23X4PlR2qRTuq1qGCBYKJIECrMS8gX\",\"s\":\"0\",\"d\":\"EBgMc3rT4rCevck9jHV3DOD_EI6siMnRS663Re-L7Q78\"}]}-AABAADird4QsaoJhh-svhevDhCtqR6D9R9KrYXeXvnUCaXAFeHdC2MxcbgiasdVkgxU8cQgxS-RSq3TofGi1CtSEVIH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"4\",\"p\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"a\":[{\"i\":\"EF-WhR99R6egZdF_r7mOeRdyTEwQFgpIX2tKDA-T4Lif\",\"s\":\"0\",\"d\":\"EB9kPd3jb2cYaNNlKE3Js4pUH0i1UGqf2z03SF7K8A17\"}]}-AABAAB_-eNO57flr7n0I9v3vQYPT476Pt94S6vRD5wLJ-DhBLNgh0pJYwZ9MfkY0XVUsWL_cb2X90YS8R5vf7sh7CsN{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EFgLzG2JhD9Fg_EpMbtDSxPZtRrRxZiSOIfZkxr9xLZr\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"5\",\"p\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"a\":[{\"i\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"0\",\"d\":\"EPapefk_fozRpTnPOpSjqJCFVThVh-385gxp656e4nJo\"}]}-AABAAA9Z5yaRKaOXjRJZmNl_MOaQnOkClp0dkjHBet0I90s58FqZrZWrqGIKWMiZZ02z3IEY0cWUoPl_vMdEkIR5G0G{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DA6qtfmKl6PC9RNA4BJ6zWT97nMPkBmh9UVj5xs_-7E0\"],\"nt\":\"1\",\"n\":[\"EAQE65tTRk0ob7z2gm3Kj7xNY0PYPkOidXJCniu9Ecs6\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAyETcnll_siVHv6A3IH1kl0hEhZfH7cPKzwKLL5nYqRI4Srpk79Iq8y_0Oo75tccLr6ZBT7rRGy-AM3CKac1UH{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"ii\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AF42OLpBI4TEM2aZLxsxvQEXC9_EnBhbk12Qa5TBb7UK\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJJO9XxSt1DWah2NDKBn0nT1zHJ3DBUQNmzNMn5R53Y4\",\"i\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"0\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON00023e_\",\"d\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY\",\"a\":{\"d\":\"ECPniQoksEFbyiH9OxG3X5oKi0lZnxSeoXCZyGa--85u\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00NABACCRDEMO119\"},\"e\":{\"d\":\"EEt_mZF9BQGwdcFiqMgwR6PEIjpFcwF7L7VxfwkO-c5r\",\"qvi\":{\"n\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\"}}}{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DA6qtfmKl6PC9RNA4BJ6zWT97nMPkBmh9UVj5xs_-7E0\"],\"nt\":\"1\",\"n\":[\"EAQE65tTRk0ob7z2gm3Kj7xNY0PYPkOidXJCniu9Ecs6\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAyETcnll_siVHv6A3IH1kl0hEhZfH7cPKzwKLL5nYqRI4Srpk79Iq8y_0Oo75tccLr6ZBT7rRGy-AM3CKac1UH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"ECv_rrhY7QLuxcrWfYh4C4YcPUkHqOzbRCjUkw2xBYRY\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"1\",\"p\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"a\":[{\"i\":\"ELwIq9O0GbzhtFw1KvXt8X3uBi0JVh5I5-jEl5blqt4D\",\"s\":\"0\",\"d\":\"ELwIq9O0GbzhtFw1KvXt8X3uBi0JVh5I5-jEl5blqt4D\"}]}-AABAACK4QmIMcHuQJ3OWzEJsvTOhUCT6DBIvEfvzCLUL6GqLooAktMXNJv0jDofehFqRALdC1gGbP89SrRu9wuSpH0B{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EBaVcPzeWoxFGhlLLQ6bNtwVRQln1nF9nqxdAFc3EwKY\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"2\",\"p\":\"ECv_rrhY7QLuxcrWfYh4C4YcPUkHqOzbRCjUkw2xBYRY\",\"a\":[{\"i\":\"EGftXQufDxqwNd8qhY3m6uYSXvwyXi0R_esivyPpMZvg\",\"s\":\"0\",\"d\":\"ENt7U3Q2u--xso84dUOtRq_C8wPass2K_gv-9FViUzRl\"}]}-AABAAAd6RicWBodKH89smMFwBfEc04GtdLWmdHYRfy0-iLNvwR_Wf75fFyi7U8GHglp9LMIZ15g8BFZa-BI2ulwWQUC{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EP49T7L_444Aczz44pPxlxL2rres8scb6RkeBDJSJVKx\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"3\",\"p\":\"EBaVcPzeWoxFGhlLLQ6bNtwVRQln1nF9nqxdAFc3EwKY\",\"a\":[{\"i\":\"ENOb_uZCutOp4Q6sqx1tJao_gbDuZ_BTYugoBrdJjRLh\",\"s\":\"0\",\"d\":\"EN9jOhJ3v0_TL-UDRB26vew8RRz1i-F1OXI5N9QdLATT\"}]}-AABAAA-IaB7puuNXKgW_GO86PEy5Y3v6aa6XzEBE0BsR8Wk79d2K0nUbjLx6kBPKrJ6eH7BglZx0W1Qg9r7s_dVWFQG{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EANGsTpZm7dGCW6Brx6PHhjfKS0UWzf5uF1Rxi0m5h8e\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"4\",\"p\":\"EP49T7L_444Aczz44pPxlxL2rres8scb6RkeBDJSJVKx\",\"a\":[{\"i\":\"EGwbcOwSv8sG09dgullUVSXZUVWJZqE82SXeHVTGyiUw\",\"s\":\"0\",\"d\":\"EA4zQgIaiCGXFBbuUfXLpFOSKknsBC54vIs_jWbRkvGH\"}]}-AABAAC3eD-9BdRkaQ7vGYe9T5TNKD7Zt64P7OyeA6cwQttPppMaYXlZ4YBVP9J0yiOLwHvWIc5nfLwl6pGqKTuhxaQA{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DH8MfPt_bxcw98SKsS4sjpL2FLB8oDvbdxkwJZfkd-9n\"],\"nt\":\"1\",\"n\":[\"EMt9TXKUYcijCyC_agLrefR2qfEFoxFPXu8ax8fKWLqn\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAB3QStcHLjWreJ6vwfaFu6j3orrWFgUGVLupl0K6_BsEbKYkpab1R4MY8MJWDuL2bpPbU8xnyl7-YsmEfEbO3AI{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"ELwIq9O0GbzhtFw1KvXt8X3uBi0JVh5I5-jEl5blqt4D\",\"i\":\"ELwIq9O0GbzhtFw1KvXt8X3uBi0JVh5I5-jEl5blqt4D\",\"ii\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AO-hTecAJoZ4QrZwrI5EMUSO7NzXBoxkjQgMm5mBfGl3\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EA4zQgIaiCGXFBbuUfXLpFOSKknsBC54vIs_jWbRkvGH\",\"i\":\"EGwbcOwSv8sG09dgullUVSXZUVWJZqE82SXeHVTGyiUw\",\"s\":\"0\",\"ri\":\"ELwIq9O0GbzhtFw1KvXt8X3uBi0JVh5I5-jEl5blqt4D\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON00031e_\",\"d\":\"EGwbcOwSv8sG09dgullUVSXZUVWJZqE82SXeHVTGyiUw\",\"i\":\"EErTnmhZq1jqh-Bo8E1w3q2qsvKkGBC6I3C5eTP72PLl\",\"ri\":\"ELwIq9O0GbzhtFw1KvXt8X3uBi0JVh5I5-jEl5blqt4D\",\"s\":\"EIyPVSpzpiV8PXfxjAhPdESlnvpUGZtBLeZ1jaoVRt8G\",\"a\":{\"d\":\"ENxBmvMFvPJVKiqktAtSB_rb8XWKGrvLVx2pxmnkMxue\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00EUCPCERTDEMO77\",\"accreditationNumber\":\"DEMO-ACC-LIV-0001\",\"activity\":\"Certification of the carbon price effectively paid (CBAM activity group LIV, draft implementing act; demo)\",\"cnScope\":[\"7213\",\"7318\"],\"validUntil\":\"2031-06-30T00:00:00Z\"},\"e\":{\"d\":\"EGwBjlyzYjwl2oOe9msMyOg-WFYPLtMN6701bqIfhjYG\",\"nab\":{\"n\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY\"}}}",
+        "ecr": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DGTLAL8A6odS_Z_jmxTmVHRKNURSQvigQ3EwwqzvG2CC\"],\"nt\":\"1\",\"n\":[\"EJsAv6PmLBAJPRTSd69wGBPHsIjNLCHHB6--VkTZMwHK\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAC5rzE2FtClYI8mNyJH2MdADTZSu-Y0lH9W_APoO0ZsV0XYc0sUisQ_8adis23E2UGtNgaPqMuKfE4rcAQ4K0gH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"1\",\"p\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"a\":[{\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"0\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\"}]}-AABAAAsHxg0ERLKOY9tk8cAndk3lNvJRdRtgwxS19JscPGjvSwpjqXqCYbQg-v4DC9Y6ZBeyaEO7Sdd3bCAulRtLv4B{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EDk139vQpnwwJoqwymoclAR4FARoLdX3ta8TJqGaV1E_\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"2\",\"p\":\"EHVWyEDMGXBCufxhEE4BuTeeoR5h6k1_dd6X5W6h0yw2\",\"a\":[{\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\"}]}-AABAAAITSeRJMAHimTf74sEtl_9cDbSfJGhSKS-y3R1zfelfnosBFEszY-U7vHMq8MV-_y2P3p4uDhadsnPsfI3zEIO{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"i\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"ii\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AEwKKm1SdDV8IVjV8BdqSi1c_lXbPpAAMT15ob3JJdfE\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EJDxrLdCa97oP2bK7jdYT4a7dVQjLmva1X0zebuTyF1I\",\"i\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"0\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON000197_\",\"d\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"i\":\"EMIzo1G42Hh_wrRZeD9b_0W7MnBW1POGAZAfDfRs7CHn\",\"ri\":\"EH8xO_D8i8lZnRmrSCmYuEVeS92WGintX0Vvckru5YA_\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\",\"a\":{\"d\":\"EACCCH4oEwiURhCglONrrifrSu815Q5TvphcM9bTcE7k\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00QVIISSRDEMO116\"}}{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DK8y0-1HVNX09Y7GP9SQVdrFfaotUueWJ3SqaDGKNLrX\"],\"nt\":\"1\",\"n\":[\"EFpa-G6sJzAl-bnXHLWPl3uWHVe9VYpWWqBRRPZkUvJH\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAAw3F-7gcqRxo955VF5jx2CVRD_OfFym1XQS72xG2AR_flzY5sOG8PgZcvLsR8fzf05KyBRdKzG8CFS2iePXeoA{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"1\",\"p\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"a\":[{\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"0\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\"}]}-AABAABpOJ-l16xk6WsWAzcs0GO7_Hl4rU6FhvWYPJD5p8lFKiXN6-E5EOssn8qGJehO92LibNUpuHHHlWImLPLvW7IE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"2\",\"p\":\"ENE6Qb0pZ9E89a3J7CO7THc0SaK1gVWYTRX3qfa558fM\",\"a\":[{\"i\":\"ECi_VUrJye2lf0XjzLuNbJjv0_QmL00Ae_ZKoc9O1kmM\",\"s\":\"0\",\"d\":\"EJJO9XxSt1DWah2NDKBn0nT1zHJ3DBUQNmzNMn5R53Y4\"}]}-AABAACFazgWYTPd-SVbHx4VYRO1XNZ13kWVXLQSpWa-tMoQe8ii5jaSd9vi8Z2vb2HcJnAIhiZfLIetBK1GtYlVp9cE{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"3\",\"p\":\"EEFW4os_Clvm-PlI_i_zZ1EDYITxxKNRUDUgAernrf3p\",\"a\":[{\"i\":\"EEKX7LGHGBcDme23X4PlR2qRTuq1qGCBYKJIECrMS8gX\",\"s\":\"0\",\"d\":\"EBgMc3rT4rCevck9jHV3DOD_EI6siMnRS663Re-L7Q78\"}]}-AABAADird4QsaoJhh-svhevDhCtqR6D9R9KrYXeXvnUCaXAFeHdC2MxcbgiasdVkgxU8cQgxS-RSq3TofGi1CtSEVIH{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"4\",\"p\":\"EAHn7kEpOePqxilQJDai_9MnJI3v7Mrfce1pMP-1UMzG\",\"a\":[{\"i\":\"EF-WhR99R6egZdF_r7mOeRdyTEwQFgpIX2tKDA-T4Lif\",\"s\":\"0\",\"d\":\"EB9kPd3jb2cYaNNlKE3Js4pUH0i1UGqf2z03SF7K8A17\"}]}-AABAAB_-eNO57flr7n0I9v3vQYPT476Pt94S6vRD5wLJ-DhBLNgh0pJYwZ9MfkY0XVUsWL_cb2X90YS8R5vf7sh7CsN{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EFgLzG2JhD9Fg_EpMbtDSxPZtRrRxZiSOIfZkxr9xLZr\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"5\",\"p\":\"EItQIKGIMVWeQaldk0TD07gheqwyJoF_SinxDWrxsoLa\",\"a\":[{\"i\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"0\",\"d\":\"EPapefk_fozRpTnPOpSjqJCFVThVh-385gxp656e4nJo\"}]}-AABAAA9Z5yaRKaOXjRJZmNl_MOaQnOkClp0dkjHBet0I90s58FqZrZWrqGIKWMiZZ02z3IEY0cWUoPl_vMdEkIR5G0G{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DH8MfPt_bxcw98SKsS4sjpL2FLB8oDvbdxkwJZfkd-9n\"],\"nt\":\"1\",\"n\":[\"EMt9TXKUYcijCyC_agLrefR2qfEFoxFPXu8ax8fKWLqn\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAB3QStcHLjWreJ6vwfaFu6j3orrWFgUGVLupl0K6_BsEbKYkpab1R4MY8MJWDuL2bpPbU8xnyl7-YsmEfEbO3AI{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"i\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"ii\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"AF42OLpBI4TEM2aZLxsxvQEXC9_EnBhbk12Qa5TBb7UK\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EPapefk_fozRpTnPOpSjqJCFVThVh-385gxp656e4nJo\",\"i\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"0\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON00023e_\",\"d\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"i\":\"EGABDopgmseyK16bTdCkbO8ey7ehVGXMrW7EtzSWStRk\",\"ri\":\"ECB1JRYQLUzx8zVut32rFUvE0QwdoqP9e3nUqQAFl1vU\",\"s\":\"ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY\",\"a\":{\"d\":\"EESlpa5AKu2b72kn0fTI5mh8ONzWTXY0_YBt0mDIxqpT\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00EUCPCERTDEMO77\"},\"e\":{\"d\":\"EEt_mZF9BQGwdcFiqMgwR6PEIjpFcwF7L7VxfwkO-c5r\",\"qvi\":{\"n\":\"EMvbO954J_lIX8G_ZHwWCL74hYNkb0sircgst1nB5qy3\",\"s\":\"EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao\"}}}{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DH8MfPt_bxcw98SKsS4sjpL2FLB8oDvbdxkwJZfkd-9n\"],\"nt\":\"1\",\"n\":[\"EMt9TXKUYcijCyC_agLrefR2qfEFoxFPXu8ax8fKWLqn\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAAB3QStcHLjWreJ6vwfaFu6j3orrWFgUGVLupl0K6_BsEbKYkpab1R4MY8MJWDuL2bpPbU8xnyl7-YsmEfEbO3AI{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EEZjTJrpvVfYOIFROqwh4kZD8_AIvjQwMPQKmTqO4DzO\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"1\",\"p\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"a\":[{\"i\":\"ECospJBCvn7_8ITq2BvFW6glHfI-cC6GmYdEhZmadoRY\",\"s\":\"0\",\"d\":\"ECospJBCvn7_8ITq2BvFW6glHfI-cC6GmYdEhZmadoRY\"}]}-AABAADrBTKFNdu_0k4fbHYKMNCSokbD9Y2kUOz3teE8sJOqfUZ6xT71WIEgUdx1QrV96MlqJ9j8-XaECL8WfApBBhsB{\"v\":\"KERI10JSON00013a_\",\"t\":\"ixn\",\"d\":\"EMrvxSPbv3B3LC6IFq7e57ZvQ7z28EuSQHfyfanuJrSd\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"2\",\"p\":\"EEZjTJrpvVfYOIFROqwh4kZD8_AIvjQwMPQKmTqO4DzO\",\"a\":[{\"i\":\"EG37Zevr_x_aaZtrGWx_0LuzrxlBdit0DOaa1LQuna97\",\"s\":\"0\",\"d\":\"EAd4jIcinMB5UPz-Hmnp11lSFHqm0lK8n4S42yBk-Rsa\"}]}-AABAACYDoaN-GwWGbl78_hYQjFkCLJqyVALCo5UEScOM8RDdidoazxrSKkw8Z6CL1_HlGiu872Gbz5ouO5pmlh_We4K{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DBj-sJiX7bTUjjKcsu5UKdFgtMTPyugpEd05XN00qkpG\"],\"nt\":\"1\",\"n\":[\"ECJkILSxK54WGyY_b_MSJosPILV8MJKU5hPEGmzoc5dg\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}-AABAABHo3wiCnb4RlUhOOnouSCkAirR9VBgtNI76CKHYZjL3t30uyT1sv9b-Pm1t972nomWu8HJEYmAttxaszYD634H{\"v\":\"KERI10JSON000113_\",\"t\":\"vcp\",\"d\":\"ECospJBCvn7_8ITq2BvFW6glHfI-cC6GmYdEhZmadoRY\",\"i\":\"ECospJBCvn7_8ITq2BvFW6glHfI-cC6GmYdEhZmadoRY\",\"ii\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"s\":\"0\",\"c\":[\"NB\"],\"bt\":\"0\",\"b\":[],\"n\":\"ACrDYX8Azm4qLLgtYd2GRYGSxibCOBM35WD9tzBHA6qN\"}{\"v\":\"KERI10JSON0000ed_\",\"t\":\"iss\",\"d\":\"EAd4jIcinMB5UPz-Hmnp11lSFHqm0lK8n4S42yBk-Rsa\",\"i\":\"EG37Zevr_x_aaZtrGWx_0LuzrxlBdit0DOaa1LQuna97\",\"s\":\"0\",\"ri\":\"ECospJBCvn7_8ITq2BvFW6glHfI-cC6GmYdEhZmadoRY\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\"}{\"v\":\"ACDC10JSON0002e6_\",\"d\":\"EG37Zevr_x_aaZtrGWx_0LuzrxlBdit0DOaa1LQuna97\",\"u\":\"0Ah9j-iK8iVLaTt6E9v_wx9g\",\"i\":\"EGQbthPYXQMA1buPsywOuuX_0Al6RG2RN-G6Z-lJjjdT\",\"ri\":\"ECospJBCvn7_8ITq2BvFW6glHfI-cC6GmYdEhZmadoRY\",\"s\":\"EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw\",\"a\":{\"d\":\"EPfltK_K8n7lDBVv-39UJyoKFmaaQu_wvq2WoXhzBcYZ\",\"u\":\"0ALj020R0icIy41ZIIggM7iQ\",\"i\":\"EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT\",\"dt\":\"2026-10-05T00:00:00.000000+00:00\",\"LEI\":\"ZZZZ00EUCPCERTDEMO77\",\"personLegalName\":\"Lena Demo (fictional person)\",\"engagementContextRole\":\"CBAM Certification Lead Auditor\"},\"e\":{\"d\":\"EFktBtDKXzPpxqP_Pi95vphuOQ0nwdyowUix2nBEYqZ5\",\"le\":{\"n\":\"ECbu2UffTDxG7Ws54WF-sYDL2412jiBqvbMPxHGCnorb\",\"s\":\"ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY\"}}}"
+      }
+    },
+    "claim": {
+      "batchId": "CP-DEMO-2026-0001",
+      "quantityTonnes": "562.5",
+      "batchSalt": "0xc96f83a1ac9306814977c9b5a933cf877072b7ceecffa6862d7b8f3e82b6920b",
+      "beneficiarySalt": "0xbb525fb39192f4239caa0a94f9551d5d0f41c2411f341fba514276480c6708fb"
+    }
+  },
+  "statementKey": "0x44c23c3504ca67260c66fdb3e7be6b21fcb14a490d026de263c8faa6e4dc0312",
+  "fx": {
+    "currency": "TWD",
+    "year": 2025,
+    "unitsPerEur": "35.196",
+    "source": "Eurostat ert_bil_eur_a (Euro exchange rates, annual average), TWD per EUR, 2025; dataset updated 2026-07-08, accessed 2026-10-16"
+  },
+  "shipment": {
+    "quantityTonnes": "200",
+    "see": "1.8",
+    "obligationT": "360.000"
+  },
+  "refPriceEur": "82.32",
+  "refPriceNote": "€82.32 is the Q3 2026 CBAM certificate price, used here as an illustrative stand-in: the draft's reference price is the yearly average of the CBAM certificate prices of the year of import (draft Art 6(3)), which for 2026 is not yet known (Q4 not published on 2026-10-16).",
+  "reductionCertificates": "6.709",
+  "verification": {
+    "overall": "VALID",
+    "primaryCode": "",
+    "checks": [
+      {
+        "index": 0,
+        "name": "Structure",
+        "status": "pass",
+        "code": "",
+        "detail": ""
+      },
+      {
+        "index": 1,
+        "name": "Credential integrity (SAID)",
+        "status": "pass",
+        "code": "",
+        "detail": "credential ID matches its content"
+      },
+      {
+        "index": 2,
+        "name": "Disclosed fields",
+        "status": "pass",
+        "code": "",
+        "detail": "21 fields disclosed, 5 hidden by supplier"
+      },
+      {
+        "index": 3,
+        "name": "Issuer signature",
+        "status": "pass",
+        "code": "",
+        "detail": "signed by 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+      },
+      {
+        "index": 4,
+        "name": "On-chain report",
+        "status": "pass",
+        "code": "",
+        "detail": "registered by an authorized auditor (checked by the contract at registration)"
+      },
+      {
+        "index": 5,
+        "name": "Shipment claim",
+        "status": "pass",
+        "code": "",
+        "detail": "200 t declared to you on the shared ledger"
+      },
+      {
+        "index": 6,
+        "name": "Auditor anchor (KEL)",
+        "status": "pass",
+        "code": "",
+        "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event; the auditor's AID has no witnesses"
+      },
+      {
+        "index": 7,
+        "name": "Authority chain (vLEI)",
+        "status": "pass",
+        "code": "",
+        "detail": "root → QVI → verification body (LE vLEI) → auditor (ECR, CBAM Lead Auditor); accredited by the NAB for CN 7318; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts; hashes match the on-chain allowlist"
+      },
+      {
+        "index": 8,
+        "name": "Report reconciliation",
+        "status": "skipped",
+        "code": "",
+        "detail": "no report extract in this proof"
+      },
+      {
+        "index": 9,
+        "name": "Precursors",
+        "status": "pass",
+        "code": "",
+        "detail": "0.18 + 1.62 = 1.8 tCO2e/t recomputed, 1.8 declared, within 0.01; 1 verified precursor credential, each claimed for this maker on the shared ledger"
+      },
+      {
+        "index": 10,
+        "name": "Carbon price paid (draft Art 9)",
+        "status": "warn",
+        "code": "CARBON_PRICE_WARNING/FX_YEAR",
+        "detail": "[Draft implementing act, not adopted — illustrative] the 2025 average rate is used for a 2026 period; the draft wants the reporting period's year (Art 5(1)), not published yet; Taiwan carbon fee (碳費) (TW): 300 TWD/tCO2e on 0.2 of the emissions → €1.704739 per tCO2e emitted, €2.454824 per t of CN 7213; €2.761677 per t of the declared good; certified by Demo Carbon Price Certification GmbH (fictional) (CBAM Certification Lead Auditor); 562.5 t claimed against the statement (562.5 t needed)"
+      }
+    ],
+    "carbonPrice": {
+      "draft": "Draft implementing act, not adopted — illustrative",
+      "statementSAID": "EDssVVOCbaemceMffYu7QSirFnOW2AzPrRUVarU2Dwlj",
+      "target": {
+        "kind": "precursor",
+        "line": 0,
+        "credSAID": "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU",
+        "cnCode": "7213",
+        "massPerTonne": "1.125",
+        "seeCap": "1.44"
+      },
+      "mechanism": "Taiwan carbon fee (碳費) (TW)",
+      "currency": "TWD",
+      "ratePerTonne": "300",
+      "paidShare": "0.2",
+      "emissionsPerTonne": "1.44",
+      "paidEmissionsPerTonne": "0.288",
+      "coveredEmissionsPerTonne": "0.288",
+      "localPerTonne": "86.4",
+      "fx": {
+        "currency": "TWD",
+        "year": 2025,
+        "unitsPerEur": "35.196",
+        "source": "Eurostat ert_bil_eur_a (Euro exchange rates, annual average), TWD per EUR, 2025; dataset updated 2026-07-08, accessed 2026-10-16",
+        "pinned": true
+      },
+      "eurPerTonne": "2.454824",
+      "statedEurPerTonne": "2.454824",
+      "eurPerTCO2e": "1.704739",
+      "eurPerPaidTCO2e": "8.523696",
+      "deductibleEurPerTonneGood": "2.761677",
+      "claim": {
+        "batchId": "CP-DEMO-2026-0001",
+        "claimedTonnes": "562.5",
+        "neededTonnes": "562.5"
+      },
+      "certifier": {
+        "name": "Demo Carbon Price Certification GmbH (fictional)",
+        "lei": "ZZZZ00EUCPCERTDEMO77",
+        "aid": "EAl9oS_OtQuGLi7vDcwYpbbL_vr1Ewng4dTM_aReZDRT",
+        "role": "CBAM Certification Lead Auditor"
+      },
+      "registeredAt": "1790000000",
+      "steps": [
+        "chargeable emissions = (576000 − K 0) × 0.2 = 115200 t; exempt = 460800 t",
+        "EFF_CP_DIR = 300 − 0 / 576000 = 300 TWD/tCO2e (eq. 5a, 6a)",
+        "(EM 1.44 − rebated 1.152) = 0.288 tCO2e/t paid on (share 0.2) (eq. 11a, 12a)",
+        "EFF_CP_DIRg = 0.288 × 300 = 86.4 TWD per t of good (eq. 12a)",
+        "€EFF_CP_DIRg = 86.4 ÷ 35.196 TWD/EUR = €2.454824 per t of good (eq. 15a; Eurostat ert_bil_eur_a (Euro exchange rates, annual average), TWD per EUR, 2025; dataset updated 2026-07-08, accessed 2026-10-16)",
+        "€EFF_CP_PREg = 1.125 t/t × €2.454824 = €2.761677 per t of the declared good (eq. 14a, m = Q_p / Q_TOTg)"
+      ]
+    },
+    "precursors": {
+      "signed": true,
+      "attributedDirect": "0.18",
+      "declared": "1.8",
+      "recomputed": "1.8",
+      "precursorTotal": "1.62",
+      "difference": "0",
+      "tolerance": "0.01",
+      "goodVerifiedTonnes": "500",
+      "lines": [
+        {
+          "index": 0,
+          "cnCode": "7213",
+          "massPerTonne": "1.125",
+          "source": "verified",
+          "status": "pass",
+          "code": "",
+          "detail": "1.125 t/t × 1.44 tCO2e/t = 1.62 tCO2e per t of good",
+          "see": "1.44",
+          "contribution": "1.62",
+          "credSAID": "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU",
+          "batchId": "WR-DEMO-2026-0001",
+          "verification": {
+            "overall": "VALID",
+            "primaryCode": "",
+            "checks": [
+              {
+                "index": 0,
+                "name": "Structure",
+                "status": "pass",
+                "code": "",
+                "detail": ""
+              },
+              {
+                "index": 1,
+                "name": "Credential integrity (SAID)",
+                "status": "pass",
+                "code": "",
+                "detail": "credential ID matches its content"
+              },
+              {
+                "index": 2,
+                "name": "Disclosed fields",
+                "status": "pass",
+                "code": "",
+                "detail": "21 fields disclosed, 5 hidden by supplier"
+              },
+              {
+                "index": 3,
+                "name": "Issuer signature",
+                "status": "pass",
+                "code": "",
+                "detail": "signed by 0x976EA74026E726554dB657fA54763abd0C3a0aa9"
+              },
+              {
+                "index": 4,
+                "name": "On-chain report",
+                "status": "pass",
+                "code": "",
+                "detail": "registered by an authorized auditor (checked by the contract at registration)"
+              },
+              {
+                "index": 5,
+                "name": "Shipment claim",
+                "status": "pass",
+                "code": "",
+                "detail": "562.5 t declared to you on the shared ledger"
+              },
+              {
+                "index": 6,
+                "name": "Auditor anchor (KEL)",
+                "status": "pass",
+                "code": "",
+                "detail": "KERI event #1 by the auditor anchors this credential; Ed25519 signature verified with the key from the auditor's inception event; the auditor's AID has no witnesses"
+              },
+              {
+                "index": 7,
+                "name": "Authority chain (vLEI)",
+                "status": "pass",
+                "code": "",
+                "detail": "root → QVI → verification body (LE vLEI) → auditor (ECR, CBAM Lead Auditor); accredited by the NAB for CN 7213; each issuance signed in its issuer's KEL, every event with its witness threshold of receipts; hashes match the on-chain allowlist"
+              },
+              {
+                "index": 8,
+                "name": "Report reconciliation",
+                "status": "skipped",
+                "code": "",
+                "detail": "no report extract in this proof"
+              }
+            ]
+          },
+          "producer": {
+            "lei": "ZZZZ00TWWIRERDEMO108",
+            "installationId": "TW-ZZZZ00TWWIRERDEMO108-0001",
+            "reportingPeriod": "2026-01-01/2026-12-31",
+            "cnCode": "7213",
+            "verifierLEI": "ZZZZ00EUVERIFDEMO249",
+            "verifiedTonnes": "1000"
+          },
+          "claimedTonnes": "562.5",
+          "neededTonnes": "562.5"
+        }
+      ]
+    }
+  },
+  "doubleUse": {
+    "overClaim": {
+      "quantityTonnes": "399438",
+      "remainingKg": "399437500",
+      "revert": {
+        "errorName": "ExceedsVerifiedTonnage",
+        "args": [
+          "399437500",
+          "399438000"
+        ]
+      }
+    },
+    "reused": {
+      "overall": "INVALID",
+      "primaryCode": "CARBON_PRICE_INVALID/NOT_CLAIMED",
+      "check10": {
+        "index": 10,
+        "name": "Carbon price paid (draft Art 9)",
+        "status": "fail",
+        "code": "CARBON_PRICE_INVALID/NOT_CLAIMED",
+        "detail": "[Draft implementing act, not adopted — illustrative] batch CP-DEMO-2026-0001 was claimed for someone other than the maker ZZZZ00TWSCREWDEMO185"
+      }
+    }
+  },
+  "mill": {
+    "credSAID": "EBRqTRLt9PeTqt8x60KuZ7kIrnkP0ALuVRioK4FbapmU",
+    "reportKey": "0xadbaf6625e20ab12fd28d0d01bcf312cea1dd56259cae25e8b727619c620fb3e"
+  },
+  "sources": [
+    {
+      "what": "CBAM Art 9 draft implementing regulation (formulae Annex I eq. 1-17, Art 5, Art 6, Art 8, Art 9, Art 16, Annex II-IV)",
+      "url": "https://ec.europa.eu/info/law/better-regulation/have-your-say/initiatives/14830-Carbon-border-adjustment-mechanism-CBAM-carbon-price-paid-in-a-third-country_en",
+      "mirror": "https://www.knowtbt.kr/mrim/rsti/download?tbtNotiSeq=726148&fileMasterSeq=273708&fileSeq=604049",
+      "accessed": "2026-10-16"
+    },
+    {
+      "what": "Status: working draft 13 May 2026, feedback 13 May-10 June 2026, not adopted as of 12 Oct 2026",
+      "url": "https://cbamguide.com/compliance/carbon-price-deduction/",
+      "accessed": "2026-10-16"
+    },
+    {
+      "what": "Taiwan carbon fee regulation: fee = (emissions − K) × adjustment factor × rate; K 25,000 t (0 for high leakage); factor 0.2 / 0.4 / 0.6",
+      "url": "https://oaout.moenv.gov.tw/laW/LawContent.aspx?id=GL007914",
+      "accessed": "2026-10-16"
+    },
+    {
+      "what": "First payment (May 2026, 2025 emissions): NT$4.97 bn; standard NT$300/t; preferential NT$50 and NT$100; 29 steel plants NT$400 m",
+      "url": "https://www.taipeitimes.com/News/front/archives/2026/06/04/2003858496",
+      "accessed": "2026-10-16"
+    },
+    {
+      "what": "224 high-leakage plants pay on emissions × 0.2; next period 0.4",
+      "url": "https://www.e-info.org.tw/node/243508",
+      "accessed": "2026-10-16"
+    },
+    {
+      "what": "EUR/TWD annual average 2025 = 35.196 (Eurostat ert_bil_eur_a, updated 2026-07-08)",
+      "url": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/ert_bil_eur_a?currency=TWD&statinfo=AVG&format=JSON&lang=EN",
+      "accessed": "2026-10-16"
+    }
+  ],
+  "txs": [
+    {
+      "step": "registerMill",
+      "label": "Mill report registered by the mill's verification body (1000 t of wire rod at 1.44 tCO2e/t)",
+      "hash": "0x8a0d385fb19a0092e809e363f59e05b6abf44a597c86eb07df3f9c5e168b85f7",
+      "block": 9,
+      "time": "2026-09-21T14:13:20Z",
+      "result": "success"
+    },
+    {
+      "step": "registerScrew",
+      "label": "Screw report registered, with the precursor statement's digest in its signed core (500 t at 1.8 tCO2e/t)",
+      "hash": "0xc0c0bba140db65fae58a67532e4159b373db89a160cf5f7cd30c4b4a0fd56474",
+      "block": 10,
+      "time": "2026-09-21T14:13:20Z",
+      "result": "success"
+    },
+    {
+      "step": "claimWireRod",
+      "label": "Mill claims 562.5 t of wire rod for the screw maker on its report",
+      "hash": "0xd382c692c27dbc4b941b6fd5a1274f2f5161c1e18249c9f0d9f2c0fecdd926e0",
+      "block": 11,
+      "time": "2026-09-21T14:13:20Z",
+      "result": "success"
+    },
+    {
+      "step": "claimScrews",
+      "label": "Screw maker claims 200 t of screws for the EU importer",
+      "hash": "0x82ddae0cd19db7131e2cd6ef0182ca73a7b2f49c9da92e3beddbbbf3c274bae9",
+      "block": 12,
+      "time": "2026-09-21T14:13:20Z",
+      "result": "success"
+    },
+    {
+      "step": "registerStatement",
+      "label": "Certifier registers the mill's carbon price statement (draft rules; 400000 t of wire rod produced in the period are claimable against it)",
+      "hash": "0x39b0acc2cfa21726deb8cc5d14ad7dfcf5ab84c3e353e3009d75bd7f9c6271d9",
+      "block": 13,
+      "time": "2026-09-21T14:13:20Z",
+      "result": "success"
+    },
+    {
+      "step": "claimStatement",
+      "label": "Mill claims 562.5 t of wire rod against the statement for the screw maker (importerCommit = its LEI)",
+      "hash": "0xeca1a0be8f79acc743276b1520ce5e93adaba92c162a547072dc52bc2b3fa984",
+      "block": 14,
+      "time": "2026-09-21T14:13:20Z",
+      "result": "success"
+    }
+  ]
+}

@@ -19,6 +19,7 @@
 // default production route of the origin, so the caller passes them (see `freeAllocation`). Without them the
 // figures are gross, before the free-allocation adjustment, and say so.
 import type { Verdict } from "./verdict.ts";
+import { art9Summary, type Art9Summary } from "./carbonprice.ts";
 
 /** Format of `PortfolioSummary`; a change that breaks a consumer increases it. */
 export const PORTFOLIO_FORMAT = 1;
@@ -107,6 +108,12 @@ export interface PortfolioOptions {
    * `<country>:<CN prefix>` → tCO2e/t. `cbamFactor` defaults to `CBAM_FACTOR[year]`, `cscf` to 1.
    */
   freeAllocation?: { benchmarks: Record<string, string>; cbamFactor?: string; cscf?: string };
+  /**
+   * Optional carbon price deduction (CBAM Art 9) on the rules of the Commission's DRAFT implementing act (not adopted:
+   * illustrative): the yearly reference price of CBAM certificates to divide by (draft Art 6(3)). The result is a
+   * separate `art9` block; totals stay before it.
+   */
+  art9?: { refPriceEur: string };
 }
 
 export type Basis = "actual" | "default";
@@ -220,6 +227,8 @@ export interface PortfolioSummary {
   prices: Record<string, string | null>;
   rounding: string[];
   notes: string[];
+  /** Only with `PortfolioOptions.art9`: the draft Art 9 deduction, kept apart (sdk/carbonprice.ts art9Summary). */
+  art9?: Art9Summary;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -580,6 +589,7 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
     prices,
     rounding: [...ROUNDING_RULES],
     notes,
+    ...(opts.art9 ? { art9: art9Summary(lines, new Map(input.map((s) => [s.id, s.verdict])), opts.art9, fmtDec(obligationTotal, E)) } : {}),
   };
 }
 

@@ -78,6 +78,25 @@ describe("precursor demo: synthetic two-body vLEI chain", () => {
     }
   });
 
+  it("the optional carbon price certifier (check 10) only appends events: no KEL forks, its anchor verifies", () => {
+    const cp = json("../../fixtures/carbonprice.json");
+    const withCert = syntheticPrecursorChain({ ...input, certifier: { ...cp.certifier, auditor: { name: cp.certifier.auditor.name } } });
+    const cert = withCert.certifier!;
+    // Every event of the QVI and the NAB without the certifier is the same event, at the same place, with it.
+    for (const [aid, stream] of [
+      [chain.qviAid, (b: typeof chain) => b.bodies.mill.bundle.cesr.leBody],
+      [chain.nabAid, (b: typeof chain) => b.bodies.mill.bundle.cesr.accreditation],
+    ] as const) {
+      const before = parseCesr(stream(chain)).filter((m) => m.ked.i === aid && m.ked.t !== undefined && m.ked.s !== undefined).map((m) => m.raw);
+      const after = parseCesr(stream(withCert)).filter((m) => m.ked.i === aid && m.ked.t !== undefined && m.ked.s !== undefined).map((m) => m.raw);
+      expect(after.slice(0, before.length)).toEqual(before);
+      expect(after.length).toBe(before.length + 1);
+    }
+    const said = "E" + "S".repeat(43);
+    expect(verifyAnchor(cert.anchor([said]) as AnchorEvidence, { credSAID: said, auditorAID: cert.auditorAid, kelSeq: 1n })).toMatchObject({ ok: true });
+    expect(new Set([cert.bodyAid, cert.auditorAid, ...BODY_KEYS.flatMap((k) => [chain.bodies[k].bodyAid, chain.bodies[k].auditorAid])]).size).toBe(6);
+  });
+
   it("shares no AID with the demo's KERI agents", () => {
     const main = new Set<string>([mainVlei.trustAnchor, ...Object.values<any>(mainVlei.agents).map((a) => a.aid)]);
     const ours = [chain.trustAnchor, chain.qviAid, chain.nabAid, ...BODY_KEYS.flatMap((k) => [chain.bodies[k].bodyAid, chain.bodies[k].auditorAid])];

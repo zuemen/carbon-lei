@@ -60,6 +60,8 @@ export interface Presentation {
   reportExtract?: Record<string, unknown>;
   /** Check 9: the precursor statement and the producers' proofs (sdk/precursor.ts PrecursorEvidence). */
   precursorEvidence?: unknown;
+  /** Check 10 (draft CBAM Art 9 rules): a certified carbon price statement (sdk/carbonprice.ts CarbonPriceEvidence). */
+  carbonPriceEvidence?: unknown;
 }
 
 /** Encoded disclosure: base64url of the compact JSON array [salt, name, value]. */

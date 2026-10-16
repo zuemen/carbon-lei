@@ -22,8 +22,8 @@
         "id": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 9,
-          "description": "Check number (sdk/verify.ts): 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment, 6 KEL anchor, 7 authority chain, 8 reconciliation (advisory), 9 precursors (only for a proof with a precursor part; its PRECURSOR_WARNING codes are advisory)."
+          "maximum": 10,
+          "description": "Check number (sdk/verify.ts): 0 structure, 1 SAID, 2 disclosures, 3 signature, 4 on-chain report, 5 shipment, 6 KEL anchor, 7 authority chain, 8 reconciliation (advisory), 9 precursors (only for a proof with a precursor part; its PRECURSOR_WARNING codes are advisory), 10 carbon price paid (only for a proof with carbon price evidence; draft CBAM Art 9 rules, not adopted, illustrative; its CARBON_PRICE_WARNING codes are advisory)."
         },
         "name": { "type": "string" },
         "status": { "enum": ["pass", "fail", "warn", "skipped"] },
@@ -42,7 +42,7 @@
           "description": "INCOMPLETE: no check failed and nothing is CONTESTED, but check 6 or 7 did not pass or fail (not run without an evidence checker, or only a warning from a caller's own checker), or the credential commits to a precursor statement that check 9 did not decide; not a pass. CONTESTED also when check 9 found a precursor credential CONTESTED."
         },
         "primaryCode": { "type": "string", "description": "Code of the first failing check; empty when no check failed." },
-        "checks": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/check" } },
+        "checks": { "type": "array", "minItems": 1, "maxItems": 11, "items": { "$ref": "#/$defs/check" } },
         "hidden": { "type": "integer", "minimum": 0, "description": "Signed fields the supplier withheld." },
         "rejected": { "type": "integer", "minimum": 0, "description": "Disclosures presented but rejected by check 2." },
         "disclosed": {
@@ -68,13 +68,13 @@
         },
         "warnings": {
           "type": "array",
-          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: check 6 or 7 did not pass or fail (not run, or only a warning from a caller's own checker); overall is then INCOMPLETE, unless a check failed (INVALID) or check 4 is CONTESTED (CONTESTED). PRECURSORS_NOT_CHECKED: the credential commits to a precursor statement, but check 9 was not run or not decided (the statement or a producer's proof not presented, or a producer's proof INCOMPLETE); overall is then INCOMPLETE unless a check failed or something is CONTESTED.",
+          "description": "How the checks were run, when the caller should know. SHIPMENT_NOT_BOUND: the proof has a shipment but no EORI was given, so check 5 was skipped and check 4 used the block time, not the claim time. EVIDENCE_NOT_CHECKED: check 6 or 7 did not pass or fail (not run, or only a warning from a caller's own checker); overall is then INCOMPLETE, unless a check failed (INVALID) or check 4 is CONTESTED (CONTESTED). PRECURSORS_NOT_CHECKED: the credential commits to a precursor statement, but check 9 was not run or not decided (the statement or a producer's proof not presented, or a producer's proof INCOMPLETE); overall is then INCOMPLETE unless a check failed or something is CONTESTED. CARBON_PRICE_NOT_CHECKED: the proof carries a carbon price statement, but check 10 was not run or not decided (no pinned exchange rate, the precursor it applies to not verified, no EORI for a statement on the good itself); overall is then INCOMPLETE unless a check failed or something is CONTESTED.",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": ["code", "detail"],
             "properties": {
-              "code": { "enum": ["SHIPMENT_NOT_BOUND", "EVIDENCE_NOT_CHECKED", "PRECURSORS_NOT_CHECKED"] },
+              "code": { "enum": ["SHIPMENT_NOT_BOUND", "EVIDENCE_NOT_CHECKED", "PRECURSORS_NOT_CHECKED", "CARBON_PRICE_NOT_CHECKED"] },
               "detail": { "type": "string", "minLength": 1 }
             }
           }
@@ -84,6 +84,20 @@
           "description": "Root of trust AID check 7 was run with: the demo root unless --trust-anchor was given; null when the caller supplied its own checkers."
         },
         "precursors": { "$ref": "#/$defs/precursors" },
+        "carbonPrice": {
+          "type": "object",
+          "description": "Check 10's breakdown (sdk/carbonprice.ts CarbonPriceReport): the effective carbon price per tonne recomputed on the rules of the Commission's DRAFT implementing regulation on CBAM Art 9 (Ares(2026)4841230), not adopted: illustrative. `draft` always carries the label.",
+          "required": ["draft", "statementSAID", "target", "deductibleEurPerTonneGood", "steps"],
+          "properties": {
+            "draft": { "const": "Draft implementing act, not adopted — illustrative" },
+            "statementSAID": { "type": ["string", "null"] },
+            "target": { "type": ["object", "null"] },
+            "deductibleEurPerTonneGood": { "$ref": "#/$defs/decimalOrNull" },
+            "eurPerTonne": { "$ref": "#/$defs/decimalOrNull" },
+            "eurPerTCO2e": { "$ref": "#/$defs/decimalOrNull" },
+            "steps": { "type": "array", "items": { "type": "string" } }
+          }
+        },
         "tool": { "$ref": "#/$defs/tool" }
       },
       "if": { "properties": { "overall": { "const": "INVALID" } } },

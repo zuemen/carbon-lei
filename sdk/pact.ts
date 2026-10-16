@@ -219,6 +219,10 @@ export async function exportPactFromProof(
   if (c4?.status === "fail" && !onlySuperseded(c4)) {
     throw new Error(`the proof fails check 4 (${c4.code}: ${c4.detail}); nothing exported`);
   }
+  // Check 10: a carbon price claim the proof carries that fails (draft Art 9 rules) makes the proof INVALID as presented.
+  if (check(10)?.status === "fail") {
+    throw new Error(`the proof fails check 10 (${check(10)?.code}: ${check(10)?.detail}); nothing exported`);
+  }
   // Check 9: a precursor tier that fails means the value relies on precursor data it cannot rely on.
   if (check(9)?.status === "fail") {
     throw new Error(`the proof fails check 9 (${check(9)?.code}: ${check(9)?.detail}); nothing exported`);

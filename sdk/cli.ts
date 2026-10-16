@@ -37,6 +37,7 @@ import { createApiServer, DEFAULTS as SERVE_DEFAULTS, isLoopback } from "./serve
 import { vleiCheckers } from "./checkers.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import type { PrecursorReport } from "./precursor.ts";
+import { art9Text, carbonPriceLines } from "./carbonprice.ts";
 import { dirname, resolve } from "node:path";
 import {
   draftCredentialFields,
@@ -74,6 +75,8 @@ const USAGE = `carbonlei <command> [options]
                                                     2 if any CONTESTED, 4 if any INCOMPLETE, else 0
   portfolio    <results.json> --year <YYYY> [--price <EUR>] [--csv <worksheet.csv>] [--json] [--out <summary.json>]
                [--defaults <map.json>] [--benchmarks <map.json>]
+               [--art9-ref-price <EUR>]             adds the carbon price deduction of check 10 (DRAFT Art 9
+                                                    rules, not adopted: illustrative), apart from the totals
                                                     declaration plan from verify-batch results: verified value only
                                                     when VALID and bound by check 5, else the default with the year's
                                                     mark-up; totals, 50 t de minimis, quarterly holding, certificates,
@@ -253,6 +256,7 @@ async function main(argv: string[]) {
       "max-body": { type: "string" },
       timeout: { type: "string" },
       "max-concurrent": { type: "string" },
+      "art9-ref-price": { type: "string" },
     },
   });
 
@@ -330,6 +334,7 @@ async function main(argv: string[]) {
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
       }
       if (r.precursors) for (const l of precursorLines(r.precursors)) console.log(l);
+      if (r.carbonPrice) for (const l of carbonPriceLines(r.carbonPrice)) console.log(l);
       // The EIP-712 signature does not name the importer; only check 5 binds the proof to one (SECURITY.md T4).
       for (const w of r.warnings ?? []) {
         console.log(
@@ -405,11 +410,12 @@ async function main(argv: string[]) {
         ...(values.price !== undefined ? { priceEur: values.price as string } : {}),
         ...(values.defaults ? { defaults: readMap(values.defaults as string, "--defaults") } : {}),
         ...(bm ? { freeAllocation: { benchmarks, ...(cbamFactor ? { cbamFactor } : {}), ...(cscf ? { cscf } : {}) } } : {}),
+        ...(values["art9-ref-price"] !== undefined ? { art9: { refPriceEur: values["art9-ref-price"] as string } } : {}),
       });
       if (values.csv) writeFileSync(values.csv as string, worksheetCsv(summary));
       if (values.out) write(values.out, summary);
       if (values.json) process.stdout.write(json(summary) + "\n");
-      else if (!values.out) console.log(printPortfolio(summary) + (values.csv ? `\n\nWorksheet written to ${values.csv}` : ""));
+      else if (!values.out) console.log(printPortfolio(summary) + (summary.art9 ? art9Text(summary.art9) : "") + (values.csv ? `\n\nWorksheet written to ${values.csv}` : ""));
       return 0;
     }
     case "recheck": {
