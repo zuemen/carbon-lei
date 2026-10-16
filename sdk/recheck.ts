@@ -14,6 +14,7 @@
 import type { BatchDocument, BatchResult } from "./batch.ts";
 import type { ChainReader } from "./chain.ts";
 import { reportKeyOf } from "./commitment.ts";
+import { sha256Hex } from "./encoding.ts";
 import { pinnedToHead, runLimited } from "./pinned.ts";
 import type { Presentation } from "./disclosure.ts";
 import { EXIT, TOOL, verdictFor, type Verdict, type VerdictOptions } from "./verdict.ts";
@@ -125,6 +126,11 @@ export interface AcceptedRecord {
   proofText: string | null;
   /** File the proof came from (evidence bundles are read next to it). */
   proofPath: string | null;
+  /**
+   * SHA-256 (hex) of the proof bytes the accepted verdict was computed from (`verify-batch` results record it). When
+   * set, the re-check verifies the proof only if `proofText` hashes to it; otherwise the record is RECHECK_FAILED.
+   */
+  expectedSha256?: string | null;
   /** Why the record could not be read, when it could not. */
   loadError?: string;
 }
@@ -148,6 +154,11 @@ export interface RecheckResult {
   /** The full current verdict (mode "full"); null in ledger-only mode or on error. */
   verdict: Verdict | null;
   error: string | null;
+  /**
+   * SHA-256 (hex) of the proof bytes this re-check verified (mode "full"), else null. `applyRecheck` lets a re-check
+   * improve a verify-batch line only when this equals the line's `proofSha256`.
+   */
+  proofSha256?: string | null;
 }
 
 export interface RecheckDocument {
@@ -237,12 +248,14 @@ export function fromAcceptedVerdict(rec: Record<string, unknown>, source: string
   };
 }
 
+/**
+ * Looks a proof file up by the name a results file gives it. With `sha256`, a file whose bytes hash to it should be
+ * preferred over another file of the same name (sdk/recheck-files.ts searches several folders).
+ */
+export type FindProof = (proof: string, sha256: string | null) => { path: string; text: string } | null;
+
 /** The lines of a `verify-batch` results file that had a verdict → AcceptedRecords (lines without a proof are skipped). */
-export function fromBatchDocument(
-  doc: BatchDocument,
-  source: string,
-  findProof: (proof: string) => { path: string; text: string } | null = () => null,
-): { records: AcceptedRecord[]; skipped: string[] } {
+export function fromBatchDocument(doc: BatchDocument, source: string, findProof: FindProof = () => null): { records: AcceptedRecord[]; skipped: string[] } {
   const records: AcceptedRecord[] = [];
   const skipped: string[] = [];
   doc.results.forEach((r: BatchResult, i) => {
@@ -255,12 +268,13 @@ export function fromBatchDocument(
     let proof: Presentation | null = null;
     let proofText: string | null = null;
     let proofPath: string | null = null;
+    const expectedSha256 = typeof r.proofSha256 === "string" && /^[0-9a-f]{64}$/.test(r.proofSha256) ? r.proofSha256 : null;
     const inline = (r as BatchResult & { proofObject?: unknown }).proofObject;
     if (isProof(inline)) {
       proof = inline;
       proofText = JSON.stringify(inline);
     } else if (r.proof) {
-      const found = findProof(r.proof);
+      const found = findProof(r.proof, expectedSha256);
       if (found) {
         try {
           const p = JSON.parse(found.text);
@@ -285,6 +299,7 @@ export function fromBatchDocument(
       proof,
       proofText,
       proofPath,
+      expectedSha256,
     });
   });
   return { records, skipped };
@@ -294,11 +309,7 @@ export function fromBatchDocument(
  * Records from parsed JSON (one file's content): a Buyer record, an array of them, or a `verify-batch` results
  * file. Anything else is reported as skipped.
  */
-export function recordsFromJson(
-  x: unknown,
-  source: string,
-  findProof?: (proof: string) => { path: string; text: string } | null,
-): { records: AcceptedRecord[]; skipped: string[] } {
+export function recordsFromJson(x: unknown, source: string, findProof?: FindProof): { records: AcceptedRecord[]; skipped: string[] } {
   if (Array.isArray(x)) {
     const out = { records: [] as AcceptedRecord[], skipped: [] as string[] };
     x.forEach((item, i) => {
@@ -525,9 +536,20 @@ export async function recheckRecords(records: AcceptedRecord[], reader: ChainRea
       window: null,
       verdict: null,
       error,
+      proofSha256: null,
     });
     const mode = r.proof ? "full" : "ledger-only";
     if (r.loadError) return fail(mode, r.loadError);
+    // The bytes re-verified must be the bytes that were accepted: a file of the same name elsewhere (a tampered copy,
+    // or the original next to a tampered one) would re-verify another proof and report it as this line.
+    const digest = r.proof ? sha256Hex(r.proofText ?? JSON.stringify(r.proof)) : null;
+    // (With no proof found at all, the record is re-checked on the ledger only, which never yields a verdict.)
+    if (r.expectedSha256 && r.proof && digest !== r.expectedSha256) {
+      return fail(mode, `the proof found${r.proofPath ? ` (${r.proofPath})` : ""} has sha256 ${digest}, not the ${r.expectedSha256} verify-batch recorded: it is another file, so it was not re-verified`);
+    }
+    if (r.proof && r.batchId && r.proof.shipment?.batchId !== undefined && r.proof.shipment.batchId !== r.batchId) {
+      return fail(mode, `the record's batch ${r.batchId} differs from its proof's (${r.proof.shipment.batchId})`);
+    }
     if (r.chainId !== null && r.chainId !== chainId) return fail(mode, `the record is from chain ${r.chainId}; the RPC node serves chain ${chainId}`);
     if (r.registry && r.registry.toLowerCase() !== registry) return fail(mode, `the record names registry ${r.registry}; this deployment's registry is ${reader.registry}`);
     const proofSAID = credSAIDOf(r.proof);
@@ -540,7 +562,7 @@ export async function recheckRecords(records: AcceptedRecord[], reader: ChainRea
       const acc = { ...r.accepted, at: r.acceptedAt };
       if (!r.proof) {
         const c = classifyLedgerOnly(acc, report, ctx);
-        return { ...base, mode, verdict: null, error: null, ...c };
+        return { ...base, mode, verdict: null, error: null, ...c, proofSha256: null };
       }
       const loadBundle = opts.loadBundleFor?.(r);
       const v = await within(
@@ -555,7 +577,7 @@ export async function recheckRecords(records: AcceptedRecord[], reader: ChainRea
         }),
       );
       const c = classify(acc, v, ctx);
-      return { ...base, mode, current: { overall: v.overall, primaryCode: v.primaryCode, block: v.chain.block }, verdict: v, error: null, ...c };
+      return { ...base, mode, current: { overall: v.overall, primaryCode: v.primaryCode, block: v.chain.block }, verdict: v, error: null, ...c, proofSha256: digest };
     } catch (e) {
       return fail(mode, (e as Error).message);
     }
@@ -648,16 +670,18 @@ export async function postWebhook(url: string, payload: unknown, fetchImpl: type
 /**
  * Feeds a re-check into the portfolio: each `verify-batch` line whose re-check found a change takes the current
  * verdict, and a line that needs action is marked so `buildPortfolio` plans it on the default value with the
- * re-check as the reason. Lines are matched on the credential ID (and the batch id when both have one).
+ * re-check as the reason. Lines are matched on the credential ID (and the batch id when both have one); a verdict
+ * that is not worse is taken over only when the re-check verified the same proof bytes (equal `proofSha256`).
  */
 export function applyRecheck(batch: BatchDocument, recheck: RecheckDocument): BatchDocument {
   if (recheck?.kind !== "carbonlei-recheck" || !Array.isArray(recheck.results)) throw new Error("not a carbonlei recheck results file");
   const results = batch.results.map((r, i) => {
     if (!r.verdict?.credSAID) return r;
-    // A re-check of this very line (made from this results file: source "<file>#<line>", same id) may replace its
-    // verdict either way. A match on the credential ID alone is not proof of the same line: a tampered copy of a
-    // proof carries the same credSAID and batch id as the original, so such a match may only make the line worse,
-    // never lift it to the original's verdict.
+    // A matching re-check may always make the line worse. It may replace the verdict otherwise (improve it, or
+    // refresh it) only when it verified the very bytes this line was verified from: the two SHA-256 digests are
+    // recorded and equal. Neither the credential ID nor the file name or line number proves that: a tampered copy of
+    // a proof carries the original's credSAID and batch id, and a file of the same name can be another proof
+    // (review of 17 October 2026, finding 2).
     const id = r.line?.id ?? r.proofShipment?.batchId ?? r.proof ?? `line-${i + 1}`;
     const exact = recheck.results.find((x) => x.source.endsWith(`#${i + 1}`) && x.id === id && x.credSAID === r.verdict!.credSAID);
     const loose = exact
@@ -669,7 +693,8 @@ export function applyRecheck(batch: BatchDocument, recheck: RecheckDocument): Ba
     if (!hit) return r;
     const rank: Record<string, number> = { VALID: 0, CONTESTED: 1, INCOMPLETE: 2, INVALID: 3 };
     const worse = (v: Verdict | null) => !!v && (rank[v.overall] ?? 3) > (rank[r.verdict!.overall] ?? 3);
-    const replace = hit.verdict && (exact || worse(hit.verdict));
+    const sameBytes = typeof hit.proofSha256 === "string" && typeof r.proofSha256 === "string" && hit.proofSha256 === r.proofSha256;
+    const replace = hit.verdict && (sameBytes || worse(hit.verdict));
     const out: BatchResult = { ...r, ...(replace ? { verdict: hit.verdict! } : {}) };
     if (hit.severity === "action" || hit.severity === "error") {
       out.recheck = { change: hit.change, severity: hit.severity, checkedAt: recheck.checkedAt, pinnedBlock: recheck.pinnedBlock };

@@ -110,8 +110,8 @@ describe("allocation book", () => {
   });
 
   it("file names keep only safe characters", () => {
-    expect(proofFileName("acme/eu", "../B 1")).toBe("acme_eu--__B_1.proof.json");
-    expect(proofFileName(".hidden", "B")).toBe("_hidden--B.proof.json");
+    expect(proofFileName("acme/eu", "../B 1")).toBe("acme_eu--__B_1--093d4357e8.proof.json");
+    expect(proofFileName(".hidden", "B")).toBe("_hidden--B--994e969e54.proof.json");
   });
 });
 
@@ -125,7 +125,7 @@ describe("reconcile", () => {
       { id: "b", name: "Importer B (fictional)", claimedKg: 0n, plannedKg: 200_000n, refusedKg: 0n, batches: 1 },
     ]);
     expect(r.totals).toMatchObject({ claimedKg: 200_000n, plannedKg: 200_000n, refusedKg: 0n, remainingAfterPlanKg: 100_000n, unaccountedKg: 0n });
-    expect(r.sharePack[0].proofs[0]).toMatchObject({ file: "a--B-1.proof.json", ready: true });
+    expect(r.sharePack[0].proofs[0]).toMatchObject({ file: "a--B-1--9be77812db.proof.json", ready: true });
     expect(r.sharePack[1].proofs[0].ready).toBe(false);
     expect(r.sharePack[1].fields).toHaveLength(REQUIRED_DISCLOSURES.length + 1);
   });
@@ -212,7 +212,7 @@ describe("share pack", () => {
     b.batches[2].status = "claimed";
     const evidence = { anchorEvidence: { x: 1 }, reportExtract: { y: 2 } };
     const { proofs, skipped } = buildSharePack(cred, b, { evidence });
-    expect(proofs.map((p) => p.file)).toEqual(["demo-imports--BATCH-DEMO-2026-0001.proof.json", "demo-nordic--BATCH-DEMO-2026-0003.proof.json"]);
+    expect(proofs.map((p) => p.file)).toEqual(["demo-imports--BATCH-DEMO-2026-0001--7ff0d9a847.proof.json", "demo-nordic--BATCH-DEMO-2026-0003--b516fb340b.proof.json"]);
     expect(skipped).toEqual([{ batchId: "BATCH-DEMO-2026-0002", reason: "planned: send the claim first" }]);
     const [full, minimal] = proofs;
     expect(full.proof.disclosures).toHaveLength(21);

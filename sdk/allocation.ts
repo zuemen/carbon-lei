@@ -9,7 +9,7 @@ import { emissionsClaimRegistryAbi } from "./abi.ts";
 import type { ChainReader, ReportRecord, ShipmentStatus } from "./chain.ts";
 import { batchKeyOf, importerCommitOf, reportKeyOf, ZERO32 } from "./commitment.ts";
 import { CLAIM_ORDER, REQUIRED_DISCLOSURES, tonnesToKg, type Hex } from "./credential.ts";
-import { isSalt } from "./encoding.ts";
+import { isSalt, sha256Hex } from "./encoding.ts";
 import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, present, type SignedCredential } from "./issue.ts";
 
@@ -336,10 +336,14 @@ export function reportStateOf(s: AllocationSnapshot): ReportState {
   return s.claimable ? "claimable" : "not-claimable";
 }
 
-/** File name of a batch's proof in a share pack: `<importer id>--<batch id>.proof.json`, unsafe characters as `_`. */
+/**
+ * File name of a batch's proof in a share pack: `<importer id>--<batch id>--<hash>.proof.json`, unsafe characters as
+ * `_`. The readable part alone is not unique ("acme" + "b--1" and "acme--b" + "1" read the same, and so do "a/b" and
+ * "a_b"), so the name ends with the first 10 hex digits of SHA-256 over both full ids (review of 17 October 2026).
+ */
 export function proofFileName(importerId: string, batchId: string): string {
   const safe = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "_");
-  return `${safe(importerId)}--${safe(batchId)}.proof.json`;
+  return `${safe(importerId)}--${safe(batchId)}--${sha256Hex(JSON.stringify([importerId, batchId])).slice(0, 10)}.proof.json`;
 }
 
 const t = (kg: bigint) => {

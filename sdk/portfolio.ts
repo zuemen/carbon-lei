@@ -86,6 +86,12 @@ export interface ShipmentInput {
    * check 5 passed: a declared quantity above it cannot rest on the verified value.
    */
   claimedTonnes?: string;
+  /**
+   * Batch id of that ledger claim (the proof's shipment batch). With the verdict's credential ID it keys the claim:
+   * lines that share one claim share its tonnes across the whole portfolio, in input order, so one proof on several
+   * manifest lines is counted once.
+   */
+  claimedBatchId?: string;
   /** Unmarked default value for this line, overriding `defaults` (tCO2e/t). */
   defaultValue?: string;
   /** Operator's verified specific embedded free allocation (tCO2e/t), for a line declared on actual values. */
@@ -114,6 +120,11 @@ export interface PortfolioOptions {
    * separate `art9` block; totals stay before it.
    */
   art9?: { refPriceEur: string };
+  /**
+   * Where the verdicts came from, stated in `verdictSource` and as the first note (for example the input file of
+   * `carbonlei portfolio`, or caller-supplied verdicts on the REST API). buildPortfolio never re-verifies a proof.
+   */
+  verdictSource?: string;
 }
 
 export type Basis = "actual" | "default";
@@ -227,6 +238,8 @@ export interface PortfolioSummary {
   prices: Record<string, string | null>;
   rounding: string[];
   notes: string[];
+  /** Where the verdicts came from (`PortfolioOptions.verdictSource`), when the caller said. */
+  verdictSource?: string;
   /** Only with `PortfolioOptions.art9`: the draft Art 9 deduction, kept apart (sdk/carbonprice.ts art9Summary). */
   art9?: Art9Summary;
 }
@@ -396,6 +409,40 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
     return p === undefined ? null : parseDec(p, 2, "price");
   };
 
+  // One ledger claim (credential ID + batch id) may back several lines (a split consignment), but never more tonnes
+  // in total than were claimed: in input order, a line that would take the claim over goes to the default value.
+  // Lines of other years count too (the claim is the same). A quantity that cannot be read is left to the main loop,
+  // which reports it with the line id.
+  const claimUse = new Map<string, { claimedKg: bigint; usedKg: bigint; usedBy: string[]; lines: string[]; batch: string }>();
+  const overClaim = new Map<ShipmentInput, string>();
+  for (const s of input) {
+    const said = s.verdict?.credSAID;
+    if (!said || s.claimedBatchId === undefined || s.claimedTonnes === undefined) continue;
+    let qKg: bigint;
+    let claimedKg: bigint;
+    try {
+      qKg = parseDec(s.quantityTonnes, Q);
+      claimedKg = parseDec(s.claimedTonnes, Q);
+    } catch {
+      continue;
+    }
+    const key = JSON.stringify([said, s.claimedBatchId]);
+    const u = claimUse.get(key) ?? { claimedKg, usedKg: 0n, usedBy: [], lines: [], batch: s.claimedBatchId };
+    claimUse.set(key, u);
+    u.lines.push(s.id);
+    if (!eligibility(s).ok) continue;
+    if (u.usedKg + qKg > u.claimedKg) {
+      const left = u.claimedKg > u.usedKg ? u.claimedKg - u.usedKg : 0n;
+      overClaim.set(
+        s,
+        `${s.quantityTonnes} t declared but only ${fmtDec(left, Q)} t of the ${s.claimedTonnes} t claimed on the ledger for batch ${s.claimedBatchId} remain (already used by ${u.usedBy.join(", ")})`,
+      );
+      continue;
+    }
+    u.usedKg += qKg;
+    u.usedBy.push(s.id);
+  }
+
   const lines: ShipmentLine[] = [];
   const excluded: { id: string; reason: string }[] = [];
   const ids = new Set<string>();
@@ -424,7 +471,8 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
       throw new Error(`${where}: no default value known for CN ${s.cnCode} from ${s.country.toUpperCase()}; pass it (defaultValue or defaults)`);
     }
     const marked = markedUpDefault(unmarked, s.cnCode, year);
-    const el = eligibility(s);
+    const over = overClaim.get(s);
+    const el: ReturnType<typeof eligibility> = over !== undefined ? { ok: false, reason: over } : eligibility(s);
     const seeUsed = el.ok ? el.see : marked;
     const lineT = (intensity: string) => roundHalfUp(qKg * parseDec(intensity, I), Q + I - E);
     const embedded = lineT(seeUsed);
@@ -543,6 +591,13 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
     "Lines on actual values use the verified intensity only when the proof is VALID and check 5 bound the shipment to your EORI.",
     "Carbon price paid in the country of origin (Art 9) is not deducted.",
   ];
+  for (const u of claimUse.values()) {
+    if (u.lines.length < 2) continue;
+    notes.push(
+      `One ledger claim (batch ${u.batch}, ${fmtDec(u.claimedKg, Q)} t) is on ${u.lines.length} lines (${u.lines.join(", ")}): their tonnes are counted together against the claim, in input order; a line that would exceed it is planned on the default value.`,
+    );
+  }
+  if (opts.verdictSource) notes.unshift(`Verdicts: ${opts.verdictSource}.`);
   if (exempt) notes.push(`Net mass ${fmtDec(qTotal, Q)} t does not exceed ${DE_MINIMIS_TONNES} t: exempt for ${year} (Art 2a) as long as no further CBAM goods are imported this year; the figures show what would apply.`);
   if (!fa) notes.push("Gross figures: no free-allocation benchmark was given, so the adjustment of Art 31 is not deducted.");
   if (fa && faLines < lines.length) notes.push("Some lines have no free-allocation adjustment (no benchmark for their CN code and origin, or no operator SEFA for a line on actual values); their figures are gross.");
@@ -589,6 +644,7 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
     prices,
     rounding: [...ROUNDING_RULES],
     notes,
+    ...(opts.verdictSource ? { verdictSource: opts.verdictSource } : {}),
     ...(opts.art9 ? { art9: art9Summary(lines, new Map(input.map((s) => [s.id, s.verdict])), opts.art9, fmtDec(obligationTotal, E)) } : {}),
   };
 }

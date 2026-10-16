@@ -69,7 +69,7 @@ test("AL3 allocations: proofs for all buyers — one download per buyer with its
   await expect(pack.nth(2)).toContainText("11 fields · verifies only after the claim is sent");
 
   const [download] = await Promise.all([page.waitForEvent("download"), pack.nth(2).getByRole("link").click()]);
-  expect(download.suggestedFilename()).toBe("demo-nordic--BATCH-DEMO-2026-0003.proof.json");
+  expect(download.suggestedFilename()).toBe("demo-nordic--BATCH-DEMO-2026-0003--b516fb340b.proof.json");
   const proof = JSON.parse(await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8")));
   expect(proof.disclosures).toHaveLength(11);
   expect(proof.shipment.batchId).toBe("BATCH-DEMO-2026-0003");

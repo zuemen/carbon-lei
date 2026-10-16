@@ -28,6 +28,13 @@
     "results": { "type": "array", "items": { "$ref": "#/$defs/result" } },
     "notes": { "type": "array", "items": { "type": "string" } },
     "skipped": { "type": "array", "items": { "type": "string" }, "description": "POST /v1/recheck only: input items that were not records." },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "mac"],
+      "description": "POST /v1/recheck only: HMAC-SHA256 of the server over the canonical JSON of this document without `binding`; POST /v1/portfolio accepts the document as `recheck` only with it.",
+      "properties": { "alg": { "const": "HMAC-SHA256" }, "mac": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+    },
     "tool": {
       "type": "object",
       "additionalProperties": false,
@@ -99,7 +106,8 @@
           "description": "The full current verdict (mode full), else null.",
           "oneOf": [{ "type": "null" }, { "$ref": "verdict.schema.json#/$defs/verdict" }]
         },
-        "error": { "type": ["string", "null"] }
+        "error": { "type": ["string", "null"] },
+        "proofSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the proof bytes re-verified (mode full), else null. A verify-batch line takes over a verdict that is not worse only when this equals its proofSha256; a results line whose recorded proofSha256 the found file does not match is RECHECK_FAILED." }
       }
     }
   }
