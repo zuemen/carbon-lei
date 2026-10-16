@@ -1,0 +1,27 @@
+/* Supplier tab: allocations (tabs/Allocations.tsx). Colours from the tokens in styles.css. */
+.alloc h3.sheet-kicker { font: 600 12px/1.2 var(--mono); }
+.alloc-lede { margin: 0 0 6px; max-width: 82ch; }
+.alloc-summary { font: 600 14px/1.5 var(--mono); margin: 8px 0 10px; overflow-wrap: anywhere; }
+.alloc-table td { overflow-wrap: anywhere; }
+.alloc-table .badge { white-space: normal; }
+.alloc-qty { width: 6.5em; min-height: 36px; font: 400 14px/1 var(--mono); padding: 4px 6px; border: 1px solid var(--ink); background: var(--sheet); color: var(--ink); }
+.alloc-profile { min-height: 36px; max-width: 100%; font: 400 13px/1.2 var(--sans); padding: 4px; border: 1px solid var(--ink); background: var(--sheet); color: var(--ink); }
+.alloc-dry { display: block; margin-top: 6px; font: 400 12.5px/1.4 var(--mono); color: var(--ink-soft); }
+.alloc-warn, .alloc-ok { margin: 14px 0 0; padding: 10px 12px; border: 1.5px solid currentColor; font-size: 14px; max-width: 96ch; }
+.alloc-warn { color: var(--red); background: var(--red-wash); }
+.alloc-ok { color: var(--green); background: var(--green-wash); }
+.alloc-warn .link-btn { color: var(--ink); text-decoration: underline; min-height: 24px; }
+.alloc-pack { margin-top: 12px; }
+.alloc-pack-h { font: 600 14px/1.3 var(--sans); margin: 0 0 6px; }
+.alloc-pack ul { margin: 0; padding-left: 18px; }
+.alloc-pack li { margin: 0 0 8px; overflow-wrap: anywhere; }
+.alloc-pack .link-btn { min-height: 24px; }
+
+/* Phones: one card per row, each cell with its column name (as the transaction ledger). */
+@media (max-width: 640px) {
+  table.alloc-table, .alloc-table tbody, .alloc-table tr { display: block; }
+  .alloc-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .alloc-table tr { padding: 8px 0; border-bottom: 1px dashed #cfc5b2; }
+  table.ledger.alloc-table td { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; border: 0; padding: 3px 0; }
+  table.ledger.alloc-table td::before { content: attr(data-label); font: 600 11px/1.75 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+}

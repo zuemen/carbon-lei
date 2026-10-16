@@ -157,6 +157,33 @@ A value accepted today can stop being usable later: the verification body revoke
 
 Exit codes: 3 if any record could not be re-checked or the webhook could not be delivered, else 1 if any line needs action, else 0. A scheduler therefore fails the run, and alerts, whenever a person has to look.
 
+## Supplier allocations: one report, many buyers
+
+A supplier with one verified report usually sells to several EU importers, and each asks for the same data. The supplier keeps an **allocation book** (a local JSON file; [example](examples/allocation-book.json)) and answers every buyer from it. Code: [`sdk/allocation.ts`](../sdk/allocation.ts) (no file system, also used by the hosted Supplier tab), [`sdk/allocation-files.ts`](../sdk/allocation-files.ts).
+
+**The book.** `credential` (path of the `carbonlei issue` output, relative to the book; or pass `--credential`), optional `defaultFields`, `importers` (`id`, `name`, `eori`, optional `fields`) and `batches` (`batchId`, `importer` id, `importerSalt`, `quantityTonnes`, `shipmentDate`, `status`: `planned` or `claimed`, optional `fields`). The required fields of a proof are always added to a buyer's list. Use a fresh 32-byte salt per batch (`newSalt()` in the SDK): two batches with the same salt for the same importer are linkable on-chain, and `allocate` warns (`SALT_REUSED`).
+
+**Procedure**
+
+1. Before claiming, run `node sdk/cli.ts allocate book.json`. Planned batches are checked in book order against the remaining tonnes; a batch the contract would refuse is `OVER_ALLOCATED` (it would revert with `ExceedsVerifiedTonnage`, as in attack 2b). Reduce it, move it to another report, or plan it on the default value.
+2. Send each claim from the supplier wallet (`claimShipment`, arguments from `claimArgsOf` in the SDK; the CLI sends no transaction). Mark the batch `claimed` in the book.
+3. Run `allocate` again. Each claimed batch must be `CLAIMED`. `CLAIM_MISSING` (not sent, reverted, or another batch ID or salt), `QUANTITY_MISMATCH` or `IMPORTER_MISMATCH` must be fixed before any proof goes out: the proof would fail check 5 for that buyer. A claim is final on-chain: if it was sent with the wrong importer or quantity, the batch ID is used up; record what happened and claim the remaining goods under a new batch ID. `UNKNOWN_CLAIM` (an on-chain claim of this report that the book does not list, found from the `ShipmentClaimed` events) means the book is incomplete or the supplier key was used by someone else ([SECURITY T33](SECURITY.md#supplier-allocation-book)). `--no-events` skips the event search (faster on public nodes) and reports the ledger difference as `UNACCOUNTED_KG` instead.
+4. `node sdk/cli.ts present-batch book.json --check --evidence-from <a proof of this credential> --out share-pack/` writes one proof per claimed batch (`<importer id>--<batch id>.proof.json`) and `share-pack.json` (who gets which file and which fields; no EORI, no salt). `--check` skips batches whose claim does not match the chain. `--evidence-from` copies the anchor, authority, report-extract and precursor evidence from an existing proof, which checks 6–9 need.
+5. Send each buyer only its own file. Each buyer verifies it with its own EORI (`verify --eori`); another buyer's file fails check 5.
+6. Keep the book with the credential, under the same protection as the supplier wallet's records: it holds every buyer's EORI and the salts that link them to the on-chain commitments.
+
+Exit codes: `allocate` 0 when nothing needs action, 1 when something does, 3 when it could not run (bad book, unreadable credential, RPC failure; with `--json`, an `{ "error" }` object). `present-batch` 0 when at least one proof was written, 1 when none, 3 when `--check` could not read the registry.
+
+| Issue | Severity | Meaning |
+|---|---|---|
+| `CLAIM_MISSING` | action | Book says claimed; no claim on-chain for that batch key |
+| `QUANTITY_MISMATCH`, `IMPORTER_MISMATCH` | action | On-chain claim differs from the book in quantity or importer commitment |
+| `OVER_ALLOCATED` | action | Planned batch exceeds the tonnes left after the planned batches before it |
+| `REPORT_NOT_CLAIMABLE`, `REPORT_REVOKED` | action | The report takes no claims (revoked, replaced, expired, not registered); claimed batches of a revoked report fail check 4 |
+| `UNKNOWN_CLAIM` | action | On-chain claim of this report not in the book |
+| `UNACCOUNTED_KG` | warning (action with events) | Ledger claims exceed the book's; includes claims carried over from a replaced report |
+| `BOOK_STALE`, `SALT_REUSED` | warning | Book says planned but the claim is on-chain; two batches share a salt |
+
 ## REST API (`carbonlei serve`): deployment and security
 
 `node sdk/cli.ts serve [--port 8787] [--host 127.0.0.1]` serves the same SDK calls over HTTP, for an ERP or compliance tool: POST `/v1/verify`, `/v1/verify-batch`, `/v1/portfolio`, `/v1/recheck`; GET `/v1/health` (chain ID, head block and its age, RPC node hosts, limits) and `/openapi.json` ([`schemas/openapi.json`](schemas/openapi.json), OpenAPI 3.1, hand-written). A verdict from `/v1/verify` equals `carbonlei verify --json` (tested); the header `X-CarbonLEI-Exit` carries the CLI exit code. Code: [`sdk/server.ts`](../sdk/server.ts), `node:http` only, no new dependency. It is a prototype.
