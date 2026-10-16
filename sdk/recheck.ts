@@ -567,7 +567,7 @@ export async function recheckRecords(records: AcceptedRecord[], reader: ChainRea
     "Every record was re-checked at the one pinned block above (one snapshot of the chain).",
     `CONTESTED window: ${windowHours} h after registration (the verifier's default is 24 h).`,
     "A line with severity \"action\" must not rest on the verified value: the portfolio (carbonlei portfolio --recheck) plans it on the default.",
-    "Not a CBAM declaration and not a CBAM Registry document. Records the importer keeps (Art 35 of Reg. (EU) 2023/956) should include this re-check result.",
+    "Not a CBAM declaration and not a CBAM Registry document. Keep this re-check result with the records of the accepted value.",
   ];
   if (results.some((x) => x.mode === "ledger-only")) {
     notes.push("Ledger-only lines had no proof attached: only the report's status (registered, revoked, superseded, validity) was read; checks 0-3 and 5-8 were not re-run.");
