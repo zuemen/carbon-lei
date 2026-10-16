@@ -109,6 +109,80 @@
         "issuedAt": "2027-03-25T00:00:00Z",
         "validUntil": "2027-12-31T00:00:00Z"
       }
+    },
+    "precursorChain": {
+      "note": "Precursor tier (wire rod) of the local precursor demo only (scripts/precursor-local.ts, anvil): a fictional wire-rod mill whose verified report backs the demo screw report, with its own verification body and lead auditor. Its vLEI chain is SYNTHETIC (verifier/src/precursor-chain.ts, deterministic test keys, no KERIA) under a synthetic test root, not the demo pinned root. Emissions values are illustrative. All fictional.",
+      "root": {
+        "name": "Synthetic Test Root (fictional)",
+        "role": "synthetic root of the local precursor demo; not the pinned demo root"
+      },
+      "qvi": {
+        "name": "Demo QVI (fictional; synthetic keys)",
+        "lei": "ZZZZ00QVIISSRDEMO116"
+      },
+      "nab": {
+        "name": "Demo Accreditation Body (fictional; synthetic keys)",
+        "lei": "ZZZZ00NABACCRDEMO119"
+      },
+      "mill": {
+        "name": "Demo Wire Rod Co. (fictional)",
+        "lei": "ZZZZ00TWWIRERDEMO108",
+        "country": "TW",
+        "unLocode": "TWKHH",
+        "operatorId": "TWZZZZ00TWWIRERDEMO108",
+        "installations": [
+          {
+            "id": "TW-ZZZZ00TWWIRERDEMO108-0001",
+            "name": "Demo Wire Rod Mill 1 (fictional)"
+          }
+        ]
+      },
+      "body": {
+        "name": "Demo Steel Verification B.V. (fictional)",
+        "lei": "ZZZZ00EUVERIFDEMO249",
+        "country": "NL",
+        "accreditationNumber": "DEMO-ACC-CBAM-0002",
+        "cnScope": [
+          "7213"
+        ],
+        "accreditedUntil": "2030-12-31T00:00:00Z"
+      },
+      "auditor": {
+        "name": "Mei Demo (fictional person)",
+        "role": "CBAM Lead Auditor"
+      },
+      "report": {
+        "verificationReportId": "VR-DEMO-WR-0001",
+        "installation": "TW-ZZZZ00TWWIRERDEMO108-0001",
+        "cnCode": "7213",
+        "cbamRoute": "C",
+        "reportingPeriod": "2026-01-01/2026-12-31",
+        "verifiedTonnes": "1000",
+        "specificEmbeddedEmissions_tCO2e_per_t": "1.44",
+        "valueType": "actual",
+        "issuedAt": "2027-02-15T00:00:00Z",
+        "validUntil": "2027-12-31T00:00:00Z"
+      },
+      "statement": {
+        "attributedDirect": "0.18",
+        "massPerTonne": "1.125",
+        "note": "Illustrative: 1.125 t of wire rod consumed per t of screws (0.125 t leaves as scrap); 0.18 tCO2e/t direct emissions of the screw process; 0.18 + 1.125 x 1.44 = 1.80 tCO2e/t."
+      },
+      "delivery": {
+        "batchId": "WR-DEMO-2026-0001",
+        "quantityTonnes": "562.5",
+        "shipmentDate": "2026-06-30"
+      },
+      "secondScrewMaker": {
+        "name": "Demo Screw Works Ltd. (fictional)",
+        "lei": "ZZZZ00TWSCREWDEMO282",
+        "installation": {
+          "id": "TW-ZZZZ00TWSCREWDEMO282-0001",
+          "name": "Demo Screw Works Plant 1 (fictional)"
+        },
+        "batchId": "WR-DEMO-2026-0002",
+        "quantityTonnes": "500"
+      }
     }
   },
   "product": {

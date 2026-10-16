@@ -7,6 +7,7 @@ import { evidenceCheckers } from "../evidence.ts";
 import { CODE_TEXT, revertText } from "../messages.ts";
 import { CHECKS, kindOf, tamperedProof } from "./Buyer.tsx";
 import type { DryOutcome } from "./LayerCard.tsx";
+import { PrecursorAttack, usePrecursorData } from "./Precursor.tsx";
 
 // The "What if one layer were missing?" card loads after the attack cards.
 const LayerCard = lazy(() => import("./LayerCard.tsx"));
@@ -192,6 +193,7 @@ function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
 
 export function Attacks() {
   const { data, reader, offline } = useApp();
+  const precursorData = usePrecursorData();
   const [out, setOut] = useState<Record<string, Outcome>>({});
   const [busy, setBusy] = useState("");
   // Attack 2b's live dry-run answer, which the layer card reads (it sends no call of its own).
@@ -271,7 +273,7 @@ export function Attacks() {
     <>
       <TabHead
         title="Try to break it"
-        lede={`${a4 ? "Four" : "Three"} attacks. Each one says how it is checked: in your browser, as a dry run against the live contract, or as a real transaction recorded on Sepolia.`}
+        lede={`${["Three", "Four", "Five"][(a4 ? 1 : 0) + (precursorData ? 1 : 0)]} attacks. Each one says how it is checked: in your browser, as a dry run against the live contract, or as a real transaction recorded on Sepolia${precursorData ? "; card 5 was run on a local chain, not on Sepolia" : ""}.`}
       />
       {waiting && (
         <p className="conn" role="status">
@@ -378,6 +380,7 @@ export function Attacks() {
         </div>
 
         {a4 && <Attack4Card a4={a4} waiting={waiting} />}
+        <PrecursorAttack />
       </section>
       <Suspense fallback={<p aria-live="polite">Loading…</p>}>
         <LayerCard a2b={a2bLive} />

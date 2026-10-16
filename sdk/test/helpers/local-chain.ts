@@ -25,6 +25,11 @@ const ANVIL_KEYS: Hex[] = [
   "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
   "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a",
   "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba",
+  // 6–9: the precursor tests (a second verification body and more suppliers)
+  "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e",
+  "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356",
+  "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97",
+  "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
 ];
 
 function bytecode(name: string): Hex {
@@ -45,6 +50,8 @@ export interface LocalChain {
   supplier: PrivateKeyAccount;
   impostor: PrivateKeyAccount;
   other: PrivateKeyAccount;
+  /** anvil development keys 6–9. */
+  extra: PrivateKeyAccount[];
   wallet: (a: PrivateKeyAccount) => WalletClient;
   deployment: Deployment;
   reader: ChainReader;
@@ -64,7 +71,7 @@ export async function startLocalChain(port: number, anvilArgs: string[] = []): P
       await new Promise((r) => setTimeout(r, 100));
     }
   }
-  const [owner, watcher, verifier, supplier, impostor, other] = ANVIL_KEYS.map((k) => privateKeyToAccount(k));
+  const [owner, watcher, verifier, supplier, impostor, other, ...extra] = ANVIL_KEYS.map((k) => privateKeyToAccount(k));
   const wallet = (a: PrivateKeyAccount) => createWalletClient({ account: a, chain: foundry, transport: http(rpc) });
   const test = createTestClient({ chain: foundry, mode: "anvil", transport: http(rpc) });
 
@@ -106,6 +113,7 @@ export async function startLocalChain(port: number, anvilArgs: string[] = []): P
     supplier,
     impostor,
     other,
+    extra,
     wallet,
     deployment,
     reader: ChainReader.forRpc(deployment, [rpc], foundry),

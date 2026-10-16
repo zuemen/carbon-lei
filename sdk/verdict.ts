@@ -6,6 +6,7 @@ import { vleiCheckers } from "./checkers.ts";
 import type { Presentation } from "./disclosure.ts";
 import { disclosureCounts } from "./summary.ts";
 import { DEMO_TRUST_ANCHOR } from "./vlei.ts";
+import type { PrecursorLineResult, PrecursorReport } from "./precursor.ts";
 import {
   verifyPresentation,
   type EvidenceCheckers,
@@ -18,7 +19,9 @@ import {
 /**
  * Version of the verdict format; a change that breaks a consumer increases it.
  * 2: `overall` can be INCOMPLETE (exit 4); `warnings` added; `checkedAt` is the claim time only when check 5
- * binds the shipment to the given EORI.
+ * binds the shipment to the given EORI. Check 9 (precursors) and `precursors` were added within format 2: they appear
+ * only for a proof whose credential commits to a precursor statement or that carries precursor evidence, so the
+ * verdict of any other proof is unchanged.
  */
 export const VERDICT_FORMAT = 2;
 /** Kept equal to sdk/package.json `version` (tested). */
@@ -28,7 +31,7 @@ export const TOOL = { name: "carbonlei", version: "0.1.0" } as const;
 export const EXIT = { VALID: 0, INVALID: 1, CONTESTED: 2, ERROR: 3, INCOMPLETE: 4 } as const;
 
 export interface VerdictCheck {
-  /** Check number, 0 to 8 (sdk/verify.ts). */
+  /** Check number, 0 to 9 (sdk/verify.ts; 9 only when the proof has a precursor part). */
   id: number;
   name: string;
   status: "pass" | "fail" | "warn" | "skipped";
@@ -60,7 +63,36 @@ export interface Verdict {
   warnings: VerificationWarning[];
   /** Root of trust check 7 was run with; null when the caller supplied its own checkers. */
   trustAnchor: string | null;
+  /** Check 9's breakdown, when check 9 ran: direct and precursor contributions, each producer's verification. */
+  precursors?: VerdictPrecursors;
   tool: { name: string; version: string };
+}
+
+export type VerdictPrecursorLine = Omit<PrecursorLineResult, "verification"> & {
+  verification?: { overall: Overall; primaryCode: string; checks: VerdictCheck[]; precursors?: VerdictPrecursors };
+};
+export type VerdictPrecursors = Omit<PrecursorReport, "lines"> & { lines: VerdictPrecursorLine[] };
+
+const toVerdictChecks = (cs: VerificationResult["checks"]): VerdictCheck[] =>
+  cs.map((c) => ({ id: c.index, name: c.name, status: c.status, code: c.code, detail: c.detail }));
+
+function toVerdictPrecursors(p: PrecursorReport): VerdictPrecursors {
+  return {
+    ...p,
+    lines: p.lines.map(({ verification, ...l }) => ({
+      ...l,
+      ...(verification
+        ? {
+            verification: {
+              overall: verification.overall,
+              primaryCode: verification.primaryCode,
+              checks: toVerdictChecks(verification.checks),
+              ...(verification.precursors ? { precursors: toVerdictPrecursors(verification.precursors) } : {}),
+            },
+          }
+        : {}),
+    })),
+  };
 }
 
 export interface VerdictError {
@@ -75,6 +107,8 @@ export interface VerdictOptions extends Omit<VerifyOptions, "checkers"> {
   loadBundle?: (path: string) => Promise<string> | string;
   /** Root of trust for check 7 (default: the demo root, DEMO_TRUST_ANCHOR). */
   trustAnchor?: string;
+  /** Root of trust for check 7 of the precursor tiers (check 9; default: `trustAnchor`). */
+  precursorTrustAnchor?: string;
 }
 
 const num = (x: bigint | undefined) => (x === undefined ? null : Number(x));
@@ -95,7 +129,7 @@ export function toVerdict(
     format: VERDICT_FORMAT,
     overall: r.overall,
     primaryCode: r.primaryCode,
-    checks: r.checks.map((c) => ({ id: c.index, name: c.name, status: c.status, code: c.code, detail: c.detail })),
+    checks: toVerdictChecks(r.checks),
     hidden,
     rejected,
     disclosed: { ...r.disclosed },
@@ -104,6 +138,7 @@ export function toVerdict(
     checkedAt: num(r.checkedAt),
     warnings: (r.warnings ?? []).map((w) => ({ ...w })),
     trustAnchor: ctx.trustAnchor ?? null,
+    ...(r.precursors ? { precursors: toVerdictPrecursors(r.precursors) } : {}),
     tool: { ...TOOL },
   };
 }
@@ -146,7 +181,7 @@ export async function verdictFor(proof: Presentation, reader: ChainReader, opts:
       return typeof v === "function" ? v.bind(target) : v;
     },
   });
-  const { checkers, loadBundle, trustAnchor, ...rest } = opts;
+  const { checkers, loadBundle, trustAnchor, precursorTrustAnchor, ...rest } = opts;
   const r = await verifyPresentation(proof, watched, {
     ...rest,
     checkers:
@@ -154,6 +189,7 @@ export async function verdictFor(proof: Presentation, reader: ChainReader, opts:
       vleiCheckers({
         ...(loadBundle ? { loadBundle: async (p: string) => loadBundle(p) } : {}),
         ...(trustAnchor ? { trustAnchor } : {}),
+        ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}),
       }),
   });
   return toVerdict(proof, r, { chainId, block, trustAnchor: checkers ? (trustAnchor ?? null) : (trustAnchor ?? DEMO_TRUST_ANCHOR) });

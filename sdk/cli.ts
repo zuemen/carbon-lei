@@ -33,6 +33,7 @@ import {
 import { buildPortfolio, worksheetCsv } from "./portfolio.ts";
 import { vleiCheckers } from "./checkers.ts";
 import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
+import type { PrecursorReport } from "./precursor.ts";
 import { dirname, resolve } from "node:path";
 import {
   draftCredentialFields,
@@ -55,6 +56,8 @@ const USAGE = `carbonlei <command> [options]
                [--eori <EORI>]                      your EORI: binds the shipment to you (check 5); only then is
                                                     the report judged at the shipment's claim time
                [--trust-anchor <AID>]               root of trust for check 7 (default: the demo root)
+               [--precursor-trust-anchor <AID>]     root of trust for check 7 of the precursor tiers (check 9;
+                                                    default: --trust-anchor)
                [--max-head-age <s>]                 refuse an RPC whose latest block is older (default 300 on Sepolia)
                [--json]                             print the verdict as JSON (docs/schemas/verdict.schema.json);
                                                     exit 0 VALID, 1 INVALID, 2 CONTESTED, 3 error, 4 INCOMPLETE
@@ -75,7 +78,8 @@ const USAGE = `carbonlei <command> [options]
                                                     (docs/OPERATE.md). The CSV is a worksheet, not the Registry XML
   export-pact  --proof <proof.json> --eori <EORI> --company-name <name> --product-name <name> --product-id <id>
                --product-description <text> [--rpc <url>] [--deployment <file>] [--trust-anchor <AID>]
-               [--max-head-age <s>] [--out <pact.json>]   runs checks 0-8 (with check 5 for your EORI) first
+               [--precursor-trust-anchor <AID>] [--max-head-age <s>] [--out <pact.json>]
+                                                    runs checks 0-9 (with check 5 for your EORI) first
   import-template <file.xlsx> [--product N] [--out <draft.json>]
                reads a filled CBAM Communication Template (V2.1 or V2.1.1) and prints a draft of the
                credential fields it can fill; the rest is left to the supplier and the verification body
@@ -160,6 +164,18 @@ function maxHeadAge(values: Record<string, unknown>): number | undefined {
   return n;
 }
 
+/** Check 9's breakdown as indented lines under the check list (one per precursor, then the mass balance). */
+function precursorLines(p: PrecursorReport, indent = "      "): string[] {
+  const out: string[] = [];
+  out.push(`${indent}direct (own process) ${p.attributedDirect ?? "?"} tCO2e/t${p.signed ? "" : " — statement not signed into this credential"}`);
+  for (const l of p.lines) {
+    const who = l.source === "default" ? "default value" : `${l.producer?.lei ?? "producer"} ${l.credSAID ?? ""}, batch ${l.batchId ?? "?"}${l.claimedTonnes ? `, ${l.claimedTonnes} t claimed for this maker (${l.neededTonnes} t needed)` : ""}`;
+    out.push(`${indent}+ CN ${l.cnCode}: ${l.massPerTonne} t/t × ${l.see ?? "?"} = ${l.contribution ?? "?"} tCO2e/t  [${l.status.toUpperCase()}${l.code ? ` ${l.code}` : ""}] ${who}${l.verification ? `; its proof: ${l.verification.overall}${l.verification.primaryCode ? ` (${l.verification.primaryCode})` : ""}` : ""}`);
+  }
+  out.push(`${indent}= ${p.recomputed ?? "?"} recomputed vs ${p.declared ?? "?"} declared (tolerance ${p.tolerance})`);
+  return out;
+}
+
 /** Summary note for a check 8 warning, with the number of reconciliation rules the received extract fails. */
 function advisoryNote(proof: Presentation, disclosed: Record<string, string>, code: string): string {
   const claims = pickReconciledClaims(disclosed);
@@ -199,6 +215,7 @@ async function main(argv: string[]) {
       out: { type: "string" },
       "expect-invalid": { type: "string" },
       "trust-anchor": { type: "string" },
+      "precursor-trust-anchor": { type: "string" },
       "max-head-age": { type: "string" },
       json: { type: "boolean", default: false },
       concurrency: { type: "string" },
@@ -256,6 +273,7 @@ async function main(argv: string[]) {
       // Evidence bundles referenced by the proof are read relative to the proof file, then to the demo's public folder.
       const loadBundle = bundleLoader(values.proof as string);
       const trustAnchor = values["trust-anchor"] as string | undefined;
+      const precursorTrustAnchor = values["precursor-trust-anchor"] as string | undefined;
       const expected = values["expect-invalid"] as string | undefined;
       const maxHeadAgeSec = maxHeadAge(values);
       if (values.json) {
@@ -264,6 +282,7 @@ async function main(argv: string[]) {
           importerEORI: values.eori as string | undefined,
           loadBundle,
           trustAnchor,
+          precursorTrustAnchor,
           maxHeadAgeSec,
           proofText,
         }));
@@ -273,7 +292,7 @@ async function main(argv: string[]) {
       }
       const r = await withinDeadline(verifyPresentation(proof, reader(values), {
         importerEORI: values.eori as string | undefined,
-        checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}) }),
+        checkers: vleiCheckers({ loadBundle, ...(trustAnchor ? { trustAnchor } : {}), ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}) }),
         maxHeadAgeSec,
         proofText,
       }));
@@ -281,6 +300,7 @@ async function main(argv: string[]) {
         const mark = { pass: "PASS", fail: "FAIL", warn: "WARN", skipped: "SKIP" }[c.status];
         console.log(`${mark}  ${c.index} ${c.name}${c.code ? `  [${c.code}]` : ""}${c.detail ? ` — ${c.detail}` : ""}`);
       }
+      if (r.precursors) for (const l of precursorLines(r.precursors)) console.log(l);
       // The EIP-712 signature does not name the importer; only check 5 binds the proof to one (SECURITY.md T4).
       for (const w of r.warnings ?? []) {
         console.log(
@@ -370,10 +390,15 @@ async function main(argv: string[]) {
       if (!values.eori) throw new Error("export-pact needs --eori <EORI>: the importer the shipment was declared to");
       const rd = reader(values);
       const trustAnchor = values["trust-anchor"] as string | undefined;
+      const precursorTrustAnchor = values["precursor-trust-anchor"] as string | undefined;
       const pf = await withinDeadline(
         verifyPresentation(proof, rd, {
           importerEORI: values.eori as string,
-          checkers: vleiCheckers({ loadBundle: bundleLoader(values.proof as string), ...(trustAnchor ? { trustAnchor } : {}) }),
+          checkers: vleiCheckers({
+            loadBundle: bundleLoader(values.proof as string),
+            ...(trustAnchor ? { trustAnchor } : {}),
+            ...(precursorTrustAnchor ? { precursorTrustAnchor } : {}),
+          }),
           maxHeadAgeSec: maxHeadAge(values),
           proofText,
         }).then((r) =>

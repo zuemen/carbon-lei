@@ -455,3 +455,23 @@ table.layer-table { width: 100%; border-collapse: collapse; font-size: 14px; bac
   .importer-file code { font-size: 8.5pt; word-break: break-all; }
   .importer-file tr { break-inside: avoid; }
 }
+
+/* Precursor (wire rod) sections: local-chain tier, see demo/src/tabs/Precursor.tsx */
+.precursor-where { border-left: 4px solid var(--amber); background: var(--amber-wash); color: var(--ink); padding: 10px 12px; margin: 0 0 14px; font-size: 14px; line-height: 1.5; }
+.pc-scroll { overflow-x: auto; }
+.pc-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0 10px; }
+.pc-table th, .pc-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--paper-rule); vertical-align: top; }
+.pc-table thead th { font: 600 11.5px/1.2 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.pc-table tbody th { font-weight: 600; }
+.pc-table .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.pc-table .pc-total th, .pc-table .pc-total td { border-top: 1.5px solid var(--ink); border-bottom: none; font-weight: 700; }
+.pc-bar { display: flex; height: 14px; border: 1.5px solid var(--ink); margin: 4px 0 6px; }
+.pc-bar-direct { background: var(--ink-soft); }
+.pc-bar-pre { background: repeating-linear-gradient(45deg, var(--green-wash), var(--green-wash) 4px, #c9dbcd 4px, #c9dbcd 8px); }
+.pc-result { margin: 12px 0; }
+.pc-mini { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 6px 0 0; font: 600 12px/1 var(--mono); }
+.pc-mini li { border: 1.5px solid currentColor; padding: 4px 6px; }
+.pc-mini-pass { color: var(--green); } .pc-mini-fail { color: var(--red); } .pc-mini-review { color: var(--amber); } .pc-mini-skip { color: var(--ink-soft); }
+.pc-source { white-space: normal; }
+.pc-items { list-style: none; padding: 0; margin: 8px 0; font-size: 13.5px; display: grid; gap: 6px; overflow-wrap: anywhere; }
+.pc-ok { color: var(--green); font-weight: 700; } .pc-bad { color: var(--red); font-weight: 700; } .pc-open { color: var(--ink-soft); font-weight: 700; }
