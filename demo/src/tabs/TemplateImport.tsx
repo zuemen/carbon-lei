@@ -3,14 +3,15 @@
 // the file is parsed in a Web Worker (with exceljs and fflate), created only when a file is read. Nothing is uploaded.
 // The panel's own text is in English and Traditional Chinese; what the SDK writes (rules, reasons, warnings, errors)
 // and the values read from the workbook stay as they are, marked lang="en" in Chinese.
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import exampleUrl from "../../../fixtures/cbam-template/CBAM_SEE_V2.1_Example_Steel_3_Screws_and_nuts.xlsx?url";
 import type { CredentialDraft, ParsedTemplate, SuppliedBy } from "../../../sdk/template.ts";
 import { useLang, type Lang } from "../i18n.ts";
 import type { TemplateResponse } from "./templateWorker.ts";
+import { lazyRetry } from "../lazy-load.tsx";
 
 // The demo-key signing step and the verifier load only once a template has been read.
-const SelfIssue = lazy(() => import("./SelfIssue.tsx"));
+const SelfIssue = lazyRetry(() => import("./SelfIssue.tsx"));
 
 /** Same limit as MAX_TEMPLATE_BYTES in sdk/template.ts; checked before the file is read into memory. */
 const MAX_FILE_BYTES = 20 * 1024 * 1024;

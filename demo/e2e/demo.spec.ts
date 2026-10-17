@@ -995,3 +995,27 @@ test("Language: in 繁體中文 on a 390 px phone the tab bar stays one row unde
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+/** The Supplier tab's own chunk: built (assets/Supplier-<hash>.js) or served by Vite (src/tabs/Supplier.tsx). */
+const SUPPLIER_CHUNK = /\/(assets\/Supplier-[^/]*\.js|src\/tabs\/Supplier\.tsx)(\?|$)/;
+
+test("a tab's chunk that fails once (GitHub Pages 503) is fetched again (Chromium: after one reload) and the tab opens", async ({ page }) => {
+  let failed = 0;
+  await page.route(SUPPLIER_CHUNK, (route) => (failed++ === 0 ? route.fulfill({ status: 503, body: "" }) : route.continue()));
+  await page.goto("./#supplier");
+  await expect(page.locator("details#template-import > summary")).toBeVisible();
+  expect(failed).toBeGreaterThan(1);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
+test("a tab's chunk that never loads → that tab says so with a reload button; the page and the other tabs still work", async ({ page }) => {
+  await page.route(SUPPLIER_CHUNK, (route) => route.fulfill({ status: 503, body: "" }));
+  await page.goto("./#supplier");
+  const alert = page.locator("#panel").getByRole("alert");
+  await expect(alert).toContainText("This part of the page could not load (a network error, not a verification result).");
+  await expect(alert.getByRole("button", { name: "Reload the page" })).toBeVisible();
+  await expect(page.locator(".overall .stamp")).toHaveCount(0);
+  await page.getByRole("tab", { name: /Buyer/ }).click();
+  await expect(page.getByRole("button", { name: "Load the demo proof" })).toBeVisible();
+  await expect(page.locator("#panel").getByRole("alert")).toHaveCount(0);
+});

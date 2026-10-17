@@ -159,9 +159,7 @@ test("L5 繁體中文 Trust chain headings and Try to break it results", async (
 
   await page.goto("./?lang=zh-TW#try-to-break-it");
   await connected(page);
-  for (const name of ["竄改一個已揭露的數值", "同一批次再申領一次", /^多申領 [\d.]+ t$/, "驗證冒名者的證明", /^把報告日期改成 /]) {
-    await page.getByRole("button", { name }).click();
-  }
+  await runAttacks(page);
   // The attack cards' results.
   const results = page.getByRole("region", { name: "攻擊" }).locator(".attack-result");
   await expect(results.filter({ hasText: "檢查 2 未通過：某個已揭露的數值在供應商建立證明後遭到更改。" })).toHaveCount(1);
@@ -174,6 +172,21 @@ test("L5 繁體中文 Trust chain headings and Try to break it results", async (
     expect(await leftoverEnglish(results.nth(i), names), `attack result ${i + 1}`).toEqual([]);
   }
 });
+
+/**
+ * Runs attacks 1, 2a, 2b, 4 and 5 one at a time, each card's result shown before the next click. Clicking them back to
+ * back raced: a late dry-run result above pushed the next button down mid-click and WebKit's click landed beside it
+ * (CI, 17 October 2026: attack 4 never ran).
+ */
+async function runAttacks(page: Page) {
+  for (const name of ["竄改一個已揭露的數值", "同一批次再申領一次", /^多申領 [\d.]+ t$/, "驗證冒名者的證明", /^把報告日期改成 /]) {
+    const button = page.getByRole("button", { name });
+    // While attack 4 runs its button reads 驗證中, so the card matches again once the result is in.
+    const card = page.locator(".attack", { has: button });
+    await button.click();
+    await expect(card.locator(".attack-result").first()).toBeVisible();
+  }
+}
 
 /** The whole tab panel (#panel) has no leftover English. */
 async function panelClean(page: Page, names: string[], label: string) {
@@ -197,9 +210,7 @@ test("L7 繁體中文 Try to break it: every card, its result and the layer card
   await page.goto("./?lang=zh-TW#try-to-break-it");
   await expect(page.getByRole("heading", { name: "試著破解" })).toBeVisible();
   await connected(page);
-  for (const name of ["竄改一個已揭露的數值", "同一批次再申領一次", /^多申領 [\d.]+ t$/, "驗證冒名者的證明", /^把報告日期改成 /]) {
-    await page.getByRole("button", { name }).click();
-  }
+  await runAttacks(page);
   await expect(page.getByRole("list", { name: "對冒名者證明的檢查" }).locator("li")).toHaveCount(8);
   await expect(page.locator("#attack-6 .attack-result")).toContainText("規則「");
   const card = page.locator("section.layer-card");

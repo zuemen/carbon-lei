@@ -1,16 +1,17 @@
-import { createContext, type KeyboardEvent, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, type KeyboardEvent, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ChainReader } from "../../sdk/chain.ts";
 import { comparisonFigures, EVIDENCE_WHY, EVIDENCE_WHY_ZH, fmt, kgToT, loadDemoData, type DemoData } from "./data.ts";
 import { HTML_LANG, LANGS, type Lang, useLang, useStrings } from "./i18n.ts";
+import { LoadBoundary, lazyRetry } from "./lazy-load.tsx";
 
 // Tabs and the chain client load on demand, so the first screen needs only the page shell.
-const Buyer = lazy(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
-const Supplier = lazy(() => import("./tabs/Supplier.tsx").then((m) => ({ default: m.Supplier })));
-const VerificationBody = lazy(() => import("./tabs/VerificationBody.tsx").then((m) => ({ default: m.VerificationBody })));
-const Attacks = lazy(() => import("./tabs/Attacks.tsx").then((m) => ({ default: m.Attacks })));
-const TrustChain = lazy(() => import("./tabs/TrustChain.tsx").then((m) => ({ default: m.TrustChain })));
-const Workbench = lazy(() => import("./tabs/Workbench.tsx").then((m) => ({ default: m.Workbench })));
-const OnchainProof = lazy(() => import("./tabs/OnchainProof.tsx").then((m) => ({ default: m.OnchainProof })));
+const Buyer = lazyRetry(() => import("./tabs/Buyer.tsx").then((m) => ({ default: m.Buyer })));
+const Supplier = lazyRetry(() => import("./tabs/Supplier.tsx").then((m) => ({ default: m.Supplier })));
+const VerificationBody = lazyRetry(() => import("./tabs/VerificationBody.tsx").then((m) => ({ default: m.VerificationBody })));
+const Attacks = lazyRetry(() => import("./tabs/Attacks.tsx").then((m) => ({ default: m.Attacks })));
+const TrustChain = lazyRetry(() => import("./tabs/TrustChain.tsx").then((m) => ({ default: m.TrustChain })));
+const Workbench = lazyRetry(() => import("./tabs/Workbench.tsx").then((m) => ({ default: m.Workbench })));
+const OnchainProof = lazyRetry(() => import("./tabs/OnchainProof.tsx").then((m) => ({ default: m.OnchainProof })));
 
 export const TABS = [
   { id: "verification-body", label: "Verification body", short: "Body" },
@@ -475,15 +476,17 @@ export function App() {
 
       <main className="wrap">
         <div id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-          <Suspense fallback={<p aria-live="polite">Loading…</p>}>
-            {tab === "verification-body" && <VerificationBody />}
-            {tab === "supplier" && <Supplier />}
-            {tab === "buyer" && <Buyer />}
-            {tab === "importer-workbench" && <Workbench />}
-            {tab === "try-to-break-it" && <Attacks />}
-            {tab === "trust-chain" && <TrustChain />}
-            {tab === "on-chain-proof" && <OnchainProof />}
-          </Suspense>
+          <LoadBoundary key={tab} lang={lang}>
+            <Suspense fallback={<p aria-live="polite">{zh ? "載入中…" : "Loading…"}</p>}>
+              {tab === "verification-body" && <VerificationBody />}
+              {tab === "supplier" && <Supplier />}
+              {tab === "buyer" && <Buyer />}
+              {tab === "importer-workbench" && <Workbench />}
+              {tab === "try-to-break-it" && <Attacks />}
+              {tab === "trust-chain" && <TrustChain />}
+              {tab === "on-chain-proof" && <OnchainProof />}
+            </Suspense>
+          </LoadBoundary>
         </div>
       </main>
 

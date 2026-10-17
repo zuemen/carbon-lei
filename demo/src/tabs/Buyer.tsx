@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Fragment, Suspense, useEffect, useRef, useState } from "react";
 import { decodeDisclosure, encodeDisclosure, type Presentation } from "../../../sdk/disclosure.ts";
 import { exportPactFromProof, type PactProduct } from "../../../sdk/pact.ts";
 import { disclosureCounts } from "../../../sdk/summary.ts";
@@ -15,9 +15,10 @@ import { SubRules } from "./VerifierRules.tsx";
 import { PrecursorBuyer } from "./Precursor.tsx";
 import { CarbonPriceSection } from "./CarbonPrice.tsx";
 import { workbenchCounts } from "../workbench-data.ts";
+import { lazyRetry } from "../lazy-load.tsx";
 
 // The printable importer's file: loaded only when the importer asks for it.
-const ImporterFile = lazy(() => import("./ImporterFile.tsx"));
+const ImporterFile = lazyRetry(() => import("./ImporterFile.tsx"));
 
 const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 1, text: "The credential has not been altered since it was issued (its content hash matches its ID)", source: "browser" },

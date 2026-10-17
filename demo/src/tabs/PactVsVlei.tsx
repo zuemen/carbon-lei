@@ -1,7 +1,7 @@
 // Trust chain tab, collapsed panel: the verifier as a name field (PDF report, PACT ProductFootprint)
 // next to the same verifier as a vLEI signature chain. Every value is read from the demo data and the
 // exported evidence; checks 6 and 7 (the SDK's functions) are re-run in the browser when the panel opens.
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import { sha256Hex } from "../../../sdk/checkers.ts";
 import { witnessState, witnessThreshold } from "../../../sdk/kel.ts";
 import { DEMO_TRUST_ANCHOR, parseCesr, verifyAnchor, verifyAuthority, type AnchorEvidence, type AuthorityEvidence } from "../../../sdk/vlei.ts";
@@ -9,9 +9,10 @@ import fixture from "../../../fixtures/demo.json";
 import { useApp } from "../App.tsx";
 import { short } from "../data.ts";
 import { useLang, type Lang } from "../i18n.ts";
+import { lazyRetry } from "../lazy-load.tsx";
 
 // Loaded only when its block is opened: it carries the keripy test KEL.
-const KeyRotation = lazy(() => import("./KeyRotation.tsx").then((m) => ({ default: m.KeyRotation })));
+const KeyRotation = lazyRetry(() => import("./KeyRotation.tsx").then((m) => ({ default: m.KeyRotation })));
 
 interface Acdc {
   d: string;
