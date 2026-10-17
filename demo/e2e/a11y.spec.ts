@@ -177,6 +177,8 @@ test("A8 axe on a 390 px phone: the first screen, the Buyer result with the clim
   await page.getByRole("tab", { name: "Break it" }).click();
   await page.getByRole("button", { name: /Claim \d+ t more/ }).click();
   await expect(page.getByText(/Reverted: ExceedsVerifiedTonnage/)).toBeVisible();
+  // The result's stamp mounts just after the text and fades in; scan once it is there (CI 2026-10-17 caught it mid-fade).
+  await expect(page.locator(".attack-result .stamp").first()).toBeVisible();
   await scan(page, "Try to break it at 390 px");
 });
 
@@ -236,11 +238,13 @@ test("A4 focus ring: shown when focus comes from the keyboard, not after a mouse
   await connected(page);
   const load = page.getByRole("button", { name: "Load the demo proof" });
   await load.click();
-  // WebKit on macOS does not focus a button on a mouse click (Safari's behaviour); the button must still show no ring.
-  if (browserName === "webkit") await expect(load).not.toBeFocused();
+  // WebKit on macOS does not focus a button on a mouse click (Safari's behaviour; WebKit on Linux does, as CI showed on
+  // 2026-10-17); either way the button must show no ring.
+  const clickFocuses = browserName !== "webkit" || process.platform !== "darwin";
+  if (!clickFocuses) await expect(load).not.toBeFocused();
   else await expect(load).toBeFocused();
   expect(await load.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("none");
-  if (browserName === "webkit") await tabTo(page, load);
+  if (!clickFocuses) await tabTo(page, load);
   else {
     await page.keyboard.press(NEXT);
     await page.keyboard.press(`Shift+${NEXT}`);
