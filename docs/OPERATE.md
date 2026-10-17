@@ -219,6 +219,38 @@ Exit codes: `allocate` 0 when nothing needs action, 1 when something does, 3 whe
 | `UNACCOUNTED_KG` | warning (action with events) | Ledger claims exceed the book's; includes claims carried over from a replaced report |
 | `BOOK_STALE`, `SALT_REUSED` | warning | Book says planned but the claim is on-chain; two batches share a salt |
 
+## Supplier data requests: asking and checking the answer
+
+An importer usually has to chase each supplier for the data of each shipment. `carbonlei request` writes the request; the supplier answers it with `present --request` or `present-batch --request`; `carbonlei check-response` checks the answer with the same verifier as `verify-batch`. Code: [`sdk/request.ts`](../sdk/request.ts) (no file system).
+
+**What it is not.** The request is a JSON file between two companies. It is **not a CBAM Registry message and not a function of the Commission's O3CI portal**, and it is not signed. How it is sent (email, a supplier portal, EDI) is up to the parties and out of scope; nothing in CarbonLEI sends it. What the importer relies on is the answer: each proof is verified in full (checks 0-10, check 5 bound to the request's EORI), then compared with what was asked.
+
+**Procedure (importer)**
+
+1. Prepare one row per shipment line in a CSV (columns `supplier_lei`, `cn_code`, `country`, `quantity_tonnes`, `reference`, `due_date`; optional `line_id`, `supplier_name`, `import_date`, `note`; [example](examples/request-lines.csv)) or a JSON list with the same fields in camelCase. `reference` is the batch ID the supplier claims on the ledger for that shipment: agree it with the supplier and put it on the purchase order or the invoice, since proofs are matched to lines by it. `import_date` is needed by `portfolio` for a line that ends up without a proof.
+2. Run `node sdk/cli.ts request lines.csv --eori <your EORI> --year 2026 --out requests/` (optionally `--importer-name`, `--extra-fields valueType,verifierLEI`, `--due <date>` for rows without one). It writes `request-<LEI>.json` per supplier, each with a random request ID. It refuses (listing every problem) a bad LEI, CN code, quantity, reference or date, an origin not subject to CBAM, an import date outside the year, a reference used twice for one supplier, an unknown or supplier-private field; it never overwrites a file.
+3. Send each file to its supplier, by your own channel.
+4. When the proofs come back: `node sdk/cli.ts check-response --request requests/request-<LEI>.json <proof files or a folder> --out check.json --csv check.csv --results results.json`.
+5. Follow up every line that is not ANSWERED. Then `portfolio results.json --year 2026` plans the year (lines without a usable proof on the default value), and `audit-pack results.json …` keeps the evidence.
+
+**Fields asked for.** By default 20: the required disclosures of checks 3-5 (`REQUIRED_DISCLOSURES` in `sdk/credential.ts`), the fields check 8 reconciles (`RECONCILED_CLAIMS` in `sdk/consistency.ts`; without them the proof verifies INCOMPLETE) and the fields `export-communication` copies into the Commission's template (`COMMUNICATION_CLAIMS` in `sdk/communication.ts`: installation name, UN/LOCODE, reporting period, CN code, emissions intensity). The request file states why each is asked for. The supplier-private fields (production route, energy mix, cost) cannot be requested.
+
+**Procedure (supplier)**
+
+1. One shipment: `node sdk/cli.ts present --credential credential.json --request request.json --line L1 --importer-salt <the claim's salt> --evidence-from <a proof of this credential> --out answer-L1.json`. The batch ID is the line's reference; the quantity defaults to the line's and the shipment date to its import date (`--quantity`, `--shipment-date` override them). The claim on the ledger must have been sent for the importer's EORI with that salt, or check 5 fails.
+2. All requested shipments in the allocation book: `node sdk/cli.ts present-batch book.json --request request.json --check --evidence-from <proof> --out answer-pack/`. Only the batches of the importer whose EORI is the request's, with a batch ID equal to a line's reference, are written; lines the book has no batch for are named (the importer will see them MISSING) and recorded in `share-pack.json` with the request ID.
+3. The proof discloses exactly the requested fields. To disclose more, list them with `--fields` and pass `--over-disclose` (the importer sees them flagged); supplier-private fields are refused even then. Both commands refuse, with nothing written, a request addressed to another LEI, a credential without a disclosure for a requested field, and a credential for another CN code or origin than the line's.
+
+| Line status | Exit | Meaning |
+|---|---|---|
+| ANSWERED | 0 | A VALID proof, bound to your EORI by check 5, of the requested supplier, CN code and origin, covering at least the requested tonnes, disclosing every requested field. `EXTRA_FIELDS` (fields not asked for) is a warning only |
+| NEEDS_ACTION | 1 | VALID, but `WRONG_SUPPLIER`, `WRONG_CN`, `WRONG_ORIGIN` (the proof is not handed to `portfolio`), `QUANTITY_SHORT` (the ledger claim covers fewer tonnes; `portfolio` plans the line on the default) or `FIELD_NOT_DISCLOSED` |
+| NOT_VERIFIED | 1 | The proof is INVALID, CONTESTED or INCOMPLETE, or check 5 did not bind it to your EORI |
+| MISSING | 1 | No proof for the line's batch; `OVERDUE` after the due date |
+| ERROR | 3 | The verification could not run (RPC, unreadable proof); a bad request file or proof path also exits 3 |
+
+Proofs that answer no line are listed, not counted: `NOT_REQUESTED` (a batch ID not in the request), `DUPLICATE` (a second proof for a line; the first VALID one is used) and `NO_SHIPMENT` (no shipment part, so check 5 cannot bind it).
+
 ## REST API (`carbonlei serve`): deployment and security
 
 `node sdk/cli.ts serve [--port 8787] [--host 127.0.0.1]` serves the same SDK calls over HTTP, for an ERP or compliance tool: POST `/v1/verify`, `/v1/verify-batch`, `/v1/portfolio`, `/v1/recheck`; GET `/v1/health` (chain ID, head block and its age, RPC node hosts, limits) and `/openapi.json` ([`schemas/openapi.json`](schemas/openapi.json), OpenAPI 3.1, hand-written). A verdict from `/v1/verify` equals `carbonlei verify --json` (tested); the header `X-CarbonLEI-Exit` carries the CLI exit code. Code: [`sdk/server.ts`](../sdk/server.ts), `node:http` only, no new dependency. It is a prototype.
@@ -237,6 +269,7 @@ Exit codes: `allocate` 0 when nothing needs action, 1 when something does, 3 whe
 
 - ERP or EDI connectors: the inputs are an Excel template and JSON files ([`sdk/cli.ts`](../sdk/cli.ts)); an ERP can call the prototype REST API (`carbonlei serve`), but no ERP-specific connector exists. [`examples/erp-integration/`](../examples/erp-integration/) shows the flow with a generic ERP CSV export: map to `/v1/verify-batch`, check the HMAC binding, plan with `/v1/portfolio`, write a CSV back (not a CBAM Registry filing; no SAP or Oracle connector).
 - A CBAM Registry XML export: the Commission has published no data structure for the definitive-period declaration (its Registry module opens in 2027), and its one published XML schema, the transitional `QReport` 18.30, is archived and covers only 2023–2025. [REGISTRY_EXPORT](REGISTRY_EXPORT.md) lists the official sources and maps CarbonLEI's fields to the Commission's communication template; `carbonlei export-communication` writes that mapping as a CSV of the template's `Summary_Communication` fields from a verified proof (no .xlsx; not validated by the Commission, not a Registry submission).
+- Delivery of data requests: `carbonlei request` writes the files and `check-response` checks the answers; sending them (email, a portal, EDI), reminders and a supplier inbox are not built, and the request is not a CBAM Registry or O3CI message.
 - A hosted alerting service: `carbonlei recheck --webhook` runs on the importer's own scheduler and POSTs to the importer's own endpoint; CarbonLEI runs nothing that watches on an importer's behalf.
 - A connection to any PACT network: the export is field-compatible JSON ([PACT_MAPPING](PACT_MAPPING.md); [ADOPTION §8](ADOPTION.md#8-current-status-by-area)).
 - Witness operation beyond the local containers ([PILOT §3](PILOT.md#3-what-runs-where)).
