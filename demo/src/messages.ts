@@ -104,12 +104,35 @@ export function codeText(code: string | undefined, zh: boolean): string | undefi
   return (zh ? CODE_TEXT_ZH[code] : undefined) ?? CODE_TEXT[code];
 }
 
-/** REVERT_TEXT in Traditional Chinese for the reverts the Try to break it tab shows; others fall back to English. */
+/** REVERT_TEXT in Traditional Chinese (every revert the contracts define). */
 const REVERT_TEXT_ZH: Record<string, string> = {
   NotActiveVerifier: "此地址不是允許清單上有效的驗證機構：它未登記、已由較新的地址取代，或其認證已暫停或到期。",
   AuditorNotAuthorized: "此查核員在此時未獲此驗證機構授權。",
   BatchAlreadyClaimed: "此批次已被申領。",
   ExceedsVerifiedTonnage: "這筆申領會超出經查證報告所涵蓋的噸數。",
+  ReportExists: "已有相同識別碼的報告登記在案。",
+  ZeroQuantity: "數量必須大於零。",
+  InvalidExpiry: "有效期限（報告或認證的）必須在未來。",
+  ReportNotFound: "沒有以此識別碼登記的報告。",
+  ReportInvalid: "此報告已撤銷、已過期，或已由修訂後的報告取代，因此不能再對它申領新的出貨。",
+  NotSupplier: "只有報告中指名的供應商，才能對該報告申領出貨。",
+  NotReportIssuer: "只有簽發此報告的驗證機構可以撤銷它；也只有在該機構仍有效時，才能修訂它。",
+  AlreadyRevoked: "此報告或查核員已經撤銷。",
+  OwnableUnauthorizedAccount: "只有允許清單營運者可以新增驗證機構或查核員，或變更機構的地址。",
+  AccessControlUnauthorizedAccount: "只有撤銷監看者可以同步暫停、解除暫停或撤銷查核員。",
+  PeriodAlreadyCovered: "此設施與報告期間已有報告涵蓋。新報告必須指明它取代哪一份——撤銷舊報告並不會釋出該期間。",
+  SupersedeOverClaimed: "修訂後的報告涵蓋的噸數，少於此產品與路徑已申領的噸數。",
+  InvalidInput: "必填欄位是空的或為零（地址或識別碼）。",
+  ReportIdRetired: "此報告 ID 已由此設施與期間的修訂報告取代，不能在該處再次使用。",
+  CredScopeAlreadyCovered: "此設施、產品、路徑與期間已有憑證涵蓋。新憑證必須指明它取代哪一份。",
+  SupersedeMismatch: "被指為取代對象的報告，並不是此設施、產品、路徑與期間的最新報告。",
+  VerifierExists: "此驗證機構已在允許清單上。",
+  VerifierNotFound: "此驗證機構不在允許清單上。",
+  AddressAlreadyBound: "此地址已被某個驗證機構使用過，不能重複使用。",
+  AuditorExists: "此查核員已列在此驗證機構之下。已撤銷的查核員不能再加回。",
+  AuditorNotFound: "此查核員未列在此驗證機構之下。",
+  AlreadySuspended: "此驗證機構已經暫停。",
+  NotSuspended: "此驗證機構並未暫停。",
 };
 
 export function revertText(name: string, args: readonly unknown[] = [], zh = false): string {

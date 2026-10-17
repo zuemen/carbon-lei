@@ -233,27 +233,29 @@ export function ReportDateAttack() {
     const fields = disclosedFields(data.proof.disclosures);
     const claims = pickReconciledClaims(fields);
     if (!extract || !claims) {
-      setOut({ status: "skipped", code: "", detail: "the demo proof has no report extract", rules: [] });
+      setOut({ status: "skipped", code: "", detail: zh ? "示範證明沒有報告摘錄" : "the demo proof has no report extract", rules: [] });
       return;
     }
     const early = { ...extract, signedAt: EARLY_DATE };
     const r = checkReconciliation(early, fields, reconcile(early, claims).reconciliation);
     setOut({ status: r.status, code: r.code, detail: r.detail, rules: r.rules ?? [] });
   }
+  // The failed sub-rule's name in Traditional Chinese (the SDK's detail is English).
+  const failedRule = out?.status === "fail" ? out.rules.find((s) => s.status === "fail")?.rule : undefined;
+  const failedLabel = failedRule ? LABEL[failedRule]?.["zh-TW"] : undefined;
   return (
     <div className="attack" id="attack-6">
       <div>
-        <h3>6 · A verification report dated before verifiers could issue</h3>
-        <div className="how">Checked in your browser — check 8's rules, no contract call</div>
+        <h3>{zh ? "6 · 查證報告的日期早於驗證機構可以簽發的時間" : "6 · A verification report dated before verifiers could issue"}</h3>
+        <div className="how">{zh ? "在您的瀏覽器中檢查——套用檢查 8 的規則，不呼叫合約" : "Checked in your browser — check 8's rules, no contract call"}</div>
         <p className="fine">
-          A "verification statement" for calendar 2026 dated {EARLY_DATE}: before the reporting period ended and before
-          January 2027, when accredited verifiers could first issue CBAM verification reports. We recompute the
-          reconciliation hashes as if the auditor had signed this date (nothing is signed with a real key or registered)
-          and run check 8.
+          {zh
+            ? `一份涵蓋 2026 曆年、日期為 ${EARLY_DATE} 的「查證聲明」：早於報告期間結束，也早於 2027 年 1 月——經認證的驗證機構最早要到那時才能簽發 CBAM 查證報告。我們假設查核員簽署的是這個日期，重新計算比對雜湊（不會用真實金鑰簽署，也不會登記），再執行檢查 8。`
+            : `A "verification statement" for calendar 2026 dated ${EARLY_DATE}: before the reporting period ended and before January 2027, when accredited verifiers could first issue CBAM verification reports. We recompute the reconciliation hashes as if the auditor had signed this date (nothing is signed with a real key or registered) and run check 8.`}
         </p>
       </div>
       <button className="btn" onClick={run}>
-        Date the report {EARLY_DATE}
+        {zh ? `把報告日期改成 ${EARLY_DATE}` : `Date the report ${EARLY_DATE}`}
       </button>
       {out && (
         <div className="attack-result" role="status">
@@ -264,7 +266,7 @@ export function ReportDateAttack() {
                 {zh ? "檢查 8 未通過：" : "Check 8 failed: "}
                 <code>{out.code}</code>
                 {zh ? "——" : " — "}
-                <span lang={zh ? "en" : undefined}>{out.detail}</span>
+                {zh && failedLabel ? `規則「${failedLabel}」未通過：已簽署的報告本身違反此規則。` : <span lang={zh ? "en" : undefined}>{out.detail}</span>}
               </>
             ) : zh ? (
               `檢查 8 沒有失敗（${out.status}）——請回報此問題。`

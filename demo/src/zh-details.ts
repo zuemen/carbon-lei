@@ -132,3 +132,18 @@ export const CP_SOURCES_ZH: { match: string; title?: { text: string; lang: strin
   { match: "e-info.org.tw", title: { text: "環境資訊中心", lang: "zh-Hant-TW" }, text: "：224 家高碳洩漏風險廠以排放量 × 0.2 計費；下一期為 0.4" },
   { match: "ert_bil_eur_a", title: { text: "Eurostat ert_bil_eur_a", lang: "en" }, text: "：2025 年 EUR/TWD 年平均匯率 = 35.196（資料集 2026-07-08 更新）" },
 ];
+
+/** The SDK's short check names (sdk/verify.ts NAMES) in Traditional Chinese: the importer's file and the self-issued proof. */
+export const CHECK_NAME_ZH: Record<number, string> = {
+  0: "結構",
+  1: "憑證完整性（SAID）",
+  2: "揭露欄位",
+  3: "簽發者簽章",
+  4: "鏈上報告",
+  5: "出貨申領",
+  6: "查核員錨定（KEL）",
+  7: "授權鏈（vLEI）",
+  8: "報告比對",
+  9: "前驅物",
+  10: "已付碳價（第 9 條草案）",
+};

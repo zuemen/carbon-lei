@@ -8,6 +8,7 @@ import { DEMO_TRUST_ANCHOR, parseCesr, verifyAnchor, verifyAuthority, type Ancho
 import fixture from "../../../fixtures/demo.json";
 import { useApp } from "../App.tsx";
 import { short } from "../data.ts";
+import { useLang, type Lang } from "../i18n.ts";
 
 // Loaded only when its block is opened: it carries the keripy test KEL.
 const KeyRotation = lazy(() => import("./KeyRotation.tsx").then((m) => ({ default: m.KeyRotation })));
@@ -33,8 +34,91 @@ function lastAcdc(stream: string): Acdc {
   return acdcs[acdcs.length - 1].ked as Acdc;
 }
 
+/** The panel's strings in English and Traditional Chinese (Taiwan); field names, LEIs, AIDs and SAIDs stay as they are. */
+const T = {
+  en: {
+    verified: "✓ Verified",
+    failed: "✕ Failed",
+    summary: "What a name field shows vs what a signature chain shows",
+    lede:
+      "The same verification body, written two ways. PACT carries the footprint data; it is not designed to prove who the provider is. A vLEI chain adds that. Values below are read from this page's demo data and evidence (all fictional).",
+    leftH: "As a name field: PDF report or PACT ProductFootprint",
+    pdfLabel: "Verification report (PDF), verifier",
+    pdfNote: "text on a page",
+    optional: "type string, optional",
+    supplier: " (the supplier)",
+    nonEmpty: "type non-empty string",
+    leftText: [
+      "The ProductFootprint schema has no signature field, and PACT's API authenticates the connection between partners (OAuth 2.0 client credentials), not the document. So PACT itself does not sign who the provider is: any name typed into ",
+      (name: string) => `, for example "${name}", is equally valid against the schema.`,
+    ],
+    rightH: "As a signature chain: the same verifier in CarbonLEI",
+    loading: "Re-checking the evidence in your browser…",
+    error: "✕ The evidence could not be checked: ",
+    leLabel: "1 · LE vLEI (legal entity)",
+    leNote: (qvi: string, aid: string, cred: string) => `issued by ${qvi} to AID ${aid} · credential ${cred}`,
+    theQvi: "the QVI",
+    ecrLabel: "2 · ECR vLEI (role)",
+    ecrNote: (from: string, to: string, cred: string) => `issued by AID ${from} (the LE holder above) to AID ${to} · credential ${cred}`,
+    kelLabel: "3 · KEL anchor",
+    kelValue: (sn: number) => `auditor's key event #${sn}`,
+    kelNote: (ev: string, cred: string) =>
+      `event ${ev} seals report credential ${cred}; Ed25519 signature checked with the key from the auditor's inception event`,
+    witLabel: "4 · Witnesses",
+    witValue: (v: number, t: number) => `witnesses ${v}/${t}`,
+    witNote: (toad: number) => `receipts on the anchor event that verify (threshold ${toad})`,
+    rotSummary: "Key rotation: check 6 follows the auditor's key event log",
+    loadingRot: "Loading…",
+    rechecked: (root: string, d: string) =>
+      `Re-checked in your browser when this panel opened (the SDK code of checks 6 and 7, up to the pinned root, ${root}). The checks compare LEIs, AIDs and signatures, not names. Evidence exported ${d}; witnesses are not queried. The auditor's ECR was revoked later (attack 3).`,
+    simRoot: "simulated root",
+    footer:
+      "CarbonLEI's PACT export keeps the verifier's LEI, the auditor's AID and the KEL sequence number in a declared extension (docs/PACT_MAPPING.md).",
+  },
+  "zh-TW": {
+    verified: "✓ 已驗證",
+    failed: "✕ 未通過",
+    summary: "名稱欄位能說明什麼，簽章鏈又能說明什麼",
+    lede:
+      "同一個驗證機構，兩種寫法。PACT 承載的是碳足跡資料，設計上並不用來證明提供者是誰；vLEI 鏈補上了這一點。以下數值讀自本頁的示範資料與證據（皆為虛構）。",
+    leftH: "名稱欄位：PDF 報告或 PACT ProductFootprint",
+    pdfLabel: "查證報告（PDF）中的驗證機構",
+    pdfNote: "頁面上的文字",
+    optional: "型別 string，選填",
+    supplier: "（供應商）",
+    nonEmpty: "型別 non-empty string",
+    leftText: [
+      "ProductFootprint 綱要沒有簽章欄位，而 PACT 的 API 驗證的是夥伴之間的連線（OAuth 2.0 client credentials），不是文件本身。所以 PACT 本身並不簽署提供者是誰：在 ",
+      (name: string) => ` 裡填入任何名稱，例如「${name}」，對綱要來說都一樣有效。`,
+    ],
+    rightH: "簽章鏈：同一個驗證機構在 CarbonLEI 中的樣子",
+    loading: "正在您的瀏覽器中重新檢查證據…",
+    error: "✕ 無法檢查證據：",
+    leLabel: "1 · LE vLEI（法人）",
+    leNote: (qvi: string, aid: string, cred: string) => `由 ${qvi} 簽發給 AID ${aid} · 憑證 ${cred}`,
+    theQvi: "QVI",
+    ecrLabel: "2 · ECR vLEI（角色）",
+    ecrNote: (from: string, to: string, cred: string) => `由 AID ${from}（上方的 LE 持有者）簽發給 AID ${to} · 憑證 ${cred}`,
+    kelLabel: "3 · KEL 錨定",
+    kelValue: (sn: number) => `查核員的金鑰事件 #${sn}`,
+    kelNote: (ev: string, cred: string) => `事件 ${ev} 封存了報告憑證 ${cred}；Ed25519 簽章以查核員起始事件中的金鑰檢查`,
+    witLabel: "4 · 見證者",
+    witValue: (v: number, t: number) => `見證者 ${v}/${t}`,
+    witNote: (toad: number) => `錨定事件上通過驗證的收據（門檻 ${toad}）`,
+    rotSummary: "金鑰輪替：檢查 6 會追蹤查核員的金鑰事件日誌",
+    loadingRot: "載入中…",
+    rechecked: (root: string, d: string) =>
+      `打開此面板時已在您的瀏覽器中重新檢查（檢查 6 與 7 的 SDK 程式碼，一路到釘選的根「${root}」）。這些檢查比對的是 LEI、AID 與簽章，不是名稱。證據匯出於 ${d}；未查詢見證者。查核員的 ECR 之後遭到撤銷（攻擊 3）。`,
+    simRoot: "模擬的根",
+    footer: "CarbonLEI 的 PACT 匯出會把驗證機構的 LEI、查核員的 AID 與 KEL 序號，保存在一個宣告的擴充欄位中（docs/PACT_MAPPING.md）。",
+  },
+} satisfies Record<Lang, unknown>;
+
 export function PactVsVlei() {
   const { data } = useApp();
+  const { lang } = useLang();
+  const zh = lang === "zh-TW";
+  const t = T[lang];
   const [view, setView] = useState<ChainView | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -91,7 +175,7 @@ export function PactVsVlei() {
     }
   }
 
-  const mark = (ok: boolean) => <span className={`badge ${ok ? "pass" : "fail"}`}>{ok ? "✓ Verified" : "✕ Failed"}</span>;
+  const mark = (ok: boolean) => <span className={`badge ${ok ? "pass" : "fail"}`}>{ok ? t.verified : t.failed}</span>;
 
   return (
     <details
@@ -101,90 +185,75 @@ export function PactVsVlei() {
         if ((e.currentTarget as HTMLDetailsElement).open) void load();
       }}
     >
-      <summary>What a name field shows vs what a signature chain shows</summary>
-      <p className="pvv-lede">
-        The same verification body, written two ways. PACT carries the footprint data; it is not designed to prove who
-        the provider is. A vLEI chain adds that. Values below are read from this page's demo data and evidence (all
-        fictional).
-      </p>
+      <summary>{t.summary}</summary>
+      <p className="pvv-lede">{t.lede}</p>
       <div className="pvv-grid">
         <section className="pvv-col" aria-labelledby="pvv-left">
-          <h3 id="pvv-left">As a name field: PDF report or PACT ProductFootprint</h3>
+          <h3 id="pvv-left">{t.leftH}</h3>
           <ul className="pvv-rows">
             <li>
-              <span className="pvv-label">Verification report (PDF), verifier</span>
+              <span className="pvv-label">{t.pdfLabel}</span>
               <span className="pvv-value">"{verifierName}"</span>
-              <span className="pvv-note">text on a page</span>
+              <span className="pvv-note">{t.pdfNote}</span>
             </li>
             <li>
               <span className="pvv-label">
                 PACT v3.0.3 <code>pcf.verification.providerName</code>
               </span>
               <span className="pvv-value">"{verifierName}"</span>
-              <span className="pvv-note">type string, optional</span>
+              <span className="pvv-note">{t.optional}</span>
             </li>
             <li>
               <span className="pvv-label">
-                PACT v3.0.3 <code>companyName</code> (the supplier)
+                PACT v3.0.3 <code>companyName</code>
+                {t.supplier}
               </span>
               <span className="pvv-value">"{companyName}"</span>
-              <span className="pvv-note">type non-empty string</span>
+              <span className="pvv-note">{t.nonEmpty}</span>
             </li>
           </ul>
           <p className="pvv-text">
-            The ProductFootprint schema has no signature field, and PACT's API authenticates the connection between
-            partners (OAuth 2.0 client credentials), not the document. So PACT itself does not sign who the provider
-            is: any name typed into <code>providerName</code>, for example "{data.impostor.name}", is equally valid
-            against the schema.
+            {t.leftText[0] as string}
+            <code>providerName</code>
+            {(t.leftText[1] as (name: string) => string)(data.impostor.name)}
           </p>
         </section>
         <section className="pvv-col" aria-labelledby="pvv-right">
-          <h3 id="pvv-right">As a signature chain: the same verifier in CarbonLEI</h3>
-          {loading && <p className="pvv-text">Re-checking the evidence in your browser…</p>}
+          <h3 id="pvv-right">{t.rightH}</h3>
+          {loading && <p className="pvv-text">{t.loading}</p>}
           {error && (
             <p className="pvv-text pvv-error" role="alert">
-              ✕ The evidence could not be checked: {error}
+              {t.error}
+              <span lang={zh ? "en" : undefined}>{error}</span>
             </p>
           )}
           {view && (
             <>
               <ol className="pvv-steps">
                 <li>
-                  <span className="pvv-label">1 · LE vLEI (legal entity)</span>
+                  <span className="pvv-label">{t.leLabel}</span>
                   <span className="pvv-value">LEI {view.le.a.LEI}</span>
-                  <span className="pvv-note">
-                    issued by {qvi?.name ?? "the QVI"} to AID {short(view.le.a.i, 8, 6)} · credential {short(view.le.d, 8, 6)}
-                  </span>
+                  <span className="pvv-note">{t.leNote(qvi?.name ?? t.theQvi, short(view.le.a.i, 8, 6), short(view.le.d, 8, 6))}</span>
                   {mark(view.authority.ok)}
                 </li>
                 <li>
-                  <span className="pvv-label">2 · ECR vLEI (role)</span>
-                  <span className="pvv-value">
+                  <span className="pvv-label">{t.ecrLabel}</span>
+                  <span className="pvv-value" lang={zh ? "en" : undefined}>
                     {view.ecr.a.engagementContextRole}, {view.ecr.a.personLegalName}
                   </span>
-                  <span className="pvv-note">
-                    issued by AID {short(view.ecr.i, 8, 6)} (the LE holder above) to AID {short(view.ecr.a.i, 8, 6)} ·
-                    credential {short(view.ecr.d, 8, 6)}
-                  </span>
+                  <span className="pvv-note">{t.ecrNote(short(view.ecr.i, 8, 6), short(view.ecr.a.i, 8, 6), short(view.ecr.d, 8, 6))}</span>
                   {mark(view.authority.ok)}
                 </li>
                 <li>
-                  <span className="pvv-label">3 · KEL anchor</span>
-                  <span className="pvv-value">auditor's key event #{view.anchor.sn}</span>
-                  <span className="pvv-note">
-                    event {short(view.anchor.eventSaid, 8, 6)} seals report credential {short(core.d, 8, 6)}; Ed25519
-                    signature checked with the key from the auditor's inception event
-                  </span>
+                  <span className="pvv-label">{t.kelLabel}</span>
+                  <span className="pvv-value">{t.kelValue(view.anchor.sn)}</span>
+                  <span className="pvv-note">{t.kelNote(short(view.anchor.eventSaid, 8, 6), short(core.d, 8, 6))}</span>
                   {mark(view.anchor.ok)}
                 </li>
                 <li>
-                  <span className="pvv-label">4 · Witnesses</span>
-                  <span className="pvv-value">
-                    witnesses {view.witnesses.verified}/{view.witnesses.total}
-                  </span>
-                  <span className="pvv-note">
-                    receipts on the anchor event that verify (threshold {view.witnesses.toad})
-                  </span>
+                  <span className="pvv-label">{t.witLabel}</span>
+                  <span className="pvv-value">{t.witValue(view.witnesses.verified, view.witnesses.total)}</span>
+                  <span className="pvv-note">{t.witNote(view.witnesses.toad)}</span>
                   {mark(view.witnesses.total > 0 && view.witnesses.verified >= view.witnesses.toad)}
                 </li>
               </ol>
@@ -195,26 +264,19 @@ export function PactVsVlei() {
                   if ((e.currentTarget as HTMLDetailsElement).open) setRotation(true);
                 }}
               >
-                <summary>Key rotation: check 6 follows the auditor's key event log</summary>
+                <summary>{t.rotSummary}</summary>
                 {rotation && (
-                  <Suspense fallback={<p className="pvv-text">Loading…</p>}>
+                  <Suspense fallback={<p className="pvv-text">{t.loadingRot}</p>}>
                     <KeyRotation />
                   </Suspense>
                 )}
               </details>
-              <p className="pvv-text">
-                Re-checked in your browser when this panel opened (the SDK code of checks 6 and 7, up to the pinned root,{" "}
-                {root?.name ?? "simulated root"}). The checks compare LEIs, AIDs and signatures, not names. Evidence
-                exported {data.exportDate}; witnesses are not queried. The auditor's ECR was revoked later (attack 3).
-              </p>
+              <p className="pvv-text">{t.rechecked(root?.name ?? t.simRoot, data.exportDate)}</p>
             </>
           )}
         </section>
       </div>
-      <p className="fine">
-        CarbonLEI's PACT export keeps the verifier's LEI, the auditor's AID and the KEL sequence number in a declared
-        extension (docs/PACT_MAPPING.md).
-      </p>
+      <p className="fine">{t.footer}</p>
     </details>
   );
 }

@@ -43,7 +43,7 @@ const LABELS: Record<string, string> = {
   validUntil: "Valid until",
 };
 
-/** Field labels in Traditional Chinese (Taiwan). The template panel keeps the English LABELS (it is not translated). */
+/** Field labels in Traditional Chinese (Taiwan), also used by the template panel. */
 const LABELS_ZH: Record<string, string> = {
   supplierLEI: "供應商 LEI",
   operatorId: "營運者 ID",
@@ -166,7 +166,7 @@ const TXT = {
     openHere: "在此開啟相同連結",
     passportNote: (t: string, period: string) =>
       `${period} 經驗證 ${t} 噸。我們不聲稱符合 ESPR 或任何數位產品護照規範。`,
-    templateSummary: "從歐盟執委會的通報範本開始（官方範例；面板內容僅有英文）",
+    templateSummary: "從歐盟執委會的通報範本開始（官方範例）",
   },
 } satisfies Record<Lang, unknown>;
 
@@ -411,7 +411,7 @@ export function Supplier() {
         onToggle={(e) => setTemplateOpen((e.currentTarget as HTMLDetailsElement).open)}
       >
         <summary>{t.templateSummary}</summary>
-        {templateOpen && <TemplateImport labels={LABELS} />}
+        {templateOpen && <TemplateImport labels={t.labels} />}
       </details>
     </>
   );

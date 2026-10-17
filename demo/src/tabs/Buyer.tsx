@@ -211,6 +211,173 @@ const VERDICT = {
   },
 } satisfies Record<Lang, unknown>;
 
+/** proofComparison's English reasons (data.ts) in Traditional Chinese; an unknown reason shows the English. */
+function noComparisonZh(why: string): string | null {
+  if (why === "the supplier did not disclose the intensity") return "供應商未揭露排放強度";
+  if (why === "no shipment quantity was confirmed on the ledger (check 5)") return "帳本上沒有確認的出貨數量（檢查 5）";
+  const m = /^this demo lists the CBAM default for CN (\S+) only$/.exec(why);
+  return m ? `本示範只列出 CN ${m[1]} 的 CBAM 預設值` : null;
+}
+
+/**
+ * The rest of the tab's strings (proof panel, legend, comparison card, what-if card, downloads), in English and
+ * Traditional Chinese. The buttons the main path and the tests name (Load the demo proof, Verify, Tamper with one
+ * number, Accept verified value) keep their English names, marked lang="en".
+ */
+const UI = {
+  en: {
+    proofFor: (name: string) => `Supplier's proof for ${name}`,
+    waiting: "Waiting for a Sepolia node…",
+    fromSupplier: "Proof loaded from the Supplier tab.",
+    fromQr: (batch: string) => [`Proof loaded from the product passport QR code (${batch}). Press `, "Verify", "."],
+    pasteLabel: "Paste the supplier's proof",
+    pastePlaceholder: 'Paste the supplier\'s proof here, or click "Load the demo proof" above.',
+    checkingAs: (eori: string) => `Checking as importer EORI ${eori} (fictional).`,
+    tamperedNote: "Disclosed intensity changed from 1.8 to 1.2.",
+    notJson: "This is not a supplier's proof (not valid JSON).",
+    couldNotFinish: (m: string) => `Verification could not finish: ${m}`,
+    stillConnecting: "Still connecting to Sepolia — try again in a moment.",
+    loadFirst: "Load a proof first.",
+    checksHead: "Eight checks: seven verification checks plus one rule-based reconciliation check",
+    legendLabel: "Source labels",
+    legend: (exportDate: string) => [
+      "◉ live · Sepolia = contract state read from Sepolia now",
+      "◎ live · your browser = recomputed on this page (check 3 takes only the chain ID from the Sepolia node)",
+      `▤ exported evidence = from a local KERI run (${exportDate})`,
+      "≡ rule-based · advisory = recomputed on this page; fails on a CBAM rule the signed report breaks, not decided when the signed extract is missing or changed, otherwise flags for review",
+    ],
+    offlineCached: (d: string) => `Offline view: the result recorded for the demo proof on ${d}; no check was re-run.`,
+    offlineLocal: "Offline view: checks 0–3 were recomputed in your browser; checks 4–8 need a live connection and were not run.",
+    revoked: (date: string, block: number) =>
+      `This report's auditor was revoked later (${date}, synced on-chain in block ${block}). Checks 4 and 7 both judge authority at registration time: check 4 through the contract, check 7 from the allowlist on Sepolia, where the auditor's revocation is dated after this report's registration. So the report stays valid (Try to break it, card 3).`,
+    cmpHeadDefault: "CBAM default",
+    cmpHead: "Verified value vs CBAM default",
+    defaultK: "CBAM default (with 2026 mark-up)",
+    verifiedK: "Verified value (illustrative)",
+    forQ: (q: string, t: string) => `For ${q} t: ${t} tCO2e`,
+    noValueFailed: (check: number | null) =>
+      `No verified value: the proof failed ${check ? `check ${check}` : "the structure check"}. The figures from the demo report are not shown as a result.`,
+    noValueIncomplete: "No verified value: checks 4–8 were not run (offline view). The figures from the demo report are not shown as a result.",
+    noGapContested:
+      "No declared-emissions gap: the report needs review (check 4: the auditor was revoked or the body suspended soon after registration). Do not rely on the verified value until a person has reviewed the report.",
+    noGapFor: "No declared-emissions gap for this proof: ",
+    gapLine: (gap: string) => `Declared-emissions gap: ${gap} tCO2e`,
+    gapEur: (eur: string, quarter: string, price: string) =>
+      `≈ €${eur} gross at the ${quarter} CBAM certificate price of €${price} — illustrative, before free-allocation adjustment.`,
+    notPhysical: "A gap in what is declared, not a physical reduction.",
+    acceptFirst: ["Verify the proof first. Accepting stays in this browser: nothing is sent to the CBAM Registry or on-chain.", "", ""],
+    accepted: "Accepted (demo).",
+    declared: (vq: string, batch: string) => `Declared ${vq} tCO2e for batch ${batch}.`,
+    verifiedFor: (v: string, batch: string) => `Verified value ${v} tCO2e/t${batch ? ` for batch ${batch}` : ""}.`,
+    staysHere: "This choice stays in your browser — no transaction is sent. On-chain record for this batch: the supplier's claim",
+    notRecorded: "(not recorded)",
+    downloadRecord: "Download verification record (JSON)",
+    recordNote: "For your own records: the checks, the credential ID and the on-chain claim. Not a CBAM document.",
+    readingRecord: "Reading the on-chain record…",
+    downloadPact: "Download PACT product footprint (JSON)",
+    pactNote:
+      "PACT data model v3.0.3, validated against the official schema in our tests. Not a conformance claim and not connected to any PACT network.",
+    pactError: (m: string) => `No PACT file was created: ${m}`,
+    print: "Print the importer's file",
+    printNote:
+      "One page with this result, the credential ID, the block the checks read and the on-chain claim — print it or save it as PDF for your own file. Not signed; not a CBAM document.",
+    summaryFields: ["CN code", "Verified intensity", "Verified quantity", "Reporting period", "Verification body LEI"],
+    summaryLabel: "What this proof states (not yet checked)",
+    shipment: "Shipment",
+    summaryNote: (disclosed: number, hidden: number) =>
+      `${disclosed} field${disclosed === 1 ? "" : "s"} disclosed${hidden > 0 ? ` · ${hidden} hidden by the supplier` : ""} · what the proof states, not yet checked. Raw JSON below.`,
+    wiDefault: (v: string) => `${v} (the CBAM default)`,
+    wiHead: "What a lower verified intensity is worth",
+    wiHypo: "Hypothetical",
+    wiLabel: ["What if the verified value were ", " tCO2e/t?"],
+    wiValueText: (label: string) => `${label} tCO2e per tonne, hypothetical`,
+    wiScale: (d: string) => `${d} = CBAM default`,
+    wiStarts: (v: string) => `Starts at this proof's verified value (${v}). Moving it changes nothing in the proof or in the figures above.`,
+    wiGap: "Declared-emissions gap per tonne of goods",
+    wiEurT: "Gross € value per tonne of goods",
+    wiEurShip: (q: string) => `Gross € value of this ${q} t shipment`,
+    wiSame: (quarter: string, price: string) =>
+      `Same ${quarter} CBAM certificate price (€${price}) and quantity as above — gross, illustrative, before free-allocation adjustment.`,
+    wiRate: ["At this certificate price, each ", "0.1 tCO2e/t", " of verified intensity accounts for about ", (eur: string) => `€${eur} per tonne of goods`, " (gross, illustrative)."] as const,
+    wiPoint:
+      "That value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed before — what the checks above answer. Who captures it is a commercial matter between buyer and producer. CarbonLEI does not measure or change emissions: any physical effect depends on producers acting on that value, and this demo does not quantify it.",
+  },
+  "zh-TW": {
+    proofFor: (name: string) => `供應商給 ${name} 的證明`,
+    waiting: "正在等候 Sepolia 節點回應…",
+    fromSupplier: "證明已從供應商分頁載入。",
+    fromQr: (batch: string) => [`證明已從產品護照 QR code 載入（${batch}）。請按「`, "Verify", "」。"],
+    pasteLabel: "貼上供應商的證明",
+    pastePlaceholder: "在此貼上供應商的證明，或按上方的「Load the demo proof」。",
+    checkingAs: (eori: string) => `以進口商 EORI ${eori}（虛構）的身分檢查。`,
+    tamperedNote: "揭露的排放強度已從 1.8 改為 1.2。",
+    notJson: "這不是供應商的證明（不是有效的 JSON）。",
+    couldNotFinish: (m: string) => `驗證無法完成：${m}`,
+    stillConnecting: "仍在連線到 Sepolia——請稍後再試。",
+    loadFirst: "請先載入證明。",
+    checksHead: "八項檢查：七項驗證檢查，加上一項規則式比對檢查",
+    legendLabel: "來源標籤",
+    legend: (exportDate: string) => [
+      "◉ 即時 · Sepolia = 現在從 Sepolia 讀取的合約狀態",
+      "◎ 即時 · 您的瀏覽器 = 在本頁重新計算（檢查 3 只從 Sepolia 節點取得 chain ID）",
+      `▤ 匯出的證據 = 來自本機 KERI 執行（${exportDate}）`,
+      "≡ 規則式 · 僅供參考 = 在本頁重新計算；已簽署的報告違反 CBAM 規則時判定未通過，已簽署的摘錄缺漏或遭更改時無法判定，其他發現則標示為需審查",
+    ],
+    offlineCached: (d: string) => `離線檢視：顯示 ${d} 為示範證明記錄的結果，沒有重新執行任何檢查。`,
+    offlineLocal: "離線檢視：檢查 0–3 已在您的瀏覽器重新計算；檢查 4–8 需要即時連線，因此未執行。",
+    revoked: (date: string, block: number) =>
+      `此報告的查核員後來遭撤銷（${date}，於區塊 ${block} 同步上鏈）。檢查 4 與檢查 7 都以報告登記當時判斷權限：檢查 4 透過合約，檢查 7 依據 Sepolia 上的允許清單，其中查核員的撤銷時間晚於此報告的登記。因此報告仍然有效（見「試著破解」卡片 3）。`,
+    cmpHeadDefault: "CBAM 預設值",
+    cmpHead: "經查證值與 CBAM 預設值比較",
+    defaultK: "CBAM 預設值（含 2026 年加成）",
+    verifiedK: "經查證值（示意）",
+    forQ: (q: string, t: string) => `${q} t 合計：${t} tCO2e`,
+    noValueFailed: (check: number | null) =>
+      `沒有經查證值：此證明未通過${check ? `檢查 ${check}` : "結構檢查"}。示範報告的數字不會當作結果顯示。`,
+    noValueIncomplete: "沒有經查證值：檢查 4–8 未執行（離線檢視）。示範報告的數字不會當作結果顯示。",
+    noGapContested:
+      "不顯示申報排放差距：此報告需要審查（檢查 4：報告登記後不久，查核員遭撤銷或驗證機構遭暫停）。在有人審查報告之前，請勿採信經查證值。",
+    noGapFor: "此證明不顯示申報排放差距：",
+    gapLine: (gap: string) => `申報排放差距：${gap} tCO2e`,
+    gapEur: (eur: string, quarter: string, price: string) => `以 ${quarter} CBAM 憑證價格 €${price} 計，毛額約 €${eur}——示意，未計入免費配額調整。`,
+    notPhysical: "這是申報數字上的差距，不是實際減排。",
+    acceptFirst: ["請先驗證證明。按下「", "Accept verified value", "」只記在此瀏覽器：不會傳送任何資料到 CBAM 登錄系統，也不會上鏈。"],
+    accepted: "已採用經查證值（示範）。",
+    declared: (vq: string, batch: string) => `批次 ${batch} 申報 ${vq} tCO2e。`,
+    verifiedFor: (v: string, batch: string) => `${batch ? `批次 ${batch} 的` : ""}經查證值為 ${v} tCO2e/t。`,
+    staysHere: "這個選擇只記在您的瀏覽器——不會送出任何交易。此批次的鏈上紀錄：供應商的申領",
+    notRecorded: "（未記錄）",
+    downloadRecord: "下載驗證紀錄（JSON）",
+    recordNote: "供您自行留存：檢查結果、憑證 ID 與鏈上申領。不是 CBAM 文件。",
+    readingRecord: "正在讀取鏈上紀錄…",
+    downloadPact: "下載 PACT 產品碳足跡（JSON）",
+    pactNote: "PACT 資料模型 v3.0.3，已在我們的測試中以官方 schema 驗證。這不是符合性聲明，也未連接任何 PACT 網路。",
+    pactError: (m: string) => `未建立 PACT 檔案：${m}`,
+    print: "列印進口商檔案",
+    printNote: "一頁包含此結果、憑證 ID、檢查所讀取的區塊與鏈上申領——可列印或另存為 PDF，供您自行歸檔。未簽署；不是 CBAM 文件。",
+    summaryFields: ["CN 代碼", "經查證排放強度", "經查證數量", "報告期間", "驗證機構 LEI"],
+    summaryLabel: "此證明陳述的內容（尚未檢查）",
+    shipment: "出貨",
+    summaryNote: (disclosed: number, hidden: number) =>
+      `已揭露 ${disclosed} 個欄位${hidden > 0 ? ` · 供應商隱藏了 ${hidden} 個` : ""} · 這是證明所陳述的內容，尚未檢查。原始 JSON 在下方。`,
+    wiDefault: (v: string) => `${v}（CBAM 預設值）`,
+    wiHead: "較低的經查證排放強度值多少",
+    wiHypo: "假設情境",
+    wiLabel: ["假如經查證值是 ", " tCO2e/t？"],
+    wiValueText: (label: string) => `每噸 ${label} tCO2e，假設情境`,
+    wiScale: (d: string) => `${d} = CBAM 預設值`,
+    wiStarts: (v: string) => `起點是此證明的經查證值（${v}）。移動滑桿不會改變證明，也不會改變上方的任何數字。`,
+    wiGap: "每噸貨物的申報排放差距",
+    wiEurT: "每噸貨物的毛額價值（€）",
+    wiEurShip: (q: string) => `這批 ${q} t 出貨的毛額價值（€）`,
+    wiSame: (quarter: string, price: string) =>
+      `採用與上方相同的 ${quarter} CBAM 憑證價格（€${price}）與數量——毛額、示意，未計入免費配額調整。`,
+    wiRate: ["以此憑證價格計算，經查證排放強度每 ", "0.1 tCO2e/t", "，大約相當於", (eur: string) => `每噸貨物 €${eur}`, "（毛額，示意）。"] as const,
+    wiPoint:
+      "這個價值的前提是：買方信任簽署經查證值的人，並確認其噸數先前沒有被申領過——這正是上方檢查回答的問題。價值由誰取得，是買方與生產者之間的商業安排。CarbonLEI 不測量、也不改變排放：任何實際效果取決於生產者是否據此採取行動，本示範並未加以量化。",
+  },
+} satisfies Record<Lang, unknown>;
+
 /**
  * The text shown for a check: the plain-language text of its code, else its detail. CONTESTED has several
  * reasons (SECURITY §4.2); the code's text describes the revocation-sync one, so any other reason shows its detail.
@@ -220,6 +387,21 @@ function checkText(r: CheckResult, lang: Lang = "en"): string {
     return VERDICT[lang].humanReview(r.detail);
   }
   return codeText(r.code, lang === "zh-TW") ?? r.detail;
+}
+
+/** checkText for the page: in Traditional Chinese, an English detail the SDK wrote (no translated code text) is marked lang="en". */
+function CheckText({ r, lang }: { r: CheckResult; lang: Lang }) {
+  if (lang !== "zh-TW") return <>{checkText(r, lang)}</>;
+  if (r.code === "CONTESTED" && !/; revoked or suspended within [\d.]+ h after$/.test(r.detail)) {
+    return (
+      <>
+        {VERDICT[lang].humanReview("")}
+        <span lang="en">{r.detail}</span>
+      </>
+    );
+  }
+  const t = codeText(r.code, true);
+  return t ? <>{t}</> : <span lang="en">{r.detail}</span>;
 }
 
 export function kindOf(c?: CheckResult): BadgeKind {
@@ -278,14 +460,18 @@ function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
   const x = Math.min(pos, def);
   const { gapPerT, eurPerT, eurShipment, eurPerTenth } = whatIfFigures(cmp, x);
   const q = Number(cmp.quantityTonnes);
-  const label = x === def ? `${fmt(x, 3)} (the CBAM default)` : fmt(x, 3);
+  const u = UI[useLang().lang];
+  const label = x === def ? u.wiDefault(fmt(x, 3)) : fmt(x, 3);
   return (
     <div className="whatif" role="group" aria-labelledby="whatif-h">
       <p className="whatif-head" id="whatif-h">
-        <span aria-hidden="true">◇ </span>What a lower verified intensity is worth <span className="tag-hypo">Hypothetical</span>
+        <span aria-hidden="true">◇ </span>
+        {u.wiHead} <span className="tag-hypo">{u.wiHypo}</span>
       </p>
       <label className="whatif-label" htmlFor="whatif-range">
-        What if the verified value were <strong>{label}</strong> tCO2e/t?
+        {u.wiLabel[0]}
+        <strong>{label}</strong>
+        {u.wiLabel[1]}
       </label>
       <input
         id="whatif-range"
@@ -295,44 +481,37 @@ function WhatIf({ cmp }: { cmp: DemoData["comparison"] }) {
         max={max}
         step={0.1}
         value={pos}
-        aria-valuetext={`${label} tCO2e per tonne, hypothetical`}
+        aria-valuetext={u.wiValueText(label)}
         onChange={(e) => setPos(Math.round(Number(e.target.value) * 10) / 10)}
       />
       <div className="whatif-scale fine" aria-hidden="true">
         <span>{min.toFixed(1)}</span>
-        <span>{fmt(def, 3)} = CBAM default</span>
+        <span>{u.wiScale(fmt(def, 3))}</span>
       </div>
-      <p className="fine">
-        Starts at this proof's verified value ({cmp.verifiedValue}). Moving it changes nothing in the proof or in the
-        figures above.
-      </p>
+      <p className="fine">{u.wiStarts(cmp.verifiedValue)}</p>
       <dl className="whatif-out" aria-live="polite" aria-atomic="true">
         <div>
-          <dt>Declared-emissions gap per tonne of goods</dt>
+          <dt>{u.wiGap}</dt>
           <dd>{fmt(gapPerT, 3)} tCO2e</dd>
         </div>
         <div>
-          <dt>Gross € value per tonne of goods</dt>
+          <dt>{u.wiEurT}</dt>
           <dd>€{eur2(eurPerT)}</dd>
         </div>
         <div>
-          <dt>Gross € value of this {fmt(q)} t shipment</dt>
+          <dt>{u.wiEurShip(fmt(q))}</dt>
           <dd>€{fmt(eurShipment, 0)}</dd>
         </div>
       </dl>
-      <p className="fine">
-        Same {cmp.quarter} CBAM certificate price (€{cmp.priceEur}) and quantity as above — gross, illustrative,
-        before free-allocation adjustment.
-      </p>
+      <p className="fine">{u.wiSame(cmp.quarter, cmp.priceEur)}</p>
       <p className="whatif-rate">
-        At this certificate price, each <strong>0.1 tCO2e/t</strong> of verified intensity accounts for about{" "}
-        <strong>€{eur2(eurPerTenth)} per tonne of goods</strong> (gross, illustrative).
+        {u.wiRate[0]}
+        <strong>{u.wiRate[1]}</strong>
+        {u.wiRate[2]}
+        <strong>{u.wiRate[3](eur2(eurPerTenth))}</strong>
+        {u.wiRate[4]}
       </p>
-      <p className="whatif-point">
-        That value depends on the buyer trusting who signed the verified value and that its tonnes were not claimed
-        before — what the checks above answer. Who captures it is a commercial matter between buyer and producer. CarbonLEI does not measure or change
-        emissions: any physical effect depends on producers acting on that value, and this demo does not quantify it.
-      </p>
+      <p className="whatif-point">{u.wiPoint}</p>
     </div>
   );
 }
@@ -431,16 +610,18 @@ function ClimateLink({ cmp, onSeeComparison }: { cmp: DemoData["comparison"]; on
   );
 }
 
-const SUMMARY_FIELDS: [string, string, string][] = [
-  ["cnCode", "CN code", ""],
-  ["specificEmbeddedEmissions_tCO2e_per_t", "Verified intensity", " tCO2e/t"],
-  ["verifiedTonnes", "Verified quantity", " t"],
-  ["reportingPeriod", "Reporting period", ""],
-  ["verifierLEI", "Verification body LEI", ""],
+/** Field and unit; the labels are UI[lang].summaryFields, in the same order. */
+const SUMMARY_FIELDS: [string, string][] = [
+  ["cnCode", ""],
+  ["specificEmbeddedEmissions_tCO2e_per_t", " tCO2e/t"],
+  ["verifiedTonnes", " t"],
+  ["reportingPeriod", ""],
+  ["verifierLEI", ""],
 ];
 
 /** What a pasted proof says, in words, before anyone reads the JSON. Nothing here is checked yet. */
 function ProofSummary({ text }: { text: string }) {
+  const u = UI[useLang().lang];
   const fields: Record<string, string> = {};
   let disclosed = 0;
   let total = 0;
@@ -463,9 +644,11 @@ function ProofSummary({ text }: { text: string }) {
     return null;
   }
   return (
-    <div className="proof-summary" role="group" aria-label="What this proof states (not yet checked)">
+    <div className="proof-summary" role="group" aria-label={u.summaryLabel}>
       <dl className="fields">
-        {SUMMARY_FIELDS.filter(([k]) => fields[k] !== undefined).map(([k, label, unit]) => (
+        {SUMMARY_FIELDS.map(([k, unit], i) => [k, u.summaryFields[i], unit] as const)
+          .filter(([k]) => fields[k] !== undefined)
+          .map(([k, label, unit]) => (
           <Fragment key={k}>
             <dt>{label}</dt>
             <dd>
@@ -476,15 +659,12 @@ function ProofSummary({ text }: { text: string }) {
         ))}
         {batch && (
           <>
-            <dt>Shipment</dt>
+            <dt>{u.shipment}</dt>
             <dd>{batch}</dd>
           </>
         )}
       </dl>
-      <p className="fine">
-        {disclosed} field{disclosed === 1 ? "" : "s"} disclosed{total > disclosed ? ` · ${total - disclosed} hidden by the supplier` : ""} ·
-        what the proof states, not yet checked. Raw JSON below.
-      </p>
+      <p className="fine">{u.summaryNote(disclosed, total - disclosed)}</p>
     </div>
   );
 }
@@ -492,6 +672,8 @@ function ProofSummary({ text }: { text: string }) {
 export function Buyer() {
   const { lang } = useLang();
   const vt = VERDICT[lang];
+  const ui = UI[lang];
+  const zh = lang === "zh-TW";
   const { data, reader, offline, proofText, setProofText, proofFromSupplier, go, explorer, demoVerify, setDemoVerify } = useApp();
   const wbCounts = workbenchCounts(data);
   // The last verification: the text it read, that text's proof and the result. It is shown only while the text box
@@ -502,7 +684,7 @@ export function Buyer() {
   const [running, setRunning] = useState(false);
   // Verify has waited more than about 3 s for the chain: a progress line is shown until it finishes.
   const [slow, setSlow] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ f: (u: (typeof UI)[Lang]) => string } | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [tampered, setTampered] = useState(false);
   const [fromQr, setFromQr] = useState(false);
@@ -563,14 +745,14 @@ export function Buyer() {
   }, [demoVerify, running, reader, offline, proofText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run(text: string) {
-    setError("");
+    setError(null);
     setAccepted(false);
     setPactError("");
     let proof: Presentation;
     try {
       proof = JSON.parse(text) as Presentation;
     } catch {
-      setError("This is not a supplier's proof (not valid JSON).");
+      setError({ f: (u) => u.notJson });
       return;
     }
     if (offline) {
@@ -588,7 +770,7 @@ export function Buyer() {
           );
           setVerified({ text, proof, result: r, cached: false, at: new Date().toISOString() });
         } catch (e) {
-          setError(`Verification could not finish: ${(e as Error).message}`);
+          { const m = (e as Error).message; setError({ f: (u) => u.couldNotFinish(m) }); }
           return;
         }
       }
@@ -596,7 +778,7 @@ export function Buyer() {
       return;
     }
     if (!reader) {
-      setError("Still connecting to Sepolia — try again in a moment.");
+      setError({ f: (u) => u.stillConnecting });
       return;
     }
     setRunning(true);
@@ -610,7 +792,7 @@ export function Buyer() {
       setVerified({ text, proof, result: r, cached: false, at: new Date().toISOString() });
       setFinished((n) => n + 1);
     } catch (e) {
-      setError(`Verification could not finish: ${(e as Error).message}`);
+      { const m = (e as Error).message; setError({ f: (u) => u.couldNotFinish(m) }); }
     } finally {
       window.clearTimeout(slowTimer);
       setSlow(false);
@@ -695,7 +877,8 @@ export function Buyer() {
       const id = checked.shipment?.batchId || (JSON.parse(checked.core) as { d: string }).d;
       saveJson(pf, `carbonlei-pact-${id}.json`);
     } catch (e) {
-      setPactError(`No PACT file was created: ${(e as Error).message}`);
+      const m = (e as Error).message;
+      setPactError(UI[lang].pactError(m));
     } finally {
       setPactBusy(false);
     }
@@ -716,7 +899,7 @@ export function Buyer() {
       <div className="grid-2">
         <section className="sheet reveal" aria-labelledby="proof-h">
           <p className="sheet-kicker" id="proof-h">
-            Supplier's proof for {data.importer.name}
+            {ui.proofFor(data.importer.name)}
           </p>
           <div className="btn-row">
             <button
@@ -740,20 +923,26 @@ export function Buyer() {
             </button>
           </div>
           <div className="verify-summary-slot" role="status" ref={summaryRef}>
-            {running && slow && <p className="conn">Waiting for a Sepolia node…</p>}
+            {running && slow && <p className="conn">{ui.waiting}</p>}
             {result && !running && <VerifySummary result={result} cmp={fromProof ? fromProof.cmp : null} onSeeComparison={seeComparison} />}
           </div>
-          {proofFromSupplier && <p className="fine">Proof loaded from the Supplier tab.</p>}
-          {fromQr && <p className="fine">Proof loaded from the product passport QR code ({data.shipment.batchId}). Press Verify.</p>}
+          {proofFromSupplier && <p className="fine">{ui.fromSupplier}</p>}
+          {fromQr && (
+            <p className="fine">
+              {ui.fromQr(data.shipment.batchId)[0]}
+              <span lang={zh ? "en" : undefined}>{ui.fromQr(data.shipment.batchId)[1]}</span>
+              {ui.fromQr(data.shipment.batchId)[2]}
+            </p>
+          )}
           {proofText && <ProofSummary text={proofText} />}
           <label className="field-label" htmlFor="proof-in">
-            Paste the supplier's proof
+            {ui.pasteLabel}
           </label>
           <textarea
             id="proof-in"
             className="proof"
             spellCheck={false}
-            placeholder={'Paste the supplier\'s proof here, or click "Load the demo proof" above.'}
+            placeholder={ui.pastePlaceholder}
             lang={lang === "zh-TW" ? "en" : undefined}
             value={proofText}
             onChange={(e) => {
@@ -761,7 +950,7 @@ export function Buyer() {
               setAccepted(false);
             }}
           />
-          <p className="fine">Checking as importer EORI {data.importer.eori} (fictional).</p>
+          <p className="fine">{ui.checkingAs(data.importer.eori)}</p>
           {proofText && (
             <div className="btn-row">
               <button
@@ -775,42 +964,40 @@ export function Buyer() {
                     setTampered(true);
                     void run(text);
                   } catch {
-                    setError("Load a proof first.");
+                    setError({ f: (u) => u.loadFirst });
                   }
                 }}
+                lang={zh ? "en" : undefined}
               >
                 Tamper with one number
               </button>
-              {tampered && <span className="fine">Disclosed intensity changed from 1.8 to 1.2.</span>}
+              {tampered && <span className="fine">{ui.tamperedNote}</span>}
             </div>
           )}
         </section>
 
         <section className="sheet reveal" aria-labelledby="checks-h">
-          <p className="sheet-kicker" id="checks-h" lang={lang === "zh-TW" ? "en" : undefined}>
-            Eight checks: seven verification checks plus one rule-based reconciliation check
+          <p className="sheet-kicker" id="checks-h">
+            {ui.checksHead}
           </p>
-          <div className="legend" role="group" aria-label="Source labels">
-            <span>◉ live · Sepolia = contract state read from Sepolia now</span>
-            <span>◎ live · your browser = recomputed on this page (check 3 takes only the chain ID from the Sepolia node)</span>
-            <span>▤ exported evidence = from a local KERI run ({data.exportDate})</span>
-            <span>≡ rule-based · advisory = recomputed on this page; fails on a CBAM rule the signed report breaks, not decided when the signed extract is missing or changed, otherwise flags for review</span>
+          <div className="legend" role="group" aria-label={ui.legendLabel}>
+            {ui.legend(data.exportDate).map((l) => (
+              <span key={l}>{l}</span>
+            ))}
           </div>
           {error && (
             <p className="check-detail bad" role="alert">
-              {error}
+              {error.f(ui)}
             </p>
           )}
           {offline && result && !running && (
             <p className="fine" role="note">
-              {current?.cached
-                ? `Offline view: the result recorded for the demo proof on ${data.cached?.time.slice(0, 10)}; no check was re-run.`
-                : "Offline view: checks 0–3 were recomputed in your browser; checks 4–8 need a live connection and were not run."}
+              {current?.cached ? ui.offlineCached(data.cached?.time.slice(0, 10) ?? "") : ui.offlineLocal}
             </p>
           )}
           {malformed && (
             <p className="check-detail bad" role="alert">
-              ✕ {codeText(malformed.code, lang === "zh-TW") ?? malformed.code} {malformed.detail}
+              ✕ {codeText(malformed.code, zh) ?? malformed.code} <span lang={zh ? "en" : undefined}>{malformed.detail}</span>
             </p>
           )}
           <ol className="checks" aria-live="polite">
@@ -833,7 +1020,7 @@ export function Buyer() {
                     <SourceLabel source={c.source} />{" "}
                     {r && r.code ? <code>{r.code}</code> : null}
                     {r && r.code ? " — " : " "}
-                    {r ? checkText(r, lang) : ""}
+                    {r ? <CheckText r={r} lang={lang} /> : ""}
                   </span>
                   {r?.rules && r.rules.length > 0 && r.status !== "skipped" && !running && <SubRules rules={r.rules} />}
                 </li>
@@ -844,12 +1031,7 @@ export function Buyer() {
             <ClimateLink cmp={fromProof.cmp} onSeeComparison={seeComparison} />
           )}
           {result && !running && revokeTx && isDemoProof && (
-            <p className="fine">
-              This report's auditor was revoked later ({revokeTx.time.slice(0, 10)}, synced on-chain in block {revokeTx.block}).
-              Checks 4 and 7 both judge authority at registration time: check 4 through the contract, check 7 from the
-              allowlist on Sepolia, where the auditor's revocation is dated after this report's registration. So the
-              report stays valid (Try to break it, card 3).
-            </p>
+            <p className="fine">{ui.revoked(revokeTx.time.slice(0, 10), revokeTx.block)}</p>
           )}
           {result && !running && (
             <div className="overall">
@@ -917,49 +1099,45 @@ export function Buyer() {
         tabIndex={-1}
       >
         <p className="sheet-kicker" id="cmp-h">
-          {rejectedProof || incomplete || contested ? "CBAM default" : "Verified value vs CBAM default"}
+          {rejectedProof || incomplete || contested ? ui.cmpHeadDefault : ui.cmpHead}
         </p>
         <div className="compare">
           <div>
-            <div className="k">CBAM default (with 2026 mark-up)</div>
+            <div className="k">{ui.defaultK}</div>
             <div className="v">{data.comparison.defaultValue} tCO2e/t</div>
-            {cmp && <div className="fine">For {fmt(q)} t: {fmt(dq)} tCO2e</div>}
+            {cmp && <div className="fine">{ui.forQ(fmt(q), fmt(dq))}</div>}
           </div>
           {!rejectedProof && !incomplete && !contested && (
             <div>
-              <div className="k">Verified value (illustrative)</div>
+              <div className="k">{ui.verifiedK}</div>
               <div className="v">{cmp ? cmp.verifiedValue : (verifiedValue ?? "—")} tCO2e/t</div>
-              {cmp && <div className="fine">For {fmt(q)} t: {fmt(vq)} tCO2e</div>}
+              {cmp && <div className="fine">{ui.forQ(fmt(q), fmt(vq))}</div>}
             </div>
           )}
         </div>
         {rejectedProof ? (
           <p className="fine no-verified-value" role="status">
-            No verified value: the proof failed {rejectedCheck && rejectedCheck.index > 0 ? `check ${rejectedCheck.index}` : "the structure check"}. The
-            figures from the demo report are not shown as a result.
+            {ui.noValueFailed(rejectedCheck && rejectedCheck.index > 0 ? rejectedCheck.index : null)}
           </p>
         ) : incomplete ? (
           <p className="fine no-verified-value" role="status">
-            No verified value: checks 4–8 were not run (offline view). The figures from the demo report are not shown as
-            a result.
+            {ui.noValueIncomplete}
           </p>
         ) : contested ? (
           <p className="fine no-verified-value" role="status">
-            No declared-emissions gap: the report needs review (check 4: the auditor was revoked or the body suspended
-            soon after registration). Do not rely on the verified value until a person has reviewed the report.
+            {ui.noGapContested}
           </p>
         ) : noComparison ? (
           <p className="fine no-verified-value" role="status">
-            No declared-emissions gap for this proof: {noComparison}.
+            {ui.noGapFor}
+            {zh ? (noComparisonZh(noComparison) ?? <span lang="en">{noComparison}</span>) : noComparison}
+            {zh ? "。" : "."}
           </p>
         ) : (
           <>
-            <p className="gap-line">Declared-emissions gap: {fmt(gap)} tCO2e</p>
-            <p className="fine">
-              ≈ €{fmt(eur, 0)} gross at the {data.comparison.quarter} CBAM certificate price of €{data.comparison.priceEur} — illustrative, before
-              free-allocation adjustment.
-            </p>
-            <p className="fine">A gap in what is declared, not a physical reduction.</p>
+            <p className="gap-line">{ui.gapLine(fmt(gap))}</p>
+            <p className="fine">{ui.gapEur(fmt(eur, 0), data.comparison.quarter, data.comparison.priceEur)}</p>
+            <p className="fine">{ui.notPhysical}</p>
           </>
         )}
         <div className="btn-row">
@@ -971,34 +1149,39 @@ export function Buyer() {
           >
             Accept verified value
           </button>
-          {!result && <span className="fine">Verify the proof first. Accepting stays in this browser: nothing is sent to the CBAM Registry or on-chain.</span>}
+          {!result && (
+            <span className="fine">
+              {ui.acceptFirst[0]}
+              {ui.acceptFirst[1] && <span lang="en">{ui.acceptFirst[1]}</span>}
+              {ui.acceptFirst[2]}
+            </span>
+          )}
         </div>
         {acceptedNow && (
           <p className="fine" role="status">
-            Accepted (demo).{" "}
-            {cmp ? `Declared ${fmt(vq)} tCO2e for batch ${batchId}.` : `Verified value ${verifiedValue ?? "—"} tCO2e/t${batchId ? ` for batch ${batchId}` : ""}.`}{" "}
-            This choice stays in your browser — no transaction is sent. On-chain record for this batch: the supplier's
-            claim{" "}
-            {claimTx && batchId === data.shipment.batchId ? <TxLink hash={claimTx.hash} /> : "(not recorded)"}
+            {ui.accepted}
+            {zh ? "" : " "}
+            {cmp ? ui.declared(fmt(vq), batchId) : ui.verifiedFor(verifiedValue ?? "—", batchId)}
+            {zh ? "" : " "}
+            {ui.staysHere}
+            {zh ? "" : " "}
+            {claimTx && batchId === data.shipment.batchId ? <TxLink hash={claimTx.hash} /> : ui.notRecorded}
           </p>
         )}
         {acceptedNow && (
           <div className="btn-row">
             <button className="btn btn-ghost" onClick={downloadRecord}>
-              Download verification record (JSON)
+              {ui.downloadRecord}
             </button>
-            <span className="fine">For your own records: the checks, the credential ID and the on-chain claim. Not a CBAM document.</span>
+            <span className="fine">{ui.recordNote}</span>
           </div>
         )}
         {acceptedNow && canExportPact && (
           <div className="btn-row">
             <button className="btn btn-ghost" onClick={() => void downloadPact()} disabled={pactBusy}>
-              {pactBusy ? "Reading the on-chain record…" : "Download PACT product footprint (JSON)"}
+              {pactBusy ? ui.readingRecord : ui.downloadPact}
             </button>
-            <span className="fine">
-              PACT data model v3.0.3, validated against the official schema in our tests. Not a conformance claim and not
-              connected to any PACT network.
-            </span>
+            <span className="fine">{ui.pactNote}</span>
           </div>
         )}
         {pactError && (
@@ -1010,12 +1193,9 @@ export function Buyer() {
         {result && checked && current && !running && (
           <div className="btn-row">
             <button className="btn btn-ghost" onClick={() => setPrintReq((r) => ({ n: (r?.n ?? 0) + 1, at: current.at }))}>
-              Print the importer's file
+              {ui.print}
             </button>
-            <span className="fine">
-              One page with this result, the credential ID, the block the checks read and the on-chain claim — print it
-              or save it as PDF for your own file. Not signed; not a CBAM document.
-            </span>
+            <span className="fine">{ui.printNote}</span>
           </div>
         )}
         {printReq && result && checked && current && printReq.at === current.at && (

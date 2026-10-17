@@ -43,9 +43,12 @@ const BADGE_TEXT: Record<BadgeKind, string> = {
   idle: "· Not run yet",
   skip: "– Not run",
 };
+const BADGE_TEXT_ZH: Record<BadgeKind, string> = { pass: "✓ 通過", fail: "✕ 未通過", review: "! 需審查", idle: "· 尚未執行", skip: "– 未執行" };
 
+/** A result badge; without children it shows the default text in the page's language. */
 export function Badge({ kind, children }: { kind: BadgeKind; children?: ReactNode }) {
-  return <span className={`badge ${kind}`}>{children ?? BADGE_TEXT[kind]}</span>;
+  const zh = useLang().lang === "zh-TW";
+  return <span className={`badge ${kind}`}>{children ?? (zh ? BADGE_TEXT_ZH : BADGE_TEXT)[kind]}</span>;
 }
 
 export type Source = "sepolia" | "browser" | "evidence" | "advisory";

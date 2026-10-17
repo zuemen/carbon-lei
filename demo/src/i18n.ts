@@ -1,5 +1,5 @@
-// Language switch: English (default) or Traditional Chinese (Taiwan) for the parts a Taiwanese supplier needs first —
-// the first screen's CBAM explanation, the tab bar, the Supplier tab, and the Buyer tab's verdict and check names.
+// Language switch: English (default) or Traditional Chinese (Taiwan) for every tab of the demo page. A few button
+// names, downloaded files and verifier details with no translation stay English, marked lang="en".
 // No library: each component holds its own `{ en, "zh-TW" }` strings and picks one with `useLang()`. Technical
 // identifiers (error codes, check numbers, hashes, vLEI, KERI, CBAM, EORI, tCO2e) are never translated.
 import { createContext, createElement, type ReactNode, useCallback, useContext, useEffect, useState } from "react";

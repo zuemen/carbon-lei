@@ -1,12 +1,16 @@
 // 繁體中文 coverage of the first screen, the Buyer tab's head and data-source panel, the precursor and carbon price
 // sections (check 9 and 10 details, re-check items, sources, footers), the Trust chain headings and the Try to break
-// it results; and the pointers from the main path to the enterprise features (Importer workbench).
+// it results; and the pointers from the main path to the enterprise features (Importer workbench). L6–L12: the
+// Verification body, Try to break it (every card and the layer card), Trust chain (with the name-field and key
+// rotation panels) and On-chain proof tabs, the Buyer tab after Accept (comparison, what-if, importer's file), the
+// Communication Template panel with the self-issued proof, each scanned with axe; and every tab at 390 px.
 //
 // "No leftover English" is checked as no run of three or more Latin words, after removing what stays English on
 // purpose: elements marked lang="en" (titles, button names), code and hashes, and the fictional entity names from
 // the demo data files. Identifiers (vLEI, KEL, SAID, CN, tCO2e, chain ID, eth_call, LEIs) are not prose words.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { FICTIONAL_LINES } from "../src/workbench-data.ts";
 
 async function scan(page: Page, label: string) {
   await page.evaluate(() => Promise.allSettled(document.getAnimations().map((a) => a.finished)));
@@ -20,19 +24,20 @@ async function connected(page: Page) {
   await expect(page.getByText("已連線到 Sepolia。").or(page.getByText("已切換到備用節點。"))).toBeVisible();
 }
 
-/** Every `name` value in the demo data files: the fictional companies, bodies and roots, which keep their names. */
+/** Every `name` (and supplier or installation name) in the demo data files: fictional entities, which keep their names. */
 async function entityNames(page: Page): Promise<string[]> {
   const names = new Set<string>();
   const walk = (x: unknown) => {
     if (Array.isArray(x)) x.forEach(walk);
     else if (x && typeof x === "object") {
       for (const [k, v] of Object.entries(x)) {
-        if ((k === "name" || k === "supplierName") && typeof v === "string" && v.length > 3) names.add(v);
+        if ((k === "name" || k === "supplierName" || k === "installationName") && typeof v === "string" && v.length > 3) names.add(v);
         walk(v);
       }
     }
   };
   for (const f of ["demo-data.json", "precursor-data.json", "carbonprice-data.json"]) walk(await (await page.request.get(f)).json());
+  walk(FICTIONAL_LINES); // the Importer workbench's fictional suppliers (workbench-data.ts)
   return [...names].sort((a, b) => b.length - a.length);
 }
 
@@ -154,10 +159,10 @@ test("L5 繁體中文 Trust chain headings and Try to break it results", async (
 
   await page.goto("./?lang=zh-TW#try-to-break-it");
   await connected(page);
-  for (const name of ["Change one disclosed number", "Claim the same batch again", /^Claim [\d.]+ t more$/, "Verify the impostor's proof", /^Date the report /]) {
+  for (const name of ["竄改一個已揭露的數值", "同一批次再申領一次", /^多申領 [\d.]+ t$/, "驗證冒名者的證明", /^把報告日期改成 /]) {
     await page.getByRole("button", { name }).click();
   }
-  // The attack cards' results (the "What if one layer were missing?" card below them stays in English).
+  // The attack cards' results.
   const results = page.getByRole("region", { name: "攻擊" }).locator(".attack-result");
   await expect(results.filter({ hasText: "檢查 2 未通過：某個已揭露的數值在供應商建立證明後遭到更改。" })).toHaveCount(1);
   await expect(results.filter({ hasText: "已退回：BatchAlreadyClaimed——此批次已被申領。" })).toHaveCount(1);
@@ -168,4 +173,127 @@ test("L5 繁體中文 Trust chain headings and Try to break it results", async (
   for (let i = 0; i < (await results.count()); i++) {
     expect(await leftoverEnglish(results.nth(i), names), `attack result ${i + 1}`).toEqual([]);
   }
+});
+
+/** The whole tab panel (#panel) has no leftover English. */
+async function panelClean(page: Page, names: string[], label: string) {
+  expect(await leftoverEnglish(page.locator("#panel"), names), label).toEqual([]);
+}
+
+test("L6 繁體中文 Verification body tab: report fields, set-up steps and the dry-run revocation", async ({ page }) => {
+  const names = await entityNames(page);
+  await page.goto("./?lang=zh-TW#verification-body");
+  await expect(page.getByRole("heading", { name: "簽發經查證的排放報告" })).toBeVisible();
+  await expect(page.locator(".fields")).toContainText("特定直接內含排放（tCO2e/t）");
+  await connected(page);
+  await page.getByRole("button", { name: "撤銷報告（試算：顯示合約的回應，不需金鑰）" }).click();
+  await expect(page.locator('#panel [role="status"]')).toContainText(/^試算結果：.*合約會(拒絕|接受)/);
+  await panelClean(page, names, "Verification body (zh-TW)");
+  await scan(page, "Verification body (zh-TW) after the dry run");
+});
+
+test("L7 繁體中文 Try to break it: every card, its result and the layer card in both states", async ({ page }) => {
+  const names = await entityNames(page);
+  await page.goto("./?lang=zh-TW#try-to-break-it");
+  await expect(page.getByRole("heading", { name: "試著破解" })).toBeVisible();
+  await connected(page);
+  for (const name of ["竄改一個已揭露的數值", "同一批次再申領一次", /^多申領 [\d.]+ t$/, "驗證冒名者的證明", /^把報告日期改成 /]) {
+    await page.getByRole("button", { name }).click();
+  }
+  await expect(page.getByRole("list", { name: "對冒名者證明的檢查" }).locator("li")).toHaveCount(8);
+  await expect(page.locator("#attack-6 .attack-result")).toContainText("規則「");
+  const card = page.locator("section.layer-card");
+  await expect(card.getByRole("heading", { name: "如果少了一層會怎樣？" })).toBeVisible();
+  await expect(card.locator("#layer-ledger .layer-table")).toContainText("來自您在上方卡片 2b 的試算");
+  await panelClean(page, names, "Try to break it (zh-TW), shared ledger, with check 7");
+  await card.getByRole("radio", { name: "兩家進口商、各自的資料庫（模擬）" }).check();
+  await card.getByRole("radio", { name: "沒有檢查 7（假設情境）" }).check();
+  await expect(card.locator("#layer-check7")).toContainText("檢查 7 是唯一未通過的檢查");
+  await panelClean(page, names, "Try to break it (zh-TW), separate databases, without check 7");
+  await scan(page, "Try to break it (zh-TW) after every attack, layer card switched");
+});
+
+test("L8 繁體中文 Trust chain: nodes, the allowlist keys, the name-field panel and key rotation", async ({ page }) => {
+  const names = await entityNames(page);
+  await page.goto("./?lang=zh-TW#trust-chain");
+  await connected(page);
+  await expect(page.getByRole("region", { name: "憑證鏈" })).toContainText(/鏈上允許清單（即時）：(✓ 已列入|✕ 已撤銷（區塊 \d+，見攻擊 3）)/);
+  await expect(page.getByRole("region", { name: "誰寫入允許清單" })).toContainText("由 NAB 與 QVI 代表組成的治理機構");
+  const panel = page.locator("details#name-vs-chain");
+  await panel.locator("summary").click();
+  await expect(panel.locator(".pvv-steps > li")).toHaveCount(4);
+  const rot = panel.locator("details#key-rotation");
+  await rot.locator("summary").click();
+  await expect(rot.locator(".pvv-rot-steps > li")).toHaveCount(4);
+  await expect(rot).toContainText("檢查 6 拒絕");
+  await panelClean(page, names, "Trust chain (zh-TW) with both panels open");
+  await scan(page, "Trust chain (zh-TW) with both panels open");
+});
+
+test("L9 繁體中文 On-chain proof: contracts, the transaction table and the data scope", async ({ page }) => {
+  const names = await entityNames(page);
+  const data = await (await page.request.get("demo-data.json")).json();
+  await page.goto("./?lang=zh-TW#on-chain-proof");
+  await expect(page.getByRole("heading", { name: "鏈上證明" })).toBeVisible();
+  await expect(page.locator(".tx-ledger tbody tr")).toHaveCount(data.txs.length);
+  await expect(page.locator(".tx-ledger thead th")).toHaveText(["步驟", "交易", "區塊", "時間（UTC）", "結果"]);
+  await expect(page.locator(".tx-ledger tbody")).toContainText("批次已申領（200 t）");
+  await panelClean(page, names, "On-chain proof (zh-TW)");
+  await scan(page, "On-chain proof (zh-TW)");
+});
+
+test("L10 繁體中文 Buyer after Verify and Accept: comparison card, what-if and the printable importer's file", async ({ page }) => {
+  const names = await entityNames(page);
+  await page.addInitScript(() => {
+    window.print = () => undefined;
+  });
+  await page.goto("./?lang=zh-TW#buyer");
+  await connected(page);
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText("已驗證");
+  await page.getByRole("button", { name: "Accept verified value" }).click();
+  await expect(page.locator("#cmp-h")).toHaveText("經查證值與 CBAM 預設值比較");
+  await expect(page.getByLabel(/假如經查證值是/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "下載驗證紀錄（JSON）" })).toBeVisible();
+  await panelClean(page, names, "Buyer (zh-TW) after Verify and Accept");
+  await scan(page, "Buyer (zh-TW) after Verify and Accept");
+  await page.getByRole("button", { name: "列印進口商檔案" }).click();
+  await page.emulateMedia({ media: "print" });
+  const file = page.getByTestId("importer-file");
+  await expect(file).toBeVisible();
+  await expect(file).toContainText("進口商檔案");
+  expect(await leftoverEnglish(file, names), "importer's file (zh-TW)").toEqual([]);
+});
+
+test("L11 繁體中文 Supplier: the Communication Template panel and the self-issued proof", async ({ page }) => {
+  const names = await entityNames(page);
+  await page.goto("./?lang=zh-TW#supplier");
+  await page.locator("details#template-import > summary").click();
+  const panel = page.locator("details#template-import");
+  await panel.getByRole("button", { name: "載入執委會的範例" }).click();
+  await expect(panel.getByTestId("template-summary")).toContainText("已讀取執委會的範例");
+  await connected(page);
+  const box = panel.getByTestId("self-issue");
+  await box.getByRole("button", { name: "以示範金鑰簽署並執行檢查" }).click();
+  await expect(box.getByTestId("self-issue-result")).toBeVisible();
+  await expect(box.getByRole("list", { name: "自行簽發證明的檢查" }).locator("> li")).toHaveCount(9);
+  await box.locator(".self-issue-fields > summary").click();
+  expect(await leftoverEnglish(panel, names), "template panel (zh-TW)").toEqual([]);
+  await scan(page, "Supplier (zh-TW) template panel and self-issued proof");
+});
+
+test("L12 繁體中文 at 390 px: no horizontal scroll and no leftover English on any tab", async ({ page }) => {
+  const names = await entityNames(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const tab of ["buyer", "supplier", "verification-body", "importer-workbench", "try-to-break-it", "trust-chain", "on-chain-proof"]) {
+    await page.goto(`./?lang=zh-TW#${tab}`);
+    await page.waitForTimeout(300);
+    await connected(page);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `tab ${tab} (zh-TW)`).toBeLessThanOrEqual(0);
+    await panelClean(page, names, `tab ${tab} (zh-TW) at 390 px`);
+  }
+  await page.goto("./?lang=zh-TW#try-to-break-it");
+  await scan(page, "Try to break it (zh-TW) at 390 px");
 });
