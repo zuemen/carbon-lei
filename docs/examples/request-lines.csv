@@ -1,0 +1,4 @@
+supplier_lei,supplier_name,cn_code,country,quantity_tonnes,reference,due_date,import_date,note
+ZZZZ00TWSCREWDEMO185,Demo Fasteners Co. (fictional),73181590,TW,200,BATCH-DEMO-2026-0001,2026-11-15,2026-10-10,the batch claimed on Sepolia
+ZZZZ00TWSCREWDEMO185,Demo Fasteners Co. (fictional),73181590,TW,120,BATCH-DEMO-2026-0004,2026-12-15,2026-11-28,illustrative: not claimed
+ZZZZ00TWBOLTSDEMO277,Demo Bolt Works Ltd. (fictional),73181595,TW,80,BOLT-2026-0042,2026-12-15,2026-11-20,illustrative: second supplier

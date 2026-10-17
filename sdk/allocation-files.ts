@@ -38,6 +38,8 @@ export interface SharePackManifest {
   /** Per proof: who it is for (the book's local id and name), the batch, the file and the fields it discloses. No EORI, no salt. */
   proofs: { importer: string; importerName?: string; batchId: string; file: string; fields: string[] }[];
   skipped: { batchId: string; reason: string }[];
+  /** With `present-batch --request`: the request answered and its lines the book has no batch for. */
+  request?: { requestId: string; notInBook: { lineId: string; reference: string; reason: string }[] };
 }
 
 /**
@@ -50,6 +52,7 @@ export function writeSharePack(
   cred: SignedCredential,
   pack: { proofs: SharePackProof[]; skipped: { batchId: string; reason: string }[] },
   now = new Date(),
+  request?: SharePackManifest["request"],
 ): SharePackManifest {
   const seen = new Set<string>();
   if (existsSync(resolve(dir, "share-pack.json"))) throw new Error(`share pack: ${resolve(dir, "share-pack.json")} already exists; write the pack to a new folder (nothing written)`);
@@ -67,6 +70,7 @@ export function writeSharePack(
     createdAt: now.toISOString(),
     proofs: pack.proofs.map((p) => ({ importer: p.importer, ...(names.get(p.importer) ? { importerName: names.get(p.importer) } : {}), batchId: p.batchId, file: p.file, fields: p.fields })),
     skipped: pack.skipped,
+    ...(request ? { request } : {}),
   };
   writeFileSync(resolve(dir, "share-pack.json"), JSON.stringify(manifest, null, 2) + "\n", { flag: "wx" });
   return manifest;

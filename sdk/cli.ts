@@ -1,8 +1,8 @@
-// carbonlei CLI: issue, present, present-batch, allocate, verify, verify-batch, portfolio, recheck, audit-pack,
-// verify-pack, serve, export-pact, export-communication, import-template.
+// carbonlei CLI: issue, present, present-batch, allocate, request, check-response, verify, verify-batch, portfolio,
+// recheck, audit-pack, verify-pack, serve, export-pact, export-communication, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { privateKeyToAccount } from "viem/accounts";
@@ -42,8 +42,25 @@ import type { AccreditationRegistry } from "./verification-rules.ts";
 import { check8HiddenFields, extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import type { PrecursorReport } from "./precursor.ts";
 import { art9Text, carbonPriceLines } from "./carbonprice.ts";
-import { basename, dirname, resolve } from "node:path";
-import { allocationExitCode, buildSharePack, printAllocation, readAllocationSnapshot, reconcile, reportRefOf } from "./allocation.ts";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { allocationExitCode, buildSharePack, fieldsFor, printAllocation, readAllocationSnapshot, reconcile, reportRefOf } from "./allocation.ts";
+import {
+  answerFields,
+  buildRequests,
+  checkResponse,
+  lineCredentialProblems,
+  linesFromCsv,
+  linesFromJson,
+  parseRequest,
+  planRequestBatches,
+  printResponseCheck,
+  requestFileName,
+  RequestError,
+  responseCsv,
+  responseExitCode,
+  responseResults,
+  selectLine,
+} from "./request.ts";
 import { evidenceFrom, loadBook, writeSharePack } from "./allocation-files.ts";
 import {
   draftCredentialFields,
@@ -60,10 +77,16 @@ const USAGE = `carbonlei <command> [options]
                [--out <credential.json>]            signs with VERIFIER_PRIVATE_KEY (EIP-712)
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
                --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>] [--allow-incomplete]
+               [--request <request.json> [--line <id>] [--over-disclose]] [--evidence-from <proof.json>]
                                                     refuses --fields that hide a field check 8 needs (the proof would
-                                                    verify INCOMPLETE), unless --allow-incomplete (then it warns)
+                                                    verify INCOMPLETE), unless --allow-incomplete (then it warns).
+                                                    --request answers one line of an importer's data request: exactly
+                                                    the requested fields (more only with --fields and --over-disclose),
+                                                    batch ID = the line's reference, quantity defaults to the line's;
+                                                    refused if the credential is another supplier's, lacks a requested
+                                                    field, or is for another CN code or origin
   present-batch <book.json> --out <dir> [--credential <credential.json>] [--evidence-from <proof.json>] [--check]
-               [--allow-incomplete] [--json] [--rpc <url>] [--deployment <file>]
+               [--allow-incomplete] [--json] [--rpc <url>] [--deployment <file>] [--request <request.json> [--over-disclose]]
                                                     one proof per claimed batch of the allocation book, each with
                                                     its buyer's fields, and share-pack.json (no EORI, no salt).
                                                     --check reconciles with the registry first and writes only the
@@ -71,7 +94,10 @@ const USAGE = `carbonlei <command> [options]
                                                     needs is skipped (its proof would verify INCOMPLETE), unless
                                                     --allow-incomplete (then written, with a warning). Exit 0 if a
                                                     proof was written, 1 if none, 3 if --check could not read the
-                                                    registry
+                                                    registry. --request: only the batches of the requesting importer
+                                                    (its EORI) whose batch ID is a line's reference, with the requested
+                                                    fields (--over-disclose adds the book's); lines without a batch are
+                                                    named
   allocate     <book.json> [--credential <credential.json>] [--json] [--out <report.json>] [--no-events]
                [--from-block <n>] [--rpc <url>] [--deployment <file>]
                                                     reconciles the supplier's allocation book with the registry at
@@ -80,6 +106,27 @@ const USAGE = `carbonlei <command> [options]
                                                     on-chain claims not in the book, and the share-pack plan.
                                                     Exit 0 if nothing needs action, 1 if something does, 3 if the
                                                     reconciliation could not run
+  request      <lines.csv | lines.json> --eori <EORI> --year <YYYY> --out <dir> [--importer-name <name>]
+               [--extra-fields a,b] [--due <YYYY-MM-DD>] [--json]
+                                                    importer's data request: one file per supplier LEI (request-<LEI>.json)
+                                                    with a random request ID, per line the CN code, origin, tonnes, batch
+                                                    reference and due date, and the fields to disclose (the required
+                                                    ones, check 8's and the communication export's, plus --extra-fields).
+                                                    CSV columns: supplier_lei, cn_code, country, quantity_tonnes,
+                                                    reference, due_date (optional line_id, supplier_name, import_date,
+                                                    note). Not a CBAM Registry message, not an O3CI function; sending it
+                                                    is up to you. Never overwrites a file
+  check-response --request <request.json> <proof.json | folder>… [--out <check.json>] [--csv <check.csv>]
+               [--results <results.json>] [--json] [--concurrency <1-4>] [--rpc <url>] [--deployment <file>]
+               [--trust-anchor <AID>] [--max-head-age <s>]
+                                                    verifies every proof as verify-batch does (one pinned block, check 5
+                                                    bound to the request's EORI) and matches it to the request's lines by
+                                                    batch ID: ANSWERED, NEEDS_ACTION (another supplier, CN code or origin,
+                                                    fewer tonnes, a requested field not disclosed), NOT_VERIFIED, MISSING;
+                                                    extra fields disclosed are a warning. --results writes verify-batch
+                                                    results for portfolio and audit-pack (unusable lines on defaults).
+                                                    Exit 3 if a verification could not run, else 1 if a line is not
+                                                    ANSWERED, else 0
   verify       --proof <proof.json> [--rpc <url>] [--deployment <file>]
                                                     RPC: --rpc, else CARBONLEI_RPC_URL (comma-separated URLs), else
                                                     the public Sepolia nodes; each request times out after 8 s
@@ -272,6 +319,36 @@ function advisoryNote(proof: Presentation, disclosed: Record<string, string>, co
     : `the auditor-signed reconciliation is flagged by ${rules}; needs human review`;
 }
 
+/** `present --request`: one proof answering one line of an importer's data request. */
+function presentForRequest(values: Record<string, unknown>, cred: SignedCredential): number {
+  const r = parseRequest(readJson(values.request as string));
+  const line = selectLine(r, { ...(values.line ? { lineId: values.line as string } : {}), ...(values["batch-id"] ? { batchId: values["batch-id"] as string } : {}) });
+  const fields = answerFields(r, cred, { ...(values.fields ? { fields: (values.fields as string).split(",") } : {}), overDisclose: values["over-disclose"] as boolean });
+  const wrong = lineCredentialProblems(line, cred);
+  if (wrong.length) throw new RequestError(wrong);
+  const hidden = check8HiddenFields(cred.core ?? JSON.parse(cred.coreJson), fields);
+  if (hidden.length) {
+    const msg = `the request leaves out ${hidden.join(", ")}, which check 8 needs: the proof would verify Not verified (INCOMPLETE)`;
+    if (!values["allow-incomplete"]) throw new Error(`${msg}; ask the importer for a request with the fields, or pass --allow-incomplete`);
+    console.error(`warning: ${msg}`);
+  }
+  const shipmentDate = (values["shipment-date"] as string | undefined) ?? line.importDate;
+  if (!shipmentDate) throw new Error(`line ${line.lineId} has no import date: pass --shipment-date <YYYY-MM-DD>`);
+  const shipment = {
+    batchId: line.reference,
+    quantityTonnes: (values.quantity as string | undefined) ?? line.quantityTonnes,
+    shipmentDate,
+    importerSalt: ((values["importer-salt"] as string) ?? newSalt()) as Hex,
+  };
+  const ev = values["evidence-from"] ? evidenceFrom(values["evidence-from"] as string, cred) : {};
+  write(values.out as string | undefined, { ...present(cred, fields, shipment), ...ev });
+  const more = fields.length > r.fields.required.length + r.fields.extra.length;
+  console.error(
+    `answers line ${line.lineId} (batch ${line.reference}, ${shipment.quantityTonnes} t) of ${r.requestId}: ${fields.length} fields${more ? " (more than requested: --over-disclose)" : ""}${values["evidence-from"] ? "" : "; no evidence attached (--evidence-from <proof.json> adds what checks 6-8 read)"}`,
+  );
+  return 0;
+}
+
 async function main(argv: string[]) {
   const [command, ...rest] = argv;
   const { values, positionals } = parseArgs({
@@ -334,6 +411,13 @@ async function main(argv: string[]) {
       "block-hash": { type: "string" },
       offline: { type: "boolean", default: false },
       "expect-manifest": { type: "string" },
+      request: { type: "string" },
+      line: { type: "string" },
+      "over-disclose": { type: "boolean", default: false },
+      "importer-name": { type: "string" },
+      "extra-fields": { type: "string" },
+      due: { type: "string" },
+      results: { type: "string" },
     },
   });
 
@@ -364,7 +448,10 @@ async function main(argv: string[]) {
     }
     case "present": {
       const file = readJson(values.credential as string);
-      const cred = (file.credential ?? file) as SignedCredential;
+      const raw = file.credential ?? file;
+      // A bare credential, `carbonlei issue` output, or the recorded fixture shape (coreJson without the parsed core).
+      const cred = (raw?.coreJson && !raw.core ? { ...raw, core: JSON.parse(raw.coreJson) } : raw) as SignedCredential;
+      if (values.request) return presentForRequest(values, cred);
       const fields = values.fields ? (values.fields as string).split(",") : [...DEMO_DISCLOSURE];
       const hidden = check8HiddenFields(cred.core ?? JSON.parse(cred.coreJson), fields);
       if (hidden.length) {
@@ -406,7 +493,19 @@ async function main(argv: string[]) {
     case "present-batch": {
       const target = positionals[0];
       if (!target || !values.out) throw new Error("usage: carbonlei present-batch <book.json> --out <dir> [--credential <credential.json>]");
-      const { book, cred } = loadBook(target, values.credential as string | undefined);
+      const loaded = loadBook(target, values.credential as string | undefined);
+      const cred = loaded.cred;
+      let book = loaded.book;
+      // --request: only the requesting importer's batches named by the request, with the requested fields.
+      const request = values.request ? parseRequest(readJson(values.request as string)) : undefined;
+      const plan = request
+        ? planRequestBatches(request, book, cred, { overDisclose: values["over-disclose"] as boolean, bookFields: (b) => fieldsFor(loaded.book, b) })
+        : undefined;
+      if (plan) {
+        book = plan.book;
+        for (const w of plan.warnings) console.error(`warning: ${w}`);
+        for (const n of plan.notInBook) console.error(`warning: line ${n.lineId} (${n.reference}): ${n.reason}; the importer will see it MISSING`);
+      }
       const evidence = values["evidence-from"] ? evidenceFrom(values["evidence-from"] as string, cred) : undefined;
       let ready: Set<string> | undefined;
       if (values.check) {
@@ -423,7 +522,7 @@ async function main(argv: string[]) {
       const pack = buildSharePack(cred, book, { ...(evidence ? { evidence } : {}), ...(ready ? { only: (b) => ready!.has(b.batchId) } : {}), allowIncomplete });
       for (const p of pack.proofs.filter((x) => x.incomplete))
         console.error(`warning: ${p.file} hides ${p.incomplete!.join(", ")}, which check 8 needs: the buyer's verifier will return Not verified (INCOMPLETE)`);
-      const manifest = writeSharePack(values.out as string, book, cred, pack);
+      const manifest = writeSharePack(values.out as string, book, cred, pack, new Date(), request && plan ? { requestId: request.requestId, notInBook: plan.notInBook } : undefined);
       if (values.json) process.stdout.write(json(manifest) + "\n");
       else {
         for (const p of manifest.proofs) console.log(`wrote ${p.file}  (${p.importer}, batch ${p.batchId}, ${p.fields.length} fields)`);
@@ -431,6 +530,74 @@ async function main(argv: string[]) {
         console.log(`${manifest.proofs.length} proof(s) and share-pack.json in ${values.out}${evidence ? "" : "; no evidence attached (--evidence-from <proof.json> adds the anchor and authority evidence checks 6-8 read)"}`);
       }
       return manifest.proofs.length ? 0 : 1;
+    }
+    case "request": {
+      const input = positionals[0];
+      if (!input || !values.eori || values.year === undefined || !values.out) {
+        throw new Error("usage: carbonlei request <lines.csv | lines.json> --eori <EORI> --year <YYYY> --out <dir>");
+      }
+      if (!/^\d{4}$/.test(values.year as string)) throw new Error(`--year must be a four-digit year, got ${values.year}`);
+      const text = readFileSync(input, "utf8");
+      const lines = /\.csv$/i.test(input) ? linesFromCsv(text) : linesFromJson(JSON.parse(text));
+      const requests = buildRequests(lines, {
+        eori: values.eori as string,
+        importYear: Number(values.year),
+        ...(values["importer-name"] ? { importerName: values["importer-name"] as string } : {}),
+        ...(values["extra-fields"] ? { extraFields: (values["extra-fields"] as string).split(",").map((f) => f.trim()).filter(Boolean) } : {}),
+        ...(values.due ? { defaultDueDate: values.due as string } : {}),
+      });
+      const dir = values.out as string;
+      // Never overwrite: a request already sent keeps its ID.
+      for (const r of requests) if (existsSync(join(dir, requestFileName(r)))) throw new Error(`${join(dir, requestFileName(r))} already exists; write the requests to a new folder (nothing written)`);
+      mkdirSync(dir, { recursive: true });
+      for (const r of requests) writeFileSync(join(dir, requestFileName(r)), json(r) + "\n", { flag: "wx" });
+      const listed = requests.map((r) => ({ file: join(dir, requestFileName(r)), requestId: r.requestId, supplier: r.supplier, lines: r.lines.length, fields: r.fields.required.length + r.fields.extra.length }));
+      if (values.json) process.stdout.write(json(listed) + "\n");
+      else {
+        for (const l of listed) console.log(`wrote ${l.file}  (${l.supplier.lei}${l.supplier.name ? ` ${l.supplier.name}` : ""}: ${l.lines} line(s), ${l.fields} fields, ${l.requestId})`);
+        console.log(`${requests.length} request(s). Not a CBAM Registry message and not an O3CI function: send each file to its supplier yourself; check the answer with carbonlei check-response --request <file> <proofs>`);
+      }
+      return 0;
+    }
+    case "check-response": {
+      if (!values.request || !positionals.length) throw new Error("usage: carbonlei check-response --request <request.json> <proof.json | folder>…");
+      // Exit 3 for any failure (unreadable request or proof, RPC), so a script can tell it from "not answered" (1).
+      try {
+        const requestText = readFileSync(values.request as string, "utf8");
+        const r = parseRequest(JSON.parse(requestText));
+        const files: { name: string; path: string }[] = [];
+        for (const t of positionals) {
+          if (statSync(t).isDirectory()) for (const e of loadBatchInput(t).entries) files.push({ name: join(t, e.line.proof as string), path: e.proofPath! });
+          else files.push({ name: t, path: t });
+        }
+        const doc = await checkResponse(
+          r,
+          requestText,
+          files.map((f) => ({ name: f.name, text: readFileSync(f.path, "utf8"), loadBundle: bundleLoader(f.path) })),
+          reader(values),
+          {
+            trustAnchor: values["trust-anchor"] as string | undefined,
+            maxHeadAgeSec: maxHeadAge(values),
+            concurrency: values.concurrency === undefined ? DEFAULT_CONCURRENCY : Number(values.concurrency),
+            within: withinDeadline,
+          },
+        );
+        if (values.out) write(values.out as string, doc);
+        if (values.csv) writeFileSync(values.csv as string, responseCsv(doc));
+        if (values.results) {
+          // Proof names relative to the results file, as audit-pack resolves them (its --proofs default).
+          const base = dirname(resolve(values.results as string));
+          const results = responseResults(doc, (name) => relative(base, resolve(name)));
+          write(values.results as string, batchDocument(results, { pinnedBlock: doc.pinnedBlock === null ? undefined : BigInt(doc.pinnedBlock), chainId: doc.chainId ?? undefined, eori: doc.importerEori }));
+        }
+        if (values.json) process.stdout.write(json(doc) + "\n");
+        else console.log(printResponseCheck(doc));
+        return responseExitCode(doc);
+      } catch (err) {
+        console.error(`error: ${(err as Error).message}`);
+        if (values.json) process.stdout.write(json({ error: (err as Error).message }) + "\n");
+        return EXIT.ERROR;
+      }
     }
     case "verify": {
       const proofText = readFileSync(values.proof as string, "utf8");

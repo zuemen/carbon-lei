@@ -140,6 +140,19 @@ export const SUMMARY_COMMUNICATION_FIELDS: readonly { section: string; cell: str
 const SIGNED = new Set<string>(CLAIM_ORDER);
 
 /**
+ * The signed credential fields this export copies into the template (D12, D16-D17, D20-D21, F25, I25, L25). A field
+ * the supplier hides is exported blank as "hidden by supplier"; `carbonlei request` asks for all of them.
+ */
+export const COMMUNICATION_CLAIMS = [
+  "installationName",
+  "unLocode",
+  "reportingPeriod",
+  "cnCode",
+  "specificEmbeddedEmissions_tCO2e_per_t",
+] as const satisfies readonly ClaimName[];
+const EXPORTED = new Set<string>(COMMUNICATION_CLAIMS);
+
+/**
  * Refuses a verdict that is not VALID with check 5 bound to an EORI: only a value the verification accepted for
  * this importer is copied into the template's fields.
  */
@@ -161,6 +174,7 @@ export function communicationRows(v: Verdict): CommunicationRow[] {
   /** A signed claim: its disclosed value, or "hidden by supplier" when the supplier withheld it. */
   const claim = (name: ClaimName, transform: (s: string) => string = (s) => s, how = "") => {
     if (!SIGNED.has(name)) throw new Error(`not a credential field: ${name}`);
+    if (!EXPORTED.has(name)) throw new Error(`${name} is not in COMMUNICATION_CLAIMS`);
     const source = `signed field ${name}${how ? `, ${how}` : ""} (verified: check 2)`;
     return d[name] === undefined
       ? { value: "", source: `signed field ${name}, not disclosed in this proof`, status: "hidden by supplier" as const }

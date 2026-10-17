@@ -863,6 +863,39 @@ export function csvField(v: string | number | null | undefined): string {
   return /[",;\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+/** RFC 4180 CSV (quoted fields, doubled quotes, CRLF or LF); a UTF-8 BOM is dropped; blank lines are skipped. */
+export function parseCsv(text: string): string[][] {
+  const s = text.replace(/^﻿/, "");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  let i = 0;
+  const endRow = () => {
+    row.push(field);
+    if (!(row.length === 1 && row[0] === "")) rows.push(row);
+    row = [];
+    field = "";
+  };
+  while (i < s.length) {
+    const c = s[i];
+    if (quoted) {
+      if (c === '"' && s[i + 1] === '"') (field += '"'), (i += 2);
+      else if (c === '"') (quoted = false), i++;
+      else (field += c), i++;
+      continue;
+    }
+    if (c === '"' && field === "") (quoted = true), i++;
+    else if (c === ",") row.push(field), (field = ""), i++;
+    else if (c === "\r" && s[i + 1] === "\n") endRow(), (i += 2);
+    else if (c === "\n" || c === "\r") endRow(), i++;
+    else (field += c), i++;
+  }
+  if (quoted) throw new Error("CSV: a quoted field is not closed");
+  if (field !== "" || row.length) endRow();
+  return rows;
+}
+
 /** The declaration worksheet as CSV text (CRLF line ends, header row first, a title row before it). */
 export function worksheetCsv(p: PortfolioSummary): string {
   const rows: string[][] = [];
