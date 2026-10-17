@@ -1,0 +1,49 @@
+name: e2e-browsers
+
+# On demand, the browser tests run in Chromium, Firefox and WebKit against the hosted demo page, one job per
+# browser, with no retries, so each count in README Measurements can be checked on a clean machine.
+# No secrets are used.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-browsers
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: ${{ matrix.browser }} against the hosted page
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      DEMO_URL: https://zuemen.github.io/carbon-lei/
+      PW_BROWSERS: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install ${{ matrix.browser }} for Playwright
+        working-directory: demo
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Playwright e2e (no retries)
+        working-directory: demo
+        run: npx playwright test --workers=1 --retries=0
+      - name: Keep the Playwright traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ matrix.browser }}
+          path: demo/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
