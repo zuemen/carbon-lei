@@ -8,10 +8,30 @@
 import { emissionsClaimRegistryAbi } from "./abi.ts";
 import type { ChainReader, ReportRecord, ShipmentStatus } from "./chain.ts";
 import { batchKeyOf, importerCommitOf, reportKeyOf, ZERO32 } from "./commitment.ts";
+import { check8HiddenFields, RECONCILED_CLAIMS } from "./consistency.ts";
 import { CLAIM_ORDER, REQUIRED_DISCLOSURES, tonnesToKg, type Hex } from "./credential.ts";
 import { isSalt, sha256Hex } from "./encoding.ts";
 import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, present, type SignedCredential } from "./issue.ts";
+
+// ------------------------------------------------------------------ disclosure presets
+
+/**
+ * The fewest fields a proof can disclose and still verify VALID: the required ones (checks 3-5) plus every field
+ * check 8 reconciles (`RECONCILED_CLAIMS`), since the credential core commits to a signed reconciliation. Hidden:
+ * UN/LOCODE, value type and the verification body's LEI (and the supplier-private fields, never disclosed).
+ */
+export const MINIMAL_VERIFIABLE_DISCLOSURE: readonly string[] = CLAIM_ORDER.filter(
+  (n) => (REQUIRED_DISCLOSURES as readonly string[]).includes(n) || (RECONCILED_CLAIMS as readonly string[]).includes(n),
+);
+
+/** Field presets offered to a supplier (the demo's Allocations tab): each one verifies VALID (sdk/test/disclosure-presets.test.ts). */
+export const DISCLOSURE_PRESETS = {
+  /** What an importer needs for a CBAM declaration (the demo default, 21 fields). */
+  importer: DEMO_DISCLOSURE,
+  /** The fewest fields that still verify VALID (18 fields). */
+  minimal: MINIMAL_VERIFIABLE_DISCLOSURE,
+} as const satisfies Record<string, readonly string[]>;
 
 // ------------------------------------------------------------------ the book
 
@@ -150,9 +170,15 @@ export interface AllocationSnapshot {
 export interface ReportRef {
   credSAID: string;
   batchSalt: Hex;
+  /** The credential core commits to a signed reconciliation: proofs must disclose the fields check 8 needs. */
+  reconciliation?: boolean;
 }
 
-export const reportRefOf = (cred: SignedCredential): ReportRef => ({ credSAID: cred.core.d, batchSalt: cred.claims.batchSalt });
+export const reportRefOf = (cred: SignedCredential): ReportRef => ({
+  credSAID: cred.core.d,
+  batchSalt: cred.claims.batchSalt,
+  ...(cred.core.reconciliation ? { reconciliation: true } : {}),
+});
 
 export const batchKeysOf = (book: AllocationBook, ref: ReportRef): Hex[] =>
   book.batches.map((b) => batchKeyOf(reportKeyOf(ref.credSAID), b.batchId, ref.batchSalt));
@@ -265,7 +291,8 @@ export type IssueCode =
   | "REPORT_REVOKED"
   | "UNKNOWN_CLAIM"
   | "UNACCOUNTED_KG"
-  | "SALT_REUSED";
+  | "SALT_REUSED"
+  | "FIELDS_INCOMPLETE";
 
 export interface AllocationIssue {
   code: IssueCode;
@@ -302,6 +329,8 @@ export interface SharePackPlanEntry {
   importer: string;
   importerName?: string;
   fields: string[];
+  /** Fields check 8 needs that this importer's proofs hide: they would verify INCOMPLETE (present-batch skips them). */
+  incomplete?: string[];
   proofs: { batchId: string; file: string; ready: boolean; reason: string }[];
 }
 
@@ -452,10 +481,13 @@ export function reconcile(book: AllocationBook, ref: ReportRef, snap: Allocation
   const sharePack: SharePackPlanEntry[] = book.importers
     .map((im) => {
       const mine = book.batches.filter((b) => b.importer === im.id);
+      const fields = mine.length ? fieldsFor(book, mine[0]) : fieldsFor(book, { importer: im.id } as BookBatch);
+      const hidden = check8HiddenFields({ reconciliation: ref.reconciliation }, fields);
       return {
         importer: im.id,
         ...(im.name ? { importerName: im.name } : {}),
-        fields: mine.length ? fieldsFor(book, mine[0]) : fieldsFor(book, { importer: im.id } as BookBatch),
+        fields,
+        ...(hidden.length ? { incomplete: hidden } : {}),
         proofs: mine.map((b) => {
           const l = lines.find((x) => x.batchId === b.batchId)!;
           return { batchId: b.batchId, file: proofFileName(im.id, b.batchId), ready: l.state === "claimed" && state !== "revoked", reason: REASON[l.state] };
@@ -463,6 +495,11 @@ export function reconcile(book: AllocationBook, ref: ReportRef, snap: Allocation
       };
     })
     .filter((e) => e.proofs.length);
+  // Per batch (a batch can override its importer's fields): a proof that hides a field check 8 needs never verifies.
+  for (const b of book.batches) {
+    const hidden = check8HiddenFields({ reconciliation: ref.reconciliation }, fieldsFor(book, b));
+    if (hidden.length) issues.push({ code: "FIELDS_INCOMPLETE", severity: "action", batchId: b.batchId, detail: incompleteReason(hidden) });
+  }
 
   return {
     reportKey,
@@ -505,7 +542,7 @@ export function printAllocation(r: AllocationReport): string {
   }
   L.push("", "Share pack (one proof per batch; `carbonlei present-batch`):");
   for (const s of r.sharePack) {
-    L.push(`  ${s.importer}: ${s.fields.length} fields`);
+    L.push(`  ${s.importer}: ${s.fields.length} fields${s.incomplete ? ` — hides ${s.incomplete.join(", ")}: would verify INCOMPLETE` : ""}`);
     for (const p of s.proofs) L.push(`    ${p.ready ? "READY  " : "NOT YET"}  ${p.file} — ${p.reason}`);
   }
   if (r.issues.length) {
@@ -524,7 +561,13 @@ export interface SharePackProof {
   file: string;
   fields: string[];
   proof: Presentation;
+  /** Fields check 8 needs that this proof hides (written only with `allowIncomplete`): it verifies INCOMPLETE. */
+  incomplete?: string[];
 }
+
+/** Why a share-pack proof is not written: it hides fields check 8 needs, so the buyer's verifier says INCOMPLETE. */
+export const incompleteReason = (hidden: readonly string[]) =>
+  `hides ${hidden.join(", ")}, which check 8 needs: the buyer's verifier would return Not verified (INCOMPLETE); add the fields to the book or pass --allow-incomplete`;
 
 /** Evidence copied into every proof (from an existing proof of the same credential): checks 6-9 read it. */
 export type ProofEvidence = Pick<Presentation, "anchorEvidence" | "authorityEvidence" | "reportExtract" | "precursorEvidence">;
@@ -533,11 +576,13 @@ export type ProofEvidence = Pick<Presentation, "anchorEvidence" | "authorityEvid
  * One selective-disclosure proof per batch, with each buyer's fields (`fieldsFor`), via `present`. By default only
  * batches the book marks claimed; `only` narrows that further (e.g. to the batches `reconcile` found READY).
  * `includePlanned` also builds planned batches (the demo's preview): their proofs fail check 5 until the claim is sent.
+ * A batch whose fields hide one check 8 needs (`check8HiddenFields`) is skipped, since its proof would verify
+ * INCOMPLETE, unless `allowIncomplete` (then the proof is written and lists the hidden fields in `incomplete`).
  */
 export function buildSharePack(
   cred: SignedCredential,
   book: AllocationBook,
-  opts: { evidence?: ProofEvidence; only?: (b: BookBatch) => boolean; includePlanned?: boolean } = {},
+  opts: { evidence?: ProofEvidence; only?: (b: BookBatch) => boolean; includePlanned?: boolean; allowIncomplete?: boolean } = {},
 ): { proofs: SharePackProof[]; skipped: { batchId: string; reason: string }[] } {
   const proofs: SharePackProof[] = [];
   const skipped: { batchId: string; reason: string }[] = [];
@@ -552,6 +597,11 @@ export function buildSharePack(
       continue;
     }
     const fields = fieldsFor(book, b);
+    const hidden = check8HiddenFields(cred.core, fields);
+    if (hidden.length && !opts.allowIncomplete) {
+      skipped.push({ batchId: b.batchId, reason: incompleteReason(hidden) });
+      continue;
+    }
     const p = present(cred, fields, { batchId: b.batchId, quantityTonnes: b.quantityTonnes, shipmentDate: b.shipmentDate, importerSalt: b.importerSalt });
     const proof: Presentation = {
       ...p,
@@ -560,7 +610,7 @@ export function buildSharePack(
       ...(ev.reportExtract ? { reportExtract: ev.reportExtract } : {}),
       ...(ev.precursorEvidence ? { precursorEvidence: ev.precursorEvidence } : {}),
     };
-    proofs.push({ importer: b.importer, batchId: b.batchId, file: proofFileName(b.importer, b.batchId), fields, proof });
+    proofs.push({ importer: b.importer, batchId: b.batchId, file: proofFileName(b.importer, b.batchId), fields, proof, ...(hidden.length ? { incomplete: hidden } : {}) });
   }
   return { proofs, skipped };
 }

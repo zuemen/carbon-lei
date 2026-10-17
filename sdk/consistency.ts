@@ -56,6 +56,17 @@ export const RECONCILED_CLAIMS = [
 
 export type ReconciledClaims = Record<(typeof RECONCILED_CLAIMS)[number], string>;
 
+/**
+ * The reconciled fields (`RECONCILED_CLAIMS`) missing from `fields`, when the credential core commits to a signed
+ * reconciliation; else none. A proof that hides any of them leaves check 8 undecided, and the buyer's verifier
+ * returns INCOMPLETE (never VALID): the supplier tools warn before building such a proof.
+ */
+export function check8HiddenFields(core: { reconciliation?: unknown }, fields: readonly string[]): string[] {
+  if (!core.reconciliation) return [];
+  const shown = new Set(fields);
+  return RECONCILED_CLAIMS.filter((k) => !shown.has(k));
+}
+
 export interface Finding {
   rule: string;
   ok: boolean;

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { keccak256, stringToBytes } from "viem";
 import {
   buildSharePack,
+  DISCLOSURE_PRESETS,
   readAllocationSnapshot,
   reconcile,
   type AllocationBook,
@@ -13,20 +14,19 @@ import {
   type ReportRef,
 } from "../../../sdk/allocation.ts";
 import { batchKeyOf, importerCommitOf, ZERO32 } from "../../../sdk/commitment.ts";
-import { REQUIRED_DISCLOSURES, tonnesToKg, type Hex } from "../../../sdk/credential.ts";
+import { tonnesToKg, type Hex } from "../../../sdk/credential.ts";
 import { decodeDisclosure } from "../../../sdk/disclosure.ts";
-import { DEMO_DISCLOSURE, type SignedCredential } from "../../../sdk/issue.ts";
+import type { SignedCredential } from "../../../sdk/issue.ts";
 import { useApp } from "../App.tsx";
 import { Badge } from "../components.tsx";
 import { kgToT } from "../data.ts";
 import { useLang, type Lang } from "../i18n.ts";
 import "../allocations.css";
 
-type Profile = "importer" | "minimal";
-const PROFILE_FIELDS: Record<Profile, readonly string[]> = {
-  importer: DEMO_DISCLOSURE,
-  minimal: [...REQUIRED_DISCLOSURES, "specificEmbeddedEmissions_tCO2e_per_t"],
-};
+// The presets come from the SDK: each one still verifies VALID (sdk/test/disclosure-presets.test.ts). "minimal"
+// keeps every field check 8 reconciles, since the credential commits to a signed reconciliation.
+type Profile = keyof typeof DISCLOSURE_PRESETS;
+const PROFILE_FIELDS: Record<Profile, readonly string[]> = DISCLOSURE_PRESETS;
 
 /** Fictional planned buyers: in this browser only, never on-chain. Salts are fixed so the page is reproducible. */
 const PLANNED = [
@@ -48,7 +48,7 @@ const TXT = {
     fields: "Fields",
     qtyLabel: (b: string) => `Planned quantity in tonnes for ${b}`,
     fieldsLabel: (b: string) => `Fields for ${b}`,
-    profile: { importer: "Importer set (CBAM)", minimal: "Minimal (intensity only)" } as Record<Profile, string>,
+    profile: { importer: "Importer set (CBAM)", minimal: "Minimal that still verifies" } as Record<Profile, string>,
     state: {
       claimed: "On-chain claim (Sepolia)",
       mismatch: "On-chain, differs from the book",
@@ -80,6 +80,7 @@ const TXT = {
     readyNow: "verifies now for this buyer's EORI",
     afterClaim: "verifies only after the claim is sent; until then check 5 fails",
     noProof: "no proof: the contract would refuse this claim",
+    noProofIncomplete: "no proof: these fields hide what check 8 needs, so the buyer's verifier would return Not verified (INCOMPLETE)",
     open: "Open in the Buyer tab →",
     fine: "Rows 2 and 3 and their importers are fictional and exist only in this browser; only row 1 is on-chain. EORIs and salts stay with the supplier: the chain holds commitments only. Same code as the CLI: carbonlei allocate and carbonlei present-batch.",
   },
@@ -94,7 +95,7 @@ const TXT = {
     fields: "欄位",
     qtyLabel: (b: string) => `${b} 的計畫數量（噸）`,
     fieldsLabel: (b: string) => `${b} 可看到的欄位`,
-    profile: { importer: "進口商組合（CBAM）", minimal: "最少（僅排放強度）" } as Record<Profile, string>,
+    profile: { importer: "進口商組合（CBAM）", minimal: "最少欄位（仍可驗證通過）" } as Record<Profile, string>,
     state: {
       claimed: "鏈上申領（Sepolia）",
       mismatch: "鏈上紀錄與帳簿不符",
@@ -126,6 +127,7 @@ const TXT = {
     readyNow: "現在即可對此買方的 EORI 驗證通過",
     afterClaim: "須先送出申領才能驗證；在此之前檢查 5 不會通過",
     noProof: "不產生證明：合約會拒絕這筆申領",
+    noProofIncomplete: "不產生證明：這組欄位隱藏了檢查 8 需要的欄位，買方的驗證器將回傳「未驗證（INCOMPLETE）」",
     open: "在買方分頁開啟 →",
     fine: "第 2、3 列及其進口商皆為虛構，只存在於此瀏覽器；只有第 1 列在鏈上。EORI 與鹽值留在供應商手中：鏈上只有承諾值。與 CLI 相同的程式碼：carbonlei allocate 與 carbonlei present-batch。",
   },
@@ -144,6 +146,8 @@ export function Allocations() {
   const [source, setSource] = useState<"live" | "cached" | "failed" | null>(null);
   const [dry, setDry] = useState<Record<string, string> | null>(null);
   const [pack, setPack] = useState<{ id: string; name: string; batchId: string; file: string; n: number; url: string; text: string; ready: boolean }[] | null>(null);
+  // Batches buildSharePack refused because their fields hide one check 8 needs (none with the SDK presets).
+  const [incomplete, setIncomplete] = useState<Set<string>>(new Set());
 
   const core = useMemo(() => JSON.parse(data.credential.coreJson) as { d: string }, [data]);
   const ref: ReportRef = useMemo(
@@ -254,7 +258,7 @@ export function Allocations() {
     pack?.forEach((p) => URL.revokeObjectURL(p.url));
     const cred = { core, coreJson: data.credential.coreJson, signature: data.credential.signature, disclosures: data.credential.disclosures } as unknown as SignedCredential;
     const refused = new Set(report.batches.filter((b) => b.state === "over-allocated" || b.state === "blocked").map((b) => b.batchId));
-    const { proofs } = buildSharePack(cred, book, {
+    const { proofs, skipped } = buildSharePack(cred, book, {
       includePlanned: true,
       only: (b) => !refused.has(b.batchId),
       evidence: {
@@ -263,6 +267,7 @@ export function Allocations() {
         ...(data.proof.reportExtract ? { reportExtract: data.proof.reportExtract } : {}),
       },
     });
+    setIncomplete(new Set(skipped.filter((k) => k.reason.startsWith("hides ")).map((k) => k.batchId)));
     setPack(
       proofs.map((p) => {
         const text = JSON.stringify(p.proof, null, 2);
@@ -417,6 +422,8 @@ export function Allocations() {
                             </>
                           )}
                         </>
+                      ) : incomplete.has(b.batchId) ? (
+                        t.noProofIncomplete
                       ) : (
                         t.noProof
                       )}

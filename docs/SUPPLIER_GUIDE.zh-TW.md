@@ -124,6 +124,7 @@ node sdk/cli.ts allocate docs/examples/allocation-book.json
 | `CLAIM_MISSING` | 帳簿寫已申領，鏈上找不到 | 交易沒送、被退回，或批號／鹽值打錯；修好前不要寄證明 |
 | `QUANTITY_MISMATCH`、`IMPORTER_MISMATCH` | 鏈上噸數或買方跟帳簿不同 | 鏈上的申領**改不了**，那個批號已經用掉；記錄原因，剩下的貨用新批號申領 |
 | `UNKNOWN_CLAIM` | 鏈上有這份報告的申領，帳簿裡沒有 | 帳簿漏記，或你的錢包金鑰被別人用了，要立刻查 |
+| `FIELDS_INCOMPLETE` | 這一批的欄位藏了檢查 8 需要的欄位 | 證明驗起來只會是 INCOMPLETE；把欄位補回帳簿（見〈[4. 哪些欄位可以藏起來？](#4-哪些欄位可以藏起來)〉） |
 
 ### 步驟 6：一次產生所有買方的證明（`present-batch`）
 
@@ -137,6 +138,7 @@ node sdk/cli.ts present-batch docs/examples/allocation-book.json --check \
 - `share-pack.json` 記錄哪個檔案給誰、含哪些欄位，**不含 EORI、不含鹽值**。
 - `--check` 先跟鏈上對帳，只產生申領吻合的批次（示範帳簿只會產生第 1 批，第 2、3 批還沒申領會被略過）。
 - `--evidence-from` 從既有的證明複製查核員錨定、授權鏈等證據，檢查 6–8 需要它們。
+- 某一批的欄位若藏了檢查 8 需要的欄位，會被略過（`skipped … hides …`），因為那份證明在客戶端只會是 INCOMPLETE；確定要給才加 `--allow-incomplete`。
 
 ### 步驟 7：每位客戶只寄他自己那一份
 
@@ -177,7 +179,9 @@ node sdk/cli.ts export-communication share-pack/demo-imports--BATCH-DEMO-2026-00
 | **可以放心隱藏**（隱藏後仍可 VALID） | 營運者 ID、設施名稱、UN/LOCODE、數值類型、驗證機構 LEI | 示範證明本來就藏了營運者 ID 和設施名稱。我們 2026-10-17 在 Sepolia 實測：再多藏 UN/LOCODE、數值類型、驗證機構 LEI，結果仍是 VALID。但藏了 UN/LOCODE，客戶的 `export-communication` 就填不出國家和 UN/LOCODE |
 | **藏了會變 INCOMPLETE** | 排放強度、認證編號、認證機構、現場訪查、保證等級、重大性門檻、簽發時間、有效期限 | 檢查 8 要用這些欄位比對查證報告。少一個，檢查 8 就無法判定，結果是 INCOMPLETE，**永遠不會是 VALID** |
 
-給要用實際值申報的歐盟進口商，建議用預設的 21 個欄位。範例帳簿裡給 `demo-nordic` 的 11 個欄位，產生的證明驗起來會是 INCOMPLETE（我們實測過），客戶不能拿它當作可用的實際值。
+給要用實際值申報的歐盟進口商，建議用預設的 21 個欄位。範例帳簿裡的 `demo-nordic` 用的是「最少欄位」組合：一定要給的 10 個，加上檢查 8 需要的欄位，共 18 個，只藏 UN/LOCODE、數值類型、驗證機構 LEI，驗起來仍是 VALID（`sdk/test/disclosure-presets.test.ts` 以錄下的 Sepolia 回應實際驗證）。網頁示範「分配」區的「最少欄位（仍可驗證通過）」選項就是這一組。
+
+**防呆：** 帳簿裡某位買方的欄位若藏了檢查 8 需要的欄位，`allocate` 會列出 `FIELDS_INCOMPLETE`（要處理，結束碼 1），`present-batch` 會略過那一批並寫明原因，`present --fields` 會直接拒絕。只有在你確定要這樣給（例如客戶只拿來參考、不當實際值申報）時才加 `--allow-incomplete`：證明照樣產生，但會印出警告。網頁「供應商」分頁取消勾選這些欄位時，也會先提示買方的驗證器將回傳「未驗證（INCOMPLETE）」。
 
 ---
 

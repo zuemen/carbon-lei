@@ -66,12 +66,12 @@ test("AL3 allocations: proofs for all buyers — one download per buyer with its
   await expect(pack).toHaveCount(3);
   await expect(pack.nth(0)).toContainText("21 fields · verifies now for this buyer's EORI");
   await expect(pack.nth(1)).toContainText("no proof: the contract would refuse this claim");
-  await expect(pack.nth(2)).toContainText("11 fields · verifies only after the claim is sent");
+  await expect(pack.nth(2)).toContainText("18 fields · verifies only after the claim is sent");
 
   const [download] = await Promise.all([page.waitForEvent("download"), pack.nth(2).getByRole("link").click()]);
   expect(download.suggestedFilename()).toBe("demo-nordic--BATCH-DEMO-2026-0003--b516fb340b.proof.json");
   const proof = JSON.parse(await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString("utf8")));
-  expect(proof.disclosures).toHaveLength(11);
+  expect(proof.disclosures).toHaveLength(18);
   expect(proof.shipment.batchId).toBe("BATCH-DEMO-2026-0003");
 
   await pack.nth(0).getByRole("button", { name: "Open in the Buyer tab →" }).click();
@@ -121,4 +121,47 @@ test("AL5 390 px in 繁體中文: the contract check's answer is a full-width ro
   expect(lines).toBe(1);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("AL6 the minimal preset still verifies: row 1 (the Sepolia claim) set to minimal gives an 18-field proof the Buyer tab stamps Verified, check 8 decided", async ({ page }) => {
+  await openAllocations(page);
+  await connected(page);
+  const select = page.getByRole("combobox", { name: /Fields for Demo Imports/ });
+  await expect(select.locator("option")).toHaveText(["Importer set (CBAM) · 21", "Minimal that still verifies · 18"]);
+  await select.selectOption("minimal");
+  await section(page).getByRole("button", { name: "Make proofs for all buyers" }).click();
+  const first = section(page).locator(".alloc-pack li").nth(0);
+  await expect(first).toContainText("18 fields · verifies now for this buyer's EORI");
+  await first.getByRole("button", { name: "Open in the Buyer tab →" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText("Verified");
+  await expect(page.locator("ol.checks > li", { hasText: "The report matches the signed credential" })).toContainText("✓ Passed");
+});
+
+test("AL7 Supplier tab: unticking a field check 8 needs warns that the buyer will get Not verified (INCOMPLETE); the proof says so; ticking it again clears it", async ({ page }) => {
+  await page.goto("./#supplier");
+  const disc = page.locator("section[aria-labelledby=disc-h]");
+  await expect(disc.getByText("Accreditation body (check 8 needs it)")).toBeVisible();
+  await expect(page.getByTestId("c8-warning")).toHaveCount(0);
+  const box = disc.getByRole("checkbox", { name: "Accreditation body (check 8 needs it)" });
+  await box.uncheck();
+  await expect(page.getByTestId("c8-warning")).toContainText("Hidden: Accreditation body. Check 8 needs these fields");
+  await expect(page.getByTestId("c8-warning")).toContainText("Not verified (INCOMPLETE)");
+  await disc.getByRole("button", { name: "Create the supplier's proof" }).click();
+  await expect(disc.locator("details > summary")).toContainText("20 fields disclosed — This proof hides fields check 8 needs");
+  // Verified in the Buyer tab, the proof is Not verified (never Verified).
+  await disc.getByRole("button", { name: "Use this proof in the Buyer tab →" }).click();
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toHaveText("Not verified");
+  // Hiding a field check 8 does not need (UN/LOCODE) gives no warning.
+  await page.goto("./?lang=zh-TW#supplier");
+  const zh = page.locator("section[aria-labelledby=disc-h]");
+  await zh.getByRole("checkbox", { name: "UN/LOCODE" }).uncheck();
+  await expect(page.getByTestId("c8-warning")).toHaveCount(0);
+  await zh.getByRole("checkbox", { name: "現場訪查（檢查 8 需要）" }).uncheck();
+  await expect(page.getByTestId("c8-warning")).toContainText("已隱藏：現場訪查。");
+  await expect(page.getByTestId("c8-warning")).toContainText("未驗證（INCOMPLETE）");
+  await zh.getByRole("checkbox", { name: "現場訪查（檢查 8 需要）" }).check();
+  await expect(page.getByTestId("c8-warning")).toHaveCount(0);
+  await scan(page, "Supplier tab with the check 8 warning");
 });

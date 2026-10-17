@@ -16,7 +16,8 @@
       "eori": "SEDEMO000000003",
       "fields": [
         "supplierLEI", "installationId", "cnCode", "cbamRoute", "reportingPeriod", "verifiedTonnes",
-        "specificEmbeddedEmissions_tCO2e_per_t", "methodologyNote", "verificationReportId", "idSalt", "batchSalt"
+        "specificEmbeddedEmissions_tCO2e_per_t", "methodologyNote", "verificationReportId", "accreditationNumber",
+        "nabName", "siteVisit", "assuranceLevel", "materialityThreshold", "idSalt", "batchSalt", "issuedAt", "validUntil"
       ]
     }
   ],
