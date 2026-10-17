@@ -452,7 +452,9 @@ export function Attacks() {
     }));
   }
 
-  const Result = ({ id }: { id: string }) => {
+  // A plain function, not a component defined here: a component type created on every render would be remounted on
+  // every re-render, restarting the stamp's fade-in and re-announcing the status region (CI axe, 2026-10-17).
+  const result = (id: string) => {
     const o = out[id];
     if (!o) return null;
     const r = o.show(zh);
@@ -482,7 +484,7 @@ export function Attacks() {
           <button className="btn" disabled={busy === "a1" || waiting} onClick={attack1}>
             {rt.a1Button}
           </button>
-          <Result id="a1" />
+          {result("a1")}
         </div>
 
         <div className="attack">
@@ -494,7 +496,7 @@ export function Attacks() {
           <button className="btn" disabled={busy === "a2a" || waiting} onClick={() => dry("a2a")}>
             {rt.a2aButton}
           </button>
-          <Result id="a2a" />
+          {result("a2a")}
         </div>
 
         {/* The first screen's ledger strip links here (focus target). */}
@@ -516,7 +518,7 @@ export function Attacks() {
           <button className="btn" disabled={busy === "a2b" || waiting} onClick={() => dry("a2b")}>
             {rt.a2bButton(data.attacks.secondImporter.quantityTonnes)}
           </button>
-          <Result id="a2b" />
+          {result("a2b")}
         </div>
 
         <div className="attack">
