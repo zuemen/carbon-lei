@@ -1,5 +1,5 @@
-// carbonlei CLI: issue, present, present-batch, allocate, verify, verify-batch, portfolio, recheck, serve, export-pact,
-// export-communication, import-template.
+// carbonlei CLI: issue, present, present-batch, allocate, verify, verify-batch, portfolio, recheck, audit-pack,
+// verify-pack, serve, export-pact, export-communication, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
 import { readFileSync, statSync, writeFileSync } from "node:fs";
@@ -35,6 +35,7 @@ import {
 import { buildPortfolio, worksheetCsv } from "./portfolio.ts";
 import { loadRecords } from "./recheck-files.ts";
 import { applyRecheck, postWebhook, printRecheck, recheckExitCode, recheckRecords, webhookPayload, type RecheckDocument } from "./recheck.ts";
+import { createAuditPack, printVerifyPack, verifyPackExitCode, verifyPackOffline, verifyPackOnChain } from "./audit-pack.ts";
 import { createApiServer, DEFAULTS as SERVE_DEFAULTS, isLoopback } from "./server.ts";
 import { vleiCheckers } from "./checkers.ts";
 import type { AccreditationRegistry } from "./verification-rules.ts";
@@ -122,6 +123,26 @@ const USAGE = `carbonlei <command> [options]
                                                     Exit 3 if a record could not be re-checked, else 1 if any needs
                                                     action, else 0. --webhook (or CARBONLEI_RECHECK_WEBHOOK_URL) POSTs
                                                     the changed lines only, without EORI; schema docs/schemas/recheck.schema.json
+  audit-pack   <results.json> --out <dir> [--year <YYYY>] [--recheck <recheck.json>] [--portfolio <summary.json>]
+               [--csv <worksheet.csv>] [--proofs <folder>] [--proofs-root <folder>] [--block-hash <0x…>] [--json]
+               [--rpc <url>] [--deployment <file>]
+                                                    writes the year's audit evidence pack to a new folder: the results,
+                                                    every proof a line was verified from (its bytes must hash to the
+                                                    line's proofSha256), their evidence, chain ID, contract addresses,
+                                                    the pinned block and its hash (read once from the RPC unless
+                                                    --block-hash), tool, import year and the retention date (31 Dec of
+                                                    year + 5: Reg. (EU) 2023/956 Art 7(6)), lines.csv, README.txt and
+                                                    manifest.json (SHA-256 and size of every file). Proof names are
+                                                    relative to --proofs (default: the results file's folder) and must
+                                                    stay inside --proofs-root (default: --proofs). Not a signature, not
+                                                    a legal opinion, not a Registry submission
+  verify-pack  <dir> [--offline] [--expect-manifest <sha256>] [--json] [--concurrency <1-4>] [--rpc <url>]
+               [--deployment <file>]
+                                                    recomputes every hash of an audit pack (missing, extra, changed
+                                                    files, links, ../ paths are failures); unless --offline, confirms
+                                                    the pinned block's hash and re-verifies every proof at that block:
+                                                    MATCH or DIFFERS per line. Exit 1 on any change or difference,
+                                                    else 3 if a re-verification could not run, else 0
   serve        [--port 8787] [--host 127.0.0.1] [--cors-origin <origin>] [--evidence-dir <dir>] [--max-body <bytes>]
                [--timeout <s>] [--body-timeout <s>] [--max-concurrent <n>] [--rpc <url>] [--deployment <file>]
                [--trust-anchor <AID>]
@@ -308,6 +329,11 @@ async function main(argv: string[]) {
       "evidence-from": { type: "string" },
       check: { type: "boolean", default: false },
       "allow-incomplete": { type: "boolean", default: false },
+      portfolio: { type: "string" },
+      "proofs-root": { type: "string" },
+      "block-hash": { type: "string" },
+      offline: { type: "boolean", default: false },
+      "expect-manifest": { type: "string" },
     },
   });
 
@@ -570,6 +596,63 @@ async function main(argv: string[]) {
         if (!sent.ok) code = EXIT.ERROR;
       } else if (hook) console.error("webhook: nothing changed, nothing sent");
       return code;
+    }
+    case "audit-pack": {
+      const file = positionals[0];
+      if (!file || !values.out) throw new Error("usage: carbonlei audit-pack <results.json> --out <dir> [--year <YYYY>] [--recheck <recheck.json>] [--portfolio <summary.json>]");
+      if (values.year !== undefined && !/^\d{4}$/.test(values.year as string)) throw new Error(`--year must be a four-digit year, got ${values.year}`);
+      const deployment = readJson((values.deployment as string) ?? fileURLToPath(new URL("../contracts/deployments/11155111.json", import.meta.url))) as Deployment;
+      // The pinned block's hash is read once from the RPC, unless the caller gives it.
+      const rd = values["block-hash"] ? undefined : reader(values);
+      const { manifest, pack, manifestSha256 } = await withinDeadline(
+        createAuditPack({
+          outDir: values.out as string,
+          resultsPath: file,
+          ...(values.year !== undefined ? { year: Number(values.year) } : {}),
+          ...(values.proofs ? { proofsDir: values.proofs as string } : {}),
+          ...(values["proofs-root"] ? { proofsRoot: values["proofs-root"] as string } : {}),
+          evidenceDirs: [fileURLToPath(new URL("../demo/public/", import.meta.url))],
+          ...(values.recheck ? { recheckPath: values.recheck as string } : {}),
+          ...(values.portfolio ? { portfolioPath: values.portfolio as string } : {}),
+          ...(values.csv ? { worksheetPath: values.csv as string } : {}),
+          deployment,
+          ...(values["block-hash"] ? { blockHash: values["block-hash"] as Hex } : {}),
+          ...(rd ? { reader: rd } : {}),
+        }),
+      );
+      if (values.json) process.stdout.write(json({ manifestSha256, manifest, pack }) + "\n");
+      else {
+        console.log(`wrote ${manifest.files.length + 1} file(s) to ${values.out}: ${pack.lines.filter((l) => l.packedAs).length} proof(s), ${pack.lines.length} line(s)`);
+        console.log(`import year ${pack.importYear}: keep until ${pack.retainUntil} (declaration in ${pack.declarationYear}; Reg. (EU) 2023/956 Art 7(6), Art 9(2)-(3))`);
+        console.log(`pinned block ${pack.chain.pinnedBlock ?? "—"}, hash ${pack.chain.blockHash ?? "—"}${pack.chain.blockHashSource === "given" ? " (given, not checked)" : ""}`);
+        for (const l of pack.lines.filter((x) => x.evidenceMissing.length)) {
+          console.log(`warning: line ${l.line} ${l.id}: evidence not found with the hash its proof names: ${l.evidenceMissing.join(", ")}`);
+        }
+        console.log(`manifest SHA-256 ${manifestSha256}: record it in your archive system; the manifest detects changes but is not a signature or a timestamp`);
+      }
+      return 0;
+    }
+    case "verify-pack": {
+      const dir = positionals[0];
+      if (!dir) throw new Error("usage: carbonlei verify-pack <dir> [--offline] [--expect-manifest <sha256>] [--json]");
+      const off = verifyPackOffline(dir, values["expect-manifest"] ? { expectManifest: values["expect-manifest"] as string } : {});
+      // Fail closed: a pack whose files do not match its manifest is not re-verified against the chain.
+      let chain;
+      if (off.ok && !values.offline) {
+        try {
+          chain = await verifyPackOnChain(dir, reader(values), {
+            concurrency: values.concurrency === undefined ? DEFAULT_CONCURRENCY : Number(values.concurrency),
+            within: withinDeadline,
+          });
+        } catch (err) {
+          console.error(`error: could not re-check the pack against the chain: ${(err as Error).message}`);
+          if (values.json) process.stdout.write(json({ offline: off, error: (err as Error).message }) + "\n");
+          return EXIT.ERROR;
+        }
+      }
+      if (values.json) process.stdout.write(json({ offline: off, ...(chain ? { chain } : {}) }) + "\n");
+      else console.log(printVerifyPack(dir, off, chain));
+      return verifyPackExitCode(off, chain);
     }
     case "serve": {
       const host = (values.host as string | undefined) ?? SERVE_DEFAULTS.host;
