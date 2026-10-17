@@ -107,7 +107,9 @@ const USAGE = `carbonlei <command> [options]
                                                     when VALID and bound by check 5, else the default with the year's
                                                     mark-up; totals, 50 t de minimis, quarterly holding, certificates,
                                                     gross EUR; --benchmarks deducts the free-allocation adjustment
-                                                    (docs/OPERATE.md). The CSV is a worksheet, not the Registry XML
+                                                    (docs/OPERATE.md). The CSV is a worksheet, not the Registry XML.
+                                                    Defaults: Annex I of IR (EU) 2026/1740 for every listed country
+                                                    and CN code is built in; --defaults ({"VN:7318": "3.000"}) wins
                [--art9-ref-price <EUR>]             adds the carbon price deduction of check 10 (DRAFT Art 9
                                                     rules, not adopted: illustrative), apart from the totals
                [--recheck <recheck.json>]           a line a later re-check says needs action is planned on the default

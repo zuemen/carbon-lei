@@ -44,6 +44,7 @@
         "seeUsed": { "$ref": "#/$defs/intensity" },
         "seeVerified": { "type": "string" },
         "defaultValue": { "$ref": "#/$defs/intensity" },
+        "defaultSource": { "type": "string", "description": "Where the unmarked default comes from: the table and CN line of Annex I to IR (EU) 2026/1740 it was read from (\"Other Countries and Territories\" when the origin is not listed or shows \"-\"), or \"caller (...)\" for a value the caller passed." },
         "defaultMarkedUp": { "$ref": "#/$defs/intensity" },
         "embeddedT": { "$ref": "#/$defs/t3" },
         "allDefaultT": { "$ref": "#/$defs/t3" },

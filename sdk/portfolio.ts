@@ -7,7 +7,9 @@
 //
 // Regulatory inputs (sources in docs/OPERATE.md › Importer workbench and docs/CLIMATE_IMPACT.md):
 //   mark-ups 10 % / 20 % / 30 % for 2026 / 2027 / 2028+ (1 % for fertilisers)    IR (EU) 2026/1740, Annex I opening
-//   default for CN 7318 from Taiwan: 2.707 tCO2e/t (total = direct; indirect N/A)   IR (EU) 2026/1740, Annex I, Taiwan
+//   default values, every country and CN code of Annex I (total emissions column;  IR (EU) 2026/1740, Annex I, parsed
+//     CN 7318 from Taiwan 2.707 tCO2e/t = direct; indirect N/A); "Other Countries     by scripts/parse-default-values.mjs
+//     and Territories" when a country is not listed or shows "-"                     into data/default-values-2026-1740.json
 //   de minimis: exempt while the year's net mass does not exceed 50 t                Reg. (EU) 2023/956 Art 2a + Annex VII
 //                                                                                    (inserted by Reg. (EU) 2025/2083)
 //   quarterly holding: ≥ 50 % of the embedded emissions imported since 1 January,    Art 22(2) and (2a) as replaced by
@@ -20,6 +22,7 @@
 // figures are gross, before the free-allocation adjustment, and say so.
 import type { Verdict } from "./verdict.ts";
 import { art9Summary, type Art9Summary } from "./carbonprice.ts";
+import annexI from "./data/default-values-2026-1740.json" with { type: "json" };
 
 /** Format of `PortfolioSummary`; a change that breaks a consumer increases it. */
 export const PORTFOLIO_FORMAT = 1;
@@ -38,14 +41,26 @@ export const CBAM_FACTOR: Readonly<Record<number, number>> = {
 /** Cross-sectoral correction factor; 1.0 for 2026–2030 (2031–2034 preliminary, also 1.0). Same table. */
 export const CSCF = 1;
 
+/** One Annex I row: direct, indirect, total (tCO2e/t; null = the annex's "-", "N/A" = not applicable), route. */
+export type DefaultValueRow = [string | null, string | null, string | null, string];
+
 /**
- * Default values (tCO2e per tonne of good, total emissions, without mark-up) the SDK knows, keyed
- * `<ISO country>:<CN prefix>`. Only the demo's good is built in; pass others in `PortfolioOptions.defaults`.
+ * The default values of Annex I to IR (EU) 2026/1740 (which replaces Annex I to IR (EU) 2025/2621 from 1 January
+ * 2026), every country table and "Other Countries and Territories" (key "OTHER"), keyed by ISO 3166 alpha-2 and by
+ * CN/TARIC code without spaces. Extracted by scripts/parse-default-values.mjs from the Official Journal XHTML; `source`
+ * carries its URL, access date and SHA-256. Unmarked: the year's mark-up is applied by `markedUpDefault`.
  */
-export const BUILTIN_DEFAULTS: Readonly<Record<string, string>> = {
-  // IR (EU) 2026/1740 Annex I, Taiwan: every CN 7318 8-digit line lists 2.707 direct, N/A indirect, 2.707 total.
-  "TW:7318": "2.707",
+export const DEFAULT_VALUES = annexI as unknown as {
+  format: 1;
+  source: { act: string; part: string; url: string; eli: string; format: string; sha256: string; accessed: string; parser: string };
+  columns: ["direct", "indirect", "total", "route"];
+  semantics: string[];
+  stats: Record<string, unknown>;
+  countries: Record<string, { name: string; rows: Record<string, DefaultValueRow> }>;
 };
+
+/** Short citation of the built-in table, used in `ShipmentLine.defaultSource`. */
+export const DEFAULT_VALUES_ACT = "IR (EU) 2026/1740 Annex I";
 
 /**
  * Column B CBAM benchmarks for CN 7318 (IR (EU) 2025/2620, Annex point 5.3), for reference: carbon steel by route
@@ -92,7 +107,7 @@ export interface ShipmentInput {
    * manifest lines is counted once.
    */
   claimedBatchId?: string;
-  /** Unmarked default value for this line, overriding `defaults` (tCO2e/t). */
+  /** Unmarked default value for this line, overriding `defaults` and the built-in Annex I table (tCO2e/t). */
   defaultValue?: string;
   /** Operator's verified specific embedded free allocation (tCO2e/t), for a line declared on actual values. */
   sefaActual?: string;
@@ -107,7 +122,10 @@ export interface PortfolioOptions {
   priceEur?: string;
   /** € per certificate by quarter of importation (2026 goods are priced per quarter, Art 21(1a)). */
   quarterPrices?: Partial<Record<1 | 2 | 3 | 4, string>>;
-  /** Extra unmarked default values, `<country>:<CN prefix>` → tCO2e/t; longest prefix wins. */
+  /**
+   * Unmarked default values that take precedence over the built-in Annex I table (`DEFAULT_VALUES`),
+   * `<country>:<CN prefix>` → tCO2e/t; the longest prefix among them wins.
+   */
   defaults?: Record<string, string>;
   /**
    * Free-allocation adjustment on default values: Column B benchmark of the origin's default production route,
@@ -150,6 +168,8 @@ export interface ShipmentLine {
   seeVerified: string;
   /** Unmarked default and the year's marked-up default, tCO2e/t. */
   defaultValue: string;
+  /** Where the unmarked default comes from: the Annex I table and CN line it was read from, or the caller. */
+  defaultSource: string;
   defaultMarkedUp: string;
   /** Embedded emissions declared, tCO2e (3 decimals). */
   embeddedT: string;
@@ -318,6 +338,72 @@ export function lookup(table: Record<string, string> | undefined, country: strin
   return best?.v;
 }
 
+/** Result of `annexDefault`: the unmarked default and where it comes from, or why there is none. */
+export type AnnexDefault =
+  | { value: string; table: string; code: string; source: string }
+  | { value: undefined; reason: string };
+
+type TableHit =
+  | { kind: "value"; value: string; code: string; lines?: number }
+  | { kind: "none"; why: string }
+  | { kind: "ambiguous"; codes: string[] };
+
+/** "731815" → "7318 15", as the annex prints codes (a 10-digit TARIC code gets a fourth pair). */
+const spacedCn = (code: string) => code.replace(/^(\d{4})((?:\d{2})*)$/, (_, head: string, rest: string) => [head, ...(rest.match(/\d{2}/g) ?? [])].join(" "));
+
+/** Looks a CN code up in one Annex I table: the longest listed code that is a prefix of it, else its sub-lines. */
+function inTable(iso: string, cn: string): TableHit {
+  const t = DEFAULT_VALUES.countries[iso];
+  if (!t) return { kind: "none", why: "is not listed" };
+  let best: string | undefined;
+  for (const code of Object.keys(t.rows)) if (cn.startsWith(code) && (!best || code.length > best.length)) best = code;
+  if (best !== undefined) {
+    const total = t.rows[best][2];
+    return total === null ? { kind: "none", why: `shows "-" for CN ${spacedCn(best)}` } : { kind: "value", value: total, code: best };
+  }
+  // A code shorter than the annex's lines (for example CN 7318 for the 8-digit lines under it): usable only when
+  // every line under it has the same value.
+  const under = Object.keys(t.rows).filter((code) => code.startsWith(cn));
+  if (!under.length) return { kind: "none", why: `does not list CN ${spacedCn(cn)}` };
+  const totals = new Set(under.map((code) => t.rows[code][2]));
+  if (totals.size === 1) {
+    const [only] = totals;
+    return only === null
+      ? { kind: "none", why: `shows "-" for every line under CN ${spacedCn(cn)}` }
+      : { kind: "value", value: only, code: cn, lines: under.length };
+  }
+  return { kind: "ambiguous", codes: under };
+}
+
+/**
+ * The unmarked default value (total emissions, tCO2e/t) of Annex I to IR (EU) 2026/1740 for a good of `cnCode` from
+ * `country`. Per the annex's opening paragraph, a country that is not listed, or whose table gives no value ("-"),
+ * takes the value of "Other Countries and Territories". A CN code shorter than the annex's lines resolves only when
+ * all the lines under it carry one value; otherwise the reason asks for the longer code.
+ */
+export function annexDefault(country: string, cnCode: string): AnnexDefault {
+  const cn = cnDigits(cnCode);
+  const iso = country.toUpperCase();
+  if (!/^[A-Z]{2}$/.test(iso)) return { value: undefined, reason: `"${country}" is not an ISO 3166 alpha-2 code` };
+  const ambiguous = (name: string, codes: string[]): AnnexDefault => ({
+    value: undefined,
+    reason: `CN ${cnCode} covers lines with different default values in the ${name} table of ${DEFAULT_VALUES_ACT} (${codes.slice(0, 4).map(spacedCn).join(", ")}${codes.length > 4 ? ", …" : ""}); give the longer CN code`,
+  });
+  const cite = (tableIso: string, h: { value: string; code: string; lines?: number }, why?: string): AnnexDefault => {
+    const name = DEFAULT_VALUES.countries[tableIso].name;
+    const spaced = spacedCn(h.code);
+    const at = h.lines ? `every one of the ${h.lines} lines under CN ${spaced}` : `CN ${spaced}`;
+    return { value: h.value, table: tableIso, code: h.code, source: `${DEFAULT_VALUES_ACT}, ${name}, ${at}${why ? ` (${iso} ${why})` : ""}` };
+  };
+  const own = inTable(iso, cn);
+  if (own.kind === "value") return cite(iso, own);
+  if (own.kind === "ambiguous") return ambiguous(DEFAULT_VALUES.countries[iso].name, own.codes);
+  const other = inTable("OTHER", cn);
+  if (other.kind === "value") return cite("OTHER", other, own.why);
+  if (other.kind === "ambiguous") return ambiguous(DEFAULT_VALUES.countries.OTHER.name, other.codes);
+  return { value: undefined, reason: `CN ${cnCode} has no default value in ${DEFAULT_VALUES_ACT} (not a good it lists)` };
+}
+
 function quarterOf(date: string): 1 | 2 | 3 | 4 {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!m) throw new Error(`import date must be YYYY-MM-DD, got "${date}"`);
@@ -397,7 +483,6 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
   const year = opts.year;
   if (!Number.isInteger(year)) throw new Error(`year must be an integer, got ${year}`);
   markupFor("7318", year); // rejects a year before 2026
-  const defaults = { ...BUILTIN_DEFAULTS, ...(opts.defaults ?? {}) };
   const fa = opts.freeAllocation;
   const factorStr = fa ? (fa.cbamFactor ?? (CBAM_FACTOR[year] ?? (year > 2034 ? 0 : undefined))?.toString()) : undefined;
   if (fa && factorStr === undefined) throw new Error(`no CBAM factor known for ${year}; pass freeAllocation.cbamFactor`);
@@ -466,10 +551,16 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
       continue;
     }
     const qKg = parseDec(s.quantityTonnes, Q, `${where}: quantity`);
-    const unmarked = s.defaultValue ?? lookup(defaults, s.country, s.cnCode);
+    // The caller's value wins (the line's own, then `defaults`); otherwise Annex I of IR (EU) 2026/1740.
+    const callerDefault = s.defaultValue ?? lookup(opts.defaults, s.country, s.cnCode);
+    const annex = callerDefault === undefined ? annexDefault(s.country, s.cnCode) : undefined;
+    const unmarked = callerDefault ?? annex?.value;
     if (unmarked === undefined) {
-      throw new Error(`${where}: no default value known for CN ${s.cnCode} from ${s.country.toUpperCase()}; pass it (defaultValue or defaults)`);
+      const why = annex && annex.value === undefined ? `: ${annex.reason}` : "";
+      throw new Error(`${where}: no default value known for CN ${s.cnCode} from ${s.country.toUpperCase()}${why}; pass it (defaultValue or defaults)`);
     }
+    const defaultSource =
+      s.defaultValue !== undefined ? "caller (shipment defaultValue)" : callerDefault !== undefined ? "caller (defaults)" : annex?.value !== undefined ? annex.source : "";
     const marked = markedUpDefault(unmarked, s.cnCode, year);
     const over = overClaim.get(s);
     const el: ReturnType<typeof eligibility> = over !== undefined ? { ok: false, reason: over } : eligibility(s);
@@ -508,6 +599,7 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
       seeUsed: el.ok ? el.see : marked,
       seeVerified: el.ok ? el.see : "",
       defaultValue: unmarked,
+      defaultSource,
       defaultMarkedUp: marked,
       embeddedT: fmtDec(embedded, E),
       allDefaultT: fmtDec(allDefault, E),

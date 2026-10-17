@@ -228,7 +228,7 @@
           "results": { "$ref": "#/components/schemas/BatchDocument" },
           "year": { "type": "integer", "minimum": 2026 },
           "priceEur": { "type": "string", "description": "EUR per certificate, every quarter." },
-          "defaults": { "type": "object", "additionalProperties": { "type": "string" } },
+          "defaults": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Unmarked default values, `<country>:<CN prefix>` → tCO2e/t, that take precedence over the built-in Annex I of IR (EU) 2026/1740 (every listed country and CN code; \"Other Countries and Territories\" for an origin not listed or shown as \"-\")." },
           "benchmarks": { "type": "object", "additionalProperties": { "type": "string" } },
           "recheck": { "$ref": "recheck.schema.json", "description": "Output of this server's /v1/recheck with its `binding` (or set trustCallerVerdicts)." },
           "trustCallerVerdicts": {
