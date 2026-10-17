@@ -149,6 +149,15 @@
     },
     "rounding": { "type": "array", "items": { "type": "string" } },
     "notes": { "type": "array", "items": { "type": "string" } },
-    "verdictSource": { "type": "string", "description": "Where the verdicts came from: the input file of `carbonlei portfolio` (not re-verified), verify-batch results bound by this API server, or caller-supplied verdicts the server did not verify (POST /v1/portfolio with trustCallerVerdicts). Also the first note." }
+    "verdictSource": { "type": "string", "description": "Where the verdicts came from: the input file of `carbonlei portfolio` (not re-verified), verify-batch results bound by this API server, or caller-supplied verdicts the server did not verify (POST /v1/portfolio with trustCallerVerdicts). Also the first note." },
+    "resultsBinding": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "POST /v1/portfolio only: the `binding.mac` of the verify-batch results the plan was computed from, when this server had bound them." },
+    "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$", "description": "POST /v1/portfolio only: the nonce the client sent, copied into the bound plan." },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "mac"],
+      "description": "POST /v1/portfolio only: HMAC-SHA256 over the canonical JSON (keys sorted) of the plan without `binding`, with the server's key (CARBONLEI_API_HMAC_KEY), so a client holding the key can tell the plan was not changed on the way.",
+      "properties": { "alg": { "const": "HMAC-SHA256" }, "mac": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+    }
   }
 }

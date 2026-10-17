@@ -73,7 +73,7 @@ describe("ERP CSV and mapping", () => {
       ["PO-4500001004/10", true, "PROOF_FILE_MISSING"],
       ["PO-4500001005/10", false, "ERP_ROW_INVALID"],
     ]);
-    expect(lines[4].detail).toBe('CSV line 6: cn_code "7318159" is not 4, 6 or 8 digits');
+    expect(lines[4].detail).toBe('CSV line 6: cn_code "7318159" is not 4, 6 or 8 digits or a 10-digit TARIC code');
   });
 
   it("rejects bad rows and proof references outside the proof folder; a file that is not a proof is sent without one", () => {
@@ -187,7 +187,7 @@ describe("ERP → REST API → write-back (recorded Sepolia answers, no network)
     expect(col("primary_code").slice(0, 2)).toEqual(["", "DISCLOSURE_TAMPERED"]);
     expect(col("certificates_estimate_tco2e")).toEqual(["360.000", "119.120", "75.939", "35.736", "", "590.795"]);
     expect(col("reason")[3]).toBe("no supplier proof: proof-not-yet-received.json not found in the proof folder");
-    expect(col("reason")[4]).toBe('CSV line 6: cn_code "7318159" is not 4, 6 or 8 digits');
+    expect(col("reason")[4]).toBe('CSV line 6: cn_code "7318159" is not 4, 6 or 8 digits or a 10-digit TARIC code');
     expect(cells[5].slice(0, 6)).toEqual(["TOTAL", "", "", "", "", "277.500"]);
     expect(cells[5][12]).toBe("591 whole certificates (gross)");
   }, 60_000);

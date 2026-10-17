@@ -144,7 +144,7 @@ describe("annexDefault: lookup with the annex's fallback rule", () => {
 
   it("a short code whose lines differ, or a good outside Annex I, gets a reason instead of a value", () => {
     expect(annexDefault("VN", "7318")).toMatchObject({ value: undefined, reason: expect.stringContaining("different default values in the Viet Nam table") });
-    expect(annexDefault("TW", "25231000")).toMatchObject({ value: undefined, reason: expect.stringContaining("give the longer CN code") }); // white vs grey clinker (TARIC)
+    expect(annexDefault("TW", "25231000")).toMatchObject({ value: undefined, reason: expect.stringContaining("give the longer CN or TARIC code, or pass the value in `defaults`") }); // white vs grey clinker (TARIC)
     expect(annexDefault("US", "8471")).toMatchObject({ value: undefined, reason: expect.stringContaining("not a good it lists") });
   });
 });

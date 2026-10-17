@@ -74,6 +74,8 @@ export interface BatchDocument {
    * can tell results it produced from caller-supplied verdicts (sdk/server.ts).
    */
   binding?: { alg: "HMAC-SHA256"; mac: string };
+  /** REST API only: the nonce the client sent with the request, copied by the server inside the bound document. */
+  nonce?: string;
 }
 
 const isProof = (x: unknown): boolean =>

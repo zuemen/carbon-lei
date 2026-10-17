@@ -259,7 +259,7 @@ describe("buildPortfolio: hand-computed vectors", () => {
   });
 
   it("rejects malformed input, naming the line", () => {
-    expect(() => buildPortfolio([ship({ cnCode: "73" })], { year: 2026 })).toThrow(/S1: CN code must be 4 to 8 digits/);
+    expect(() => buildPortfolio([ship({ cnCode: "73" })], { year: 2026 })).toThrow(/S1: CN code must be 4, 6 or 8 digits or a 10-digit TARIC code/);
     expect(() => buildPortfolio([ship({ country: "Taiwan" })], { year: 2026 })).toThrow(/S1: country/);
     expect(() => buildPortfolio([ship({ importDate: "10/10/2026" })], { year: 2026 })).toThrow(/S1: import date/);
     expect(() => buildPortfolio([ship({ quantityTonnes: "1.0005" })], { year: 2026 })).toThrow(/more than 3 decimals/);

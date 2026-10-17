@@ -64,7 +64,7 @@
       "post": {
         "operationId": "portfolio",
         "summary": "Declaration plan for a year from verify-batch results",
-        "description": "Pure computation, no chain read: the verified value only for a VALID proof bound by check 5, else the default with the year's mark-up; one ledger claim (credential and batch) on several lines is counted once, in input order; totals, 50 t de minimis, quarterly holding, certificates, gross EUR. With `recheck`, a line a later re-check says needs action is planned on the default. `results` and `recheck` must be this server's own output with an intact `binding` (HMAC), unless `trustCallerVerdicts` is true; the plan's `verdictSource` says which. A worksheet, not a CBAM declaration.",
+        "description": "Pure computation, no chain read: the verified value only for a VALID proof bound by check 5, else the default with the year's mark-up; one ledger claim (credential and batch) on several lines is counted once, in input order; totals, 50 t de minimis, quarterly holding, certificates, gross EUR. With `recheck`, a line a later re-check says needs action is planned on the default. `results` and `recheck` must be this server's own output with an intact `binding` (HMAC), unless `trustCallerVerdicts` is true; the plan's `verdictSource` says which. The plan itself carries `binding` (the same HMAC), `resultsBinding` (the `binding.mac` of the bound results it was computed from) and the request's `nonce`, so a client holding the key can check that the plan is this server's answer to its request, unchanged. A line that cannot be planned (no default value for an ambiguous short CN code, an origin not subject to CBAM) makes the whole request 422, naming the line: a plan never leaves a line out of its totals silently. A worksheet, not a CBAM declaration.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortfolioRequest" } } }
@@ -74,7 +74,7 @@
           "400": { "$ref": "#/components/responses/BadRequest" },
           "413": { "$ref": "#/components/responses/TooLarge" },
           "415": { "$ref": "#/components/responses/WrongType" },
-          "422": { "description": "The input cannot be planned: `results` or `recheck` not bound by this server and trustCallerVerdicts not set, or a line without a known default value (the message names the line).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "The input cannot be planned: `results` or `recheck` not bound by this server and trustCallerVerdicts not set, or a line that cannot be planned: no known default value (give a longer CN code or pass `defaults`), an origin not subject to CBAM, a malformed CN code (the message names the line).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "503": { "$ref": "#/components/responses/Busy" },
           "408": { "$ref": "#/components/responses/SlowBody" },
           "504": { "$ref": "#/components/responses/Timeout" }
@@ -175,6 +175,7 @@
         "required": ["shipments"],
         "properties": {
           "eori": { "type": "string" },
+          "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$", "description": "Optional, fresh per request (for example 16 random bytes in hex). The server copies it into the bound response, so a client can tell the response was made for this request and not replayed from an earlier one." },
           "shipments": {
             "type": "array",
             "minItems": 1,
@@ -186,8 +187,8 @@
                 "proof": { "oneOf": [{ "$ref": "#/components/schemas/Proof" }, { "type": "null" }] },
                 "id": { "type": "string" },
                 "quantityTonnes": { "type": "string" },
-                "cnCode": { "type": "string" },
-                "country": { "type": "string" },
+                "cnCode": { "type": "string", "description": "CN code of 4, 6 or 8 digits, or a 10-digit TARIC code (spaces allowed); checked by /v1/portfolio." },
+                "country": { "type": "string", "description": "Country of origin, ISO 3166 alpha-2 (\"UK\" is read as GB). An EU member state, Iceland, Liechtenstein, Norway or Switzerland is refused by /v1/portfolio: not subject to CBAM." },
                 "importDate": { "type": "string" },
                 "supplier": { "type": "string" },
                 "installation": { "type": "string" },
@@ -209,6 +210,7 @@
           "pinnedBlock": { "type": ["integer", "null"] },
           "chainId": { "type": ["integer", "null"] },
           "eori": { "type": ["string", "null"] },
+          "nonce": { "type": "string", "description": "The request's nonce, when the client sent one; inside the binding." },
           "verifiedAt": { "type": "string" },
           "counts": { "type": "object" },
           "results": { "type": "array", "items": { "type": "object" } },
@@ -227,6 +229,7 @@
         "properties": {
           "results": { "$ref": "#/components/schemas/BatchDocument" },
           "year": { "type": "integer", "minimum": 2026 },
+          "nonce": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$", "description": "Optional, fresh per request (for example 16 random bytes in hex). The server copies it into the bound response, so a client can tell the response was made for this request and not replayed from an earlier one." },
           "priceEur": { "type": "string", "description": "EUR per certificate, every quarter." },
           "defaults": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Unmarked default values, `<country>:<CN prefix>` → tCO2e/t, that take precedence over the built-in Annex I of IR (EU) 2026/1740 (every listed country and CN code; \"Other Countries and Territories\" for an origin not listed or shown as \"-\")." },
           "benchmarks": { "type": "object", "additionalProperties": { "type": "string" } },

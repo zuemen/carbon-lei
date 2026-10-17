@@ -2,8 +2,8 @@
 // compliance tool, scheduler). node:http only, no framework and no new dependency. OpenAPI: docs/schemas/openapi.json.
 //
 //   POST /v1/verify        { proof, eori? }                         → verdict (docs/schemas/verdict.schema.json)
-//   POST /v1/verify-batch  { eori?, shipments: [{ proof, id, … }] } → verify-batch results, one pinned block
-//   POST /v1/portfolio     { results, year, priceEur?, defaults?, benchmarks?, recheck?, trustCallerVerdicts? } → plan
+//   POST /v1/verify-batch  { eori?, nonce?, shipments: [{ proof, id, … }] } → verify-batch results, one pinned block
+//   POST /v1/portfolio     { results, year, nonce?, priceEur?, defaults?, benchmarks?, recheck?, trustCallerVerdicts? } → plan
 //   POST /v1/recheck       { records: [...] }                        → re-check (docs/schemas/recheck.schema.json)
 //   GET  /v1/health        chain head, chain ID, RPC node hosts, limits
 //   GET  /openapi.json     the OpenAPI 3.1 description (also at GET / and GET /v1/openapi.json)
@@ -18,6 +18,10 @@
 // carry `binding`, an HMAC-SHA256 over their canonical JSON with a key only the server holds (CARBONLEI_API_HMAC_KEY,
 // else 32 random bytes per process). /v1/portfolio plans from verdicts it did not compute only when the caller sets
 // `trustCallerVerdicts: true`, and the plan then says "computed from caller-supplied verdicts, not verified".
+// The plan /v1/portfolio returns is bound the same way, and names the binding of the results it was computed from
+// (`resultsBinding`), so a client holding the key can tell a plan changed on the way (third review of 17 Oct 2026, H1).
+// A client may send a `nonce` (16-128 characters of [A-Za-z0-9_-]) with either request; the server copies it into the
+// bound document, so a recorded response cannot be replayed to a later request (M1).
 // We chose the HMAC over re-verifying in /v1/portfolio: it keeps the endpoint a pure computation with no chain read
 // (it plans hundreds of lines within one request), and re-verifying would need every proof and evidence bundle again.
 // The request body is read before a concurrency slot is taken, within `bodyTimeoutMs` (default 10 s): a client that
@@ -210,6 +214,13 @@ const optString = (body: Record<string, unknown>, key: string): string | undefin
   return v;
 };
 
+/** The optional client nonce: copied into the bound response so that the client can tell it was made for its request. */
+const optNonce = (body: Record<string, unknown>): string | undefined => {
+  const v = optString(body, "nonce");
+  if (v !== undefined && !/^[A-Za-z0-9_-]{16,128}$/.test(v)) throw new HttpError(400, '"nonce" must be 16 to 128 characters of A-Z, a-z, 0-9, "_" or "-"');
+  return v;
+};
+
 const optMap = (body: Record<string, unknown>, key: string): Record<string, string> | undefined => {
   const v = body[key];
   if (v === undefined || v === null) return undefined;
@@ -238,7 +249,7 @@ export function createApiServer(opts: ServeOptions): Server {
     const { binding: _drop, ...rest } = doc;
     return createHmac("sha256", hmacKey).update(canonicalJson(JSON.parse(json(rest)))).digest("hex");
   };
-  /** The document with `binding` set: what /v1/verify-batch and /v1/recheck return. */
+  /** The document with `binding` set: what /v1/verify-batch, /v1/portfolio and /v1/recheck return. */
   const bind = <T extends object>(doc: T): T & { binding: { alg: "HMAC-SHA256"; mac: string } } => ({
     ...doc,
     binding: { alg: "HMAC-SHA256", mac: macOf(doc as Record<string, unknown>) },
@@ -278,6 +289,7 @@ export function createApiServer(opts: ServeOptions): Server {
       if (!Array.isArray(lines) || !lines.length) throw new HttpError(400, '"shipments" must be a non-empty array');
       if (lines.length > maxBatch) throw new HttpError(413, `at most ${maxBatch} shipments per request`);
       const eori = optString(body, "eori");
+      const nonce = optNonce(body);
       ctx.eori = eori ? "given" : "none";
       const head = await opts.reader.latestBlock().catch((e) => {
         throw new HttpError(502, redact((e as Error).message));
@@ -303,7 +315,7 @@ export function createApiServer(opts: ServeOptions): Server {
       });
       const doc = batchDocument(results, { pinnedBlock: head.number, chainId, eori });
       ctx.outcome = doc.counts;
-      return { status: 200, body: bind(doc) };
+      return { status: 200, body: bind(nonce ? { ...doc, nonce } : doc) };
     },
     "/v1/portfolio": async (body, ctx) => {
       const year = body.year;
@@ -313,6 +325,7 @@ export function createApiServer(opts: ServeOptions): Server {
       const recheck = body.recheck as RecheckDocument | undefined | null;
       const trust = body.trustCallerVerdicts;
       if (trust !== undefined && typeof trust !== "boolean") throw new HttpError(400, '"trustCallerVerdicts" must be true or false');
+      const nonce = optNonce(body);
       // Verdicts are planned only when this server computed them, unless the caller opts in explicitly.
       const bound = isBound(doc) && (recheck === undefined || recheck === null || isBound(recheck));
       if (!bound && trust !== true) {
@@ -337,7 +350,13 @@ export function createApiServer(opts: ServeOptions): Server {
           ...(bm ? { freeAllocation: { benchmarks, ...(cbamFactor ? { cbamFactor } : {}), ...(cscf ? { cscf } : {}) } } : {}),
         });
         ctx.outcome = { onActual: summary.totals.onActual, onDefault: summary.totals.onDefault };
-        return { status: 200, body: summary };
+        // The plan is bound too, with the binding of the results it was computed from: a client that holds the key
+        // checks both, so a plan changed on the way (a line turned VERIFIED) is refused (third review, H1).
+        const resultsBinding = (body.results as { binding?: { mac?: unknown } })?.binding?.mac;
+        return {
+          status: 200,
+          body: bind({ ...summary, ...(bound && typeof resultsBinding === "string" ? { resultsBinding } : {}), ...(nonce ? { nonce } : {}) }),
+        };
       } catch (e) {
         if (e instanceof HttpError) throw e;
         throw new HttpError(422, (e as Error).message);

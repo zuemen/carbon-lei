@@ -88,7 +88,7 @@ export interface ShipmentInput {
   downgradedBy?: string;
   /** Net mass in tonnes, as a decimal string with at most 3 decimals (kg). */
   quantityTonnes: string;
-  /** CN code, 4 to 8 digits (spaces allowed). */
+  /** CN code of 4, 6 or 8 digits, or a 10-digit TARIC code (spaces allowed). */
   cnCode: string;
   /** Country of origin, ISO 3166 alpha-2. */
   country: string;
@@ -260,6 +260,13 @@ export interface PortfolioSummary {
   notes: string[];
   /** Where the verdicts came from (`PortfolioOptions.verdictSource`), when the caller said. */
   verdictSource?: string;
+  /**
+   * REST API only (POST /v1/portfolio): the HMAC binding of the plan, the binding (`mac`) of the verify-batch results
+   * it was computed from when the server had bound them, and the client's nonce (sdk/server.ts).
+   */
+  binding?: { alg: "HMAC-SHA256"; mac: string };
+  resultsBinding?: string;
+  nonce?: string;
   /** Only with `PortfolioOptions.art9`: the draft Art 9 deduction, kept apart (sdk/carbonprice.ts art9Summary). */
   art9?: Art9Summary;
 }
@@ -308,6 +315,41 @@ const E = 3;
 
 const cnDigits = (cn: string) => cn.replace(/\s+/g, "");
 
+/**
+ * The CN codes a shipment line may carry, after removing spaces: 4, 6 or 8 digits, or a 10-digit TARIC code (Annex I
+ * of IR 2026/1740 has TARIC lines, for example 2523 10 00 10 and 2523 10 00 90 for clinker).
+ */
+export const CN_CODE = /^\d{4}(\d{2}){0,3}$/;
+
+/**
+ * Origins that are not subject to CBAM: the 27 EU member states (goods of Union origin are not imported; "EL" is the
+ * EU's code for Greece) and the countries of Annex III point 1 to Reg. (EU) 2023/956 (Iceland, Liechtenstein, Norway,
+ * Switzerland). The territories of Annex III point 2 (Büsingen, Heligoland, Livigno, Ceuta, Melilla) have no ISO
+ * 3166 alpha-2 code of their own and are not recognised here.
+ */
+export const NOT_SUBJECT_TO_CBAM: Readonly<Record<string, string>> = {
+  AT: "Austria", BE: "Belgium", BG: "Bulgaria", HR: "Croatia", CY: "Cyprus", CZ: "Czechia", DK: "Denmark", EE: "Estonia",
+  FI: "Finland", FR: "France", DE: "Germany", GR: "Greece", EL: "Greece", HU: "Hungary", IE: "Ireland", IT: "Italy",
+  LV: "Latvia", LT: "Lithuania", LU: "Luxembourg", MT: "Malta", NL: "Netherlands", PL: "Poland", PT: "Portugal",
+  RO: "Romania", SK: "Slovakia", SI: "Slovenia", ES: "Spain", SE: "Sweden",
+  IS: "Iceland", LI: "Liechtenstein", NO: "Norway", CH: "Switzerland",
+};
+
+/** Upper-case origin code; "UK", the common but non-ISO code of the United Kingdom, is read as GB. */
+export function originCode(country: string): string {
+  const c = String(country ?? "").trim().toUpperCase();
+  return c === "UK" ? "GB" : c;
+}
+
+/** Why goods from `country` are not subject to CBAM, or null when they are. */
+export function notSubjectToCbam(country: string): string | null {
+  const iso = originCode(country);
+  const name = NOT_SUBJECT_TO_CBAM[iso];
+  if (!name) return null;
+  const why = ["IS", "LI", "NO", "CH"].includes(iso) ? "listed in Annex III to Reg. (EU) 2023/956" : "an EU member state: goods of Union origin are not imports";
+  return `goods originating in ${name} (${iso}) are not subject to CBAM (${why}); leave the line out of the CBAM plan`;
+}
+
 /** Mark-up for goods imported in `year` (IR 2026/1740, Annex I): 1 % fertilisers; 10/20/30 % the other sectors. */
 export function markupFor(cnCode: string, year: number): { pct: number; sector: string } {
   const cn = cnDigits(cnCode);
@@ -332,7 +374,7 @@ export function lookup(table: Record<string, string> | undefined, country: strin
   let best: { len: number; v: string } | undefined;
   for (const [k, v] of Object.entries(table)) {
     const [c, p] = k.split(":");
-    if (c?.toUpperCase() !== country.toUpperCase() || !p || !cn.startsWith(cnDigits(p))) continue;
+    if (originCode(c ?? "") !== originCode(country) || !p || !cn.startsWith(cnDigits(p))) continue;
     if (!best || cnDigits(p).length > best.len) best = { len: cnDigits(p).length, v };
   }
   return best?.v;
@@ -344,55 +386,91 @@ export type AnnexDefault =
   | { value: undefined; reason: string };
 
 type TableHit =
-  | { kind: "value"; value: string; code: string; lines?: number }
+  | { kind: "value"; value: string; code: string; lines?: number; mixed?: boolean }
   | { kind: "none"; why: string }
   | { kind: "ambiguous"; codes: string[] };
 
 /** "731815" → "7318 15", as the annex prints codes (a 10-digit TARIC code gets a fourth pair). */
 const spacedCn = (code: string) => code.replace(/^(\d{4})((?:\d{2})*)$/, (_, head: string, rest: string) => [head, ...(rest.match(/\d{2}/g) ?? [])].join(" "));
 
-/** Looks a CN code up in one Annex I table: the longest listed code that is a prefix of it, else its sub-lines. */
+/** The longest code listed in table `iso` that is a prefix of `cn`, or undefined. */
+function longestPrefix(iso: string, cn: string): string | undefined {
+  const t = DEFAULT_VALUES.countries[iso];
+  let best: string | undefined;
+  if (t) for (const code of Object.keys(t.rows)) if (cn.startsWith(code) && (!best || code.length > best.length)) best = code;
+  return best;
+}
+
+/**
+ * The value a single annex line `code` takes for an origin with table `iso`: the origin's own line (longest prefix)
+ * when it has a value, else the "Other Countries and Territories" line (longest prefix), else null.
+ */
+function effectiveLine(iso: string, code: string): { value: string | null; table: string; code: string } {
+  const own = iso === "OTHER" ? undefined : longestPrefix(iso, code);
+  const ownTotal = own !== undefined ? DEFAULT_VALUES.countries[iso].rows[own][2] : null;
+  if (own !== undefined && ownTotal !== null) return { value: ownTotal, table: iso, code: own };
+  const other = longestPrefix("OTHER", code);
+  return { value: other !== undefined ? DEFAULT_VALUES.countries.OTHER.rows[other][2] : null, table: "OTHER", code: other ?? code };
+}
+
+/**
+ * Looks a CN code up in one Annex I table: the longest listed code that is a prefix of it, else its sub-lines.
+ * For a country table, a code shorter than the annex's lines (for example CN 7202 for the lines under it) resolves
+ * only when every line under it has the same value, where a line the country does not list (or shows as "-") takes
+ * its "Other Countries and Territories" value: the union of both tables' lines under the code is compared (third
+ * review of 17 October 2026, M2: Albania lists only CN 7202 41 at 2.350, but CN 7202 19 from Albania is 5.590).
+ */
 function inTable(iso: string, cn: string): TableHit {
   const t = DEFAULT_VALUES.countries[iso];
   if (!t) return { kind: "none", why: "is not listed" };
-  let best: string | undefined;
-  for (const code of Object.keys(t.rows)) if (cn.startsWith(code) && (!best || code.length > best.length)) best = code;
+  const best = longestPrefix(iso, cn);
   if (best !== undefined) {
     const total = t.rows[best][2];
     return total === null ? { kind: "none", why: `shows "-" for CN ${spacedCn(best)}` } : { kind: "value", value: total, code: best };
   }
-  // A code shorter than the annex's lines (for example CN 7318 for the 8-digit lines under it): usable only when
-  // every line under it has the same value.
   const under = Object.keys(t.rows).filter((code) => code.startsWith(cn));
   if (!under.length) return { kind: "none", why: `does not list CN ${spacedCn(cn)}` };
-  const totals = new Set(under.map((code) => t.rows[code][2]));
+  const lines = iso === "OTHER" ? under : [...new Set([...under, ...Object.keys(DEFAULT_VALUES.countries.OTHER.rows).filter((code) => code.startsWith(cn))])].sort();
+  const eff = lines.map((code) => ({ line: code, ...effectiveLine(iso, code) }));
+  const totals = new Set(eff.map((e) => e.value));
   if (totals.size === 1) {
     const [only] = totals;
-    return only === null
-      ? { kind: "none", why: `shows "-" for every line under CN ${spacedCn(cn)}` }
-      : { kind: "value", value: only, code: cn, lines: under.length };
+    if (only === null) return { kind: "none", why: `shows "-" for every line under CN ${spacedCn(cn)}` };
+    const tables = new Set(eff.map((e) => e.table));
+    return { kind: "value", value: only, code: cn, lines: lines.length, ...(tables.size > 1 ? { mixed: true } : {}) };
   }
-  return { kind: "ambiguous", codes: under };
+  return { kind: "ambiguous", codes: eff.map((e) => `${spacedCn(e.line)} = ${e.value ?? "-"}${iso !== "OTHER" && e.table === "OTHER" ? " (Other Countries and Territories)" : ""}`) };
 }
 
 /**
  * The unmarked default value (total emissions, tCO2e/t) of Annex I to IR (EU) 2026/1740 for a good of `cnCode` from
  * `country`. Per the annex's opening paragraph, a country that is not listed, or whose table gives no value ("-"),
- * takes the value of "Other Countries and Territories". A CN code shorter than the annex's lines resolves only when
- * all the lines under it carry one value; otherwise the reason asks for the longer code.
+ * takes the value of "Other Countries and Territories"; so does a line the country's table does not list. A CN code
+ * shorter than the annex's lines resolves only when all the lines under it carry one value, counting the lines the
+ * country does not list at their "Other Countries and Territories" value; otherwise the reason asks for the longer
+ * code or a caller value (`defaults`). "UK" is read as GB; an origin not subject to CBAM (EU member state, Annex III
+ * country) has no default value, and the reason says so.
  */
 export function annexDefault(country: string, cnCode: string): AnnexDefault {
   const cn = cnDigits(cnCode);
-  const iso = country.toUpperCase();
+  const iso = originCode(country);
   if (!/^[A-Z]{2}$/.test(iso)) return { value: undefined, reason: `"${country}" is not an ISO 3166 alpha-2 code` };
+  const exempt = notSubjectToCbam(iso);
+  if (exempt) return { value: undefined, reason: exempt };
+  if (!CN_CODE.test(cn)) return { value: undefined, reason: `CN code "${cnCode}" is not 4, 6 or 8 digits or a 10-digit TARIC code` };
   const ambiguous = (name: string, codes: string[]): AnnexDefault => ({
     value: undefined,
-    reason: `CN ${cnCode} covers lines with different default values in the ${name} table of ${DEFAULT_VALUES_ACT} (${codes.slice(0, 4).map(spacedCn).join(", ")}${codes.length > 4 ? ", …" : ""}); give the longer CN code`,
+    reason:
+      `CN ${cnCode} covers lines with different default values in the ${name} table of ${DEFAULT_VALUES_ACT}` +
+      `${name === DEFAULT_VALUES.countries.OTHER.name ? "" : ` (with "Other Countries and Territories" for the lines it does not list or shows as "-")`}` +
+      ` (${codes.slice(0, 5).join(", ")}${codes.length > 5 ? ", …" : ""}); give the longer CN or TARIC code, or pass the value in \`defaults\``,
   });
-  const cite = (tableIso: string, h: { value: string; code: string; lines?: number }, why?: string): AnnexDefault => {
+  const cite = (tableIso: string, h: { value: string; code: string; lines?: number; mixed?: boolean }, why?: string): AnnexDefault => {
     const name = DEFAULT_VALUES.countries[tableIso].name;
     const spaced = spacedCn(h.code);
-    const at = h.lines ? `every one of the ${h.lines} lines under CN ${spaced}` : `CN ${spaced}`;
+    const at = h.lines
+      ? `every one of the ${h.lines} lines under CN ${spaced}${h.mixed ? `, the lines ${name} does not list or shows as "-" taken from Other Countries and Territories` : ""}`
+      : `CN ${spaced}`;
     return { value: h.value, table: tableIso, code: h.code, source: `${DEFAULT_VALUES_ACT}, ${name}, ${at}${why ? ` (${iso} ${why})` : ""}` };
   };
   const own = inTable(iso, cn);
@@ -479,7 +557,9 @@ export const ROUNDING_RULES = [
 ] as const;
 
 /** The year's declaration plan for a set of shipments. Throws on malformed input (with the line id). */
-export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): PortfolioSummary {
+export function buildPortfolio(rawInput: ShipmentInput[], opts: PortfolioOptions): PortfolioSummary {
+  // "UK" is read as GB everywhere below (Annex I table, eligibility's origin check, groups).
+  const input = rawInput.map((s) => (typeof s.country === "string" && s.country.trim().toUpperCase() === "UK" ? { ...s, country: "GB" } : s));
   const year = opts.year;
   if (!Number.isInteger(year)) throw new Error(`year must be an integer, got ${year}`);
   markupFor("7318", year); // rejects a year before 2026
@@ -538,8 +618,10 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
     if (!s.id) throw new Error("every shipment needs an id");
     if (ids.has(s.id)) throw new Error(`${where}: duplicate id`);
     ids.add(s.id);
-    if (!/^\d{4,8}$/.test(cnDigits(s.cnCode ?? ""))) throw new Error(`${where}: CN code must be 4 to 8 digits, got "${s.cnCode}"`);
+    if (!CN_CODE.test(cnDigits(s.cnCode ?? ""))) throw new Error(`${where}: CN code must be 4, 6 or 8 digits or a 10-digit TARIC code, got "${s.cnCode}"`);
     if (!/^[A-Za-z]{2}$/.test(s.country ?? "")) throw new Error(`${where}: country must be an ISO 3166 alpha-2 code, got "${s.country}"`);
+    const exempt = notSubjectToCbam(s.country);
+    if (exempt) throw new Error(`${where}: ${exempt}`);
     let quarter: 1 | 2 | 3 | 4;
     try {
       quarter = quarterOf(s.importDate);
@@ -557,7 +639,7 @@ export function buildPortfolio(input: ShipmentInput[], opts: PortfolioOptions): 
     const unmarked = callerDefault ?? annex?.value;
     if (unmarked === undefined) {
       const why = annex && annex.value === undefined ? `: ${annex.reason}` : "";
-      throw new Error(`${where}: no default value known for CN ${s.cnCode} from ${s.country.toUpperCase()}${why}; pass it (defaultValue or defaults)`);
+      throw new Error(`${where}: no default value known for CN ${s.cnCode} from ${s.country.toUpperCase()}${why}${why.includes("`defaults`") ? "" : "; pass it (defaultValue or defaults)"}`);
     }
     const defaultSource =
       s.defaultValue !== undefined ? "caller (shipment defaultValue)" : callerDefault !== undefined ? "caller (defaults)" : annex?.value !== undefined ? annex.source : "";
@@ -770,11 +852,15 @@ export const WORKSHEET_COLUMNS = [
   "note",
 ] as const;
 
-/** RFC 4180 field: quoted when it holds a comma, quote or line break; a leading = + - @ is prefixed with ' (CSV injection). */
+/**
+ * RFC 4180 field, quoted when it holds a comma, semicolon, tab, quote or line break (a spreadsheet that splits on ";"
+ * or tab then keeps it in one cell). CSV injection: a field whose first character after leading white space is = + - @, or
+ * that starts with a tab or carriage return, is prefixed with ' (a plain number such as -1.5 is left as it is).
+ */
 export function csvField(v: string | number | null | undefined): string {
   let s = v === null || v === undefined ? "" : String(v);
-  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
-  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  if ((/^[\t\r]/.test(s) || /^\s*[=+\-@]/.test(s)) &&!/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
+  return /[",;\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 /** The declaration worksheet as CSV text (CRLF line ends, header row first, a title row before it). */
