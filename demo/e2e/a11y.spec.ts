@@ -11,9 +11,10 @@ async function connected(page: Page) {
 }
 
 async function scan(page: Page, label: string) {
-  // Scan the settled page: entrance animations finished (mid-fade text would read as low contrast), scrolled to
+  // Scan the settled page: entrance animations finished (one cancelled by a re-render rejects with AbortError in
+  // WebKit, CI 2026-10-17; it is no longer running either) (mid-fade text would read as low contrast), scrolled to
   // the top (the sticky tab bar would otherwise cover, and so shrink, the targets under it).
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   await page.evaluate(() => window.scrollTo(0, 0));
   const { violations } = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])

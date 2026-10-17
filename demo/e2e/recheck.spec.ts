@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 async function scan(page: Page, label: string) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   await page.evaluate(() => window.scrollTo(0, 0));
   const { violations } = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
