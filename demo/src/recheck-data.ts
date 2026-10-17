@@ -56,7 +56,7 @@ export const ILLUSTRATIVE_RECHECKS: IllustrativeRecheck[] = [
     contested(fnw, "registered by an authorized auditor (checked by the contract at registration); revoked or suspended within 24 h after"),
     {
       en: "Accepted 3 h after registration; 11 h after registration the watcher revoked the auditor (illustrative).",
-      "zh-TW": "於登錄後 3 小時接受；登錄後 11 小時監看者撤銷了該稽核員（示意）。",
+      "zh-TW": "於登記後 3 小時接受；登記後 11 小時監看者撤銷了該查核員（示意）。",
     },
   ),
   outcome("KRC-2026-003", { registeredAt: "2026-03-10T08:00:00Z", acceptedAt: "2026-03-14T10:00:00Z" }, line("KRC-2026-003").verdict, {

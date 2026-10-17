@@ -1,7 +1,7 @@
 // Importer workbench: many suppliers' proofs → one year's CBAM declaration plan (sdk/portfolio.ts, the same code as
 // `carbonlei portfolio`). Line 1 is the demo proof, verified live; lines 2–6 are illustrative fixtures.
 import { useEffect, useMemo, useState } from "react";
-import { buildPortfolio, worksheetCsv, type PortfolioSummary, type ShipmentLine } from "../../../sdk/portfolio.ts";
+import { buildPortfolio, ROUNDING_RULES, worksheetCsv, type PortfolioSummary, type ShipmentLine } from "../../../sdk/portfolio.ts";
 import { toVerdict, type Verdict } from "../../../sdk/verdict.ts";
 import { verifyPresentation } from "../../../sdk/verify.ts";
 import { useApp } from "../App.tsx";
@@ -11,6 +11,32 @@ import { useLang, type Lang } from "../i18n.ts";
 import { DEMO_BENCHMARKS, demoLine, FICTIONAL_LINES, shiftYear } from "../workbench-data.ts";
 import { RecheckPanel } from "./RecheckPanel.tsx";
 import "../workbench.css";
+
+/**
+ * The plan's rounding rules (sdk/portfolio.ts ROUNDING_RULES) in Traditional Chinese, keyed by the SDK's English
+ * text: a rule added or reworded in the SDK fails the type check here until it is translated.
+ */
+const ROUNDING_ZH: Record<(typeof ROUNDING_RULES)[number], string> = {
+  "Quantities are read exactly to the kilogram (at most 3 decimals); intensities to 6 decimals.":
+    "數量精確讀到公斤（最多 3 位小數）；強度讀到 6 位小數。",
+  "Marked-up default = unmarked default × (1 + mark-up), rounded half up to 3 decimals (our convention: the CBAM Registry computes it and its rounding is not published).":
+    "加成後預設值 = 未加成預設值 × (1 + 加成)，四捨五入到 3 位小數（本專案的慣例：此值由 CBAM 登錄系統計算，其捨入方式未公布）。",
+  "Default free allocation per tonne = CBAM factor × CSCF × benchmark, kept to 6 decimals (rounded half up).":
+    "每噸的預設免費配額 = CBAM 係數 × CSCF × 基準值，保留 6 位小數（四捨五入）。",
+  "Per line: tCO2e = tonnes × intensity, rounded half up to 3 decimals (kg CO2e); totals and groups are sums of the rounded lines.":
+    "每一行：tCO2e = 噸數 × 強度，四捨五入到 3 位小數（kg CO2e）；總計與分組是各行捨入後數值的加總。",
+  "Certificates = total obligation in tCO2e rounded up to a whole certificate; quarterly holding likewise (a purchase plan, not a Registry rule).":
+    "憑證數 = 以 tCO2e 計的總義務無條件進位到整張憑證；每季持有量亦同（這是購買規劃，不是登錄系統的規則）。",
+  "Gross € = Σ line obligation × price of its quarter, rounded half up to the cent.":
+    "毛額 € = Σ 各行義務 × 該行所屬季度的價格，四捨五入到分。",
+};
+
+/** A rounding rule in the page's language; a rule without a translation stays in English, marked as such. */
+function roundingText(rule: string, lang: Lang): { text: string; en: boolean } {
+  if (lang !== "zh-TW") return { text: rule, en: false };
+  const zh = (ROUNDING_ZH as Record<string, string>)[rule];
+  return zh ? { text: zh, en: false } : { text: rule, en: true };
+}
 
 const PRICE = "82.32";
 
@@ -343,9 +369,14 @@ export function Workbench() {
         <details className="wb-rules">
           <summary>{s.rules}</summary>
           <ul className="fine">
-            {plan.rounding.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
+            {plan.rounding.map((r) => {
+              const t = roundingText(r, lang);
+              return (
+                <li key={r} lang={t.en ? "en" : undefined}>
+                  {t.text}
+                </li>
+              );
+            })}
           </ul>
           <p className="fine">{s.sources}</p>
         </details>

@@ -78,6 +78,16 @@ test("R2 re-check a11y: keyboard, axe with results shown (English and 繁體中�
   await expect(item(page, "FNW-2026-014")).toContainText("需處理");
   await expect(item(page, "FNW-2026-014")).toContainText("登記後 24 小時內查核員遭撤銷 → 人工複核，期間用預設值");
   await expect(item(page, "FNW-2026-014")).toContainText("示意");
+  // The action says a person must review the line, as in English; never "after acceptance" (the code checks the
+  // window after registration).
+  await expect(item(page, "FNW-2026-014").locator(".rc-action")).toContainText("需人工複核此行");
+  await expect(page.locator(".rc-list")).not.toContainText("接受後");
+  await expect(item(page, "FNW-2026-014")).toContainText("登記後 11 小時監看者撤銷了該查核員");
+  await expect(item(page, "KRC-2026-003")).toContainText("現在 CONTESTED。");
+  // The plan's rounding rules, in Traditional Chinese.
+  await page.locator(".wb-rules summary").click();
+  await expect(page.locator(".wb-rules li").first()).toHaveText("數量精確讀到公斤（最多 3 位小數）；強度讀到 6 位小數。");
+  await expect(page.locator('.wb-rules li[lang="en"]')).toHaveCount(0);
   await expect(item(page, "BATCH-DEMO-2026-0001")).toContainText("無變更");
   await expect(rows(page).filter({ hasText: "FNW-2026-014" }).locator(".wb-reason")).toContainText(
     "接受後重新檢查：AUDITOR_REVOKED_OR_BODY_SUSPENDED（示意重新檢查）",

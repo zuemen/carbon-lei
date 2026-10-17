@@ -961,7 +961,10 @@ async function verifyOnce(p: Presentation, reader: ChainReader, opts: VerifyOpti
   const reconciliationNotChecked = signedRec !== undefined && c8.status !== "fail" && (!extractIsSigned || c8.status === "skipped");
   if (reconciliationNotChecked && c8.status !== "skipped") {
     const why = c8.code || c8.status;
-    checks[c8i] = { ...c8, status: "skipped", code: "", detail: `not decided (${why}): ${c8.detail}` };
+    // The sub-rules were computed on an extract that is not the signed one: none of them was applied, so none is
+    // reported (a "pass" read from a changed extract would claim a rule held on the signed report).
+    const { rules: _notApplied, ...c8NoRules } = c8;
+    checks[c8i] = { ...c8NoRules, status: "skipped", code: "", detail: `not decided (${why}): ${c8.detail}` };
   }
   // ---------------------------------------------------------------- 9 precursors
   let precursorReport: PrecursorReport | undefined;

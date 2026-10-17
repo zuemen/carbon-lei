@@ -11,6 +11,8 @@ import { evidenceCheckers } from "../evidence.ts";
 import { useLang } from "../i18n.ts";
 import { ILLUSTRATIVE_RECHECKS } from "../recheck-data.ts";
 
+const ZH_USE_DEFAULT = "在供應商提供新的有效（VALID）證明之前，此行以預設值（含當年度加成）申報。";
+
 const S = {
   en: {
     title: "Re-check accepted lines",
@@ -64,13 +66,23 @@ const S = {
       RECHECK_FAILED: "無法重新檢查",
     } as Partial<Record<Change, string>>,
     action: {
-      action: "接受後狀況改變：在供應商提供新的有效（VALID）證明之前，此行以預設值（含當年度加成）申報。",
+      action: "此行不能再採用經驗證數值：在供應商提供新的有效（VALID）證明之前，此行以預設值（含當年度加成）申報。",
       info: "無須變更：報告日後仍可能遭撤銷或取代，申報前請持續重新檢查。",
       none: "無須變更。",
       error: "無法重新檢查，因此無法確認先前接受的數值；請修正原因後再執行一次。",
     } as Record<Severity, string>,
+    /** The changes whose English action says a person must review the line (sdk/recheck.ts ACTION), in zh-TW. */
+    review: {
+      AUDITOR_REVOKED_OR_BODY_SUSPENDED: `需人工複核此行（docs/OPERATE.md › CONTESTED）：登記後的窗口內查核員遭撤銷或驗證機構遭停權。${ZH_USE_DEFAULT}`,
+      ADDRESS_ROTATED: `需人工複核此行（docs/OPERATE.md › CONTESTED）：登記所用的地址在登記後不久即遭輪替。${ZH_USE_DEFAULT}`,
+      REVOCATION_CONTESTED: `需人工複核此行（docs/OPERATE.md › CONTESTED）：報告是由可能遭竊的地址撤銷的。${ZH_USE_DEFAULT}`,
+      CONTESTED: `需人工複核此行（docs/OPERATE.md › CONTESTED）。${ZH_USE_DEFAULT}`,
+    } as Partial<Record<Change, string>>,
   },
 };
+
+/** zh-TW action of a line: the review text for a change that needs a person, else the text for its severity. */
+const zhAction = (change: Change, severity: Severity) => S["zh-TW"].review[change] ?? S["zh-TW"].action[severity];
 
 const BADGE: Record<Severity, BadgeKind> = { action: "fail", error: "fail", info: "pass", none: "pass" };
 
@@ -138,7 +150,7 @@ export function RecheckPanel({
       now: r.current?.overall ?? "—",
       where: s.live(String(state.doc.pinnedBlock ?? "—")),
       detail: r.reasons.join("; "),
-      action: lang === "en" ? r.action : S["zh-TW"].action[r.severity],
+      action: lang === "en" ? r.action : zhAction(r.change, r.severity),
     });
     for (const x of ILLUSTRATIVE_RECHECKS) {
       rows.push({
@@ -150,7 +162,7 @@ export function RecheckPanel({
         now: x.result.now,
         where: s.illustrative,
         detail: x.story[lang],
-        action: lang === "en" ? x.result.action : S["zh-TW"].action[x.result.severity],
+        action: lang === "en" ? x.result.action : zhAction(x.result.change, x.result.severity),
       });
     }
     rows.sort((a, b) => a.n - b.n);
@@ -184,7 +196,9 @@ export function RecheckPanel({
                   {lang === "en" ? (S.en.change[r.change] ?? r.change) : (S["zh-TW"].change[r.change] ?? r.change)} <code>{r.change}</code>
                 </p>
                 <p className="fine">
-                  {s.accepted} {r.accepted} → {s.now} {r.now}. {r.detail}
+                  {s.accepted} {r.accepted} → {s.now} {r.now}
+                  {lang === "zh-TW" ? "。" : ". "}
+                  {r.detail}
                 </p>
                 <p className="fine rc-action">→ {r.action}</p>
               </li>

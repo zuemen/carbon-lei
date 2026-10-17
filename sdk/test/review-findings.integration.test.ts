@@ -178,7 +178,29 @@ describe("finding 6: check 8 on a credential that commits to a reconciliation", 
       expect(r.overall, label).not.toBe("VALID");
       expect(r.overall, label).toBe("INCOMPLETE");
       expect(status(r, 8), label).toBe("skipped:");
+      // Not decided: no sub-rule is reported, not even a "pass" computed on the changed extract.
+      expect(r.checks.find((c) => c.index === 8)?.rules, label).toBeUndefined();
       expect(r.warnings?.map((x) => x.code), label).toContain("RECONCILIATION_NOT_CHECKED");
+    }
+  }, 120_000);
+
+  it("check 8 not decided reports no sub-rule, not even a pass computed on the changed extract", async () => {
+    // QA 17 October: a compliant signed extract with one field changed showed check 8 "not run" but kept every
+    // sub-rule computed from the changed extract as "passed" (the CLI printed pass lines under SKIP 8).
+    const { cred, ex } = await issueReconciled(63, {}, {});
+    const signed = await verify(proofWith(cred, ex), undefined);
+    expect(status(signed, 8)).toBe("pass:");
+    expect(signed.checks.find((c) => c.index === 8)?.rules?.length).toBeGreaterThan(0);
+    for (const [label, x] of [
+      ["signedAt moved", { ...ex, signedAt: "2027-03-20" }],
+      ["one extra field", { ...ex, note: "x" }],
+    ] as [string, unknown][]) {
+      const r = await verify(proofWith(cred, x), undefined);
+      const c8 = r.checks.find((c) => c.index === 8);
+      expect(r.overall, label).toBe("INCOMPLETE");
+      expect(c8?.status, label).toBe("skipped");
+      expect(c8?.detail, label).toMatch(/^not decided/);
+      expect(c8?.rules, label).toBeUndefined();
     }
   }, 120_000);
 });

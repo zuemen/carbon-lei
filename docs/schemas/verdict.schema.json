@@ -31,7 +31,7 @@
         "detail": { "type": "string" },
         "rules": {
           "type": "array",
-          "description": "Check 8 sub-rules on the verification report (sdk/verification-rules.ts, rule set carbonlei-verification-rules/1): report dates, site visit, accreditation at the report date and, with an accreditation registry, the verifier's provenance. A sub-rule fails only when the report extract is the one the auditor signed; note is information only.",
+          "description": "Check 8 sub-rules on the verification report (sdk/verification-rules.ts, rule set carbonlei-verification-rules/1): report dates, site visit, accreditation at the report date and, with an accreditation registry, the verifier's provenance. A sub-rule fails only when the report extract is the one the auditor signed; note is information only. Absent when check 8 is skipped, including not decided for a credential that commits to a signed reconciliation (warning RECONCILIATION_NOT_CHECKED): sub-rules computed on an extract that is not the signed one were not applied and are not reported.",
           "items": {
             "type": "object",
             "additionalProperties": false,

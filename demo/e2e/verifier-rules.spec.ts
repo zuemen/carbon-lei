@@ -78,3 +78,65 @@ test("V4 Try to break it, card 6: a report dated before verifiers could issue is
   await expect(card.locator('[data-rule="report-after-period"].fail')).toBeVisible();
   await axe(page, "Try to break it after card 6");
 });
+
+/** Loads the demo proof, changes it with `edit`, pastes it back and verifies it live. */
+async function verifyEditedProof(page: Page, url: string, edit: (p: Record<string, unknown>) => void) {
+  await page.goto(url);
+  await expect(page.getByText(/Connected to Sepolia\.|Switched to backup node\.|已連線到 Sepolia。|已切換到備用節點。/)).toBeVisible();
+  await page.getByRole("button", { name: "Load the demo proof" }).click();
+  const box = page.locator("#proof-in");
+  const proof = JSON.parse(await box.inputValue()) as Record<string, unknown>;
+  edit(proof);
+  await box.fill(JSON.stringify(proof, null, 2));
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page.locator(".overall .stamp")).toBeVisible({ timeout: 60_000 });
+}
+
+test("V5 Buyer: a report extract changed after signing is Not verified; the summary names check 8 and the signed extract, not Sepolia, and no sub-rule shows as passed (EN and zh-TW)", async ({ page }) => {
+  const moveDate = (p: Record<string, unknown>) => {
+    p.reportExtract = { ...(p.reportExtract as Record<string, unknown>), signedAt: "2027-03-20" };
+  };
+  await verifyEditedProof(page, "./#buyer", moveDate);
+  const summary = page.locator(".verify-summary");
+  const c8 = page.locator("ol.checks > li").nth(7);
+  await expect(page.locator(".overall .stamp")).toHaveText("Not verified");
+  await expect(summary).toContainText("Not verified — check 8 was not decided");
+  await expect(summary).toContainText("7 of 8 checks passed, 1 not run");
+  await expect(summary).toContainText("The report extract in this proof is not the one the auditor signed");
+  await expect(summary).toContainText("so check 8 (the rules on the signed report) could not be applied");
+  await expect(summary).not.toContainText("Sepolia");
+  await expect(summary).not.toContainText("checks 4–8");
+  await expect(c8.locator(".badge")).toHaveText("– Not run");
+  await expect(c8.locator(".check-detail")).toContainText("not decided (CONSISTENCY_WARNING/PROOF_MISMATCH)");
+  await expect(c8.locator(".subrules")).toHaveCount(0);
+  await expect(page.locator(".overall p")).toContainText("Not decided: RECONCILIATION_NOT_CHECKED.");
+  await expect(page.locator(".overall-warnings li")).toHaveCount(1);
+  await expect(page.locator(".overall-warnings")).toContainText("RECONCILIATION_NOT_CHECKED — check 8 not run or not decided");
+  await expect(page.getByRole("button", { name: "Accept verified value" })).toBeDisabled();
+  await axe(page, "Buyer, extract changed (Not verified)");
+
+  await verifyEditedProof(page, "./?lang=zh-TW#buyer", moveDate);
+  await expect(page.locator(".overall .stamp")).toHaveText("未驗證");
+  await expect(summary).toContainText("未驗證——檢查 8 無法判定");
+  await expect(summary).toContainText("此證明中的報告摘錄並非查核員所簽署者");
+  await expect(summary).not.toContainText("Sepolia");
+  await expect(page.locator(".overall p")).toContainText("無法判定：RECONCILIATION_NOT_CHECKED。");
+  await expect(page.locator('.overall-warnings [lang="en"]')).toHaveCount(1);
+  await expect(c8.locator(".subrules")).toHaveCount(0);
+  await axe(page, "Buyer zh-TW, extract changed (Not verified)");
+});
+
+test("V6 Buyer: a proof without its report extract is Not verified; the summary says the extract is missing", async ({ page }) => {
+  await verifyEditedProof(page, "./#buyer", (p) => {
+    delete p.reportExtract;
+  });
+  const summary = page.locator(".verify-summary");
+  const c8 = page.locator("ol.checks > li").nth(7);
+  await expect(page.locator(".overall .stamp")).toHaveText("Not verified");
+  await expect(summary).toContainText("Not verified — check 8 was not run");
+  await expect(summary).toContainText("The proof carries no report extract, although the credential commits to the one the auditor signed");
+  await expect(summary).not.toContainText("Sepolia");
+  await expect(c8.locator(".check-detail")).toContainText("no report extract in this proof");
+  await expect(c8.locator(".subrules")).toHaveCount(0);
+  await expect(page.locator(".overall p")).toContainText("Not decided: RECONCILIATION_NOT_CHECKED.");
+});

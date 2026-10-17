@@ -33,7 +33,7 @@ const CHECKS: { n: number; text: string; source: Source }[] = [
   { n: 7, text: "The auditor is authorised by an accredited verification body", source: "evidence" },
   {
     n: 8,
-    text: "The report matches the signed credential (rule-based check, covered by the auditor's signature) — advisory: a mismatch flags the report for human review; it fails only when the signed report itself breaks a CBAM rule (dated too early, accreditation expired, no physical first-year site visit)",
+    text: "The report matches the signed credential (rule-based check, covered by the auditor's signature) — it fails when the signed report itself breaks a CBAM rule (dated too early, accreditation expired, no physical first-year site visit); a report extract that is missing, changed after signing or partly hidden leaves it not decided (Not verified, never Verified); any other finding is flagged for human review",
     source: "advisory",
   },
 ];
@@ -47,7 +47,7 @@ export const CHECK_TEXT_ZH: Record<number, string> = {
   5: "此批次是為您、以此數量申領的",
   6: "查核員已將此報告記錄在其自己的簽署歷史中（KERI 金鑰事件日誌）——簽章由您的瀏覽器依匯出的事件重新檢查；未查詢見證者（witnesses）",
   7: "查核員獲得經認證的驗證機構授權",
-  8: "報告與已簽署的憑證相符（規則式檢查，涵蓋於查核員的簽章內）——僅供參考：不一致時會將報告標示為需人工審查；只有當已簽署的報告本身違反 CBAM 規則（日期過早、認證已過期、首年未實地查訪）時才判定為未通過",
+  8: "報告與已簽署的憑證相符（規則式檢查，涵蓋於查核員的簽章內）——已簽署的報告本身違反 CBAM 規則（日期過早、認證已過期、首年未實地查訪）時判定為未通過；報告摘錄缺漏、簽署後遭更改或部分隱藏時無法判定（結果為未驗證，絕不會是已驗證）；其他發現則標示為需人工審查",
 };
 
 /** The check list's result badges in Traditional Chinese; other tabs keep the English badges. */
@@ -58,6 +58,56 @@ const BADGE_ZH: Record<BadgeKind, string> = {
   idle: "· 尚未執行",
   skip: "– 未執行",
 };
+
+/** How the checks that kept a result from VALID were left: not run, not decided (check 8 on a changed extract), or both. */
+type NotRunHow = "run" | "decided" | "both";
+
+/** Check numbers as a list: a run of three or more as a range ("4–8"), else "6 and 7" / "6, 8 and 10". */
+function listNums(ns: number[], and: string): string {
+  if (ns.length >= 3 && ns.every((n, i) => i === 0 || n === ns[i - 1] + 1)) return `${ns[0]}–${ns[ns.length - 1]}`;
+  return ns.length === 1 ? `${ns[0]}` : `${ns.slice(0, -1).join(", ")}${and}${ns[ns.length - 1]}`;
+}
+
+/** The verdict's warnings that make a result INCOMPLETE (SHIPMENT_NOT_BOUND does not). */
+const INCOMPLETE_CODES: string[] = ["EVIDENCE_NOT_CHECKED", "RECONCILIATION_NOT_CHECKED", "PRECURSORS_NOT_CHECKED", "CARBON_PRICE_NOT_CHECKED"];
+
+/**
+ * Why an INCOMPLETE result is not verified, read from the verdict itself: which checks were skipped (or not decided)
+ * and the warnings that name the reason. The offline view (no warnings, checks 4–8 skipped) names the missing Sepolia
+ * connection; a missing or changed report extract names check 8.
+ */
+function incompleteReason(result: VerificationResult, lang: Lang) {
+  const v = VERDICT[lang];
+  const skipped = result.checks.filter((c) => c.index > 0 && c.status === "skipped");
+  const decided = skipped.filter((c) => c.detail.startsWith("not decided"));
+  const how: NotRunHow = skipped.length && decided.length === skipped.length ? "decided" : decided.length ? "both" : "run";
+  const codes = (result.warnings ?? []).map((w) => w.code).filter((c) => INCOMPLETE_CODES.includes(c));
+  // Checks 6 and 7 that only warned are not skipped, but they are not checked either (EVIDENCE_NOT_CHECKED).
+  const evidence = [6, 7].filter((i) => {
+    const st = result.checks.find((c) => c.index === i)?.status;
+    return st !== "pass" && st !== "fail";
+  });
+  const heads = [...new Set([...skipped.map((c) => c.index), ...(codes.includes("EVIDENCE_NOT_CHECKED") ? evidence : [])])].sort((a, b) => a - b);
+  const reasons: string[] = [];
+  for (const code of codes) {
+    if (code === "RECONCILIATION_NOT_CHECKED") {
+      const c8 = result.checks.find((c) => c.index === 8);
+      reasons.push(c8 && /^no report extract/.test(c8.detail) ? v.why.extractMissing : v.why.extractChanged);
+    } else if (code === "EVIDENCE_NOT_CHECKED") {
+      reasons.push(v.why.evidence(v.checkList(evidence), evidence.length));
+    } else if (code === "PRECURSORS_NOT_CHECKED") {
+      reasons.push(v.why.precursors);
+    } else if (code === "CARBON_PRICE_NOT_CHECKED") {
+      reasons.push(v.why.carbonPrice);
+    }
+  }
+  if (!reasons.length) reasons.push(heads.includes(4) || heads.includes(5) ? v.why.sepolia : v.why.other);
+  return {
+    head: heads.length ? v.incompleteHead(v.checkList(heads), heads.length, how) : v.stampNotVerified,
+    reasons,
+    codes,
+  };
+}
 
 /** Verdict line, stamp and check list strings; the codes, check numbers and units stay as they are. */
 const VERDICT = {
@@ -71,9 +121,25 @@ const VERDICT = {
     checkFailed: (n: number) => `check ${n} failed`,
     rejected: (what: string) => `Rejected — ${what}`,
     noGap: "Do not rely on this proof's value: no declared-emissions gap is shown.",
-    incompleteHead: "Not verified — checks 4–8 were not run",
-    incompleteBody: (counts: string) =>
-      ` — ${counts}. They need a live connection to Sepolia. Do not rely on this proof's value: no declared-emissions gap is shown.`,
+    checkList: (ns: number[]) => `check${ns.length > 1 ? "s" : ""} ${listNums(ns, " and ")}`,
+    incompleteHead: (list: string, n: number, how: NotRunHow) =>
+      `Not verified — ${list} ${n === 1 ? "was" : "were"} ${{ run: "not run", decided: "not decided", both: "not run or not decided" }[how]}`,
+    incompleteBody: (counts: string, reasons: string[]) =>
+      ` — ${counts}. ${reasons.map((r) => r[0].toUpperCase() + r.slice(1)).join(". ")}. Do not rely on this proof's value: no declared-emissions gap is shown.`,
+    why: {
+      extractMissing:
+        "the proof carries no report extract, although the credential commits to the one the auditor signed, so check 8 (the rules on the signed report) could not be applied",
+      extractChanged:
+        "the report extract in this proof is not the one the auditor signed (a field changed, added or removed, or the fields it reconciles are hidden), so check 8 (the rules on the signed report) could not be applied",
+      evidence: (list: string, n: number) =>
+        `${list} (the auditor's signed history and authority) ${n === 1 ? "was" : "were"} not run or not confirmed by an evidence checker`,
+      precursors: "the credential commits to a precursor statement, but check 9 could not be decided",
+      carbonPrice: "the proof carries a carbon price statement, but check 10 could not be decided",
+      sepolia: "they need a live connection to Sepolia",
+      other: "a check that decides validity was not run",
+    },
+    notDecided: "Not decided: ",
+    warningsLabel: "Warnings from the verifier",
     reviewHead: "Needs review",
     reviewBody: (counts: string) =>
       ` — ${counts}. Do not rely on the verified value until a person has reviewed the report: no declared-emissions gap is shown.`,
@@ -105,8 +171,22 @@ const VERDICT = {
     checkFailed: (n: number) => `檢查 ${n} 未通過`,
     rejected: (what: string) => `已拒絕——${what}`,
     noGap: "請勿採信此證明的數值：不顯示申報排放差距。",
-    incompleteHead: "未驗證——檢查 4–8 未執行",
-    incompleteBody: (counts: string) => `——${counts}。這些檢查需要即時連線到 Sepolia。請勿採信此證明的數值：不顯示申報排放差距。`,
+    checkList: (ns: number[]) => `檢查 ${listNums(ns, " 與 ")}`,
+    incompleteHead: (list: string, _n: number, how: NotRunHow) =>
+      `未驗證——${list} ${{ run: "未執行", decided: "無法判定", both: "未執行或無法判定" }[how]}`,
+    incompleteBody: (counts: string, reasons: string[]) => `——${counts}。${reasons.join("。")}。請勿採信此證明的數值：不顯示申報排放差距。`,
+    why: {
+      extractMissing: "此證明未附報告摘錄，但憑證承諾了查核員所簽署的摘錄，因此無法套用檢查 8（針對已簽署報告的規則）",
+      extractChanged:
+        "此證明中的報告摘錄並非查核員所簽署者（有欄位遭更改、增加或刪除，或其比對的欄位遭隱藏），因此無法套用檢查 8（針對已簽署報告的規則）",
+      evidence: (list: string, _n: number) => `${list}（查核員的簽署歷史與權限）未執行，或證據檢查器未確認`,
+      precursors: "憑證承諾了前驅物聲明，但檢查 9 無法判定",
+      carbonPrice: "此證明附有碳價聲明，但檢查 10 無法判定",
+      sepolia: "這些檢查需要即時連線到 Sepolia",
+      other: "有決定結果的檢查未執行",
+    },
+    notDecided: "無法判定：",
+    warningsLabel: "驗證器的警告",
     reviewHead: "需審查",
     reviewBody: (counts: string) => `——${counts}。在有人審查報告之前，請勿採信經驗證的數值：不顯示申報排放差距。`,
     gap: (q: string, gap: string) => `此批 ${q} 噸出貨的申報排放差距：${gap} tCO2e（毛額，示意）`,
@@ -294,11 +374,12 @@ function VerifySummary({
     );
   }
   if (result.overall === "INCOMPLETE") {
+    const why = incompleteReason(result, lang);
     return (
       <p className="verify-summary review">
         <span aria-hidden="true">! </span>
-        <strong>{v.incompleteHead}</strong>
-        {v.incompleteBody(counts)}
+        <strong>{why.head}</strong>
+        {v.incompleteBody(counts, why.reasons)}
       </p>
     );
   }
@@ -541,6 +622,7 @@ export function Buyer() {
   const counts = result && checked ? disclosureCounts(checked, result) : null;
   const hiddenN = counts ? counts.hidden : (result?.hidden ?? 0);
   const hiddenText = vt.hidden(hiddenN, counts?.rejected ?? 0);
+  const incompleteCodes = result && !running && result.overall === "INCOMPLETE" ? incompleteReason(result, lang).codes : [];
   const rejectedProof = !!result && !running && result.overall === "INVALID";
   const incomplete = !!result && !running && result.overall === "INCOMPLETE";
   // CONTESTED: the summary says no declared-emissions gap is shown, so the card shows none either.
@@ -644,10 +726,16 @@ export function Buyer() {
                 setAccepted(false);
                 setTampered(false);
               }}
+              lang={lang === "zh-TW" ? "en" : undefined}
             >
               Load the demo proof
             </button>
-            <button className="btn" disabled={running || !proofText || (!reader && !offline)} onClick={() => run(proofText)}>
+            <button
+              className="btn"
+              disabled={running || !proofText || (!reader && !offline)}
+              onClick={() => run(proofText)}
+              lang={lang === "zh-TW" ? "en" : undefined}
+            >
               {running ? "Verifying…" : "Verify"}
             </button>
           </div>
@@ -666,6 +754,7 @@ export function Buyer() {
             className="proof"
             spellCheck={false}
             placeholder={'Paste the supplier\'s proof here, or click "Load the demo proof" above.'}
+            lang={lang === "zh-TW" ? "en" : undefined}
             value={proofText}
             onChange={(e) => {
               setProofText(e.target.value);
@@ -698,14 +787,14 @@ export function Buyer() {
         </section>
 
         <section className="sheet reveal" aria-labelledby="checks-h">
-          <p className="sheet-kicker" id="checks-h">
+          <p className="sheet-kicker" id="checks-h" lang={lang === "zh-TW" ? "en" : undefined}>
             Eight checks: seven verification checks plus one rule-based reconciliation check
           </p>
           <div className="legend" role="group" aria-label="Source labels">
             <span>◉ live · Sepolia = contract state read from Sepolia now</span>
             <span>◎ live · your browser = recomputed on this page (check 3 takes only the chain ID from the Sepolia node)</span>
             <span>▤ exported evidence = from a local KERI run ({data.exportDate})</span>
-            <span>≡ rule-based · advisory = can flag; fails only on a CBAM rule the signed report breaks</span>
+            <span>≡ rule-based · advisory = recomputed on this page; fails on a CBAM rule the signed report breaks, not decided when the signed extract is missing or changed, otherwise flags for review</span>
           </div>
           {error && (
             <p className="check-detail bad" role="alert">
@@ -746,7 +835,7 @@ export function Buyer() {
                     {r && r.code ? " — " : " "}
                     {r ? checkText(r, lang) : ""}
                   </span>
-                  {r?.rules && r.rules.length > 0 && !running && <SubRules rules={r.rules} />}
+                  {r?.rules && r.rules.length > 0 && r.status !== "skipped" && !running && <SubRules rules={r.rules} />}
                 </li>
               );
             })}
@@ -780,8 +869,30 @@ export function Buyer() {
               <p>
                 {hiddenText}
                 {result.primaryCode ? vt.firstFailure(result.primaryCode) : ""}
+                {incompleteCodes.length > 0 && (
+                  <span className="overall-reason">
+                    {" "}
+                    {vt.notDecided}
+                    {incompleteCodes.map((c, i) => (
+                      <Fragment key={c}>
+                        {i > 0 && ", "}
+                        <code>{c}</code>
+                      </Fragment>
+                    ))}
+                    {lang === "zh-TW" ? "。" : "."}
+                  </span>
+                )}
                 {vt.scope}
               </p>
+              {result.warnings && result.warnings.length > 0 && (
+                <ul className="overall-warnings" aria-label={vt.warningsLabel}>
+                  {result.warnings.map((w) => (
+                    <li key={w.code}>
+                      <code>{w.code}</code> — <span lang={lang === "zh-TW" ? "en" : undefined}>{w.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <button className="btn btn-ghost" onClick={() => go("try-to-break-it")}>
                 {vt.tryBreak}
               </button>
@@ -852,7 +963,12 @@ export function Buyer() {
           </>
         )}
         <div className="btn-row">
-          <button className="btn" onClick={() => setAccepted(true)} disabled={!result || result.overall !== "VALID"}>
+          <button
+            className="btn"
+            onClick={() => setAccepted(true)}
+            disabled={!result || result.overall !== "VALID"}
+            lang={lang === "zh-TW" ? "en" : undefined}
+          >
             Accept verified value
           </button>
           {!result && <span className="fine">Verify the proof first. Accepting stays in this browser: nothing is sent to the CBAM Registry or on-chain.</span>}

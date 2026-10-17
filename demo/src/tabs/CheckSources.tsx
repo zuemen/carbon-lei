@@ -29,7 +29,7 @@ const T = {
       5: "The shared tonnage ledger on Sepolia, read when you press Verify: the claim for this batch, its quantity and the importer it was declared to.",
       6: `The signature on the auditor's key event is re-checked on this page from the exported event (${exportDate}). Witnesses are not queried.`,
       7: `The vLEI credential chain is read from evidence exported on ${exportDate} and checked up to this page's pinned root. Witnesses are not queried. Check 7 also reads the allowlist on Sepolia (when the auditor was added and revoked, and when the body's accreditation ends) and judges authority at the report's registration time, as check 4 does.`,
-      8: "A rule-based comparison of the report with the signed credential, on this page. A mismatch flags the proof for human review. Its sub-rules on the report itself (report date, site visit, accreditation on the report date, the operator's accreditation record) fail the check only when the auditor-signed report breaks a CBAM rule.",
+      8: "A rule-based comparison of the report extract with the signed credential, on this page. When the extract is the one the auditor signed, a broken timing or site-visit rule fails the check (Rejected); an extract that is missing, changed after signing or partly hidden leaves the check not decided and the proof Not verified, never Verified; any other finding, and every difference in the operator's accreditation record, is flagged for human review.",
     }),
   },
   "zh-TW": {
@@ -45,7 +45,7 @@ const T = {
       5: "按下 Verify 時讀取的 Sepolia 共享噸數帳本：此批次的申領、其數量，以及它所申報給的進口商。",
       6: `查核員金鑰事件上的簽章，在本頁依匯出的事件（${exportDate}）重新檢查。未查詢見證者（witnesses）。`,
       7: `vLEI 憑證鏈讀自 ${exportDate} 匯出的證據，並一路檢查到本頁釘選的根。未查詢見證者（witnesses）。檢查 7 也會讀取 Sepolia 上的允許清單（查核員何時加入與撤銷，以及驗證機構的認證何時到期），並與檢查 4 一樣，以報告登記時的時間判斷權限。`,
-      8: "在本頁以規則比對報告與已簽署的憑證。不一致時會將證明標示為需人工審查。針對報告本身的子規則（報告日期、現場訪視、報告日期當時的認證、營運者的認證紀錄），只有在查核員簽署的報告違反 CBAM 規則時，才會使此檢查判定為失敗。",
+      8: "在本頁以規則比對報告摘錄與已簽署的憑證。摘錄正是查核員所簽署者時，違反日期或現場查訪規則即判定此檢查未通過（已拒絕）；摘錄缺漏、簽署後遭更改或部分隱藏時，此檢查無法判定，證明為未驗證，絕不會是已驗證；其他發現，以及營運者認證紀錄中的任何差異，則標示為需人工審查。",
     }),
   },
 };
