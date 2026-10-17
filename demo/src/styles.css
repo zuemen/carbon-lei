@@ -459,6 +459,7 @@ table.layer-table { width: 100%; border-collapse: collapse; font-size: 14px; bac
 }
 
 /* Precursor (wire rod) sections: local-chain tier, see demo/src/tabs/Precursor.tsx */
+.disc-warn { border-left: 4px solid var(--amber); background: var(--amber-wash); color: var(--ink); padding: 10px 12px; margin: 12px 0 0; font-size: 14px; line-height: 1.5; max-width: 72ch; }
 .precursor-where { border-left: 4px solid var(--amber); background: var(--amber-wash); color: var(--ink); padding: 10px 12px; margin: 0 0 14px; font-size: 14px; line-height: 1.5; }
 .pc-scroll { overflow-x: auto; }
 .pc-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0 10px; }

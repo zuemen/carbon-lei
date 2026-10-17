@@ -38,7 +38,7 @@ import { applyRecheck, postWebhook, printRecheck, recheckExitCode, recheckRecord
 import { createApiServer, DEFAULTS as SERVE_DEFAULTS, isLoopback } from "./server.ts";
 import { vleiCheckers } from "./checkers.ts";
 import type { AccreditationRegistry } from "./verification-rules.ts";
-import { extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
+import { check8HiddenFields, extractShapeProblem, pickReconciledClaims, runRules, type ReportExtract } from "./consistency.ts";
 import type { PrecursorReport } from "./precursor.ts";
 import { art9Text, carbonPriceLines } from "./carbonprice.ts";
 import { basename, dirname, resolve } from "node:path";
@@ -58,14 +58,19 @@ const USAGE = `carbonlei <command> [options]
   issue        --claims <claims.json> --auditor-aid <AID> --supplier <0x…> [--kel-seq <n>] [--supersedes <0x…>]
                [--out <credential.json>]            signs with VERIFIER_PRIVATE_KEY (EIP-712)
   present      --credential <credential.json> [--fields a,b,…] [--batch-id <id> --quantity <t>
-               --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>]
+               --shipment-date <YYYY-MM-DD> [--importer-salt <0x…>]] [--out <proof.json>] [--allow-incomplete]
+                                                    refuses --fields that hide a field check 8 needs (the proof would
+                                                    verify INCOMPLETE), unless --allow-incomplete (then it warns)
   present-batch <book.json> --out <dir> [--credential <credential.json>] [--evidence-from <proof.json>] [--check]
-               [--json] [--rpc <url>] [--deployment <file>]
+               [--allow-incomplete] [--json] [--rpc <url>] [--deployment <file>]
                                                     one proof per claimed batch of the allocation book, each with
                                                     its buyer's fields, and share-pack.json (no EORI, no salt).
                                                     --check reconciles with the registry first and writes only the
-                                                    batches whose claim matches. Exit 0 if a proof was written, 1 if
-                                                    none, 3 if --check could not read the registry
+                                                    batches whose claim matches. A batch whose fields hide one check 8
+                                                    needs is skipped (its proof would verify INCOMPLETE), unless
+                                                    --allow-incomplete (then written, with a warning). Exit 0 if a
+                                                    proof was written, 1 if none, 3 if --check could not read the
+                                                    registry
   allocate     <book.json> [--credential <credential.json>] [--json] [--out <report.json>] [--no-events]
                [--from-block <n>] [--rpc <url>] [--deployment <file>]
                                                     reconciles the supplier's allocation book with the registry at
@@ -300,6 +305,7 @@ async function main(argv: string[]) {
       "from-block": { type: "string" },
       "evidence-from": { type: "string" },
       check: { type: "boolean", default: false },
+      "allow-incomplete": { type: "boolean", default: false },
     },
   });
 
@@ -332,6 +338,12 @@ async function main(argv: string[]) {
       const file = readJson(values.credential as string);
       const cred = (file.credential ?? file) as SignedCredential;
       const fields = values.fields ? (values.fields as string).split(",") : [...DEMO_DISCLOSURE];
+      const hidden = check8HiddenFields(cred.core ?? JSON.parse(cred.coreJson), fields);
+      if (hidden.length) {
+        const msg = `the proof hides ${hidden.join(", ")}, which check 8 needs (the credential commits to a signed reconciliation): the buyer's verifier will return Not verified (INCOMPLETE)`;
+        if (!values["allow-incomplete"]) throw new Error(`${msg}; add the fields to --fields or pass --allow-incomplete`);
+        console.error(`warning: ${msg}`);
+      }
       const shipment = values["batch-id"]
         ? {
             batchId: values["batch-id"] as string,
@@ -379,7 +391,10 @@ async function main(argv: string[]) {
           return EXIT.ERROR;
         }
       }
-      const pack = buildSharePack(cred, book, { ...(evidence ? { evidence } : {}), ...(ready ? { only: (b) => ready!.has(b.batchId) } : {}) });
+      const allowIncomplete = values["allow-incomplete"] as boolean;
+      const pack = buildSharePack(cred, book, { ...(evidence ? { evidence } : {}), ...(ready ? { only: (b) => ready!.has(b.batchId) } : {}), allowIncomplete });
+      for (const p of pack.proofs.filter((x) => x.incomplete))
+        console.error(`warning: ${p.file} hides ${p.incomplete!.join(", ")}, which check 8 needs: the buyer's verifier will return Not verified (INCOMPLETE)`);
       const manifest = writeSharePack(values.out as string, book, cred, pack);
       if (values.json) process.stdout.write(json(manifest) + "\n");
       else {

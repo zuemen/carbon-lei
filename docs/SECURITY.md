@@ -631,6 +631,7 @@ The registering transaction itself stays secp256k1, as do the owner and watcher 
 - **The book is a secret** (T32). It holds each buyer's EORI and the per-batch salts of the importer commitments. Outputs (terminal report, `--json`, `share-pack.json`) carry neither; each proof carries only its own batch's salt, as any proof does.
 - **Reconcile before sharing** (T33). Proofs should go out only for batches whose on-chain claim matches the book; `present-batch --check` enforces that.
 - **One proof per buyer** (T34). Check 5 binds each proof to one EORI, so a forwarded proof fails for anyone else who runs check 5 with its own EORI.
+- **No proof that cannot verify.** When the credential commits to a signed reconciliation, a field list that hides a field check 8 reconciles gives a proof the buyer's verifier returns INCOMPLETE, never VALID: `allocate` reports `FIELDS_INCOMPLETE`, `present-batch` skips the batch and `present --fields` refuses, unless `--allow-incomplete`; the Supplier tab warns. Every preset and the example book verify VALID (`sdk/test/disclosure-presets.test.ts`). This is a usability guard, not a security control: the verifier's INCOMPLETE result is what protects the buyer.
 - **File names** (T42): each share-pack file name carries a short hash of the full importer and batch ids, and a pack never overwrites a file.
 - Not done: an encrypted book format; signed acknowledgements from buyers; import from ERP sales orders.
 

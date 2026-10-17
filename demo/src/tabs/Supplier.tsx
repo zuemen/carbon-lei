@@ -4,6 +4,7 @@ import { selectDisclosures, type Presentation } from "../../../sdk/disclosure.ts
 import { decodeDisclosure } from "../../../sdk/disclosure.ts";
 import { DEMO_DISCLOSURE } from "../../../sdk/issue.ts";
 import { REQUIRED_DISCLOSURES } from "../../../sdk/credential.ts";
+import { check8HiddenFields, RECONCILED_CLAIMS } from "../../../sdk/consistency.ts";
 import { scrollBelowTabbar, useApp } from "../App.tsx";
 import { fmt, TabHead, TxLink } from "../components.tsx";
 import { kgToT } from "../messages.ts";
@@ -96,6 +97,10 @@ const TXT = {
     hashOnly: "On-chain, the importer appears only as a hash commitment.",
     choose: "Choose what the importer can see",
     required: " (required)",
+    check8: " (check 8 needs it)",
+    c8warn: (fields: string) =>
+      `Hidden: ${fields}. Check 8 needs these fields, because the credential commits to a signed reconciliation: the buyer's verifier will return Not verified (INCOMPLETE), never Verified. Tick them again to give the buyer a proof that can verify.`,
+    c8proof: "This proof hides fields check 8 needs: the buyer's verifier will return Not verified (INCOMPLETE).",
     create: "Create the supplier's proof",
     useInBuyer: "Use this proof in the Buyer tab →",
     proofSummary: (n: number) => `Supplier's proof (JSON) — ${n} fields disclosed`,
@@ -139,6 +144,10 @@ const TXT = {
     hashOnly: "在鏈上，進口商只以雜湊承諾（hash commitment）呈現。",
     choose: "選擇進口商可以看到的內容",
     required: "（必須揭露）",
+    check8: "（檢查 8 需要）",
+    c8warn: (fields: string) =>
+      `已隱藏：${fields}。由於憑證承諾了一份已簽署的核對結果，檢查 8 需要這些欄位：買方的驗證器將回傳「未驗證（INCOMPLETE）」，不會是「已驗證」。請重新勾選，買方才能拿到可驗證通過的證明。`,
+    c8proof: "這份證明隱藏了檢查 8 需要的欄位：買方的驗證器將回傳「未驗證（INCOMPLETE）」。",
     create: "建立供應商的證明",
     useInBuyer: "在買方分頁使用此證明 →",
     proofSummary: (n: number) => `供應商的證明（JSON）—— 已揭露 ${n} 個欄位`,
@@ -167,6 +176,13 @@ export function Supplier() {
   const { data, reader, offline, setProofText, go } = useApp();
   const allNames = useMemo(() => Object.keys(data.credential.disclosures), [data]);
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(DEMO_DISCLOSURE));
+  // Fields check 8 reconciles, when the credential commits to a signed reconciliation: hiding one makes the proof
+  // INCOMPLETE at the buyer (sdk/verify.ts), so the tab marks them and warns before the proof is made.
+  const c8Hidden = useMemo(() => check8HiddenFields(JSON.parse(data.credential.coreJson), [...chosen]), [data, chosen]);
+  const c8Needed = useMemo(
+    () => (JSON.parse(data.credential.coreJson).reconciliation ? new Set<string>(RECONCILED_CLAIMS) : new Set<string>()),
+    [data],
+  );
   const [proof, setProof] = useState<Presentation | null>(null);
   const [qr, setQr] = useState("");
   const [remaining, setRemaining] = useState<bigint | null>(null);
@@ -217,6 +233,9 @@ export function Supplier() {
 
   const claimed = remaining === null ? null : verifiedKg - remaining;
   const pct = claimed === null ? 0 : Number((claimed * 1000n) / verifiedKg) / 10;
+
+  const proofHidesC8 =
+    proof !== null && check8HiddenFields(JSON.parse(proof.core), proof.disclosures.map((d) => decodeDisclosure(d).name)).length > 0;
 
   function create() {
     const names = allNames.filter((n) => chosen.has(n));
@@ -291,6 +310,7 @@ export function Supplier() {
           <ul className="checkbox-list">
             {allNames.map((n) => {
               const required = (REQUIRED_DISCLOSURES as readonly string[]).includes(n);
+              const forCheck8 = !required && c8Needed.has(n);
               return (
                 <li key={n}>
                   <label>
@@ -308,13 +328,18 @@ export function Supplier() {
                     />
                     <span>
                       {t.labels[n] ?? n}
-                      {required ? t.required : ""}
+                      {required ? t.required : forCheck8 ? t.check8 : ""}
                     </span>
                   </label>
                 </li>
               );
             })}
           </ul>
+          {c8Hidden.length > 0 && (
+            <p className="disc-warn" role="status" data-testid="c8-warning">
+              {t.c8warn(c8Hidden.map((n) => t.labels[n] ?? n).join(lang === "zh-TW" ? "、" : ", "))}
+            </p>
+          )}
           <div className="btn-row" style={{ marginTop: 16 }}>
             <button className="btn btn-ghost" onClick={create}>
               {t.create}
@@ -333,7 +358,10 @@ export function Supplier() {
           </div>
           {proof && (
             <details style={{ marginTop: 12 }}>
-              <summary>{t.proofSummary(proof.disclosures.length)}</summary>
+              <summary>
+                {t.proofSummary(proof.disclosures.length)}
+                {proofHidesC8 ? ` — ${t.c8proof}` : ""}
+              </summary>
               <pre>{JSON.stringify(proof, null, 2)}</pre>
             </details>
           )}

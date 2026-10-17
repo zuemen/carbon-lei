@@ -196,6 +196,19 @@ describe("reconcile", () => {
     expect(noEvents.ok).toBe(true);
   });
 
+  it("a credential that commits to a signed reconciliation: a buyer whose fields hide one check 8 needs is FIELDS_INCOMPLETE (action)", () => {
+    const b = book({ batches: book().batches.slice(0, 2) });
+    const r = reconcile(b, { ...REF, reconciliation: true }, snap({}, B1));
+    expect(r.issues.map((i) => `${i.code}/${i.severity} ${i.batchId}`)).toEqual(["FIELDS_INCOMPLETE/action B-2"]);
+    expect(r.issues[0].detail).toMatch(/^hides accreditationNumber, nabName, siteVisit, assuranceLevel, materialityThreshold, issuedAt, validUntil, .*INCOMPLETE/);
+    expect(r.sharePack[0].incomplete).toBeUndefined();
+    expect(r.sharePack[1].incomplete).toHaveLength(7);
+    expect(r.ok).toBe(false);
+    expect(printAllocation(r)).toContain("would verify INCOMPLETE");
+    // reportRefOf carries the flag from the credential core.
+    expect(reportRefOf(cred).reconciliation).toBe(true);
+  });
+
   it("warns when two batches share an importer salt; the report never carries an EORI or a salt", () => {
     const b = book();
     b.batches[2].importerSalt = b.batches[1].importerSalt;
@@ -225,5 +238,16 @@ describe("share pack", () => {
     const demoProof = JSON.parse(readFileSync(new URL("../../fixtures/sepolia-demo-proof.json", import.meta.url), "utf8"));
     expect([...full.proof.disclosures].sort()).toEqual([...demoProof.disclosures].sort());
     expect(buildSharePack(cred, b, { only: (x) => x.batchId !== "BATCH-DEMO-2026-0003" }).skipped[1].reason).toMatch(/not READY/);
+  });
+
+  it("a batch whose fields hide one check 8 needs is skipped (INCOMPLETE), unless allowIncomplete", () => {
+    const b = parseBook(structuredClone(exampleBook));
+    b.importers[0].fields = ["specificEmbeddedEmissions_tCO2e_per_t"];
+    b.batches = b.batches.filter((x) => x.importer === "demo-imports");
+    const refused = buildSharePack(cred, b);
+    expect(refused.proofs).toHaveLength(0);
+    expect(refused.skipped[0]).toEqual({ batchId: "BATCH-DEMO-2026-0001", reason: expect.stringMatching(/hides accreditationNumber, .* Not verified \(INCOMPLETE\); .*--allow-incomplete/) });
+    const allowed = buildSharePack(cred, b, { allowIncomplete: true });
+    expect(allowed.proofs[0].incomplete).toEqual(["accreditationNumber", "nabName", "siteVisit", "assuranceLevel", "materialityThreshold", "issuedAt", "validUntil"]);
   });
 });
