@@ -44,7 +44,7 @@ What vendors advertise on their public pages, read on 2026-10-16. "—" means we
 
 **What none of them showed.** A check software can run of *who* signed a verification and whether that person was authorised when it was registered; a signer's revocation reaching relying parties; and a cap on the same verified tonnes across importers. These are CarbonLEI's three questions.
 
-**What all of them have and CarbonLEI lacked until 16 October 2026.** Portfolio planning, alerts, supplier-side sharing, an API, precursors and the carbon price paid. We built prototypes of each on the same checks: the Importer workbench (`verify-batch`, `portfolio`), `recheck` and the REST API (`serve`), the supplier portal (`allocate`, `present-batch`), precursors (check 9) and the carbon price paid on draft rules (check 10); see the [README](../README.md). Registry XML export and ERP connectors are still not built.
+**What all of them have and CarbonLEI lacked until 16 October 2026.** Portfolio planning, alerts, supplier-side sharing, an API, precursors and the carbon price paid. We built prototypes of each on the same checks: the Importer workbench (`verify-batch`, `portfolio`), `recheck` and the REST API (`serve`), the supplier portal (`allocate`, `present-batch`), precursors (check 9) and the carbon price paid on draft rules (check 10); see the [README](../README.md). Registry XML export and ERP connectors are still not built; a generic ERP CSV-to-REST-API example is in [`examples/erp-integration`](../examples/erp-integration/) (17 October 2026).
 
 ## What is new here, and what is not
 

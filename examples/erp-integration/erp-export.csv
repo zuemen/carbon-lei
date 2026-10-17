@@ -1,0 +1,6 @@
+po_number,po_line,cn_code,country_of_origin,supplier_name,quantity_tonnes,import_date,proof_file
+PO-4500001001,10,73181595,TW,Demo Fasteners Co. (fictional),200,2026-10-10,sepolia-demo-proof.json
+PO-4500001002,10,73181595,TW,Demo Fasteners Co. (fictional),40,2026-11-05,sepolia-demo-proof.tampered.json
+PO-4500001003,20,73181595,TW,Example Bolts Co. (fictional),25.5,2026-12-01,
+PO-4500001004,10,73181590,TW,Example Bolts Co. (fictional),12,2026-12-15,proof-not-yet-received.json
+PO-4500001005,10,7318159,TW,Example Bolts Co. (fictional),5,2026-12-20,

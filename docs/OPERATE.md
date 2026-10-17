@@ -221,7 +221,7 @@ Exit codes: `allocate` 0 when nothing needs action, 1 when something does, 3 whe
 
 ## Not built
 
-- ERP or EDI connectors: the inputs are an Excel template and JSON files ([`sdk/cli.ts`](../sdk/cli.ts)); an ERP can call the prototype REST API (`carbonlei serve`), but no ERP-specific connector exists.
+- ERP or EDI connectors: the inputs are an Excel template and JSON files ([`sdk/cli.ts`](../sdk/cli.ts)); an ERP can call the prototype REST API (`carbonlei serve`), but no ERP-specific connector exists. [`examples/erp-integration/`](../examples/erp-integration/) shows the flow with a generic ERP CSV export: map to `/v1/verify-batch`, check the HMAC binding, plan with `/v1/portfolio`, write a CSV back (not a CBAM Registry filing; no SAP or Oracle connector).
 - A hosted alerting service: `carbonlei recheck --webhook` runs on the importer's own scheduler and POSTs to the importer's own endpoint; CarbonLEI runs nothing that watches on an importer's behalf.
 - A connection to any PACT network: the export is field-compatible JSON ([PACT_MAPPING](PACT_MAPPING.md); [ADOPTION §8](ADOPTION.md#8-current-status-by-area)).
 - Witness operation beyond the local containers ([PILOT §3](PILOT.md#3-what-runs-where)).
