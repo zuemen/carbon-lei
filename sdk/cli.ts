@@ -1,5 +1,5 @@
 // carbonlei CLI: issue, present, present-batch, allocate, verify, verify-batch, portfolio, recheck, serve, export-pact,
-// import-template.
+// export-communication, import-template.
 // Run with Node 22: node sdk/cli.ts <command> [options]
 // The CLI never sends transactions; registration and claims are sent by the wallets that own them.
 import { readFileSync, statSync, writeFileSync } from "node:fs";
@@ -13,6 +13,7 @@ import type { CredentialClaims, Hex } from "./credential.ts";
 import type { Presentation } from "./disclosure.ts";
 import { DEMO_DISCLOSURE, issueCredential, present, reportInputOf, type SignedCredential } from "./issue.ts";
 import { exportPactFromProof } from "./pact.ts";
+import { communicationCsv } from "./communication.ts";
 import { verifyPresentation } from "./verify.ts";
 import { EXIT, exitCodeOf, verdictError, verdictFor } from "./verdict.ts";
 import { disclosureSummary } from "./summary.ts";
@@ -129,6 +130,14 @@ const USAGE = `carbonlei <command> [options]
                                                     verifies the proof first, with check 5 for your EORI: checks
                                                     0-8, plus 9 and 10 when it carries a precursor or carbon-price
                                                     statement
+  export-communication <proof.json> --eori <EORI> [--out <communication.csv>] [--rpc <url>] [--deployment <file>]
+               [--trust-anchor <AID>] [--precursor-trust-anchor <AID>] [--max-head-age <s>]
+                                                    verifies the proof first (as verify --eori); only a VALID result
+                                                    is exported: a CSV of the Summary_Communication fields of the
+                                                    Commission's communication template v2.1.1, in template order,
+                                                    with value, source and status (from verified proof, hidden by
+                                                    supplier, not held). Not validated by the Commission, not a
+                                                    Registry submission; for any other result nothing is written
   import-template <file.xlsx> [--product N] [--out <draft.json>]
                reads a filled CBAM Communication Template (V2.1 or V2.1.1) and prints a draft of the
                credential fields it can fill; the rest is left to the supplier and the verification body
@@ -612,6 +621,31 @@ async function main(argv: string[]) {
         ),
       );
       write(values.out, pf);
+      return 0;
+    }
+    case "export-communication": {
+      const file = positionals[0] ?? (values.proof as string | undefined);
+      if (!file) throw new Error("usage: carbonlei export-communication <proof.json> --eori <EORI> [--out <communication.csv>]");
+      // Check 5 binds the shipment to this importer; without it the result says nothing about this importer.
+      if (!values.eori) throw new Error("export-communication needs --eori <EORI>: the importer the shipment was declared to");
+      const proofText = readFileSync(file, "utf8");
+      const proof = JSON.parse(proofText) as Presentation;
+      const v = await withinDeadline(
+        verdictFor(proof, reader(values), {
+          importerEORI: values.eori as string,
+          loadBundle: bundleLoader(file),
+          trustAnchor: values["trust-anchor"] as string | undefined,
+          precursorTrustAnchor: values["precursor-trust-anchor"] as string | undefined,
+          maxHeadAgeSec: maxHeadAge(values),
+          proofText,
+        }),
+      );
+      // communicationCsv refuses anything but VALID with check 5 passed, before anything is written.
+      const csv = communicationCsv(v, sha256Hex(proofText));
+      if (values.out) {
+        writeFileSync(values.out as string, csv);
+        console.error(`wrote ${values.out} (${v.overall} at block ${v.chain.block}; not validated by the Commission, not a Registry submission)`);
+      } else process.stdout.write(csv);
       return 0;
     }
     case "import-template": {

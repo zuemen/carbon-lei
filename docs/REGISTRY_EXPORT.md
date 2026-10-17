@@ -2,7 +2,7 @@
 
 > **Short answer.** Several enterprise CBAM tools advertise a "Registry XML export". On 17 October 2026 the European Commission publishes one XML schema for CBAM Registry submissions: the **transitional-period quarterly report** (`QReport`, XSD version 18.30). The Commission has moved it to its CBAM archive as no longer applicable; it covers imports from Q4 2023 to Q4 2025. It has published **no** XML schema for the definitive-period annual CBAM declaration. Its Q&A of 15 October 2026 says the Registry module for submitting the declaration "will open in 2027". It has published no file-import format for O3CI, where non-EU operators enter emissions data on screen. What it does publish for the operator-to-importer exchange is an Excel **communication template** with a `Summary_Communication` sheet.
 >
-> CarbonLEI's portfolio planning starts at import year 2026 (`buildPortfolio` rejects earlier years), so no official schema covers the data CarbonLEI holds. We therefore built **no** Registry exporter and did not invent a schema. This page records what exists (§1) and what does not (§2), explains the decision (§3), and maps CarbonLEI's verdict and portfolio fields to the fields the Commission does publish (§4). When the Commission publishes the declaration's data structure, §5 says what we would build.
+> CarbonLEI's portfolio planning starts at import year 2026 (`buildPortfolio` rejects earlier years), so no official schema covers the data CarbonLEI holds. We therefore built **no** Registry exporter and did not invent a schema. This page records what exists (§1) and what does not (§2), explains the decision (§3), and maps CarbonLEI's verdict and portfolio fields to the fields the Commission does publish (§4). `carbonlei export-communication` writes the `Summary_Communication` part of that mapping as a CSV from a verified proof (§4.5). When the Commission publishes the declaration's data structure, §5 says what we would build.
 
 All sources were accessed on **17 October 2026**. SHA-256 hashes are of the files as downloaded that day, so anyone can check that the same file is meant. None of these files is in this repository.
 
@@ -23,7 +23,7 @@ All sources were accessed on **17 October 2026**. SHA-256 hashes are of the file
 - **An import format for O3CI emissions data.** The operator manual (R5) describes on-screen entry and a CSV export. It mentions an appendix file `CBAM_O3CI_Data_Elements.xlsx` (§6.1), but that file is not attached to the published PDF and we did not find it on the Registry page.
 - **A system-to-system interface for declarants or operators.** We found no published API or message specification for either.
 
-## 3. Decision: no exporter, documentation only
+## 3. Decision: no Registry exporter
 
 We build only what an official, public specification grounds. The one official XML schema (R1) does not match the data CarbonLEI holds:
 
@@ -31,7 +31,7 @@ We build only what an official, public specification grounds. The one official X
 2. **Codes that would misstate the data.** For a line on default values, the only fitting code is `TOM03`, "default values made available and published by the Commission". In the transitional rules that meant the transitional default values, which could be used only until July 2024 (as the CBAM archive page states). The 2026 defaults of IR (EU) 2026/1740 with their mark-up are a different thing. For a line on the supplier's verified value, `TOM01` "Commission rules" would assert a methodology that the demo report itself labels "illustrative — not official CBAM methodology".
 3. **Identifiers that do not fit.** `OperatorId` and `InstallationId` are at most 17 characters (`an..17`). A supplier LEI has 20, and the demo installation ID `TW-ZZZZ00TWSCREWDEMO185-0001` has 28.
 
-The definitive declaration has no published structure (§2). An exporter for it would be an invented schema, which this project does not ship. The importer's outputs therefore stay as they are: the CSV declaration worksheet (`carbonlei portfolio`, not a Registry format), the PACT export (`carbonlei export-pact`), and the verdict JSON. §4 tells a declarant or an integrator where each CarbonLEI field goes in the published templates.
+The definitive declaration has no published structure (§2). An exporter for it would be an invented schema, which this project does not ship. The importer's outputs are therefore: the CSV declaration worksheet (`carbonlei portfolio`, not a Registry format), the PACT export (`carbonlei export-pact`), the verdict JSON, and the CSV of the communication template's `Summary_Communication` fields (`carbonlei export-communication`, §4.5; not a Registry format either). §4 tells a declarant or an integrator where each CarbonLEI field goes in the published templates.
 
 ## 4. Mapping CarbonLEI fields to the published fields
 
@@ -93,8 +93,23 @@ Check 10 follows the Commission's **draft** implementing act on the carbon price
 | `disclosed.verificationReportId`, `verifierLEI`, `accreditationNumber`, `nabName`, `assuranceLevel`, `siteVisit`, `materialityThreshold` | Verification report of the accredited verifier (template in the Annex to IR (EU) 2025/2546); in the Registry, the verifier issues it through O3CI (R5) | The communication template has no verification fields |
 | `verdict.credSAID`, `verdict.chain.block`, `verdict.overall` | — | CarbonLEI evidence: which signed credential was checked, at which block, with what result. No CBAM field; keep it with the declaration's supporting documents |
 
+### 4.5 The export: `carbonlei export-communication`
+
+```bash
+npm run carbonlei -- export-communication <proof.json> --eori <EORI> [--out <communication.csv>]
+```
+
+It runs the same verification as `carbonlei verify --eori` and writes the CSV only when the result is VALID and check 5 bound the shipment to that EORI. For any other result (INVALID, CONTESTED, INCOMPLETE, or check 5 not passed) it writes nothing and exits 1 ([`sdk/communication.ts`](../sdk/communication.ts)).
+
+- **Rows.** One per field of `Summary_Communication` in template v2.1.1, in the sheet's order: installation details (rows 12–21), the production-process summary, the emissions and data-quality block, further information, and the product columns of header row 25. That is 76 fields. Each label is the workbook's cached cell text, and a test compares all 76 with the published file (SHA-256 above, R4). The template labels two rows "Country:". The first (D15) reads the city in the template's formula, so CarbonLEI leaves it blank.
+- **Columns.** `template field` (the exact label), `value`, `source` (the signed field or the check that produced the value, or why there is none), `status`, `template cell`. The status is `from verified proof`, `hidden by supplier` (a signed field the supplier did not disclose in this proof) or `not held` (CarbonLEI's credential has no such field; the value stays blank).
+- **Values.** Only the §4 rows with a CarbonLEI source are filled: country (the first two letters of `unLocode`), UNLOCODE, reporting period start and end, CN code (a 4- or 6-digit heading is written as signed, and the row says the template's list holds 8-digit codes), SEE (direct), and its unit `tCO2e/t`. The installation name is filled when the supplier discloses it. The §4.3 carbon price fields are filled only when check 10 passed for a statement about this good; they carry the draft label. `cbamRoute` and the importer-side default fall-back are not mapped (§4.2).
+- **Header lines.** The template name, version 2.1.1 and date, and the workbook's SHA-256. Then: "not validated by the Commission; a copy for the declarant's records, not a Registry submission". Then the proof file's SHA-256, the credential SAID and the pinned block of the verification, and the count of filled, hidden and blank fields.
+
+On the demo proof (`fixtures/sepolia-demo-proof.json`), 7 fields are filled from the verified proof, the installation name is hidden by the supplier, and 68 are not held. The output is a CSV, not the .xlsx workbook: a declarant or operator copies the values into the template.
+
 ## 5. What would change this decision
 
 - **The Commission publishes the declaration's data structure** (XSD, XLSX structure or API), most likely with the 2027 declaration module. We would then write an exporter from a portfolio to that structure: fill only fields with a CarbonLEI source in §4, leave the rest blank and list them, state the version of the specification in the file, and validate it against the published schema in tests if its licence allows us to include it.
 - **O3CI gets an import format.** A supplier could then turn a verified credential into an O3CI upload. Until then, a supplier types the §4 values into O3CI or into the communication template.
-- **CarbonLEI writes the communication template.** That needs no new schema: `Summary_Communication` (R4) is published. It would fill only the §4 rows that have a CarbonLEI source, and most required cells, such as indirect emissions and qualifying parameters, would stay blank. It is not built, because a mostly blank template would add little to the CSV worksheet and the PACT export. We would build it when a supplier's credential carries those fields.
+- **The credential carries more of the template's fields.** `carbonlei export-communication` (§4.5) already writes the `Summary_Communication` fields as a CSV. It needed no new schema, because the sheet is published (R4). Most required cells, such as indirect emissions, embedded electricity and qualifying parameters, stay blank because CarbonLEI's credential does not carry them. If a supplier's credential carries those fields, the export would fill them in the same way, and writing the .xlsx workbook itself would then add more. Today it would add little.
