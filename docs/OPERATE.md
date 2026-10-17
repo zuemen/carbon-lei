@@ -114,7 +114,7 @@ The record is the operator's statement, not the NAB's: check 8 turns any differe
 
 ## Importer workbench: planning a year's declaration
 
-An importer with many suppliers does not verify one proof at a time. The workbench verifies all of a year's proofs against one block, then plans the CBAM declaration from the verdicts: per line, the supplier's verified value or the default with the year's mark-up (and why), totals, the 50 t de minimis status, the quarterly holding, the certificates and their gross €, and a CSV worksheet. Code: [`sdk/portfolio.ts`](../sdk/portfolio.ts) (pure, no chain), [`sdk/batch.ts`](../sdk/batch.ts) and two CLI commands; the hosted page's **Importer workbench** tab runs the same `buildPortfolio` on a six-line illustrative portfolio. It is a planning aid: it does not submit anything, it is not the CBAM Registry's XML format, and it sends no transaction.
+An importer with many suppliers does not verify one proof at a time. The workbench verifies all of a year's proofs against one block, then plans the CBAM declaration from the verdicts: per line, the supplier's verified value or the default with the year's mark-up (and why), totals, the 50 t de minimis status, the quarterly holding, the certificates and their gross €, and a CSV worksheet. Code: [`sdk/portfolio.ts`](../sdk/portfolio.ts) (pure, no chain), [`sdk/batch.ts`](../sdk/batch.ts) and two CLI commands; the hosted page's **Importer workbench** tab runs the same `buildPortfolio` on a six-line illustrative portfolio. It is a planning aid: it does not submit anything, it is not a CBAM Registry format, and it sends no transaction ([REGISTRY_EXPORT](REGISTRY_EXPORT.md): the Commission has published no data structure for the definitive-period declaration).
 
 **Procedure (one importer, one year)**
 
@@ -222,6 +222,7 @@ Exit codes: `allocate` 0 when nothing needs action, 1 when something does, 3 whe
 ## Not built
 
 - ERP or EDI connectors: the inputs are an Excel template and JSON files ([`sdk/cli.ts`](../sdk/cli.ts)); an ERP can call the prototype REST API (`carbonlei serve`), but no ERP-specific connector exists. [`examples/erp-integration/`](../examples/erp-integration/) shows the flow with a generic ERP CSV export: map to `/v1/verify-batch`, check the HMAC binding, plan with `/v1/portfolio`, write a CSV back (not a CBAM Registry filing; no SAP or Oracle connector).
+- A CBAM Registry XML export: the Commission has published no data structure for the definitive-period declaration (its Registry module opens in 2027), and its one published XML schema, the transitional `QReport` 18.30, is archived and covers only 2023–2025. [REGISTRY_EXPORT](REGISTRY_EXPORT.md) lists the official sources and maps CarbonLEI's fields to the Commission's communication template.
 - A hosted alerting service: `carbonlei recheck --webhook` runs on the importer's own scheduler and POSTs to the importer's own endpoint; CarbonLEI runs nothing that watches on an importer's behalf.
 - A connection to any PACT network: the export is field-compatible JSON ([PACT_MAPPING](PACT_MAPPING.md); [ADOPTION §8](ADOPTION.md#8-current-status-by-area)).
 - Witness operation beyond the local containers ([PILOT §3](PILOT.md#3-what-runs-where)).
