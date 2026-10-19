@@ -12,7 +12,7 @@ A carbon number is only as trustworthy as the person who signed it.
 <sub>Screenshot of the live page on Sepolia after one click on "Verify the demo proof", taken 2026-10-19 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
 
 - **Who signed:** the lead auditor's vLEI role credential (a signed statement that this person holds this role at this verification body; vLEIs are specified in ISO 17442-3:2024), is checked against a GLEIF-rooted chain (simulated root in the demo).
-- **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
+- **Were they authorised:** the contract checks, at the block that registers the report, that the body is on the allowlist, active and accredited and the auditor is not revoked; the allowlist is written by one operator, so the vLEI role is rechecked off-chain in the buyer's browser (check 7).
 - **Already claimed?** An on-chain ledger deducts each shipment from the report's verified tonnage (500 t in the demo) and rejects a batch claimed twice or a claim beyond what remains.
 
 **Who checks what.** The chain keeps only what several parties must share: who may register reports, each report's hash and verified tonnes, and the tonnes left. Signatures and the vLEI chain are checked off-chain, in each buyer's browser.

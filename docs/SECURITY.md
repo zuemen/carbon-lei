@@ -15,7 +15,7 @@ Scope: the two contracts on Ethereum Sepolia, the SDK verification pipeline, the
 | Threat category | Status | Section |
 |---|---|---|
 | Tampered or undisclosed fields, replay of an old credential (T4, T7, T8) | Fixed (checks 1, 2, 4, 5) | [§4](#4-threat-model), [§7](#7-privacy-of-on-chain-data) |
-| Impostor verifier, including a vLEI chain under another root (T1, attack 4) | Fixed (check 7); on-chain, see T10 | [§4](#4-threat-model), [§4.1](#41-limits-of-the-vlei-checks-in-the-prototype) |
+| Impostor verifier, including a vLEI chain under another root (T1, attack 4) | Detected off-chain by check 7 (exported evidence; witnesses not queried); the contract accepts it, see T10 | [§4](#4-threat-model), [§4.1](#41-limits-of-the-vlei-checks-in-the-prototype) |
 | Double claim, over-claiming, cross-report duplication (T5, T19) | Fixed on-chain; period squatting and takeover mitigated | [§4](#4-threat-model), [§9](#9-security-properties) |
 | Same tonnes used outside the deployment: PDF, Registry or another deployment (T22) | Out of scope; each credential's signature is bound to one deployment | [§4](#4-threat-model), [§8](#8-data-integrity-chain) |
 | Physical origin of goods within the verified tonnage (T6) | Design limit (High); roadmap | [§11](#11-residual-risk-summary) |

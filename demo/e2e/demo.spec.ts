@@ -177,8 +177,8 @@ test("First screen order: the claim largest, three answers in one row, the decla
   const answers = glance.getByRole("list", { name: "What the checks answer" }).getByRole("listitem");
   await expect(answers).toHaveCount(3);
   await expect(answers.locator(".answer-q")).toHaveText(["Who signed", "Authorised", "Tonnes left"]);
-  await expect(answers.nth(0).locator(".answer-a")).toHaveText("Signer identified · vLEI credential");
-  await expect(answers.nth(1).locator(".answer-a")).toHaveText("Role at the registering block");
+  await expect(answers.nth(0).locator(".answer-a")).toHaveText("Signer identified · vLEI chain checked");
+  await expect(answers.nth(1).locator(".answer-a")).toHaveText("On the allowlist at registration");
   // One row at 1280 px: the three answers share a top edge.
   const tops = await answers.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
   expect(new Set(tops).size).toBe(1);
