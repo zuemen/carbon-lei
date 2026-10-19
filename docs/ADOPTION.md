@@ -165,7 +165,7 @@ Measured time: setting up the whole simulated credential chain locally (8 KERIA 
 
 | Phase | When | Scope | Exit criterion |
 |---|---|---|---|
-| 0. Prototype | Hackathon, October 2026 | Sepolia; fictional parties; simulated GLEIF root; single allowlist key | Demo flow and four counterexamples: hosted demo at https://zuemen.github.io/carbon-lei/; locally, `npm run demo:local` reproduces the first three, and attack 4 runs with `scripts/demo-scenario.ts --synthetic-impostor` (see the [README](../README.md) and [VLEI_SETUP.md](VLEI_SETUP.md)) |
+| 0. Prototype | Hackathon, October 2026 | Sepolia; fictional parties; simulated GLEIF root; single allowlist key | Demo flow and six attacks: hosted demo at https://zuemen.github.io/carbon-lei/; locally, `npm run demo:local` reproduces attacks 1–3, and attack 4 runs with `scripts/demo-scenario.ts --synthetic-impostor` (see the [README](../README.md) and [VLEI_SETUP.md](VLEI_SETUP.md)) |
 | 1. Pilot | Around the first verified reports, from January 2027 | One verification body holding a real LE vLEI and ECRs from a QVI; a few operators using their LEI; one or two importers (one is enough to start, see §2.1); multisig allowlist. First step: the importer feeds the PACT JSON export into its existing CBAM declaration software | Reports used in real declarations alongside the official Registry flow |
 | 2. Network | After pilot | Several verification bodies and NABs; governance body with NAB and QVI representatives; several watchers; production chain decision (EVM L2 or permissioned EVM) | Independent operation without the project team |
 | 3. Extension | Later | Other CBAM goods, product passports, business wallets (see §6) | — |
