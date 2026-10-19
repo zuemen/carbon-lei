@@ -77,6 +77,7 @@ const R = {
     a4Synthetic: "▤ synthetic evidence · local test",
     a4Exported: (d: string) => `▤ exported evidence · ${d}`,
     a4Title: "4 · The owner key is stolen: an impostor body is put on the allowlist",
+    a4Takeaway: "Even with the allowlist key stolen, the buyer still catches the impostor: check 7 finds that its vLEI chain does not lead to the root of trust this page pins.",
     a4How: "Real transactions, simulated compromise of the allowlist owner key — the proof is checked in your browser with the same verifier as the Buyer tab",
     a4Story: [
       (name: string, lei: string) => `We simulated a stolen allowlist owner key. With it, ${name} (LEI ${lei}) and its auditor were added to the allowlist (`,
@@ -161,6 +162,7 @@ const R = {
     a4Synthetic: "▤ 合成證據 · 本機測試",
     a4Exported: (d: string) => `▤ 匯出的證據 · ${d}`,
     a4Title: "4 · 所有者金鑰遭竊：冒名機構被加進允許清單",
+    a4Takeaway: "就算允許清單的金鑰被偷，買方還是抓得到冒名者：檢查 7 發現它的 vLEI 鏈通往的不是本頁釘選的信任根。",
     a4How: "真實交易，模擬允許清單所有者金鑰外洩——證明在您的瀏覽器中，以和買方分頁相同的驗證器檢查",
     a4Story: [
       (name: string, lei: string) => `我們模擬允許清單的所有者金鑰遭竊。冒名者用它把 ${name}（LEI ${lei}）及其查核員加進允許清單（`,
@@ -249,6 +251,9 @@ function Attack4Card({ a4, waiting }: { a4: Attack4; waiting: boolean }) {
     <div className="attack">
       <div>
         <h3>{rt.a4Title}</h3>
+        <p className="takeaway">
+          <strong>{rt.a4Takeaway}</strong>
+        </p>
         <div className="how">{rt.a4How}</div>
         <p className="fine">
           {story[0](a4.body.name, a4.body.lei)}

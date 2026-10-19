@@ -283,7 +283,12 @@ export function App() {
     window.location.hash = t;
     setTab(t);
     if (target) setFocusTarget(target);
-    else window.scrollTo({ top: 0, behavior: "smooth" });
+    else {
+      // The tab's content starts below the first screen: bring its top to just under the sticky tab bar.
+      const panel = document.getElementById("panel");
+      if (panel) scrollBelowTabbar(panel);
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }, []);
 
   // Tabs load on demand: wait (up to about five seconds) for the target to render, then scroll to it and focus it.
