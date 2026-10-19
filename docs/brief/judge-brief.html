@@ -199,12 +199,12 @@
     <li><span class="n">1</span><span><b>Tampered value</b> (1.8 edited to 1.2 tCO2e/t): <b class="red">check 2 fails, DISCLOSURE_TAMPERED</b>; no contract is called.</span></li>
     <li><span class="n">2</span><span><b>Tonnes claimed twice</b>, or 400 t when 300 t are left: <b class="red">reverts BatchAlreadyClaimed / ExceedsVerifiedTonnage</b> (dry run).</span></li>
     <li><span class="n">3</span><span><b>Auditor who left</b> (ECR revoked, watcher syncs): next report <b class="red">reverts AuditorNotAuthorized on Sepolia</b>, status 0 <span class="muted">· tx 0xa8b6b8a8…fc5</span></span></li>
-    <li><span class="n">4</span><span><b>Impostor body</b> listed with a stolen owner key (simulated): <b class="green">contract accepts, status 1</b>; <b class="red">check 7 rejects, wrong root</b> <span class="muted">· tx 0x295abe6c…013</span></span></li>
+    <li><span class="n">4</span><span><b>Impostor body</b> listed with a stolen owner key (simulated): <b class="red">the buyer's check 7 rejects it, wrong root</b>, although the contract accepted its report <span class="muted">(status 1) · tx 0x295abe6c…013</span></span></li>
   </ol>
 
   <section class="scale">
-    <div class="label">Real<br>scale</div>
-    <p>EU imports of CN 7318 from Taiwan, 2025 (Eurostat): <span class="num">371,270&nbsp;t</span>. Each 1% declared on a verified value instead of the 2026 default moves about <span class="num">11,060&nbsp;tCO2e</span> of declaration onto verifiers' signatures.</p>
+    <div class="label">Climate<br>link</div>
+    <p>CBAM rewards a lower verified value only if buyers can trust who signed it and its tonnes are not stretched. EU imports of CN 7318 from Taiwan, 2025 (Eurostat): <span class="num">371,270&nbsp;t</span>. Each 1% declared on a verified value instead of the 2026 default moves about <span class="num">11,060&nbsp;tCO2e</span> of declaration onto verifiers' signatures (an upper bound). Declared amounts, not reductions.</p>
   </section>
 
   <section class="cols">

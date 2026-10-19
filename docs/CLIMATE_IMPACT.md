@@ -1,6 +1,6 @@
 # Climate impact assessment
 
-An EU importer that cannot check who signed a verified value, or whether its tonnes were already claimed, falls back on the CBAM default: 2.978 tCO2e per tonne for screws from Taiwan in 2026, against the 1.8 verified in the demo (illustrative). CarbonLEI makes the signer's authority and the remaining verified tonnage checkable, so for one 500 t report the verified value can be relied on instead, putting 589 tCO2e less on the declaration (about €48,486 gross at €82.32 per tCO2e). That is a declared-emissions gap, not a physical reduction: CarbonLEI claims no emission reduction, and the incentive to switch to lower-carbon steel is largely offset by free allocation until about 2030, so we do not quantify one.
+An EU importer that cannot check who signed a verified value, or whether its tonnes were already claimed, falls back on the CBAM default: 2.978 tCO2e per tonne for screws from Taiwan in 2026, against the 1.8 verified in the demo (illustrative). CarbonLEI makes the signer's authority and the remaining verified tonnage checkable, so for one 500 t report the verified value can be relied on instead, putting 589 tCO2e less on the declaration: 453.5 tCO2e against the unmarked default plus 135.5 tCO2e of mark-up, a surcharge for missing verified data, not emissions (about €48,486 gross at €82.32 per tCO2e). That is a declared-emissions gap, not a physical reduction: CarbonLEI claims no emission reduction, and the incentive to switch to lower-carbon steel is largely offset by free allocation until about 2030, so we do not quantify one.
 
 > **Deliverable.** This document answers the requested "Climate impact assessment and carbon reduction projections": it reports the declared-emissions gap in tCO2e and € per tonne against the CBAM default value, for one report (Section 2) and for 10 / 100 / 1,000 installations (Section 4).\
 > **Why no reduction projection.** A physical reduction would come mainly from producers switching to lower-carbon steel; free allocation largely offsets the CBAM incentive to do so until about 2030 (Section 2a), and we found no public case of a fastener producer switching because of CBAM (Section 6), so a projected tonnage would be invented.
@@ -167,7 +167,7 @@ These are **scenarios under stated assumptions, not forecasts.** Every input mar
 
 V = installations × 500 t. P = €82.32, the Q3 2026 certificate price, held fixed (assumption).
 
-| Scenario | Volume V (t) | Declared-emissions gap vs 2026 default (tCO2e) | Gap vs default from 2028 (tCO2e) | Price signal, gross, 2026 (€ million per year at P = €82.32) | Price signal, gross, from 2028 (€ million per year at P = €82.32, held constant) |
+| Scenario | Volume V (t) | Declared-emissions gap vs 2026 default (tCO2e) | Gap vs default from 2028 (tCO2e) | Certificate cost difference, gross, 2026 (€ million per year at P = €82.32) | Certificate cost difference, gross, from 2028 (€ million per year at P = €82.32, held constant) |
 |---|---|---|---|---|---|
 | 10 installations | 5,000 | 5,890 | 8,595 | 0.48 | 0.71 |
 | 100 installations | 50,000 | 58,900 | 85,950 | 4.85 | 7.08 |
@@ -176,7 +176,7 @@ V = installations × 500 t. P = €82.32, the Q3 2026 certificate price, held fi
 Formulas:
 
 - Declared-emissions gap = V × (default − 1.8). Not a physical reduction.
-- Price signal, gross and illustrative = gap × P, before the free-allocation adjustment.
+- Certificate cost difference, gross and illustrative = gap × P, before the free-allocation adjustment.
 - Emissions kept in declarations = V × A4 × (A5 − 1.8): real emissions that would otherwise vanish from CBAM declarations through over-claiming of verified tonnage. We do not tabulate it, because A4 has no empirical basis; the tonnage ledger's effect is not quantified.
 
 Per 1,000 t of verified goods, each percentage point of tonnage claimed a second time would hide 11.78 tCO2e against the 2026 marked-up default (9.07 against the unmarked default, the A5 value used in the formula above). We know of no observed over-claiming rate, so we state no total.
