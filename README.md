@@ -8,8 +8,8 @@ A carbon number is only as trustworthy as the person who signed it.
 
 **More (5 min):** [one-page judge brief (PDF)](docs/judge-brief.pdf) · [five-minute path with what you should see](docs/JUDGING_CRITERIA.md#five-minute-path-for-reviewers) · [Importer workbench](https://zuemen.github.io/carbon-lei/#importer-workbench) · [Supplier allocations](https://zuemen.github.io/carbon-lei/#supplier) · [`carbonlei serve` REST API](#re-check-accepted-values-alerts-and-the-rest-api) · [ERP integration example](examples/erp-integration/).
 
-<a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed, the declared-emissions gap for one 200 t shipment (gross, illustrative), and the first three checks"></a>
-<sub>Screenshot of the live page on Sepolia after one click on "Verify the demo proof", taken 2026-10-08 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
+<a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed, the declared-emissions gap for one 200 t shipment (gross, illustrative), the four source labels and the first four checks"></a>
+<sub>Screenshot of the live page on Sepolia after one click on "Verify the demo proof", taken 2026-10-19 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
 
 - **Who signed:** the lead auditor's vLEI role credential (a signed statement that this person holds this role at this verification body; vLEIs are specified in ISO 17442-3:2024), is checked against a GLEIF-rooted chain (simulated root in the demo).
 - **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
