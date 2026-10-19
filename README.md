@@ -6,11 +6,7 @@ A carbon number is only as trustworthy as the person who signed it.
 
 **Judge's 90-second path:** open the [demo](https://zuemen.github.io/carbon-lei/) (read-only, no wallet) → press **Verify the demo proof** on the first screen (it loads the proof on the Buyer tab and runs the eight checks; checks 9–10, precursor and carbon price, are shown on a local chain further down that tab) → **Try to break it** → card 4: press "Verify the impostor's proof".
 
-**Enterprise extras (5 min):** [Importer workbench](https://zuemen.github.io/carbon-lei/#importer-workbench) · [Supplier allocations](https://zuemen.github.io/carbon-lei/#supplier) · [`carbonlei serve` REST API](#re-check-accepted-values-alerts-and-the-rest-api) · [ERP integration example](examples/erp-integration/).
-
-One-page judge brief (PDF): [docs/judge-brief.pdf](docs/judge-brief.pdf)
-
-**Five-minute path** (demo, phone QR, three terminal commands): [what you should see at each step](docs/JUDGING_CRITERIA.md#five-minute-path-for-reviewers).
+**More (5 min):** [one-page judge brief (PDF)](docs/judge-brief.pdf) · [five-minute path with what you should see](docs/JUDGING_CRITERIA.md#five-minute-path-for-reviewers) · [Importer workbench](https://zuemen.github.io/carbon-lei/#importer-workbench) · [Supplier allocations](https://zuemen.github.io/carbon-lei/#supplier) · [`carbonlei serve` REST API](#re-check-accepted-values-alerts-and-the-rest-api) · [ERP integration example](examples/erp-integration/).
 
 <a href="https://zuemen.github.io/carbon-lei/"><img src="docs/img/buyer-verified.png" width="440" alt="The live demo's Buyer tab after Verify: 8 of 8 checks passed, the declared-emissions gap for one 200 t shipment (gross, illustrative), and the first three checks"></a>
 <sub>Screenshot of the live page on Sepolia after one click on "Verify the demo proof", taken 2026-10-08 (not a mock-up). All companies, people and LEIs are fictional; emissions values are illustrative; the vLEI root is simulated.</sub>
@@ -18,6 +14,25 @@ One-page judge brief (PDF): [docs/judge-brief.pdf](docs/judge-brief.pdf)
 - **Who signed:** the lead auditor's vLEI role credential (a signed statement that this person holds this role at this verification body; vLEIs are specified in ISO 17442-3:2024), is checked against a GLEIF-rooted chain (simulated root in the demo).
 - **Were they authorised:** the contract checks, at the block that registers the report, that the body is active and accredited and the auditor is not revoked.
 - **Already claimed?** An on-chain ledger deducts each shipment from the report's verified tonnage (500 t in the demo) and rejects a batch claimed twice or a claim beyond what remains.
+
+**Who checks what.** The chain keeps only what several parties must share: who may register reports, each report's hash and verified tonnes, and the tonnes left. Signatures and the vLEI chain are checked off-chain, in each buyer's browser.
+
+```mermaid
+flowchart LR
+  VB["Verification body + lead auditor<br/>vLEI role credentials"]
+  SUP["Supplier"]
+  BUY["Any buyer or bank<br/>browser, no wallet"]
+  subgraph CHAIN["On-chain: Ethereum Sepolia"]
+    AL["Allowlist<br/>who may register reports"]
+    REG["Claim registry<br/>report hash, verified tonnes, tonnes left"]
+  end
+  VB -- "1 signs the credential, registers the report" --> REG
+  REG --- AL
+  SUP -- "2 claims tonnes per shipment" --> REG
+  SUP -- "3 sends the proof, fields of its choice" --> BUY
+  BUY -- "4a reads: authorised at that block? tonnes left?" --> REG
+  BUY -. "4b checks the signature and the vLEI chain to a pinned root (simulated in the demo)" .-> VB
+```
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![ci](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/carbon-lei/actions/workflows/ci.yml) [![Tests: 363 contract, 635 SDK, 55 verifier, 88 browser](https://img.shields.io/badge/tests-363%20contract%20%2B%20635%20SDK%20%2B%2055%20verifier%20%2B%2088%20browser-brightgreen.svg)](#measurements) [![Sepolia: source verified](https://img.shields.io/badge/Sepolia-source%20verified-6f42c1.svg)](https://sepolia.etherscan.io/address/0xEA52a50d3753bACD835DCd47892754b65a90ca19#code)
 
